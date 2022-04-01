@@ -1,2 +1,2 @@
 
-export {default as Component} from "./src/Component.svelte"
+export {default as Treeview} from "./src/Treeview.svelte"

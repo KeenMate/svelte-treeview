@@ -1,7 +1,7 @@
 
 <script>
-	import Component from "../src/Component.svelte"
+	import Draganddrop from "./Draganddrop.svelte"
 </script>
 
-<Component/>
+<Draganddrop/>
 
