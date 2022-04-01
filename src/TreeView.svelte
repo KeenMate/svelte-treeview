@@ -491,33 +491,35 @@
 	export let disableOrHide = false; //bool
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
-
-	export let childDepth = 0; //number
-	export let parentId = null; //string
-
 	//properties
 	export let expandedProperty = "__expanded";
 	export let selectedProperty = "__selected";
 	export let usecallbackPropery = "__useCallback";
 	export let priorityPropery = "__priority";
-	export let getId = (x) => x.nodePath;
-	export let getParentId = (x) => getParentNodePath(x.nodePath);
-	export let isChild = (x) => nodePathIsChild(x.nodePath);
-
 	//classes for customization of tree
- 	export let treeCssClass = "", nodeCssClass = "", expandedToggleCss = "", collapsedToggleCss = ""
+	export let treeCssClass = "", nodeCssClass = "", expandedToggleCss = "", collapsedToggleCss = ""
 	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
+	export let expandCallback = null;
+
+
+
+
+	export let getId = (x) => x.nodePath;
+	export let getParentId = (x) => getParentNodePath(x.nodePath);
+	export let isChild = (x) => nodePathIsChild(x.nodePath);
+
 
 	//! DONT SET ONLY USED INTERNALLY
 
 	//path of currently dragged node
 	export let draggedPath = null;
-	export let expandCallback = null;
 	export let highlightedNode = null;
+	export let childDepth = 0; //number
+	export let parentId = null; //string
 
 	let dragenterTimestamp;
 	let canNestPos = false;
