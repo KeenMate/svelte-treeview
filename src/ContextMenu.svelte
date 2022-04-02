@@ -21,6 +21,7 @@
 	}
 </script>
 
+<svelte:window on:click={closeMenu} />
 {#if showMenu}
 	<Menu {...pos} on:click={closeMenu} on:clickoutside={closeMenu}>
 		<slot {node}>

@@ -57,11 +57,12 @@
 		{ nodePath: "4.4", __priority: 4, title: "ITEM_5" },
 		{ nodePath: "4.5", __priority: 10, title: "ITEM_6" },
 	];
-	let dragAndDrop = true;
+	let dragAndDrop = true,showContexMenu = true;
 </script>
 
 		TreeView drag and drop test
 		<input type="checkbox" bind:checked={dragAndDrop} />
+		<input type="checkbox" bind:checked={showContexMenu} />
 
 	<TreeView
 		bind:tree
@@ -74,7 +75,7 @@
 		on:selection={(e) => console.log(e.detail)}
 		on:expansion={(e) => console.log(e.detail)}
 		bind:dragAndDrop
-		showContexMenu
+		{showContexMenu}
 		expandCallback={async (n) => {
 			console.log("callback from " + n.nodePath);
 			let data = await [
