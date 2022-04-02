@@ -1,6 +1,9 @@
 <script>
 	import TreeView from "../src/TreeView.svelte";
 
+	import MenuDivider from "../src/MenuDivider.svelte"
+	import MenuOption from "../src/MenuOption.svelte"
+
 	let num = 0;
 
 	let tree = [
@@ -71,6 +74,7 @@
 		on:selection={(e) => console.log(e.detail)}
 		on:expansion={(e) => console.log(e.detail)}
 		bind:dragAndDrop
+		showContexMenu
 		expandCallback={async (n) => {
 			console.log("callback from " + n.nodePath);
 			let data = await [
@@ -95,6 +99,15 @@
 		}}
 	>
 		{node.nodePath} p: {node.__priority} t: {node.title}
+
+		<svelte:fragment slot="context-menu" let:node>
+
+			<MenuOption text={node.nodePath} isDisabled></MenuOption>
+			<MenuDivider/>
+			<MenuOption text="alert object" on:click={alert(JSON.stringify(node))}></MenuOption>
+
+
+		</svelte:fragment>
 	</TreeView>
 
 <style>

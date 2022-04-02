@@ -1,11 +1,21 @@
 <script>
+	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
 
 	const dispatch = createEventDispatcher();
 
-	import {getParentNodePath, hasChildren, nodePathIsChild,OrderByPriority,getParentChildrenTree
-		,computeInitialVisualStates,changeExpansion, ChangeSelection,ChangeSelectForAllChildren,
-		moveNode} from "./TreeHelpers"
+	import {
+		getParentNodePath,
+		hasChildren,
+		nodePathIsChild,
+		OrderByPriority,
+		getParentChildrenTree,
+		computeInitialVisualStates,
+		changeExpansion,
+		ChangeSelection,
+		ChangeSelectForAllChildren,
+		moveNode,
+	} from "./TreeHelpers";
 
 	//! required
 	export let tree = null; //array of nodes with nodePath
@@ -27,21 +37,21 @@
 	export let usecallbackPropery = "__useCallback";
 	export let priorityPropery = "__priority";
 	//classes for customization of tree
-	export let treeCssClass = "", nodeCssClass = "", expandedToggleCss = "", collapsedToggleCss = ""
+	export let treeCssClass = "",
+		nodeCssClass = "",
+		expandedToggleCss = "",
+		collapsedToggleCss = "";
 	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
 	export let expandCallback = null;
-
-
-
+	export let showContexMenu=false
 
 	export let getId = (x) => x.nodePath;
 	export let getParentId = (x) => getParentNodePath(x.nodePath);
 	export let isChild = (x) => nodePathIsChild(x.nodePath);
-
 
 	//! DONT SET ONLY USED INTERNALLY
 
@@ -50,6 +60,7 @@
 	export let highlightedNode = null;
 	export let childDepth = 0; //number
 	export let parentId = null; //string
+	export let nodePath = null;
 
 	let dragenterTimestamp;
 	let canNestPos = false;
@@ -58,6 +69,9 @@
 	let dragTimeout;
 	let validTarget = false;
 	$: canNest = canNestPos || canNestTime;
+
+	//
+	let ctxMenu;
 
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
 
@@ -169,8 +183,23 @@
 		selectionEvents(node);
 	}
 
+
+	function selectionEvents(node) {
+		let val = node[selectedProperty];
+		dispatch("selection", {
+			path: node.nodePath,
+			value: val,
+		});
+		if (val) {
+			dispatch("selected", node.nodePath);
+		} else {
+			dispatch("unselected", node.nodePath);
+		}
+	}
+
 	//#endregion
 
+	//#region drag and drop
 	function handleDragStart(e, node) {
 		console.log("dragstart from: " + node.nodePath);
 		e.dataTransfer.dropEffect = "move";
@@ -228,18 +257,6 @@
 		}
 	}
 
-	function selectionEvents(node) {
-		let val = node[selectedProperty];
-		dispatch("selection", {
-			path: node.nodePath,
-			value: val,
-		});
-		if (val) {
-			dispatch("selected", node.nodePath);
-		} else {
-			dispatch("unselected", node.nodePath);
-		}
-	}
 
 	function handleDragEnter(e, node) {
 		validTarget = false;
@@ -267,6 +284,16 @@
 		}, 1);
 	}
 
+	//#endregion
+
+	function openContextMenu(e, node) {
+		if(!showContexMenu)
+			return
+		e.preventDefault()
+		console.log("openning context menu from: " + node.nodePath);
+		ctxMenu.onRightClick(e, node);
+	}
+
 	//computes all visual states when component is first created
 	tree = computeInitialVisualStates(
 		tree,
@@ -277,9 +304,21 @@
 	);
 </script>
 
-<ul class:treeview={childDepth === 0} class:child-menu={childDepth > 0} class={treeCssClass}>
+<ul
+	class:treeview={childDepth === 0}
+	class:child-menu={childDepth > 0}
+	class={treeCssClass}
+>
 	{#each parentChildrenTree as node (getNodeId(node))}
-		<li class:is-child={isChild(node)} class:has-children={node.hasChildren}>
+		<li
+			class:is-child={isChild(node)}
+			class:has-children={node.hasChildren}
+			on:contextmenu|stopPropagation={(e) => {
+				childDepth == 0
+					? openContextMenu(e, node)
+					: dispatch("open-ctxmenu", { e: e, node: node });
+			}}
+		>
 			<div
 				class="tree-item {validTarget &&
 				canNest &&
@@ -298,7 +337,9 @@
 				{#if node.hasChildren}
 					<span on:click={() => toggleExpansion(node)}>
 						<i
-							class="far {node[expandedProperty] ? expandedToggleCss : collapsedToggleCss}"
+							class="far {node[expandedProperty]
+								? expandedToggleCss
+								: collapsedToggleCss}"
 							class:fa-minus-square={node[expandedProperty]}
 							class:fa-plus-square={!node[expandedProperty]}
 						/>
@@ -363,6 +404,7 @@
 			{#if node[expandedProperty] && node.hasChildren}
 				<!--tree={tree/*.filter(x => x.nodePath.startsWith(node.nodePath) && x.nodePath !== node.nodePath)*/} -->
 				<svelte:self
+					nodePath={node.nodePath}
 					{treeId}
 					{getId}
 					{checkboxes}
@@ -387,6 +429,11 @@
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold
+					on:open-ctxmenu={(data) => {
+						childDepth == 0
+							? openContextMenu(data.detail.e, data.detail.node)
+							: dispatch("open-ctxmenu", data.detail);
+					}}
 					{expandCallback}
 				>
 					<slot node={nodeNested} />
@@ -404,6 +451,12 @@
 		</li>
 	{/each}
 </ul>
+
+<ContextMenu bind:this={ctxMenu} >
+	<svelte:fragment let:node>
+		<slot name="context-menu" {node}/>
+	</svelte:fragment>
+</ContextMenu>
 
 <style lang="sass">
 	$treeview-lines: dotted black 1px
