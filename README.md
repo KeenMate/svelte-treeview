@@ -38,6 +38,41 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
 - **selected** {node }
 - **unselected** {node }
 
+## basic usage
+
+You need to provide treeId and tree, that is array of node where every node has nodepath defined. Parent nodes have to have hasChildren set to true. Next you have to set a default slot with how you want you nodes to be rendered.You can add your own props to nodes and used them here in  events, contextmenus and callbacks. Treeview uses **expandedProperty** to determine expansion.
+
+example:
+
+```js
+let tree = [
+  { nodePath: "1"},
+  { nodePath: "2"},
+  { nodePath: "3" hasChildren: true},
+  { nodePath: "3.1"},
+  { nodePath: "3.2", hasChildren: true},
+  { nodePath: "3.2.1"},
+  { nodePath: "3.2.2"},
+  { nodePath: "3.2.3" },
+  { nodePath: "3.2.4"},
+  { nodePath: "3.3"}
+]
+...
+
+<TreeView
+	bind:tree
+	treeId="tree"
+	let:node
+>
+	{node.nodePath}
+</TreeView>
+
+```
+
+## callbacks
+
+## selection
+
 ## drag and drop
 
 After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.    
