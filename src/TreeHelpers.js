@@ -68,6 +68,14 @@
 		return tree;
 	}
 
+
+export function changeEveryExpansion(tree, expandedProperty, changeTo) {
+	return tree.map((node) => {
+		node[expandedProperty] = changeTo;
+		return node;
+	});
+}
+
 	//#endregion
 
 	//#region selection
@@ -472,6 +480,7 @@
 
 //#region searching
 
+//return filtered tree
 export function searchTree(tree, filterFunction, recursive) {
 	let result = [],
 		matchingNodes = [];
@@ -489,7 +498,7 @@ export function searchTree(tree, filterFunction, recursive) {
 	return result;
 }
 
-export function addParents(tree, result, node) {
+function addParents(tree, result, node) {
 	let parentsIds = [],
 		parentNodes = [];
 	if (result === undefined) result = [];
@@ -522,12 +531,6 @@ export function addParents(tree, result, node) {
 	return result;
 }
 
-export function changeEveryExpansion(tree, expandedProperty, changeTo) {
-	return tree.map((node) => {
-		node[expandedProperty] = changeTo;
-		return node;
-	});
-}
 //#endregion
 
 	/* Tree view helpers end */
