@@ -42,12 +42,13 @@
 		});
 	}
 
-	function joinTrees(filteredTree, tree) {
+	export function joinTrees(filteredTree, tree) {
 		return tree.map(
 			(tnode) =>
 				filteredTree.find((fnode) => tnode.nodePath === fnode.nodePath) || tnode
 		);
 	}
+
 
 	export function changeExpansion(tree, nodePath, expandedProperty) {
 		return tree.map((x) => {
@@ -468,6 +469,66 @@
 	}
 
 	//#endregion
+
+//#region searching
+
+export function searchTree(tree, filterFunction, recursive) {
+	let result = [],
+		matchingNodes = [];
+	if (recursive) {
+		matchingNodes = getAllLeafNodes(tree).filter(filterFunction);
+	} else {
+		matchingNodes = tree.filter(filterFunction);
+	}
+	//console.log("matching nodes length:" + matchingNodes.length)
+	matchingNodes.forEach((node) => {
+		result.push(node);
+		result = addParents(tree, result, node);
+	});
+	//console.log(result)
+	return result;
+}
+
+export function addParents(tree, result, node) {
+	let parentsIds = [],
+		parentNodes = [];
+	if (result === undefined) result = [];
+	let nodePath = node.nodePath;
+	while (nodePath.length > 0) {
+		nodePath = getParentNodePath(nodePath);
+		parentsIds.push(nodePath);
+	}
+
+	//finds nodes for ids
+	tree.forEach((n) => {
+		if (
+			parentsIds.some((parentId) => {
+				return n.nodePath === parentId;
+			})
+		) {
+			parentNodes.push(n);
+		}
+	});
+	//removes duplicate nodePaths
+	parentNodes.forEach((n) => {
+		if (
+			result.findIndex((x) => {
+				return n.nodePath === x.nodePath;
+			}) < 0
+		)
+			result.push(n);
+	});
+
+	return result;
+}
+
+export function changeEveryExpansion(tree, expandedProperty, changeTo) {
+	return tree.map((node) => {
+		node[expandedProperty] = changeTo;
+		return node;
+	});
+}
+//#endregion
 
 	/* Tree view helpers end */
 
