@@ -16,11 +16,13 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
  - **selectedProperty** (string, default: *"__selected"*)
  - **usecallbackPropery** (string, default: *"__useCallback"*)
  - **priorityPropery** (string, default: *"__priority"*)
- - **treeCssClass** (string css class, default: *""*)
- - **nodeCssClass** (string css class, default: *""*)
- - **expandedToggleCss** (string css class, default: *""*)
- - **collapsedToggleCss** (string css class, default: *""*)
+ - **treeClass** (string css class, default: *""*)
+ - **nodeClass** (string css class, default: *""*)
+ - **expandedToggleClass** (string css class, default: *""*)
+ - **collapsedToggleClass** (string css class, default: *""*)
  - **expandClass** (string css class, default: *"inserting-highlighted"*)
+ - **inserLineClass** (string css class, default: *""*)
+ - **inserLineNestClass** (string css class, default: *""*)
  - **timeToNest** (number in ms, default: *null*)
  - **pixelNestTreshold** (number in px, default: *150*)
  - **expandCallback** (function that takes node as argument, default: *null*)
@@ -38,7 +40,9 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
 
 ## drag and drop
 
-After setting dragAndDrop to true, you will be able to changing order of nodes and moving them between nodes. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after at least one of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, moved will be cancelled.    New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest and as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).
+After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.    
+New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).    
+You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass** 
 
 ## context menu
 

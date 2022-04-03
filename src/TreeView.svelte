@@ -37,12 +37,14 @@
 	export let usecallbackPropery = "__useCallback";
 	export let priorityPropery = "__priority";
 	//classes for customization of tree
-	export let treeCssClass = "",
-		nodeCssClass = "",
-		expandedToggleCss = "",
-		collapsedToggleCss = "";
+	export let treeClass = "",
+		nodeClass = "",
+		expandedToggleClass = "",
+		collapsedToggleClass = "";
 	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
+	export let inserLineClass = ""
+	export let inserLineNestClass = ""
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
@@ -50,12 +52,9 @@
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
 
-
 	export let getId = (x) => x.nodePath;
 	export let getParentId = (x) => getParentNodePath(x.nodePath);
 	export let isChild = (x) => nodePathIsChild(x.nodePath);
-
-
 
 	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
@@ -224,14 +223,14 @@
 
 		let newNode = tree.find((n) => n.nodePath == draggedPath);
 
-		let oldNode = {...newNode}
+		let oldNode = { ...newNode };
 		let oldParent = tree.find(
-			(n) => (n.nodePath == getParentNodePath(draggedPath))
+			(n) => n.nodePath == getParentNodePath(draggedPath)
 		);
 
 		//callback can cancell move
-		if(beforeMovedCallback(oldNode,oldParent,node,canNest) === false)
-			return
+		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
+			return;
 
 		tree = moveNode(
 			tree,
@@ -243,17 +242,15 @@
 			expandedProperty
 		);
 
-
 		dispatch("moved", {
 			oldParent: oldParent,
 			oldNode: oldNode,
 			NewNode: newNode,
 			targetNode: node,
-			nest: canNest
+			nest: canNest,
 		});
 
-		console.log("dispatched")
-
+		console.log("dispatched");
 
 		//reset props
 		dragenterTimestamp = null;
@@ -331,7 +328,7 @@
 <ul
 	class:treeview={childDepth === 0}
 	class:child-menu={childDepth > 0}
-	class={treeCssClass}
+	class={treeClass}
 >
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
@@ -348,7 +345,7 @@
 				canNest &&
 				highlightedNode?.nodePath == node.nodePath
 					? expandClass
-					: ''} {nodeCssClass}"
+					: ''} {nodeClass}"
 				class:div-has-children={node.hasChildren}
 				class:hover={validTarget && highlightedNode?.nodePath == node.nodePath}
 				draggable={dragAndDrop}
@@ -362,8 +359,8 @@
 					<span on:click={() => toggleExpansion(node)}>
 						<i
 							class="far {node[expandedProperty]
-								? expandedToggleCss
-								: collapsedToggleCss}"
+								? expandedToggleClass
+								: collapsedToggleClass}"
 							class:fa-minus-square={node[expandedProperty]}
 							class:fa-plus-square={!node[expandedProperty]}
 						/>
@@ -420,7 +417,7 @@
 
 			{#if validTarget && canNest && highlightedNode?.nodePath == node.nodePath}
 				<div class="insert-line-wrapper">
-					<div class="insert-line insert-line-child" />
+					<div class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}" />
 				</div>
 			{/if}
 			<!-- {@debug node} -->
@@ -471,7 +468,7 @@
 			<!-- Show line if insering -->
 			{#if validTarget && !canNest && highlightedNode?.nodePath == node.nodePath}
 				<div class="insert-line-wrapper">
-					<div class="insert-line" />
+					<div class="insert-line {inserLineClass}" />
 				</div>
 			{/if}
 		</li>
