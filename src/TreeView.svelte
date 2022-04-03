@@ -47,14 +47,17 @@
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
 	export let expandCallback = null;
-	export let showContexMenu=false
+	export let showContexMenu = false;
+	export let beforeMovedCallback = null;
+
 
 	export let getId = (x) => x.nodePath;
 	export let getParentId = (x) => getParentNodePath(x.nodePath);
 	export let isChild = (x) => nodePathIsChild(x.nodePath);
 
-	//! DONT SET ONLY USED INTERNALLY
 
+
+	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
 	export let draggedPath = null;
 	export let highlightedNode = null;
@@ -125,7 +128,7 @@
 
 		//expansion events
 		dispatch("expansion", {
-			path: node.nodePath,
+			node: node.nodePath,
 			value: val,
 		});
 
@@ -183,17 +186,16 @@
 		selectionEvents(node);
 	}
 
-
 	function selectionEvents(node) {
 		let val = node[selectedProperty];
 		dispatch("selection", {
-			path: node.nodePath,
+			node: node,
 			value: val,
 		});
 		if (val) {
-			dispatch("selected", node.nodePath);
+			dispatch("selected", node);
 		} else {
-			dispatch("unselected", node.nodePath);
+			dispatch("unselected", node);
 		}
 	}
 
@@ -220,6 +222,17 @@
 				(dragenterTimestamp ? new Date() - dragenterTimestamp : 1) > timeToNest;
 		}
 
+		let newNode = tree.find((n) => n.nodePath == draggedPath);
+
+		let oldNode = {...newNode}
+		let oldParent = tree.find(
+			(n) => (n.nodePath == getParentNodePath(draggedPath))
+		);
+
+		//callback can cancell move
+		if(beforeMovedCallback(oldNode,oldParent,node,canNest) === false)
+			return
+
 		tree = moveNode(
 			tree,
 			draggedPath,
@@ -230,12 +243,22 @@
 			expandedProperty
 		);
 
+
+		dispatch("moved", {
+			oldParent: oldParent,
+			oldNode: oldNode,
+			NewNode: newNode,
+			targetNode: node,
+			nest: canNest
+		});
+
+		console.log("dispatched")
+
+
 		//reset props
 		dragenterTimestamp = null;
 		draggedPath = null;
 		highlightedNode = null;
-
-		dispatch("moved", { moved: draggedPath, to: node.nodePath });
 	}
 
 	function handleDragOver(e, node) {
@@ -256,7 +279,6 @@
 			validTarget = false;
 		}
 	}
-
 
 	function handleDragEnter(e, node) {
 		validTarget = false;
@@ -286,13 +308,15 @@
 
 	//#endregion
 
+	//#region context menu
 	function openContextMenu(e, node) {
-		if(!showContexMenu)
-			return
-		e.preventDefault()
+		if (!showContexMenu) return;
+		e.preventDefault();
 		console.log("openning context menu from: " + node.nodePath);
 		ctxMenu.onRightClick(e, node);
 	}
+
+	//#endregion
 
 	//computes all visual states when component is first created
 	tree = computeInitialVisualStates(
@@ -435,6 +459,8 @@
 							: dispatch("open-ctxmenu", data.detail);
 					}}
 					{expandCallback}
+					on:moved
+					{beforeMovedCallback}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>
@@ -452,9 +478,9 @@
 	{/each}
 </ul>
 
-<ContextMenu bind:this={ctxMenu} >
+<ContextMenu bind:this={ctxMenu}>
 	<svelte:fragment let:node>
-		<slot name="context-menu" {node}/>
+		<slot name="context-menu" {node} />
 	</svelte:fragment>
 </ContextMenu>
 

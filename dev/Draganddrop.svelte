@@ -1,8 +1,8 @@
 <script>
 	import TreeView from "../src/TreeView.svelte";
 
-	import MenuDivider from "../src/MenuDivider.svelte"
-	import MenuOption from "../src/MenuOption.svelte"
+	import MenuDivider from "../src/MenuDivider.svelte";
+	import MenuOption from "../src/MenuOption.svelte";
 
 	let num = 0;
 
@@ -57,59 +57,71 @@
 		{ nodePath: "4.4", __priority: 4, title: "ITEM_5" },
 		{ nodePath: "4.5", __priority: 10, title: "ITEM_6" },
 	];
-	let dragAndDrop = true,showContexMenu = true;
+	let dragAndDrop = true,
+		showContexMenu = true;
+
+	async function callback(n) {
+		console.log("callback from " + n.nodePath);
+		let data = await [
+			{
+				nodePath: n.nodePath + "." + ++num,
+				__priority: 0,
+				__useCallback: true,
+				hasChildren: true,
+			},
+			{
+				nodePath: n.nodePath + "." + ++num,
+				__priority: 0,
+				__useCallback: true,
+				hasChildren: true,
+			},
+		];
+		return data;
+	}
+
+	function handleClick(node) {
+		console.log(node.nodePath);
+		tree = tree.filter((n) => n.nodePath != node.nodePath);
+	}
+
+	function beforeCallback(node, oldParent, targetNode, nest) {
+		alert(
+			`moved ${node.nodePath} from ${oldParent.nodePath} to ${
+				targetNode.nodePath
+			} while ${nest ? "nesting" : "not nesting"}`
+		);
+	}
 </script>
 
-		TreeView drag and drop test
-		<input type="checkbox" bind:checked={dragAndDrop} />
-		<input type="checkbox" bind:checked={showContexMenu} />
+TreeView drag and drop test
+<input type="checkbox" bind:checked={dragAndDrop} />
+<input type="checkbox" bind:checked={showContexMenu} />
 
-	<TreeView
-		bind:tree
-		treeId="tree"
-		let:node
-		maxExpandedDepth={4}
-		recursive
-		checkboxes
-		bind:filteredTree={tree}
-		on:selection={(e) => console.log(e.detail)}
-		on:expansion={(e) => console.log(e.detail)}
-		bind:dragAndDrop
-		{showContexMenu}
-		expandCallback={async (n) => {
-			console.log("callback from " + n.nodePath);
-			let data = await [
-				{
-					nodePath: n.nodePath+ "." + ++num,
-					__priority: 0,
-					__useCallback: true,
-					hasChildren: true,
-				},
-				{
-					nodePath: n.nodePath+ "." + ++num,
-					__priority: 0,
-					__useCallback: true,
-					hasChildren: true,
-				},
-				// {
-				// 	nodePath: n.nodePath+ "." + ++num,
-				// 	__priority: 0
-				// },
-			];
-			return data;
-		}}
-	>
-		{node.nodePath} p: {node.__priority} t: {node.title}
+<TreeView
+	bind:tree
+	treeId="tree"
+	let:node
+	maxExpandedDepth={4}
+	recursive
+	checkboxes
+	bind:filteredTree={tree}
+	on:selection={(e) => console.log(e.detail)}
+	on:expansion={(e) => console.log(e.detail)}
+	on:moved={(e) => console.log(e.detail)}
+	bind:dragAndDrop
+	{showContexMenu}
+	expandCallback={callback}
+	beforeMovedCallback={beforeCallback}
+>
+	{node.nodePath} p: {node.__priority} t: {node.title}
 
-		<svelte:fragment slot="context-menu" let:node>
-
-			<MenuOption text={node.nodePath} isDisabled></MenuOption>
-			<MenuDivider/>
-			<MenuOption text="alert object" on:click={alert(JSON.stringify(node))}></MenuOption>
-
-
-		</svelte:fragment>
-	</TreeView>
+	<svelte:fragment slot="context-menu" let:node>
+		<MenuOption text={node.nodePath} isDisabled />
+		<MenuDivider />
+		<MenuOption text="alert object" on:click={alert(JSON.stringify(node))} />
+		<MenuOption text="delete node" on:click={handleClick(node)} />
+	</svelte:fragment>
+</TreeView>
 
 <style>
 </style>
