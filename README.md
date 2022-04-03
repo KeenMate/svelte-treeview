@@ -42,15 +42,20 @@ TODO: add some example
 
 ## context menu
 
-To enable context menu you first need to add your desired context menu to slot named context-menu. you can accest clicked node with let:node. You can use MenuDivider and MenuOption from this package to easy creation of ctxmenu. Set showContexMenu to true and context menu will now show when you right click on node.
+To enable context menu you first need to add your desired context menu to slot named context-menu. you can accest clicked node with let:node. You can use MenuDivider and MenuOption from this package to easy creation of ctxmenu.Then just set **showContexMenu** to true and context menu will now be showen when you right click on node.
 
 example:
 ```js
-	<svelte:fragment slot="context-menu" let:node>
-		<MenuOption text={node.nodePath} isDisabled />
-		<MenuDivider />
-		<MenuOption text="do stuff" on:click={doStuff(node))} />
-	</svelte:fragment>
 
+<TreeView
+...
+>
+...
+<svelte:fragment slot="context-menu" let:node>
+  <MenuOption text={node.nodePath} isDisabled />
+  <MenuDivider />
+  <MenuOption text="do stuff" on:click={(node) => doStuff(node)} />
+</svelte:fragment>
+<TreeView>
 ```
 
