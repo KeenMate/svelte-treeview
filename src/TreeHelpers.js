@@ -7,8 +7,8 @@
 		return nodePath.substring(0, nodePath.lastIndexOf("."));
 	}
 
-	export function hasChildren(tree, nodePath) {
-		return tree.find((x) => getParentNodePath(x.nodePath) === nodePath);
+	export function hasChildren(tree, nodePath,propNames) {
+		return tree.find((x) => getParentNodePath(x[propNames.nodePathProperty]) === nodePath);
 	}
 
 	export function nodePathIsChild(nodePath) {
@@ -21,7 +21,7 @@
 		);
 	}
 
-	export function allCHildren(tree, parentId, isChild) {
+	export function allCHildren(tree, parentId, isChild,propNames) {
 		let children;
 		children = tree.filter((x) => {
 			if (!parentId) {
@@ -29,49 +29,49 @@
 				return !isChild(x);
 			} else {
 				return (
-					x.nodePath.startsWith(parentId.toString()) && x.nodePath != parentId
+					x[propNames.nodePathProperty].startsWith(parentId.toString()) && x[propNames.nodePathProperty] != parentId
 				);
 			}
 		});
 		return children;
 	}
 
-	export function getAllLeafNodes(tree) {
+	export function getAllLeafNodes(tree,propNames) {
 		return tree.filter((x) => {
-			return x.hasChildren == undefined || x.hasChildren == false;
+			return x[propNames.hasChildrenProperty] == undefined || x[propNames.hasChildrenProperty] == false;
 		});
 	}
 
-	export function joinTrees(filteredTree, tree) {
+	export function joinTrees(filteredTree, tree,propNames) {
 		return tree.map(
 			(tnode) =>
-				filteredTree.find((fnode) => tnode.nodePath === fnode.nodePath) || tnode
+				filteredTree.find((fnode) => tnode[propNames.nodePathProperty] === fnode[propNames.nodePathProperty]) || tnode
 		);
 	}
 
 
-	export function changeExpansion(tree, nodePath, expandedProperty) {
+	export function changeExpansion(tree, nodePath, propNames) {
 		return tree.map((x) => {
 			let t = x;
-			if (x.nodePath == nodePath) {
-				t[expandedProperty] = !x[expandedProperty];
+			if (x[propNames.nodePathProperty] == nodePath) {
+				t[propNames.expandedProperty] = !x[propNames.expandedProperty];
 			}
 			return t;
 		});
 	}
 
-	export function OrderByPriority(tree, priorityProp) {
+	export function OrderByPriority(tree, propNames) {
 		tree.sort((a, b) => {
-			if (b[priorityProp] > a[priorityProp]) return -1;
+			if (b[propNames.priorityPropery] > a[propNames.priorityPropery]) return -1;
 			return 1;
 		});
 		return tree;
 	}
 
 
-export function changeEveryExpansion(tree, expandedProperty, changeTo) {
+export function changeEveryExpansion(tree, changeTo,propNames) {
 	return tree.map((node) => {
-		node[expandedProperty] = changeTo;
+		node[propNames.expandedProperty] = changeTo;
 		return node;
 	});
 }
@@ -85,36 +85,36 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		tree,
 		nodePath,
 		isChild,
-		selectedProperty,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	) {
 		if (!recursiveely) {
 			//non recursiveely
 
-			return addOrRemoveSelection(tree, nodePath, selectedProperty);
+			return addOrRemoveSelection(tree, nodePath, propNames);
 		} else {
 			//recursiveely
 
 			//only allow selection if it doesnt have any children
-			tree = addOrRemoveSelection(tree, nodePath, selectedProperty);
+			tree = addOrRemoveSelection(tree, nodePath, propNames);
 			return recomputeAllParentVisualState(
 				tree,
 				nodePath,
 				isChild,
-				selectedProperty,
 				getParentId,
-				filteredTree
+				filteredTree,
+				propNames
 			);
 		}
 	}
 
-	function addOrRemoveSelection(tree, nodePath, selectedProperty) {
+	function addOrRemoveSelection(tree, nodePath, propNames) {
 		return tree.map((x) => {
 			let t = x;
-			if (x.nodePath == nodePath) {
-				t[selectedProperty] = !x[selectedProperty];
-				t.__visual_state = !x[selectedProperty];
+			if (x[propNames.nodePathProperty] == nodePath) {
+				t[propNames.selectedProperty] = !x[propNames.selectedProperty];
+				t.__visual_state = !x[propNames.selectedProperty];
 			}
 			return t;
 		});
@@ -124,29 +124,29 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		tree,
 		parentId,
 		isChild,
-		selectedProperty,
 		changeTo,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	) {
 		tree = tree.map((x) => {
 			//changes itself
-			if (parentId == x.nodePath) {
-				x = changeSelectedIfNParent(x, selectedProperty, changeTo);
+			if (parentId == x[propNames.nodePathProperty]) {
+				x = changeSelectedIfNParent(x, changeTo,propNames);
 			}
 
 			if (!parentId) {
 				//top level
 				if (!isChild(x)) {
-					x = changeSelectedIfNParent(x, selectedProperty, changeTo);
+					x = changeSelectedIfNParent(x,changeTo,propNames);
 				}
 			} else {
 				//if parentId isnt root
 				if (
-					x.nodePath.startsWith(parentId.toString()) &&
-					x.nodePath != parentId.toString()
+					x[propNames.nodePathProperty].startsWith(parentId.toString()) &&
+					x[propNames.nodePathProperty] != parentId.toString()
 				) {
-					x = changeSelectedIfNParent(x, selectedProperty, changeTo);
+					x = changeSelectedIfNParent(x,changeTo,propNames);
 				}
 			}
 			return x;
@@ -155,17 +155,17 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 			tree,
 			parentId,
 			isChild,
-			selectedProperty,
 			getParentId,
-			filteredTree
+			filteredTree,
+			propNames
 		);
 		return tree;
 	}
 
 	//changes selectedproperty or visual state depending on
-	function changeSelectedIfNParent(node, selectedProperty, changeTo) {
-		if (!node.hasChildren) {
-			node[selectedProperty] = changeTo;
+	function changeSelectedIfNParent(node, changeTo,propNames) {
+		if (!node[propNames.hasChildrenProperty]) {
+			node[propNames.selectedProperty] = changeTo;
 		} else {
 			node.__visual_state = changeTo.toString();
 		}
@@ -176,12 +176,12 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		filteredTree,
 		node,
 		isChild,
-		selectedProperty,
-		getParentId
+		getParentId,
+		propNames
 	) {
 		let children = getParentChildrenTree(
 			filteredTree,
-			node.nodePath,
+			node[propNames.nodePathProperty],
 			isChild,
 			getParentId
 		);
@@ -191,7 +191,7 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		//if every child is selected or vs=true return true
 		if (
 			children.every((x) => {
-				return x[selectedProperty] === true || x.__visual_state === "true";
+				return x[propNames.selectedProperty] === true || x.__visual_state === "true";
 			})
 		) {
 			return "true";
@@ -200,7 +200,7 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		else if (
 			children.some((x) => {
 				return (
-					x[selectedProperty] === true ||
+					x[propNames.selectedProperty] === true ||
 					x.__visual_state === "indeterminate" ||
 					x.__visual_state === "true"
 				);
@@ -217,21 +217,21 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		tree,
 		nodePath,
 		isChild,
-		selectedProperty,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	) {
 		let parent = getParentId({ nodePath: nodePath });
 
 		let newstate;
 		filteredTree.forEach((x) => {
-			if (x.nodePath == parent) {
+			if (x[propNames.nodePathProperty] == parent) {
 				newstate = getVisualState(
 					filteredTree,
 					x,
 					isChild,
-					selectedProperty,
-					getParentId
+					getParentId,
+					propNames
 				);
 				x.__visual_state = newstate;
 				console.log("recomputing" + parent + " ->" + newstate);
@@ -242,9 +242,9 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 				tree,
 				parent,
 				isChild,
-				selectedProperty,
 				getParentId,
-				filteredTree
+				filteredTree,
+				propNames
 			);
 		}
 		return tree;
@@ -254,27 +254,27 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 	export function computeInitialVisualStates(
 		tree,
 		isChild,
-		selectedProperty,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	) {
 		let rootELements = getParentChildrenTree(tree, null, isChild, getParentId);
 		rootELements.forEach((x) => {
-			if (x.hasChildren == true) {
+			if (x[propNames.hasChildrenProperty] == true) {
 				tree = computeChildrenVisualStates(
 					tree,
 					x,
 					isChild,
-					selectedProperty,
 					getParentId,
-					filteredTree
+					filteredTree,
+					propNames
 				);
 				x.__visual_state = getVisualState(
 					filteredTree,
 					x,
 					isChild,
-					selectedProperty,
-					getParentId
+					getParentId,
+					propNames
 				);
 			}
 		});
@@ -285,43 +285,43 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		tree,
 		node,
 		isChild,
-		selectedProperty,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	) {
 		let children = getParentChildrenTree(
 			tree,
-			node.nodePath,
+			node[propNames.nodePathProperty],
 			isChild,
 			getParentId
 		);
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
-			if (x.hasChildren == true) {
+			if (x[propNames.hasChildrenProperty] == true) {
 				tree = computeChildrenVisualStates(
 					tree,
 					x,
 					isChild,
-					selectedProperty,
 					getParentId,
-					filteredTree
+					filteredTree,
+					propNames
 				);
 				x.__visual_state = getVisualState(
 					filteredTree,
 					x,
 					isChild,
-					selectedProperty,
-					getParentId
+					getParentId,
+					propNames
 				);
 			}
 		});
 		return tree;
 	}
 
-	export function deleteSelected(tree) {
+	export function deleteSelected(tree,propNames) {
 		return tree.map((t) => {
 			let x = t;
-			x.__selected = false;
+			x[propNames.selectedProperty] = false;
 			x.__visual_state = "false";
 			return x;
 		});
@@ -346,8 +346,7 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		targetNodePath,
 		isChild,
 		nest,
-		priorityProp,
-		expandedProperty
+		propNames
 	) {
 		// if you are not nesting, you want to be on same level
 		let parentNodePath = !nest
@@ -365,39 +364,39 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		if (!insideParent) {
 			newParrentNodePath =
 				(parentNodePath ? parentNodePath + "." : "") +
-				getNextNodeId(tree, parentNodePath, isChild);
+				getNextNodeId(tree, parentNodePath, isChild,propNames);
 		}
 
 		//* find target node
-		let targetNode = tree.find((x) => x.nodePath == targetNodePath);
+		let targetNode = tree.find((x) => x[propNames.nodePathProperty] == targetNodePath);
 		let movedNode;
 
 		console.log("parentNodePath: " + newParrentNodePath);
 
 		tree = tree.map((node) => {
 			//make sure that parent's haschild is set to true, so that children
-			if (node.nodePath == parentNodePath) {
-				node.hasChildren = true;
-				node[expandedProperty] = true;
+			if (node[propNames.nodePathProperty] == parentNodePath) {
+				node[propNames.hasChildrenProperty] = true;
+				node[propNames.expandedProperty] = true;
 			}
 
 			//move moved nodes to new location ( if location is being changed)
-			if (!insideParent && node.nodePath.startsWith(movedNodePath)) {
+			if (!insideParent && node[propNames.nodePathProperty].startsWith(movedNodePath)) {
 				//replace old parent with new
-				let newPath = node.nodePath.replace(movedNodePath, newParrentNodePath);
-				console.log(node.nodePath + " -> " + newPath);
-				node.nodePath = newPath;
+				let newPath = node[propNames.nodePathProperty].replace(movedNodePath, newParrentNodePath);
+				console.log(node[propNames.nodePathProperty] + " -> " + newPath);
+				node[propNames.nodePathProperty] = newPath;
 			}
 
 			//if it is moved node
-			if (node.nodePath == newParrentNodePath) {
+			if (node[propNames.nodePathProperty] == newParrentNodePath) {
 				movedNode = node;
 
-				if (nest || targetNode[priorityProp] != null) {
+				if (nest || targetNode[propNames.priorityPropery] != null) {
 					let newpriority = 0;
 					if (!nest) {
 						//calculate next
-						newpriority = (targetNode[priorityProp] ?? 0) + 1;
+						newpriority = (targetNode[propNames.priorityPropery] ?? 0) + 1;
 					}
 
 					console.log("new priority:" + newpriority);
@@ -407,35 +406,36 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 						parentNodePath,
 						newParrentNodePath,
 						newpriority,
-						priorityProp,
-						isChild
+						isChild,
+						propNames
 					);
 
-					node[priorityProp] = newpriority;
+					node[propNames.priorityPropery] = newpriority;
 				} else {
 					//so old priority doesnt mess up orderring
-					movedNode[priorityProp] = undefined;
+					movedNode[propNames.priorityPropery] = undefined;
 				}
 			}
 			return node;
 		});
 
 		//* insert node at right possition of array
-		let oldIndex = tree.findIndex((x) => x.nodePath == newParrentNodePath);
+		let oldIndex = tree.findIndex((x) => x[propNames.nodePathProperty] == newParrentNodePath);
 		tree.splice(oldIndex, 1);
 
-		let index = tree.findIndex((x) => x.nodePath == targetNode.nodePath);
+		let index = tree.findIndex((x) => x[propNames.nodePathProperty] == targetNode[propNames.nodePathProperty]);
 		tree.splice(index + 1, 0, movedNode);
 
 		//hide plus icon if parrent of moved node doesnt have any more children
 		let movedNodeParrent = tree.find(
-			(x) => x.nodePath == getParentNodePath(movedNodePath)
+			(x) => x[propNames.nodePathProperty] == getParentNodePath(movedNodePath)
 		);
 		if (
 			movedNodeParrent &&
-			!allCHildren(tree, movedNodeParrent.nodePath, isChild).length
+			!allCHildren(tree, movedNodeParrent[propNames.nodePathProperty], isChild,
+				propNames).length
 		) {
-			movedNodeParrent.hasChildren = false;
+			movedNodeParrent[propNames.hasChildrenProperty] = false;
 		}
 
 		return tree;
@@ -448,28 +448,28 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 		parentNode,
 		movedNodePath,
 		insertedPriority,
-		priorityProp,
-		isChild
+		isChild,
+		propNames
 	) {
 		let nextPriority = insertedPriority + 1;
 		OrderByPriority(
-			allCHildren(tree, parentNode, isChild),
-			priorityProp
+			allCHildren(tree, parentNode, isChild,propNames),
+			propNames
 		).forEach((n) => {
-			if (n[priorityProp] >= insertedPriority && n.nodePath != movedNodePath) {
-				n[priorityProp] = nextPriority++;
+			if (n[propNames.priorityPropery] >= insertedPriority && n[propNames.nodePathProperty] != movedNodePath) {
+				n[propNames.priorityPropery] = nextPriority++;
 			}
 		});
 	}
 
 	//return biggest value of nodepath number that children are using +1
-	function getNextNodeId(tree, parentPath, isChild) {
+	function getNextNodeId(tree, parentPath, isChild,propNames) {
 		let max = 0;
 		//findes biggest nodeNumber for
-		allCHildren(tree, parentPath, isChild).forEach((node) => {
-			let parent = getParentNodePath(node.nodePath);
+		allCHildren(tree, parentPath, isChild,propNames).forEach((node) => {
+			let parent = getParentNodePath(node[propNames.nodePathProperty]);
 			if (parent == parentPath) {
-				let num = node.nodePath.substring(parent ? parent.length + 1 : 0);
+				let num = node[propNames.nodePathProperty].substring(parent ? parent.length + 1 : 0);
 				if (parseInt(num) >= parseInt(max)) max = num;
 			}
 		});
@@ -481,11 +481,11 @@ export function changeEveryExpansion(tree, expandedProperty, changeTo) {
 //#region searching
 
 //return filtered tree
-export function searchTree(tree, filterFunction, recursive) {
+export function searchTree(tree, filterFunction, recursive,propNames) {
 	let result = [],
 		matchingNodes = [];
 	if (recursive) {
-		matchingNodes = getAllLeafNodes(tree).filter(filterFunction);
+		matchingNodes = getAllLeafNodes(tree,propNames).filter(filterFunction);
 	} else {
 		matchingNodes = tree.filter(filterFunction);
 	}
@@ -498,11 +498,11 @@ export function searchTree(tree, filterFunction, recursive) {
 	return result;
 }
 
-function addParents(tree, result, node) {
+function addParents(tree, result, node,propNames) {
 	let parentsIds = [],
 		parentNodes = [];
 	if (result === undefined) result = [];
-	let nodePath = node.nodePath;
+	let nodePath = node[propNames.nodePathProperty];
 	while (nodePath.length > 0) {
 		nodePath = getParentNodePath(nodePath);
 		parentsIds.push(nodePath);
@@ -512,7 +512,7 @@ function addParents(tree, result, node) {
 	tree.forEach((n) => {
 		if (
 			parentsIds.some((parentId) => {
-				return n.nodePath === parentId;
+				return n[propNames.nodePathProperty] === parentId;
 			})
 		) {
 			parentNodes.push(n);
@@ -522,7 +522,7 @@ function addParents(tree, result, node) {
 	parentNodes.forEach((n) => {
 		if (
 			result.findIndex((x) => {
-				return n.nodePath === x.nodePath;
+				return n[propNames.nodePathProperty] === x[propNames.nodePathProperty];
 			}) < 0
 		)
 			result.push(n);

@@ -1,6 +1,7 @@
 # Svelte Treeview
 
 The most elaborate treeview for svelte on earth (or even in galaxy)
+
 ## Props
 
  - **tree** (array of nodes, default: *null*)
@@ -12,6 +13,8 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
  - **leafNodeCheckboxesOnly** ( bool, default: *false*)
  - **disableOrHide** (bool, default: *false*)
  - **dragAndDrop** (bool, default: *false*)
+ - **nodePathProperty** (string, default: *"nodePath"*)
+ - **hasChildrenProperty** (string, default: *"hasChildren"*)
  - **expandedProperty** (string, default: *"__expanded"*)
  - **selectedProperty** (string, default: *"__selected"*)
  - **usecallbackPropery** (string, default: *"__useCallback"*)
@@ -33,7 +36,7 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
 - **expanded** { node }
 - **closed** { node }
-- **moved**  { oldParent: Node, oldNode: Node, NewNode: Node,targetNode: Node,nest: bool} = fires when user moved node with drag and drog 
+- **moved**  { oldParent: Node, oldNode: Node, newNode: Node,targetNode: Node,nest: bool} = fires when user moved node with drag and drog 
 - **selection** { node: node,value: bool }  = fired when user clicks on checkbox
 - **selected** {node }
 - **unselected** {node }
@@ -122,6 +125,8 @@ example:
 ```js
 
 <TreeView
+...
+showContexMenu 
 ...
 >
 ...

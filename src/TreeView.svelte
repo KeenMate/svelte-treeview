@@ -31,11 +31,6 @@
 	export let disableOrHide = false; //bool
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
-	//properties
-	export let expandedProperty = "__expanded";
-	export let selectedProperty = "__selected";
-	export let useCallbackPropery = "__useCallback";
-	export let priorityPropery = "__priority";
 	//classes for customization of tree
 	export let treeClass = "",
 		nodeClass = "",
@@ -43,8 +38,8 @@
 		collapsedToggleClass = "";
 	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
-	export let inserLineClass = ""
-	export let inserLineNestClass = ""
+	export let inserLineClass = "";
+	export let inserLineNestClass = "";
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
@@ -52,9 +47,31 @@
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
 
-	export let getId = (x) => x.nodePath;
-	export let getParentId = (x) => getParentNodePath(x.nodePath);
-	export let isChild = (x) => nodePathIsChild(x.nodePath);
+	//* properties
+	export let nodePathProperty = "nodePath";
+	export let hasChildrenProperty = "hasChildren";
+	export let expandedProperty = "__expanded";
+	export let selectedProperty = "__selected";
+	export let useCallbackPropery = "__useCallback";
+	export let priorityPropery = "__priority";
+
+	let propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
+	$: propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
+	function getPropsObject(nodePath,hasChildren, expanded,selected,useCallback,priority){
+		return {
+		nodePathProperty: nodePath,
+		expandedProperty: expanded,
+		selectedProperty: selected,
+		useCallbackPropery: useCallback,
+		priorityPropery: priority,
+		hasChildrenProperty: hasChildren
+	}
+	}
+
+	export let getId = (x) => x[propNames.nodePathProperty];
+	export let getParentId = (x) =>
+		getParentNodePath(x[propNames.nodePathProperty]);
+	export let isChild = (x) => nodePathIsChild(x[propNames.nodePathProperty]);
 
 	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
@@ -74,7 +91,6 @@
 
 	//
 	let ctxMenu;
-
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
 
 	$: parentChildrenTree = OrderByPriority(
@@ -89,13 +105,14 @@
 	$: ComputeVisualTree(filteredTree);
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
 
+
 	function ComputeVisualTree(filteredTree) {
 		tree = computeInitialVisualStates(
 			tree,
 			isChild,
-			selectedProperty,
 			getParentId,
-			filteredTree
+			filteredTree,
+			propNames
 		);
 	}
 
@@ -107,17 +124,25 @@
 	}
 
 	function toggleExpansion(node, setValueTo = null) {
-		tree = changeExpansion(tree, node.nodePath, expandedProperty);
+		tree = changeExpansion(
+			tree,
+			node[propNames.nodePathProperty],
+			propNames
+		);
 
-		let val = node[expandedProperty];
+		let val = node[propNames.expandedProperty];
 
 		//trigger callback if it is present and node has useCallbackPropery
-		if (val && expandCallback != null && node[useCallbackPropery] == true) {
+		if (
+			val &&
+			expandCallback != null &&
+			node[propNames.useCallbackPropery] == true
+		) {
 			console.log("calling callback");
 			fetchNodeDataAsync(node)
 				.then((val) => {
 					tree = tree.concat(val);
-					node[useCallbackPropery] = false;
+					node[propNames.useCallbackPropery] = false;
 				})
 				.catch((reason) => {
 					console.log("ERROR IN CALLBACK!!");
@@ -127,14 +152,14 @@
 
 		//expansion events
 		dispatch("expansion", {
-			node: node.nodePath,
+			node: node[propNames.nodePathProperty],
 			value: val,
 		});
 
 		if (val) {
-			dispatch("expanded", node.nodePath);
+			dispatch("expanded", node[propNames.nodePathProperty]);
 		} else {
-			dispatch("closed", node.nodePath);
+			dispatch("closed", node[propNames.nodePathProperty]);
 		}
 	}
 
@@ -162,11 +187,11 @@
 		tree = ChangeSelection(
 			recursive,
 			tree,
-			node.nodePath,
+			node[propNames.nodePathProperty],
 			isChild,
-			selectedProperty,
 			getParentId,
-			filteredTree
+			filteredTree,
+			propNames
 		);
 		selectionEvents(node);
 	}
@@ -175,18 +200,18 @@
 	function selectChildren(node, e) {
 		tree = ChangeSelectForAllChildren(
 			tree,
-			node.nodePath,
+			node[propNames.nodePathProperty],
 			isChild,
-			selectedProperty,
 			e.target.checked,
 			getParentId,
-			filteredTree
+			filteredTree,
+			propNames
 		);
 		selectionEvents(node);
 	}
 
 	function selectionEvents(node) {
-		let val = node[selectedProperty];
+		let val = node[propNames.selectedProperty];
 		dispatch("selection", {
 			node: node,
 			value: val,
@@ -202,10 +227,10 @@
 
 	//#region drag and drop
 	function handleDragStart(e, node) {
-		console.log("dragstart from: " + node.nodePath);
+		console.log("dragstart from: " + node[propNames.nodePathProperty]);
 		e.dataTransfer.dropEffect = "move";
-		e.dataTransfer.setData("node_id", node.nodePath);
-		draggedPath = node.nodePath;
+		e.dataTransfer.setData("node_id", node[propNames.nodePathProperty]);
+		draggedPath = node[propNames.nodePathProperty];
 	}
 
 	function handleDragDrop(e, node) {
@@ -213,7 +238,9 @@
 		highlightedNode = null;
 		if (!dragAndDrop) return;
 		draggedPath = e.dataTransfer.getData("node_id");
-		console.log(draggedPath + " dropped on: " + node.nodePath);
+		console.log(
+			draggedPath + " dropped on: " + node[propNames.nodePathProperty]
+		);
 
 		//important to check if timetonest is set, otherwise you could spend 30 minutes fixing this shit :)
 		if (timeToNest) {
@@ -221,11 +248,13 @@
 				(dragenterTimestamp ? new Date() - dragenterTimestamp : 1) > timeToNest;
 		}
 
-		let newNode = tree.find((n) => n.nodePath == draggedPath);
+		let newNode = tree.find(
+			(n) => n[propNames.nodePathProperty] == draggedPath
+		);
 
 		let oldNode = { ...newNode };
 		let oldParent = tree.find(
-			(n) => n.nodePath == getParentNodePath(draggedPath)
+			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 		);
 
 		//callback can cancell move
@@ -235,17 +264,16 @@
 		tree = moveNode(
 			tree,
 			draggedPath,
-			node.nodePath,
+			node[propNames.nodePathProperty],
 			isChild,
 			canNest,
-			priorityPropery,
-			expandedProperty
+			propNames
 		);
 
 		dispatch("moved", {
 			oldParent: oldParent,
 			oldNode: oldNode,
-			NewNode: newNode,
+			newNode: newNode,
 			targetNode: node,
 			nest: canNest,
 		});
@@ -269,7 +297,10 @@
 		}
 
 		//if you arent dropping parent to child allow drop
-		if (dragAndDrop && !node.nodePath.startsWith(draggedPath)) {
+		if (
+			dragAndDrop &&
+			!node[propNames.nodePathProperty].startsWith(draggedPath)
+		) {
 			validTarget = true;
 			e.preventDefault();
 		} else {
@@ -309,7 +340,9 @@
 	function openContextMenu(e, node) {
 		if (!showContexMenu) return;
 		e.preventDefault();
-		console.log("openning context menu from: " + node.nodePath);
+		console.log(
+			"openning context menu from: " + node[propNames.nodePathProperty]
+		);
 		ctxMenu.onRightClick(e, node);
 	}
 
@@ -319,9 +352,9 @@
 	tree = computeInitialVisualStates(
 		tree,
 		isChild,
-		selectedProperty,
 		getParentId,
-		filteredTree
+		filteredTree,
+		propNames
 	);
 </script>
 
@@ -333,7 +366,7 @@
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
 			class:is-child={isChild(node)}
-			class:has-children={node.hasChildren}
+			class:has-children={node[propNames.hasChildrenProperty]}
 			on:contextmenu|stopPropagation={(e) => {
 				childDepth == 0
 					? openContextMenu(e, node)
@@ -341,13 +374,18 @@
 			}}
 		>
 			<div
-				class="tree-item {validTarget &&
+				class="tree-item {highlightedNode &&
+				validTarget &&
 				canNest &&
-				highlightedNode?.nodePath == node.nodePath
+				highlightedNode[propNames.nodePathProperty] ==
+					node[propNames.nodePathProperty]
 					? expandClass
 					: ''} {nodeClass}"
-				class:div-has-children={node.hasChildren}
-				class:hover={validTarget && highlightedNode?.nodePath == node.nodePath}
+				class:div-has-children={node[propNames.hasChildrenProperty]}
+				class:hover={validTarget &&
+					highlightedNode &&
+					highlightedNode[propNames.nodePathProperty] ==
+						node[propNames.nodePathProperty]}
 				draggable={dragAndDrop}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
@@ -355,14 +393,14 @@
 				on:dragenter={(e) => handleDragEnter(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
-				{#if node.hasChildren}
+				{#if node[propNames.hasChildrenProperty]}
 					<span on:click={() => toggleExpansion(node)}>
 						<i
-							class="far {node[expandedProperty]
+							class="far {node[propNames.expandedProperty]
 								? expandedToggleClass
 								: collapsedToggleClass}"
-							class:fa-minus-square={node[expandedProperty]}
-							class:fa-plus-square={!node[expandedProperty]}
+							class:fa-minus-square={node[propNames.expandedProperty]}
+							class:fa-plus-square={!node[propNames.expandedProperty]}
 						/>
 					</span>
 				{:else}
@@ -370,12 +408,12 @@
 				{/if}
 				{#if checkboxes}
 					{#if recursive}
-						{#if !hasChildren(tree, node.nodePath)}
+						{#if !hasChildren(tree, node[propNames.nodePathProperty],propNames)}
 							<input
 								type="checkbox"
 								id={getNodeId(node)}
 								on:change={() => selectionChanged(node)}
-								checked={node[selectedProperty] ? "false" : ""}
+								checked={node[propNames.selectedProperty] ? "false" : ""}
 							/>
 						{:else if !leafNodeCheckboxesOnly}
 							<input
@@ -408,24 +446,26 @@
 							type="checkbox"
 							id={getNodeId(node)}
 							on:change={() => selectionChanged(node)}
-							checked={node[selectedProperty] ? "false" : ""}
+							checked={node[propNames.selectedProperty] ? "false" : ""}
 						/>
 					{/if}
 				{/if}
 				<slot {node} />
 			</div>
 
-			{#if validTarget && canNest && highlightedNode?.nodePath == node.nodePath}
+			{#if validTarget && canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
-					<div class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}" />
+					<div
+						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
+					/>
 				</div>
 			{/if}
 			<!-- {@debug node} -->
 			<!--{@debug $_expansionState}-->
-			{#if node[expandedProperty] && node.hasChildren}
-				<!--tree={tree/*.filter(x => x.nodePath.startsWith(node.nodePath) && x.nodePath !== node.nodePath)*/} -->
+			{#if node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
+				<!--tree={tree/*.filter(x => x[propNames.nodePathProperty].startsWith(node[propNames.nodePathProperty]) && x[propNames.nodePathProperty] !== node[propNames.nodePathProperty])*/} -->
 				<svelte:self
-					nodePath={node.nodePath}
+					nodePath={node[propNames.nodePathProperty]}
 					{treeId}
 					{getId}
 					{checkboxes}
@@ -462,11 +502,11 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if node[expandedProperty] != true && node.hasChildren}
+			{#if node[propNames.expandedProperty] != true && node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if validTarget && !canNest && highlightedNode?.nodePath == node.nodePath}
+			{#if validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
