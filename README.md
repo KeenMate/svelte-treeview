@@ -1,7 +1,6 @@
 # Svelte Treeview
 
-customizable svelte component for treeview
-
+The most elaborate treeview for svelte on earth (or even in galaxy)
 ## Props
 
  - **tree** (array of nodes, default: *null*)
@@ -38,7 +37,8 @@ customizable svelte component for treeview
 - **unselected** {node }
 
 ## drag and drop
-TODO: add some example 
+
+After setting dragAndDrop to true, you will be able to changing order of nodes and moving them between nodes. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after at least one of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, moved will be cancelled.    New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest and as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).
 
 ## context menu
 
