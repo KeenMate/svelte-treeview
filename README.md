@@ -48,7 +48,7 @@ example:
 let tree = [
   { nodePath: "1"},
   { nodePath: "2"},
-  { nodePath: "3" hasChildren: true},
+  { nodePath: "3", hasChildren: true},
   { nodePath: "3.1"},
   { nodePath: "3.2", hasChildren: true},
   { nodePath: "3.2.1"},
@@ -70,6 +70,41 @@ let tree = [
 ```
 
 ## callbacks
+
+To dynamicly load data, you have to hase hasChildren(to show + icon) and **usecallbackPropery** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as paramentr. Function should return array of nodes, that will be added to tree. **usecallbackPropery** will be then set to false, so that callback will only be called once.
+
+example:
+```js
+let tree = [
+  { nodePath: "1",__useCallback: true,},
+  { nodePath: "2",__useCallback: true,},
+  { nodePath: "3", hasChildren: true},
+  { nodePath: "3.1"},
+  { nodePath: "3.2", hasChildren: true},
+  { nodePath: "3.2.1"},
+  { nodePath: "3.2.2"},
+  { nodePath: "3.2.3" },
+  { nodePath: "3.2.4"},
+  { nodePath: "3.3",__useCallback: true,}
+]
+let num =0
+...
+<TreeView
+	bind:tree
+	treeId="tree"
+	let:node
+	expandCallback={(n) => {
+    return [ 
+			{nodePath: n.nodePath + "." + ++num,
+				__useCallback: true,hasChildren: true,}
+      ]
+  }}
+>
+	{node.nodePath}
+
+</TreeView>
+
+```
 
 ## selection
 

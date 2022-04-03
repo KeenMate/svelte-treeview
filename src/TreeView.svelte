@@ -34,7 +34,7 @@
 	//properties
 	export let expandedProperty = "__expanded";
 	export let selectedProperty = "__selected";
-	export let usecallbackPropery = "__useCallback";
+	export let useCallbackPropery = "__useCallback";
 	export let priorityPropery = "__priority";
 	//classes for customization of tree
 	export let treeClass = "",
@@ -112,12 +112,12 @@
 		let val = node[expandedProperty];
 
 		//trigger callback if it is present and node has useCallbackPropery
-		if (val && expandCallback != null && node[usecallbackPropery] == true) {
+		if (val && expandCallback != null && node[useCallbackPropery] == true) {
 			console.log("calling callback");
 			fetchNodeDataAsync(node)
 				.then((val) => {
 					tree = tree.concat(val);
-					node[usecallbackPropery] = false;
+					node[useCallbackPropery] = false;
 				})
 				.catch((reason) => {
 					console.log("ERROR IN CALLBACK!!");
