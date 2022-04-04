@@ -1,6 +1,6 @@
 # Svelte Treeview
 
-The most elaborate treeview for svelte on earth (or even in galaxy)
+The most elaborate treeview for svelte on earth (or even in galaxy). 
 
 ## Props
 
@@ -43,6 +43,18 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
 - **selected** {node }
 - **unselected** {node }
 
+## Helper functions
+- **searchTree** (tree, filterFunction, recursive,propNames) = function that will filter tree using filterFunction and adds all parent so that it can render. If recursive is true, it will only search through "lef nodes" (nodes that dont have children)
+- **mergeTrees** (oldTree,addedTree,nodePathProperty="nodePath") = will merge new tree into old one, so that expanded, etc. wont be reseted.
+
+usage:
+```js 
+	import {TreeView,mergeTrees} from "../index.js";
+
+  tree = mergeTrees(tree,treeToAdd);
+
+  filteredTree = searchTree(tree, filterFunction, recursive,propNames)
+```
 ## basic usage
 
 You need to provide treeId and tree, that is array of node where every node has nodepath defined. Parent nodes have to have hasChildren set to true. Next you have to set a default slot with how you want you nodes to be rendered.You can add your own props to nodes and used them here in  events, contextmenus and callbacks. Treeview uses **expandedProperty** to determine expansion.
@@ -50,7 +62,7 @@ You need to provide treeId and tree, that is array of node where every node has 
 example:
 
 ```js
-import TreeView from "svelte-treeview"
+import {TreeView} from "svelte-treeview"
 let tree = [
   { nodePath: "1"},
   { nodePath: "2"},

@@ -1,3 +1,4 @@
+	import orderBy from "lodash.unionby"
 	//#region helpers
 	/* Tree view helpers */
 
@@ -47,6 +48,10 @@
 			(tnode) =>
 				filteredTree.find((fnode) => tnode[propNames.nodePathProperty] === fnode[propNames.nodePathProperty]) || tnode
 		);
+	}
+
+	export function mergeTrees(oldTree,addedTree,nodePathProperty="nodePath"){
+		return orderBy(addedTree, oldTree, nodePathProperty);
 	}
 
 

@@ -1,3 +1,3 @@
 
 export {default as TreeView} from "./src/Treeview.svelte"
-export {searchTree} from "./src/TreeHelpers"
+export {searchTree,mergeTrees} from "./src/TreeHelpers"

@@ -1,5 +1,5 @@
 <script>
-	import TreeView from "../src/TreeView.svelte";
+	import {TreeView,mergeTrees} from "../index.js";
 
 	import MenuDivider from "../src/MenuDivider.svelte";
 	import MenuOption from "../src/MenuOption.svelte";
@@ -17,6 +17,48 @@
 		{ nodePath: "2", title: "2" },
 
 		{ nodePath: "3", title: "3", hasChildren: true, __expanded: true },
+		// { nodePath: "3.1", title: "Hecarim" },
+		// { nodePath: "3.2", title: "3.2", hasChildren: true, __expanded: false },
+		// {
+		// 	nodePath: "3.2.2",
+		// 	title: "Visage",
+		// 	__expanded: true,
+		// 	__selected: true,
+		// 	test: "test223",
+		// },
+		// {
+		// 	nodePath: "3.2.3",
+		// 	title: "Lycan",
+		// 	__expanded: true,
+		// 	__selected: true,
+		// 	test: "test223",
+		// },
+		// {
+		// 	nodePath: "3.2.4",
+		// 	title: "Bloodseeker",
+		// 	__expanded: true,
+		// 	__selected: true,
+		// },
+
+		// { nodePath: "3.3", title: "3.3", hasChildren: true, __expanded: true },
+
+		// {
+		// 	nodePath: "3.3.1",
+		// 	title: "3.3.1",
+		// 	__expanded: true,
+		// 	__selected: false,
+		// },
+		{ nodePath: "3.4", title: "	Omniknight" },
+		{ nodePath: "4", hasChildren: true, __expanded: true },
+		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
+		{ nodePath: "4.6", priority: 6, title: "ITEM_2" },
+		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
+		{ nodePath: "4.3", priority: 3, title: "ITEM_4" },
+		{ nodePath: "4.4", priority: 4, title: "ITEM_5" },
+		{ nodePath: "4.5", priority: 10, title: "ITEM_6" },
+	];
+
+	let treeToAdd = [
 		{ nodePath: "3.1", title: "Hecarim" },
 		{ nodePath: "3.2", title: "3.2", hasChildren: true, __expanded: false },
 		{
@@ -48,15 +90,7 @@
 			__expanded: true,
 			__selected: false,
 		},
-		{ nodePath: "3.4", title: "	Omniknight" },
-		{ nodePath: "4", hasChildren: true, __expanded: true },
-		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
-		{ nodePath: "4.6", priority: 6, title: "ITEM_2" },
-		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
-		{ nodePath: "4.3", priority: 3, title: "ITEM_4" },
-		{ nodePath: "4.4", priority: 4, title: "ITEM_5" },
-		{ nodePath: "4.5", priority: 10, title: "ITEM_6" },
-	];
+	]
 	let dragAndDrop = true,
 		showContexMenu = true,
 		enableVerticalLines = false;
@@ -92,12 +126,17 @@
 			} while ${nest ? "nesting" : "not nesting"}`
 		);
 	}
+
+	function addTo() {
+		tree = mergeTrees(tree,treeToAdd)
+	}
 </script>
 
 TreeView drag and drop test
 <input type="checkbox" bind:checked={dragAndDrop} />
 <input type="checkbox" bind:checked={showContexMenu} />
 <input type="checkbox" bind:checked={enableVerticalLines} />
+<button on:click={addTo} > add</button>
 
 	<TreeView
 		bind:tree
