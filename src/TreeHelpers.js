@@ -346,6 +346,7 @@ export function changeEveryExpansion(tree, changeTo,propNames) {
 		targetNodePath,
 		isChild,
 		nest,
+		recalculateNodePath,
 		propNames
 	) {
 		// if you are not nesting, you want to be on same level
@@ -364,8 +365,12 @@ export function changeEveryExpansion(tree, changeTo,propNames) {
 		if (!insideParent) {
 			newParrentNodePath =
 				(parentNodePath ? parentNodePath + "." : "") +
-				getNextNodeId(tree, parentNodePath, isChild,propNames);
+				(recalculateNodePath ?
+					getNextNodeId(tree, parentNodePath, isChild,propNames):
+					movedNodePath.substring(getParentNodePath(movedNodePath) ? getParentNodePath(movedNodePath).length + 1:0));
 		}
+
+		console.log(newParrentNodePath)
 
 		//* find target node
 		let targetNode = tree.find((x) => x[propNames.nodePathProperty] == targetNodePath);

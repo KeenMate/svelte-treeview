@@ -47,6 +47,7 @@
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
 	export let enableVerticalLines = false
+	export let recalculateNodePath = true;
 
 	//* properties
 	export let nodePathProperty = "nodePath";
@@ -260,6 +261,9 @@
 			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 		);
 
+		console.log(oldNode)
+		console.log(oldParent)
+		console.log(node)
 		//callback can cancell move
 		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
 			return;
@@ -270,6 +274,7 @@
 			node[propNames.nodePathProperty],
 			isChild,
 			canNest,
+			recalculateNodePath,
 			propNames
 		);
 

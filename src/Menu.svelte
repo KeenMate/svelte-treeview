@@ -33,7 +33,7 @@
 
 <style>
 	div {
-		position: absolute;
+		position: fixed;
 		display: grid;
 		border: 1px solid #0003;
 		box-shadow: 2px 2px 5px 0px #0002;

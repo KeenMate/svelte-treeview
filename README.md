@@ -31,6 +31,8 @@ The most elaborate treeview for svelte on earth (or even in galaxy)
  - **expandCallback** (function that takes node as argument, default: *null*)
  - **showContexMenu** (bool, default: false)
  - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
+ - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
+ - **recalculateNodePath** (bool,default: false) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
 
 ## Events
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
@@ -48,6 +50,7 @@ You need to provide treeId and tree, that is array of node where every node has 
 example:
 
 ```js
+import TreeView from "svelte-treeview"
 let tree = [
   { nodePath: "1"},
   { nodePath: "2"},
@@ -110,6 +113,8 @@ let num =0
 ```
 
 ## selection
+
+## search
 
 ## drag and drop
 

@@ -87,8 +87,8 @@
 
 	function beforeCallback(node, oldParent, targetNode, nest) {
 		alert(
-			`moved ${node.nodePath} from ${oldParent.nodePath} to ${
-				targetNode.nodePath
+			`moved ${node?.nodePath} from ${oldParent?.nodePath} to ${
+				targetNode?.nodePath
 			} while ${nest ? "nesting" : "not nesting"}`
 		);
 	}
@@ -99,32 +99,31 @@ TreeView drag and drop test
 <input type="checkbox" bind:checked={showContexMenu} />
 <input type="checkbox" bind:checked={enableVerticalLines} />
 
-<TreeView
-	bind:tree
-	treeId="tree"
-	let:node
-	maxExpandedDepth={4}
-	recursive
-	checkboxes
-	bind:filteredTree={tree}
-	on:selection={(e) => console.log(e.detail)}
-	on:expansion={(e) => console.log(e.detail)}
-	on:moved={(e) => console.log(e.detail)}
-	bind:dragAndDrop
-	{showContexMenu}
-	expandCallback={callback}
-	beforeMovedCallback={beforeCallback}
-	{enableVerticalLines}
->
-	{node.nodePath} p: {node.priority} t: {node.title}
+	<TreeView
+		bind:tree
+		treeId="tree"
+		let:node
+		maxExpandedDepth={4}
+		recursive
+		checkboxes
+		bind:filteredTree={tree}
+		on:selection={(e) => console.log(e.detail)}
+		on:expansion={(e) => console.log(e.detail)}
+		on:moved={(e) => console.log(e.detail)}
+		bind:dragAndDrop
+		{showContexMenu}
+		expandCallback={callback}
+		beforeMovedCallback={beforeCallback}
+		{enableVerticalLines}
+	>
+		{node.nodePath} p: {node.priority} t: {node.title}
 
-	<svelte:fragment slot="context-menu" let:node>
-		<MenuOption text={node.nodePath} isDisabled />
-		<MenuDivider />
-		<MenuOption text="alert object" on:click={alert(JSON.stringify(node))} />
-		<MenuOption text="delete node" on:click={handleClick(node)} />
-	</svelte:fragment>
-</TreeView>
-
+		<svelte:fragment slot="context-menu" let:node>
+			<MenuOption text={node.nodePath} isDisabled />
+			<MenuDivider />
+			<MenuOption text="alert object" on:click={alert(JSON.stringify(node))} />
+			<MenuOption text="delete node" on:click={handleClick(node)} />
+		</svelte:fragment>
+	</TreeView>
 <style>
 </style>
