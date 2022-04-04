@@ -83,9 +83,13 @@ export function OrderByPriority(tree, propNames) {
 	return tree;
 }
 
+/**
+ * changes expansion of evry node that has hasChildren set to true
+ */
 export function changeEveryExpansion(tree, changeTo, propNames) {
 	return tree.map((node) => {
-		node[propNames.expandedProperty] = changeTo;
+		if(node[propNames.hasChildrenProperty] == true)
+			node[propNames.expandedProperty] = changeTo;
 		return node;
 	});
 }

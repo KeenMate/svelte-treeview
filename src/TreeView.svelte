@@ -16,6 +16,7 @@
 		ChangeSelectForAllChildren,
 		moveNode,
 		expandToLevel,
+		changeEveryExpansion
 	} from "./TreeHelpers";
 
 	//! required
@@ -197,6 +198,10 @@
 		if (childDepth < parsedMaxExpandedDepth) {
 			expandNodes(parentChildrenTree);
 		}
+	}
+
+	export function changeAllExpansion(changeTo) {
+		tree = changeEveryExpansion(tree,changeTo,propNames)
 	}
 
 	//#endregion

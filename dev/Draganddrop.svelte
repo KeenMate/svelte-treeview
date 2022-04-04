@@ -4,7 +4,6 @@
 	import MenuDivider from "../src/MenuDivider.svelte";
 	import MenuOption from "../src/MenuOption.svelte";
 
-	let num = 0;
 
 	let tree = [
 		{
@@ -91,7 +90,8 @@
 	]
 	let dragAndDrop = true,
 		showContexMenu = true,
-		enableVerticalLines = false;
+		enableVerticalLines = false,
+		num,thisTree;
 
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
@@ -136,7 +136,11 @@ TreeView drag and drop test
 <input type="checkbox" bind:checked={enableVerticalLines} />
 <button on:click={addTo} > add</button>
 
+<button on:click={thisTree.changeAllExpansion(true)} > true</button>
+<button on:click={thisTree.changeAllExpansion(false)} > false</button>
+
 	<TreeView
+	bind:this={thisTree}
 		bind:tree
 		treeId="tree"
 		let:node

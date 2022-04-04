@@ -44,9 +44,31 @@ The most elaborate treeview for svelte on earth (or even in galaxy).
 - **selected** {node }
 - **unselected** {node }
 
+## function on component
+you call them on binded component
+- **changeAllExpansion(changeTo)** = changes expansionn status of every that hasChildren to value you specify
+
+example:
+```js
+let thisTree
+
+
+//...
+<button on:click={thisTree.changeAllExpansion(true)} >expand All</button>
+<button on:click={thisTree.changeAllExpansion(false)} >colapse All</button>
+
+<TreeView
+bind:this={thisTree}
+	bind:tree
+	treeId="tree"
+	let:node
+>
+	{node.nodePath}
+</TreeView>
+```
 ## Helper functions
-- **searchTree** (tree, filterFunction, recursive,propNames) = function that will filter tree using filterFunction and adds all parent so that it can render. If recursive is true, it will only search through "lef nodes" (nodes that dont have children)
-- **mergeTrees** (oldTree,addedTree,nodePathProperty="nodePath") = will merge new tree into old one, so that expanded, etc. wont be reseted.
+- **searchTree(tree, filterFunction, recursive,propNames)**  = function that will filter tree using filterFunction and adds all parent so that it can render. If recursive is true, it will only search through "lef nodes" (nodes that dont have children)
+- **mergeTrees(oldTree,addedTree,nodePathProperty="nodePath")**  = will merge new tree into old one, so that expanded, etc. wont be reseted.
 
 usage:
 ```js 
@@ -76,7 +98,7 @@ let tree = [
   { nodePath: "3.2.4"},
   { nodePath: "3.3"}
 ]
-...
+//...
 
 <TreeView
 	bind:tree
@@ -107,7 +129,7 @@ let tree = [
   { nodePath: "3.3",__useCallback: true,}
 ]
 let num =0
-...
+//...
 <TreeView
 	bind:tree
 	treeId="tree"
@@ -143,11 +165,11 @@ example:
 ```js
 
 <TreeView
-...
+//...
 showContexMenu 
-...
+//...
 >
-...
+//...
 <svelte:fragment slot="context-menu" let:node>
   <MenuOption text={node.nodePath} isDisabled />
   <MenuDivider />
