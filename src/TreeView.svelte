@@ -46,6 +46,7 @@
 	export let expandCallback = null;
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
+	export let enableVerticalLines = false
 
 	//* properties
 	export let nodePathProperty = "nodePath";
@@ -57,16 +58,7 @@
 
 	let propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
 	$: propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
-	function getPropsObject(nodePath,hasChildren, expanded,selected,useCallback,priority){
-		return {
-		nodePathProperty: nodePath,
-		expandedProperty: expanded,
-		selectedProperty: selected,
-		useCallbackPropery: useCallback,
-		priorityPropery: priority,
-		hasChildrenProperty: hasChildren
-	}
-	}
+
 
 	export let getId = (x) => x[propNames.nodePathProperty];
 	export let getParentId = (x) =>
@@ -114,6 +106,17 @@
 			filteredTree,
 			propNames
 		);
+	}
+
+	function getPropsObject(nodePath,hasChildren, expanded,selected,useCallback,priority){
+		return {
+		nodePathProperty: nodePath,
+		expandedProperty: expanded,
+		selectedProperty: selected,
+		useCallbackPropery: useCallback,
+		priorityPropery: priority,
+		hasChildrenProperty: hasChildren
+	}
 	}
 
 	//#region expansions
@@ -360,6 +363,7 @@
 
 <ul
 	class:treeview={childDepth === 0}
+	class:show-lines={childDepth === 0 && enableVerticalLines}
 	class:child-menu={childDepth > 0}
 	class={treeClass}
 >
@@ -526,40 +530,37 @@
 
 	:global
 		.treeview
+			&.show-lines
+				> :first-child
+					padding-left: 1px
+				li
+					border: $treeview-lines
+					border-width: 0 0 1px 1px
+
+					&:last-child > ul
+						border-left: 1px solid white
+					ul
+						border-top: $treeview-lines
+						margin-left: -1px
+						border-left: none
+				.has-children
+					border-bottom: 0px
+
+
 			padding-left: 1em
-
-			> :first-child
-				//border-left: none
-				padding-left: 1px
-
 			ul, li
 				list-style: none
 				margin: 0
 				padding: 0
-
 			ul
-				margin-left: 1.5em
-
+				//margin-left: 1.5em
 			li
-				border: $treeview-lines
-				border-width: 0 0 1px 1px
 				//padding: 0.3em 0
-
-
-				&:last-child > ul
-					border-left: 1px solid white
-
 				div
 					margin-left: 0
-
-
 				ul
-					border-top: $treeview-lines
-					margin-left: -1px
 					padding-left: 1.25em
-					border-left: none
-			.has-children
-				border-bottom: 0px
+
 
 			.tree-item
 				display: flex
@@ -571,7 +572,7 @@
 				margin-left: 26px
 
 			.div-has-children
-				margin-left: 12px
+				margin-left: 11px
 
 			.no-arrow
 				padding-left: .5rem

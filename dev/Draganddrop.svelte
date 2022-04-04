@@ -58,7 +58,8 @@
 		{ nodePath: "4.5", __priority: 10, title: "ITEM_6" },
 	];
 	let dragAndDrop = true,
-		showContexMenu = true;
+		showContexMenu = true,
+		enableVerticalLines = false;
 
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
@@ -96,6 +97,7 @@
 TreeView drag and drop test
 <input type="checkbox" bind:checked={dragAndDrop} />
 <input type="checkbox" bind:checked={showContexMenu} />
+<input type="checkbox" bind:checked={enableVerticalLines} />
 
 <TreeView
 	bind:tree
@@ -112,6 +114,7 @@ TreeView drag and drop test
 	{showContexMenu}
 	expandCallback={callback}
 	beforeMovedCallback={beforeCallback}
+	{enableVerticalLines}
 >
 	{node.nodePath} p: {node.__priority} t: {node.title}
 
