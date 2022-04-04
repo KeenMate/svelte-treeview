@@ -32,14 +32,14 @@ The most elaborate treeview for svelte on earth (or even in galaxy).
  - **showContexMenu** (bool, default: false)
  - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
  - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
- - **recalculateNodePath** (bool,default: false) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
+ - **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
  - **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Will only effect nodes where you dont specify expansion.
 
 ## Events
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
 - **expanded** { node }
 - **closed** { node }
-- **moved**  { oldParent: Node, oldNode: Node, newNode: Node,targetNode: Node,nest: bool} = fires when user moved node with drag and drog 
+- **moved**  { oldParent: Node, oldNode: Node, newNode: Node,targetNode: Node,insType: -1(insert below)||0(nest)||1(insert above)} = fires when user moved node with drag and drog 
 - **selection** { node: node,value: bool }  = fired when user clicks on checkbox
 - **selected** {node }
 - **unselected** {node }
@@ -156,6 +156,7 @@ let num =0
 After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.    
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).    
 You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass** 
+
 
 ## context menu
 

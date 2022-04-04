@@ -1,9 +1,8 @@
 <script>
-	import {TreeView,mergeTrees} from "../index.js";
+	import { TreeView, mergeTrees } from "../index.js";
 
 	import MenuDivider from "../src/MenuDivider.svelte";
 	import MenuOption from "../src/MenuOption.svelte";
-
 
 	let tree = [
 		{
@@ -87,11 +86,12 @@
 			__expanded: true,
 			__selected: false,
 		},
-	]
+	];
 	let dragAndDrop = true,
 		showContexMenu = true,
 		enableVerticalLines = false,
-		num,thisTree;
+		num,
+		thisTree;
 
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
@@ -126,7 +126,7 @@
 	}
 
 	function addTo() {
-		tree = mergeTrees(tree,treeToAdd)
+		tree = mergeTrees(tree, treeToAdd);
 	}
 </script>
 
@@ -134,37 +134,38 @@ TreeView drag and drop test
 <input type="checkbox" bind:checked={dragAndDrop} />
 <input type="checkbox" bind:checked={showContexMenu} />
 <input type="checkbox" bind:checked={enableVerticalLines} />
-<button on:click={addTo} > add</button>
+<button on:click={addTo}> add</button>
 
-<button on:click={thisTree.changeAllExpansion(true)} > true</button>
-<button on:click={thisTree.changeAllExpansion(false)} > false</button>
+<button on:click={thisTree.changeAllExpansion(true)}> true</button>
+<button on:click={thisTree.changeAllExpansion(false)}> false</button>
 
-	<TreeView
+<TreeView
 	bind:this={thisTree}
-		bind:tree
-		treeId="tree"
-		let:node
-		maxExpandedDepth={4}
-		recursive
-		checkboxes
-		bind:filteredTree={tree}
-		on:selection={(e) => console.log(e.detail)}
-		on:expansion={(e) => console.log(e.detail)}
-		on:moved={(e) => console.log(e.detail)}
-		bind:dragAndDrop
-		{showContexMenu}
-		expandCallback={callback}
-		beforeMovedCallback={beforeCallback}
-		{enableVerticalLines}
-	>
-		{JSON.stringify(node)}
+	bind:tree
+	treeId="tree"
+	let:node
+	maxExpandedDepth={4}
+	recursive
+	checkboxes
+	bind:filteredTree={tree}
+	on:selection={(e) => console.log(e.detail)}
+	on:expansion={(e) => console.log(e.detail)}
+	on:moved={(e) => console.log(e.detail)}
+	bind:dragAndDrop
+	{showContexMenu}
+	expandCallback={callback}
+	beforeMovedCallback={beforeCallback}
+	{enableVerticalLines}
+>
+	{JSON.stringify(node)}
 
-		<svelte:fragment slot="context-menu" let:node>
-			<MenuOption text={node.nodePath} isDisabled />
-			<MenuDivider />
-			<MenuOption text="alert object" on:click={alert(JSON.stringify(node))} />
-			<MenuOption text="delete node" on:click={handleClick(node)} />
-		</svelte:fragment>
-	</TreeView>
+	<svelte:fragment slot="context-menu" let:node>
+		<MenuOption text={node.nodePath} isDisabled />
+		<MenuDivider />
+		<MenuOption text="alert object" on:click={alert(JSON.stringify(node))} />
+		<MenuOption text="delete node" on:click={handleClick(node)} />
+	</svelte:fragment>
+</TreeView>
+
 <style>
 </style>

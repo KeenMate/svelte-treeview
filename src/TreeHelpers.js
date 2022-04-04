@@ -88,7 +88,7 @@ export function OrderByPriority(tree, propNames) {
  */
 export function changeEveryExpansion(tree, changeTo, propNames) {
 	return tree.map((node) => {
-		if(node[propNames.hasChildrenProperty] == true)
+		if (node[propNames.hasChildrenProperty] == true)
 			node[propNames.expandedProperty] = changeTo;
 		return node;
 	});
@@ -378,10 +378,13 @@ export function moveNode(
 	movedNodePath,
 	targetNodePath,
 	isChild,
-	nest,
+	insType,
 	recalculateNodePath,
 	propNames
 ) {
+	console.log(insType);
+	let nest = insType == 0;
+
 	// if you are not nesting, you want to be on same level
 	let parentNodePath = !nest
 		? getParentNodePath(targetNodePath)
@@ -390,21 +393,24 @@ export function moveNode(
 	//trying to move parent to child
 	if (parentNodePath.startsWith(movedNodePath)) return;
 
-	//dont create new node if you only moved inside same parrent
 	let insideParent =
 		!nest &&
 		getParentNodePath(movedNodePath) == getParentNodePath(targetNodePath);
 	let newParrentNodePath = movedNodePath;
+
+	//dont create new node if you only moved inside same parrent
 	if (!insideParent) {
-		newParrentNodePath =
-			(parentNodePath ? parentNodePath + "." : "") +
-			(recalculateNodePath
-				? getNextNodeId(tree, parentNodePath, isChild, propNames)
-				: movedNodePath.substring(
-						getParentNodePath(movedNodePath)
-							? getParentNodePath(movedNodePath).length + 1
-							: 0
-				  ));
+		let nodeId;
+		if (recalculateNodePath) {
+			nodeId = getNextNodeId(tree, parentNodePath, isChild, propNames);
+		} else {
+			nodeId = movedNodePath.substring(
+				getParentNodePath(movedNodePath)
+					? getParentNodePath(movedNodePath).length + 1
+					: 0
+			);
+		}
+		newParrentNodePath = (parentNodePath ? parentNodePath + "." : "") + nodeId;
 	}
 
 	console.log(newParrentNodePath);
@@ -446,7 +452,12 @@ export function moveNode(
 				let newpriority = 0;
 				if (!nest) {
 					//calculate next
-					newpriority = (targetNode[propNames.priorityProperty] ?? 0) + 1;
+					newpriority = targetNode[propNames.priorityProperty] ?? 0;
+					if (insType == -1) {
+						newpriority += 1;
+					} else {
+						//targetNode[propNames.priorityProperty] -= 1;
+					}
 				}
 
 				console.log("new priority:" + newpriority);
@@ -538,6 +549,16 @@ function getNextNodeId(tree, parentPath, isChild, propNames) {
 		}
 	});
 	return parseInt(max) + 1;
+}
+
+export function getInsertionPosition(e) {
+	let targetCords = e.target.getBoundingClientRect();
+	let half = targetCords.bottom - targetCords.height / 2;
+
+	if (e.y < half) {
+		return 1;
+	}
+	return -1;
 }
 
 //#endregion

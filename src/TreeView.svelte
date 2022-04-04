@@ -16,7 +16,8 @@
 		ChangeSelectForAllChildren,
 		moveNode,
 		expandToLevel,
-		changeEveryExpansion
+		changeEveryExpansion,
+		getInsertionPosition,
 	} from "./TreeHelpers";
 
 	//! required
@@ -88,6 +89,7 @@
 	export let highlightedNode = null;
 	export let childDepth = 0; //number
 	export let parentId = null; //string
+	// svelte-ignore unused-export-let
 	export let nodePath = null;
 
 	let dragenterTimestamp;
@@ -96,6 +98,7 @@
 	let canNest;
 	let dragTimeout;
 	let validTarget = false;
+	let insPos;
 	$: canNest = canNestPos || canNestTime;
 
 	//
@@ -109,7 +112,7 @@
 			isChild,
 			getParentId
 		),
-		priorityProperty
+		propNames
 	);
 	$: ComputeVisualTree(filteredTree);
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
@@ -201,7 +204,7 @@
 	}
 
 	export function changeAllExpansion(changeTo) {
-		tree = changeEveryExpansion(tree,changeTo,propNames)
+		tree = changeEveryExpansion(tree, changeTo, propNames);
 	}
 
 	//#endregion
@@ -283,6 +286,8 @@
 		let oldParent = tree.find(
 			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 		);
+
+		let insType = canNest ? 0 : getInsertionPosition(e);
 		//callback can cancell move
 		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
 			return;
@@ -292,7 +297,7 @@
 			draggedPath,
 			node[propNames.nodePathProperty],
 			isChild,
-			canNest,
+			insType,
 			recalculateNodePath,
 			propNames
 		);
@@ -302,7 +307,7 @@
 			oldNode: oldNode,
 			newNode: newNode,
 			targetNode: node,
-			nest: canNest,
+			insType: insType,
 		});
 
 		console.log("dispatched");
@@ -315,6 +320,8 @@
 
 	function handleDragOver(e, node) {
 		//if you are further away from right then treshold allow nesting
+		insPos = getInsertionPosition(e);
+
 		let diff = e.x - e.target.getBoundingClientRect().x;
 		//console.log(diff + " - " + (diff > pixelNestTreshold))
 		if (pixelNestTreshold && diff > pixelNestTreshold) {
@@ -401,6 +408,12 @@
 					: dispatch("open-ctxmenu", { e: e, node: node });
 			}}
 		>
+			<!-- place here if insering above  -->
+			{#if insPos == 1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+				<div class="insert-line-wrapper">
+					<div class="insert-line {inserLineClass}" />
+				</div>
+			{/if}
 			<div
 				class="tree-item {highlightedNode &&
 				validTarget &&
@@ -540,7 +553,7 @@
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			{#if insPos == -1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
@@ -590,7 +603,6 @@
 					margin-left: 0
 				ul
 					padding-left: 1.25em
-
 
 			.tree-item
 				display: flex
