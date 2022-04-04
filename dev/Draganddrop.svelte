@@ -60,12 +60,10 @@
 
 	let treeToAdd = [
 		{ nodePath: "3.1", title: "Hecarim" },
-		{ nodePath: "3.2", title: "3.2", hasChildren: true, __expanded: false },
+		{ nodePath: "3.2", title: "3.2", hasChildren: true },
 		{
 			nodePath: "3.2.2",
 			title: "Visage",
-			__expanded: true,
-			__selected: true,
 			test: "test223",
 		},
 		{
@@ -155,7 +153,7 @@ TreeView drag and drop test
 		beforeMovedCallback={beforeCallback}
 		{enableVerticalLines}
 	>
-		{node.nodePath} p: {node.priority} t: {node.title}
+		{JSON.stringify(node)}
 
 		<svelte:fragment slot="context-menu" let:node>
 			<MenuOption text={node.nodePath} isDisabled />

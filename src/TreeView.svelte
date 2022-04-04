@@ -15,6 +15,7 @@
 		ChangeSelection,
 		ChangeSelectForAllChildren,
 		moveNode,
+		expandToLevel,
 	} from "./TreeHelpers";
 
 	//! required
@@ -46,20 +47,34 @@
 	export let expandCallback = null;
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
-	export let enableVerticalLines = false
+	export let enableVerticalLines = false;
 	export let recalculateNodePath = true;
+	export let expandedLevel = 0;
 
 	//* properties
 	export let nodePathProperty = "nodePath";
 	export let hasChildrenProperty = "hasChildren";
 	export let expandedProperty = "__expanded";
 	export let selectedProperty = "__selected";
-	export let useCallbackPropery = "__useCallback";
-	export let priorityPropery = "priority";
+	export let useCallbackProperty = "__useCallback";
+	export let priorityProperty = "priority";
 
-	let propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
-	$: propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
-
+	let propNames = getPropsObject(
+		nodePathProperty,
+		hasChildrenProperty,
+		expandedProperty,
+		selectedProperty,
+		useCallbackProperty,
+		priorityProperty
+	);
+	$: propNames = getPropsObject(
+		nodePathProperty,
+		hasChildrenProperty,
+		expandedProperty,
+		selectedProperty,
+		useCallbackProperty,
+		priorityProperty
+	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
 	export let getParentId = (x) =>
@@ -93,11 +108,11 @@
 			isChild,
 			getParentId
 		),
-		priorityPropery
+		priorityProperty
 	);
 	$: ComputeVisualTree(filteredTree);
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-
+	$: tree = expandToLevel(tree, expandedLevel, propNames);
 
 	function ComputeVisualTree(filteredTree) {
 		tree = computeInitialVisualStates(
@@ -109,15 +124,22 @@
 		);
 	}
 
-	function getPropsObject(nodePath,hasChildren, expanded,selected,useCallback,priority){
+	function getPropsObject(
+		nodePath,
+		hasChildren,
+		expanded,
+		selected,
+		useCallback,
+		priority
+	) {
 		return {
-		nodePathProperty: nodePath,
-		expandedProperty: expanded,
-		selectedProperty: selected,
-		useCallbackPropery: useCallback,
-		priorityPropery: priority,
-		hasChildrenProperty: hasChildren
-	}
+			nodePathProperty: nodePath,
+			expandedProperty: expanded,
+			selectedProperty: selected,
+			useCallbackProperty: useCallback,
+			priorityProperty: priority,
+			hasChildrenProperty: hasChildren,
+		};
 	}
 
 	//#region expansions
@@ -128,25 +150,21 @@
 	}
 
 	function toggleExpansion(node, setValueTo = null) {
-		tree = changeExpansion(
-			tree,
-			node[propNames.nodePathProperty],
-			propNames
-		);
+		tree = changeExpansion(tree, node[propNames.nodePathProperty], propNames);
 
 		let val = node[propNames.expandedProperty];
 
-		//trigger callback if it is present and node has useCallbackPropery
+		//trigger callback if it is present and node has useCallbackProperty
 		if (
 			val &&
 			expandCallback != null &&
-			node[propNames.useCallbackPropery] == true
+			node[propNames.useCallbackProperty] == true
 		) {
 			console.log("calling callback");
 			fetchNodeDataAsync(node)
 				.then((val) => {
 					tree = tree.concat(val);
-					node[propNames.useCallbackPropery] = false;
+					node[propNames.useCallbackProperty] = false;
 				})
 				.catch((reason) => {
 					console.log("ERROR IN CALLBACK!!");
@@ -260,10 +278,6 @@
 		let oldParent = tree.find(
 			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 		);
-
-		console.log(oldNode)
-		console.log(oldParent)
-		console.log(node)
 		//callback can cancell move
 		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
 			return;
@@ -417,7 +431,7 @@
 				{/if}
 				{#if checkboxes}
 					{#if recursive}
-						{#if !hasChildren(tree, node[propNames.nodePathProperty],propNames)}
+						{#if !hasChildren(tree, node[propNames.nodePathProperty], propNames)}
 							<input
 								type="checkbox"
 								id={getNodeId(node)}
@@ -496,6 +510,12 @@
 					on:expansion
 					on:expanded
 					on:closed
+					{nodePathProperty}
+					{hasChildrenProperty}
+					{expandedProperty}
+					{selectedProperty}
+					{useCallbackProperty}
+					{priorityProperty}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold

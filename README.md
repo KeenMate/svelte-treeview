@@ -17,8 +17,8 @@ The most elaborate treeview for svelte on earth (or even in galaxy).
  - **hasChildrenProperty** (string, default: *"hasChildren"*)
  - **expandedProperty** (string, default: *"__expanded"*)
  - **selectedProperty** (string, default: *"__selected"*)
- - **usecallbackPropery** (string, default: *"__useCallback"*)
- - **priorityPropery** (string, default: *"__priority"*)
+ - **usecallbackProperty** (string, default: *"__useCallback"*)
+ - **priorityProperty** (string, default: *"__priority"*)
  - **treeClass** (string css class, default: *""*)
  - **nodeClass** (string css class, default: *""*)
  - **expandedToggleClass** (string css class, default: *""*)
@@ -33,6 +33,7 @@ The most elaborate treeview for svelte on earth (or even in galaxy).
  - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
  - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
  - **recalculateNodePath** (bool,default: false) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
+ - **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Will only effect nodes where you dont specify expansion.
 
 ## Events
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
@@ -49,11 +50,11 @@ The most elaborate treeview for svelte on earth (or even in galaxy).
 
 usage:
 ```js 
-	import {TreeView,mergeTrees} from "../index.js";
-
-  tree = mergeTrees(tree,treeToAdd);
-
-  filteredTree = searchTree(tree, filterFunction, recursive,propNames)
+import {TreeView,mergeTrees,searchTree} from "../index.js";
+//will merger treeToAdd into tree, so expansion etc wont be effected
+tree = mergeTrees(tree,treeToAdd);
+//searches tree
+filteredTree = searchTree(tree, filterFunction, recursive,propNames)
 ```
 ## basic usage
 
@@ -89,7 +90,7 @@ let tree = [
 
 ## callbacks
 
-To dynamicly load data, you have to hase hasChildren(to show + icon) and **usecallbackPropery** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as paramentr. Function should return array of nodes, that will be added to tree. **usecallbackPropery** will be then set to false, so that callback will only be called once.
+To dynamicly load data, you have to have hasChildren(to show + icon) and **usecallbackProperty** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as parametr. Function should return Promise or array of nodes, that will be added to tree. **usecallbackProperty** will be then set to false, so that callback will only be called once.
 
 example:
 ```js
