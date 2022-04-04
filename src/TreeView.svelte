@@ -54,7 +54,7 @@
 	export let expandedProperty = "__expanded";
 	export let selectedProperty = "__selected";
 	export let useCallbackPropery = "__useCallback";
-	export let priorityPropery = "__priority";
+	export let priorityPropery = "priority";
 
 	let propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);
 	$: propNames = getPropsObject(nodePathProperty,hasChildrenProperty,expandedProperty,selectedProperty,useCallbackPropery,priorityPropery);

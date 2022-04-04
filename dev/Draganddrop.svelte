@@ -50,12 +50,12 @@
 		},
 		{ nodePath: "3.4", title: "	Omniknight" },
 		{ nodePath: "4", hasChildren: true, __expanded: true },
-		{ nodePath: "4.1", __priority: 0, title: "ITEM_1" },
-		{ nodePath: "4.6", __priority: 6, title: "ITEM_2" },
-		{ nodePath: "4.2", __priority: 2, title: "ITEM_3" },
-		{ nodePath: "4.3", __priority: 3, title: "ITEM_4" },
-		{ nodePath: "4.4", __priority: 4, title: "ITEM_5" },
-		{ nodePath: "4.5", __priority: 10, title: "ITEM_6" },
+		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
+		{ nodePath: "4.6", priority: 6, title: "ITEM_2" },
+		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
+		{ nodePath: "4.3", priority: 3, title: "ITEM_4" },
+		{ nodePath: "4.4", priority: 4, title: "ITEM_5" },
+		{ nodePath: "4.5", priority: 10, title: "ITEM_6" },
 	];
 	let dragAndDrop = true,
 		showContexMenu = true,
@@ -66,13 +66,13 @@
 		let data = await [
 			{
 				nodePath: n.nodePath + "." + ++num,
-				__priority: 0,
+				priority: 0,
 				__useCallback: true,
 				hasChildren: true,
 			},
 			{
 				nodePath: n.nodePath + "." + ++num,
-				__priority: 0,
+				priority: 0,
 				__useCallback: true,
 				hasChildren: true,
 			},
@@ -116,7 +116,7 @@ TreeView drag and drop test
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
 >
-	{node.nodePath} p: {node.__priority} t: {node.title}
+	{node.nodePath} p: {node.priority} t: {node.title}
 
 	<svelte:fragment slot="context-menu" let:node>
 		<MenuOption text={node.nodePath} isDisabled />
