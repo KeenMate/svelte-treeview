@@ -1,6 +1,6 @@
 # Svelte Treeview
 
-The most elaborate treeview for svelte on earth (or even in galaxy). 
+The most elaborate treeview for svelte on earth (or even in our galaxy). 
 
 ## Props
 
