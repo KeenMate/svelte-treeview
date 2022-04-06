@@ -90,7 +90,11 @@
 	export let childDepth = 0; //number
 	export let parentId = null; //string
 	// svelte-ignore unused-export-let
-	export let nodePath = null;
+	export let branchRootNode = {};
+	//node bellow which GhostNodePos should be placed
+	export let GhostNodePos = null;
+	//if true, it will be inserted as first child of treeview
+	export let GhostNesting = false;
 
 	let dragenterTimestamp;
 	let canNestPos = false;
@@ -99,7 +103,10 @@
 	let dragTimeout;
 	let validTarget = false;
 	let insPos;
+	let parentNode;
 	$: canNest = canNestPos || canNestTime;
+	$: parentNode = tree.find((x) => x[propNames.nodePathProperty]);
+	$: GhostNesting = canNest;
 
 	//
 	let ctxMenu;
@@ -289,8 +296,7 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 		//callback can cancell move
-		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
-			return;
+		if (beforeMovedCallback(oldNode, oldParent, node, insPos) === false) return;
 
 		tree = moveNode(
 			tree,
@@ -320,7 +326,9 @@
 
 	function handleDragOver(e, node) {
 		//if you are further away from right then treshold allow nesting
-		insPos = getInsertionPosition(e);
+
+		// insPos = getInsertionPosition(e);
+		insPos = -1;
 
 		let diff = e.x - e.target.getBoundingClientRect().x;
 		//console.log(diff + " - " + (diff > pixelNestTreshold))
@@ -337,8 +345,10 @@
 		) {
 			validTarget = true;
 			e.preventDefault();
+			GhostNodePos = node;
 		} else {
 			validTarget = false;
+			GhostNodePos = null;
 		}
 	}
 
@@ -365,6 +375,8 @@
 		setTimeout(() => {
 			draggedPath = null;
 			highlightedNode = null;
+			GhostNodePos = null;
+			GhostNesting = null;
 		}, 1);
 	}
 
@@ -398,6 +410,20 @@
 	class:child-menu={childDepth > 0}
 	class={treeClass}
 >
+	{#if GhostNesting && GhostNodePos && GhostNodePos[propNames.nodePathProperty] == branchRootNode[propNames.nodePathProperty] }
+		<li>
+			<div
+				class="tree-item"
+				on:drop={(e) => handleDragDrop(e, parentNode)}
+				on:dragover={(e) => handleDragOver(e, parentNode)}
+				on:dragenter={(e) => handleDragEnter(e, parentNode)}
+			>
+				<span class="insert-ghost insert-ghost-nesting" >
+					<slot {branchRootNode} />
+				</span>
+			</div>
+		</li>
+	{/if}
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
 			class:is-child={isChild(node)}
@@ -409,11 +435,11 @@
 			}}
 		>
 			<!-- place here if insering above  -->
-			{#if insPos == 1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			<!-- {#if insPos == 1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
-			{/if}
+			{/if} -->
 			<div
 				class="tree-item {highlightedNode &&
 				validTarget &&
@@ -494,19 +520,19 @@
 				<slot {node} />
 			</div>
 
-			{#if validTarget && canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			<!-- {#if validTarget && canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
 					<div
 						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
 					/>
 				</div>
-			{/if}
+			{/if} -->
 			<!-- {@debug node} -->
 			<!--{@debug $_expansionState}-->
 			{#if node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
 				<!--tree={tree/*.filter(x => x[propNames.nodePathProperty].startsWith(node[propNames.nodePathProperty]) && x[propNames.nodePathProperty] !== node[propNames.nodePathProperty])*/} -->
 				<svelte:self
-					nodePath={node[propNames.nodePathProperty]}
+					branchRootNode={node}
 					{treeId}
 					{getId}
 					{checkboxes}
@@ -545,20 +571,56 @@
 					{expandCallback}
 					on:moved
 					{beforeMovedCallback}
+					bind:GhostNodePos
+					bind:GhostNesting
 				>
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if node[propNames.expandedProperty] != true && node[propNames.hasChildrenProperty]}
+			{#if node[propNames.expandedProperty] != true && !node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
+			<!-- nest ghost when inserting into element without children -->
+			{#if  GhostNesting &&  GhostNodePos && GhostNodePos[propNames.nodePathProperty] == node[propNames.nodePathProperty] && node[propNames.expandedProperty] != true && !node[propNames.hasChildrenProperty]}
+			<!-- {@debug GhostNesting, GhostNodePos } -->
+
+			<ul class:child-menu={childDepth > 0}>
+					<li>
+						<div
+							class="tree-item"
+							on:drop={(e) => handleDragDrop(e, node)}
+							on:dragover={(e) => handleDragOver(e, node)}
+							on:dragenter={(e) => handleDragEnter(e, node)}
+						>
+							<span class="insert-ghost insert-ghost-nesting" >
+								<slot {node} /> </span>
+						</div>
+					</li>
+				</ul>
+			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			<!-- {#if insPos == -1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
-			{/if}
+			{/if} -->
 		</li>
+
+			<!-- nest ghost when inserting into element without children -->
+		{#if GhostNesting != true && GhostNodePos && GhostNodePos[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			<li>
+				<div
+					class="tree-item"
+					on:drop={(e) => handleDragDrop(e, node)}
+					on:dragover={(e) => handleDragOver(e, node)}
+					on:dragenter={(e) => handleDragEnter(e, node)}
+				>
+					<span class="insert-ghost" >
+						<slot {node} />
+					</span>
+				</div>
+			</li>
+		{/if}
 	{/each}
 </ul>
 
@@ -650,6 +712,19 @@
 
 			.insert-line-wrapper
 				position: relative
+
+			.insert-ghost
+				background-color: gray
+				height: 2em
+				width: 300px
+				border-radius: 10px
+				vertical-align: mi
+				color: white
+
+			.insert-ghost-nesting
+				margin-left: 1em
+
+
 
 
 </style>

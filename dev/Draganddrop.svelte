@@ -117,11 +117,11 @@
 		tree = tree.filter((n) => n.nodePath != node.nodePath);
 	}
 
-	function beforeCallback(node, oldParent, targetNode, nest) {
+	function beforeCallback(node, oldParent, targetNode, insPos) {
 		alert(
 			`moved ${node?.nodePath} from ${oldParent?.nodePath} to ${
 				targetNode?.nodePath
-			} while ${nest ? "nesting" : "not nesting"}`
+			} while ${insPos}`
 		);
 	}
 
