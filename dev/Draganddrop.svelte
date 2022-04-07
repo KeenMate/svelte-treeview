@@ -90,7 +90,7 @@
 	let dragAndDrop = true,
 		showContexMenu = true,
 		enableVerticalLines = false,
-		num,
+		num = 0,
 		thisTree;
 
 	async function callback(n) {
