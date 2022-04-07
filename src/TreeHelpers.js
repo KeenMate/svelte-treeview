@@ -267,7 +267,7 @@ function recomputeAllParentVisualState(
 				propNames
 			);
 			x.__visual_state = newstate;
-			console.log("recomputing" + parent + " ->" + newstate);
+			//console.log("recomputing" + parent + " ->" + newstate);
 		}
 	});
 	if (getParentNodePath(parent) != "") {
@@ -382,7 +382,7 @@ export function moveNode(
 	recalculateNodePath,
 	propNames
 ) {
-	console.log(insType);
+	//console.log(insType);
 	let nest = insType == 0;
 
 	// if you are not nesting, you want to be on same level
@@ -413,7 +413,7 @@ export function moveNode(
 		newParrentNodePath = (parentNodePath ? parentNodePath + "." : "") + nodeId;
 	}
 
-	console.log(newParrentNodePath);
+	//console.log(newParrentNodePath);
 
 	//* find target node
 	let targetNode = tree.find(
@@ -421,7 +421,7 @@ export function moveNode(
 	);
 	let movedNode;
 
-	console.log("parentNodePath: " + newParrentNodePath);
+	//console.log("parentNodePath: " + newParrentNodePath);
 
 	tree = tree.map((node) => {
 		//make sure that parent's haschild is set to true, so that children
@@ -440,7 +440,7 @@ export function moveNode(
 				movedNodePath,
 				newParrentNodePath
 			);
-			console.log(node[propNames.nodePathProperty] + " -> " + newPath);
+			//console.log(node[propNames.nodePathProperty] + " -> " + newPath);
 			node[propNames.nodePathProperty] = newPath;
 		}
 
@@ -460,7 +460,7 @@ export function moveNode(
 					}
 				}
 
-				console.log("new priority:" + newpriority);
+				//console.log("new priority:" + newpriority);
 
 				InsertPriority(
 					tree,
