@@ -90,7 +90,7 @@
 	export let childDepth = 0; //number
 	export let parentId = null; //string
 	// svelte-ignore unused-export-let
-	export let nodePath = null;
+	export let branchRootNode = {};
 
 	let dragenterTimestamp;
 	let canNestPos = false;
@@ -506,7 +506,7 @@
 			{#if node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
 				<!--tree={tree/*.filter(x => x[propNames.nodePathProperty].startsWith(node[propNames.nodePathProperty]) && x[propNames.nodePathProperty] !== node[propNames.nodePathProperty])*/} -->
 				<svelte:self
-					nodePath={node[propNames.nodePathProperty]}
+					branchRootNode={node}
 					{treeId}
 					{getId}
 					{checkboxes}
