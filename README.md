@@ -23,6 +23,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
  - **nodeClass** (string css class, default: *""*)
  - **expandedToggleClass** (string css class, default: *""*)
  - **collapsedToggleClass** (string css class, default: *""*)
+ - **currentlyDraggedClass** (string css class, default: *"currently-dragged"*)
  - **expandClass** (string css class, default: *"inserting-highlighted"*)
  - **inserLineClass** (string css class, default: *""*)
  - **inserLineNestClass** (string css class, default: *""*)
@@ -39,7 +40,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
 - **expanded** { node }
 - **closed** { node }
-- **moved**  { oldParent: Node, oldNode: Node, newNode: Node,targetNode: Node,insType: -1(insert below)||0(nest)||1(insert above)} = fires when user moved node with drag and drog 
+- **moved**  { oldParent: Node,newParent:Node oldNode: Node, newNode: Node,targetNode: Node,insType: ("before","inside","after")} = fires when user moved node with drag and drop. Target is element you dropped node at.
 - **selection** { node: node,value: bool }  = fired when user clicks on checkbox
 - **selected** {node }
 - **unselected** {node }

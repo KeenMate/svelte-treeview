@@ -18,6 +18,7 @@
 		expandToLevel,
 		changeEveryExpansion,
 		getInsertionPosition,
+		huminifyInsType
 	} from "./TreeHelpers";
 
 	//! required
@@ -305,13 +306,16 @@
 			propNames
 		);
 
+		let newParent = tree.find((x) => x[propNames.nodePathProperty] == getParentNodePath(newNode[propNames.nodePathProperty])) ?? null
+
 
 		dispatch("moved", {
 			oldParent: oldParent,
+			newParent: newParent,
 			oldNode: oldNode,
 			newNode: newNode,
 			targetNode: node,
-			insType: insType,
+			insType: huminifyInsType(insType),
 		});
 
 		console.log("dispatched");
@@ -325,7 +329,6 @@
 	function handleDragOver(e, node) {
 		//if you are further away from right then treshold allow nesting
 		insPos = getInsertionPosition(e);
-
 		let diff = e.x - e.target.getBoundingClientRect().x;
 		//console.log(diff + " - " + (diff > pixelNestTreshold))
 		if (pixelNestTreshold && diff > pixelNestTreshold) {
@@ -347,11 +350,12 @@
 	}
 
 	function handleDragEnter(e, node) {
+		setTimeout( () => {
 		validTarget = false;
 		dragenterTimestamp = new Date();
 		// will cause flashing when moving wrom node to node while be able to nest
 		//* have to be here if you only use time
-		console
+		console.log("enter")
 		highlightedNode = node;
 
 		if (timeToNest) {
@@ -363,6 +367,7 @@
 				canNestTime = true;
 			}, timeToNest);
 		}
+	},0)
 		e.preventDefault();
 	}
 
@@ -373,6 +378,10 @@
 		}, 1);
 	}
 
+	function handleDragleave(e,node){
+			highlightedNode = null;
+		console.log("leave")
+	}
 	/**
 	*check if this node is one being hovered over (highlited) and is valid target
 	*/
@@ -439,6 +448,7 @@
 				on:dragover={(e) => handleDragOver(e, node)}
 				on:dragenter={(e) => handleDragEnter(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
+				on:dragleave={(e) => handleDragleave(e, node)}
 			>
 				{#if node[propNames.hasChildrenProperty]}
 					<span on:click={() => toggleExpansion(node)}>
