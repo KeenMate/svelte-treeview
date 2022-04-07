@@ -561,6 +561,17 @@ export function getInsertionPosition(e) {
 	return -1;
 }
 
+export function huminifyInsType(insType){
+	switch (insType) {
+		case 1:
+			return "before"
+		case 0:
+			return "inside"
+		case -1:
+			return "after"
+	}
+}
+
 //#endregion
 
 //#region searching
