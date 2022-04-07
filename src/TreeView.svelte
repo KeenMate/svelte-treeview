@@ -34,15 +34,6 @@
 	export let disableOrHide = false; //bool
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
-	//classes for customization of tree
-	export let treeClass = "",
-		nodeClass = "",
-		expandedToggleClass = "",
-		collapsedToggleClass = "";
-	//class shown on div when it should expand on drag and drop
-	export let expandClass = "inserting-highlighted";
-	export let inserLineClass = "";
-	export let inserLineNestClass = "";
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = 150;
@@ -52,6 +43,18 @@
 	export let enableVerticalLines = false;
 	export let recalculateNodePath = true;
 	export let expandedLevel = 0;
+
+	//* classes for customization of tree
+	export let treeClass = "";
+	export let	nodeClass = "";
+	export let	expandedToggleClass = "";
+	export let	collapsedToggleClass = "";
+	//class shown on div when it should expand on drag and drop
+	export let expandClass = "inserting-highlighted";
+	export let inserLineClass = "";
+	export let inserLineNestClass = "";
+	export let currentlyDraggedClass = "currently-dragged"
+
 
 	//* properties
 	export let nodePathProperty = "nodePath";
@@ -302,6 +305,7 @@
 			propNames
 		);
 
+
 		dispatch("moved", {
 			oldParent: oldParent,
 			oldNode: oldNode,
@@ -347,6 +351,7 @@
 		dragenterTimestamp = new Date();
 		// will cause flashing when moving wrom node to node while be able to nest
 		//* have to be here if you only use time
+		console
 		highlightedNode = node;
 
 		if (timeToNest) {
@@ -366,6 +371,13 @@
 			draggedPath = null;
 			highlightedNode = null;
 		}, 1);
+	}
+
+	/**
+	*check if this node is one being hovered over (highlited) and is valid target
+	*/
+	function highlighThisNode(n,hn,vt){
+		return vt && hn?.[propNames.nodePathProperty] == n?.[propNames.nodePathProperty]
 	}
 
 	//#endregion
@@ -409,24 +421,18 @@
 			}}
 		>
 			<!-- place here if insering above  -->
-			{#if insPos == 1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			{#if insPos == 1 && !canNest && highlighThisNode(node,highlightedNode,validTarget) }
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
 			{/if}
+
 			<div
-				class="tree-item {highlightedNode &&
-				validTarget &&
-				canNest &&
-				highlightedNode[propNames.nodePathProperty] ==
-					node[propNames.nodePathProperty]
-					? expandClass
-					: ''} {nodeClass}"
+				class="tree-item
+				{canNest && highlighThisNode(node,highlightedNode,validTarget) ? expandClass : ''}
+				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]? currentlyDraggedClass : "" }"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
-				class:hover={validTarget &&
-					highlightedNode &&
-					highlightedNode[propNames.nodePathProperty] ==
-						node[propNames.nodePathProperty]}
+				class:hover={highlighThisNode(node,highlightedNode,validTarget) }
 				draggable={dragAndDrop}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
@@ -492,19 +498,17 @@
 					{/if}
 				{/if}
 				<slot {node} />
+				{highlighThisNode(node,highlightedNode,validTarget)}
 			</div>
 
-			{#if validTarget && canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			{#if canNest && highlighThisNode(node,highlightedNode,validTarget)}
 				<div class="insert-line-wrapper">
 					<div
 						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
 					/>
 				</div>
 			{/if}
-			<!-- {@debug node} -->
-			<!--{@debug $_expansionState}-->
 			{#if node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
-				<!--tree={tree/*.filter(x => x[propNames.nodePathProperty].startsWith(node[propNames.nodePathProperty]) && x[propNames.nodePathProperty] !== node[propNames.nodePathProperty])*/} -->
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
@@ -549,11 +553,11 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if node[propNames.expandedProperty] != true && node[propNames.hasChildrenProperty]}
+			{#if !node[propNames.expandedProperty]&& node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && validTarget && !canNest && highlightedNode && highlightedNode[propNames.nodePathProperty] == node[propNames.nodePathProperty]}
+			{#if insPos == -1 && !canNest && highlighThisNode(node,highlightedNode,validTarget)}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
@@ -651,5 +655,7 @@
 			.insert-line-wrapper
 				position: relative
 
+			.currently-dragged
+				color: grey
 
 </style>
