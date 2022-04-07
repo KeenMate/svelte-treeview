@@ -168,7 +168,7 @@
 			expandCallback != null &&
 			node[propNames.useCallbackProperty] == true
 		) {
-			console.log("calling callback");
+			//console.log("calling callback");
 			fetchNodeDataAsync(node)
 				.then((val) => {
 					tree = tree.concat(val);
@@ -196,8 +196,8 @@
 	//awaits function provided in expandCallback
 	async function fetchNodeDataAsync(node) {
 		let data = await expandCallback(node);
-		console.log("loaded new nodes: ");
-		console.log(data);
+		//.log("loaded new nodes: ");
+		//console.log(data);
 		return data;
 	}
 
@@ -318,8 +318,6 @@
 			insType: huminifyInsType(insType),
 		});
 
-		console.log("dispatched");
-
 		//reset props
 		dragenterTimestamp = null;
 		draggedPath = null;
@@ -355,7 +353,6 @@
 		dragenterTimestamp = new Date();
 		// will cause flashing when moving wrom node to node while be able to nest
 		//* have to be here if you only use time
-		console.log("enter")
 		highlightedNode = node;
 
 		if (timeToNest) {
@@ -380,7 +377,6 @@
 
 	function handleDragleave(e,node){
 			highlightedNode = null;
-		console.log("leave")
 	}
 	/**
 	*check if this node is one being hovered over (highlited) and is valid target
@@ -395,9 +391,6 @@
 	function openContextMenu(e, node) {
 		if (!showContexMenu) return;
 		e.preventDefault();
-		console.log(
-			"openning context menu from: " + node[propNames.nodePathProperty]
-		);
 		ctxMenu.onRightClick(e, node);
 	}
 
