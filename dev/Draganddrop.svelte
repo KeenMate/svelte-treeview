@@ -91,7 +91,8 @@
 		showContexMenu = true,
 		enableVerticalLines = false,
 		num = 0,
-		thisTree;
+		thisTree,
+		expandedLevel;
 
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
@@ -134,6 +135,7 @@ TreeView drag and drop test
 <input type="checkbox" bind:checked={dragAndDrop} />
 <input type="checkbox" bind:checked={showContexMenu} />
 <input type="checkbox" bind:checked={enableVerticalLines} />
+<input type="number" bind:value={expandedLevel} />
 <button on:click={addTo}> add</button>
 
 <button on:click={thisTree.changeAllExpansion(true)}> true</button>
@@ -156,6 +158,8 @@ TreeView drag and drop test
 	expandCallback={callback}
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
+	{expandedLevel}
+
 >
 	{JSON.stringify(node)}
 
