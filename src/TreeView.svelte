@@ -501,7 +501,6 @@
 					{/if}
 				{/if}
 				<slot {node} />
-				{highlighThisNode(node,highlightedNode,validTarget)}
 			</div>
 
 			{#if canNest && highlighThisNode(node,highlightedNode,validTarget)}
