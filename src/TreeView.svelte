@@ -111,7 +111,7 @@
 
 	$: parentChildrenTree = OrderByPriority(
 		getParentChildrenTree(
-			filteredTree === undefined ? tree : filteredTree,
+			filteredTree? filteredTree :tree ,
 			parentId,
 			isChild,
 			getParentId
@@ -127,7 +127,7 @@
 			tree,
 			isChild,
 			getParentId,
-			filteredTree,
+			filteredTree ?? tree,
 			propNames
 		);
 	}
@@ -224,7 +224,7 @@
 			node[propNames.nodePathProperty],
 			isChild,
 			getParentId,
-			filteredTree,
+			filteredTree ?? tree,
 			propNames
 		);
 		selectionEvents(node);
@@ -238,7 +238,7 @@
 			isChild,
 			e.target.checked,
 			getParentId,
-			filteredTree,
+			filteredTree ?? tree,
 			propNames
 		);
 		selectionEvents(node);
@@ -293,7 +293,7 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 		//callback can cancell move
-		if (beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
+		if (beforeMovedCallback && beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
 			return;
 
 		tree = moveNode(
@@ -401,7 +401,7 @@
 		tree,
 		isChild,
 		getParentId,
-		filteredTree,
+		filteredTree ?? tree,
 		propNames
 	);
 </script>
