@@ -151,7 +151,7 @@ function addOrRemoveSelection(tree, nodePath, propNames) {
 		let t = x;
 		if (x[propNames.nodePathProperty] == nodePath) {
 			t[propNames.selectedProperty] = !x[propNames.selectedProperty];
-			t.__visual_state = !x[propNames.selectedProperty];
+			//t.__visual_state = !x[propNames.selectedProperty];
 		}
 		return t;
 	});
@@ -355,7 +355,7 @@ export function deleteSelected(tree, propNames) {
 	return tree.map((t) => {
 		let x = t;
 		x[propNames.selectedProperty] = false;
-		x.__visual_state = "false";
+		x.__visual_state = undefined;
 		return x;
 	});
 }
