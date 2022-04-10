@@ -5,11 +5,11 @@ import orderBy from "lodash.unionby";
 //#region basic helpres
 
 export function getParentNodePath(nodePath) {
-	return nodePath.substring(0, nodePath.lastIndexOf("."));
+	return nodePath?.substring(0, nodePath.lastIndexOf("."));
 }
 
 export function hasChildren(tree, nodePath, propNames) {
-	return tree.find(
+	return tree?.find(
 		(x) => getParentNodePath(x[propNames.nodePathProperty]) === nodePath
 	);
 }
