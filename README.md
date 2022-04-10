@@ -21,7 +21,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
  - **pixelNestTreshold** (number in px, default: *150*) when you move cursor to then left by x pixels will nest
  - **expandCallback** (function that takes node as argument, default: *null*)  called when node with **usecallbackProperty** set to true is expanded. Only called once.
  - **showContexMenu** (bool, default: false) Will show context menu you defined in context-menu slot when you right click any node
- - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
+ - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null ) = if it return false, move will be cancelled
  - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
  - **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
  - **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Will only effect nodes where you dont specify expansion.
