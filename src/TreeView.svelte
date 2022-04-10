@@ -302,7 +302,7 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 		//callback can cancell move
-		if (beforeMovedCallback && beforeMovedCallback(oldNode, oldParent, node, canNest) === false)
+		if (beforeMovedCallback && beforeMovedCallback(oldNode, oldParent, node, huminifyInsType(insType)) === false)
 			return;
 
 		tree = moveNode(
