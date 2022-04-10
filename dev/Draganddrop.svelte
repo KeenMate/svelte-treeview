@@ -22,7 +22,7 @@
 		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
 		{ nodePath: "4.3", priority: 3, title: "ITEM_4" },
 		{ nodePath: "4.4", priority: 4, title: "ITEM_5" },
-		{ nodePath: "4.5", priority: 10, title: "ITEM_6" },
+		{ nodePath: "4.5", priority: 10, title: "ITEM_6" , isDraggable:false},
 	];
 
 	let treeToAdd = [

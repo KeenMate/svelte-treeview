@@ -266,6 +266,10 @@
 
 	//#region drag and drop
 	function handleDragStart(e, node) {
+		if(node[propNames.isDraggableProperty] === false){
+			e.preventDefault()
+			return
+		}
 		console.log("dragstart from: " + node[propNames.nodePathProperty]);
 		e.dataTransfer.dropEffect = "move";
 		e.dataTransfer.setData("node_id", node[propNames.nodePathProperty]);
@@ -442,7 +446,7 @@
 				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]? currentlyDraggedClass : "" }"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
 				class:hover={highlighThisNode(node,highlightedNode,validTarget) }
-				draggable={dragAndDrop && (node[propNames.isDraggableProperty] != false)}
+				draggable={dragAndDrop && (node[propNames.isDraggableProperty] !== false)}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
 				on:dragover={(e) => handleDragOver(e, node)}
