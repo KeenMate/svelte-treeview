@@ -1,24 +1,37 @@
 # Svelte Treeview
 
-The most elaborate treeview for svelte on earth (or even in our galaxy). 
+The most elaborate treeview for svelte on earth (or even in our galaxy).  
+
+[DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree) 
+
+
 
 ## Props
 
  - **tree** (array of nodes, default: *null*) = tree itself. THIS CAN NEVER BE NULL/UNDEFINED
  - **treeId** (string, default: *null*) = you HAVE to set this to unique string
  - **maxExpandedDepth** (number, default: *3*)
- - **filteredTree** (array of nodes, default: *null*)
- - **recursive** (bool, default: *false*)
- - **checkboxes** (bool, default: *false*)
- - **leafNodeCheckboxesOnly** ( bool, default: *false*)
- - **disableOrHide** (bool, default: *false*)
- - **dragAndDrop** (bool, default: *false*)
+ - **filteredTree** (array of nodes, default: *null*) searched tree
+ - **checkboxes** (bool, default: *false*) Will show checkboxes next to nodes. when click it will toggle selectedProperty on clicked node. You can specify this behavior with **recursive**, **leafNodeCheckboxesOnly** and **disableOrHide**.
+ - **recursive** (bool, default: *false*) When true, you can only select "leaf nodes" (nodes when **hasChildrenProperty** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selectedProperty**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
+ - **leafNodeCheckboxesOnly** ( bool, default: *false*) you wont be able to click on any other checkboxes that on leaf nodes.
+ - **disableOrHide** (bool, default: *false*) will only disable checkboxes, instead of not showing them
+ - **dragAndDrop** (bool, default: *false*) will enable drag and drop behavior viz drag and drop section
+ - **timeToNest** (number in ms, default: *null*) after that time hovering over one node, it will nest.
+ - **pixelNestTreshold** (number in px, default: *150*) when you move cursor to then left by x pixels will nest
+ - **expandCallback** (function that takes node as argument, default: *null*)  called when node with **usecallbackProperty** set to true is expanded. Only called once.
+ - **showContexMenu** (bool, default: false) Will show context menu you defined in context-menu slot when you right click any node
+ - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
+ - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
+ - **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
+ - **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Will only effect nodes where you dont specify expansion.
  - **nodePathProperty** (string, default: *"nodePath"*)
  - **hasChildrenProperty** (string, default: *"hasChildren"*)
  - **expandedProperty** (string, default: *"__expanded"*)
  - **selectedProperty** (string, default: *"__selected"*)
  - **usecallbackProperty** (string, default: *"__useCallback"*)
  - **priorityProperty** (string, default: *"__priority"*)
+ - **isDraggableProperty** (string, default: *"isDraggable"*) when false, wont allow you to start dragging element
  - **treeClass** (string css class, default: *""*)
  - **nodeClass** (string css class, default: *""*)
  - **expandedToggleClass** (string css class, default: *""*)
@@ -27,14 +40,6 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
  - **expandClass** (string css class, default: *"inserting-highlighted"*)
  - **inserLineClass** (string css class, default: *""*)
  - **inserLineNestClass** (string css class, default: *""*)
- - **timeToNest** (number in ms, default: *null*)
- - **pixelNestTreshold** (number in px, default: *150*)
- - **expandCallback** (function that takes node as argument, default: *null*)
- - **showContexMenu** (bool, default: false)
- - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,Nesting), default: null ) = if it return false, move will be cancelled
- - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use 
- - **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
- - **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Will only effect nodes where you dont specify expansion.
 
 ## Events
 - **expansion** { node: node,value: bool } = fired when user clicks on plus/minus icon
@@ -154,7 +159,7 @@ let num =0
 
 ## drag and drop
 
-After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.    
+After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging.When **isDraggableProperty** on node is set to false you wont be able to grab it. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.    
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).    
 You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass** 
 
