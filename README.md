@@ -4,7 +4,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 
 ## Props
 
- - **tree** (array of nodes, default: *null*)
+ - **tree** (array of nodes, default: *null*) = tree itself. THIS CAN NEVER BE NULL/UNDEFINED
  - **treeId** (string, default: *null*) = you HAVE to set this to unique string
  - **maxExpandedDepth** (number, default: *3*)
  - **filteredTree** (array of nodes, default: *null*)
