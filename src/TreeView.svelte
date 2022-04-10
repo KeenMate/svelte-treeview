@@ -547,6 +547,7 @@
 					{selectedProperty}
 					{useCallbackProperty}
 					{priorityProperty}
+					{isDraggableProperty}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold
