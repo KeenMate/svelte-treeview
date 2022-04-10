@@ -64,6 +64,7 @@
 	export let selectedProperty = "__selected";
 	export let useCallbackProperty = "__useCallback";
 	export let priorityProperty = "priority";
+	export let isDraggableProperty = "isDraggable";
 
 	let propNames = getPropsObject(
 		nodePathProperty,
@@ -71,7 +72,8 @@
 		expandedProperty,
 		selectedProperty,
 		useCallbackProperty,
-		priorityProperty
+		priorityProperty,
+		isDraggableProperty
 	);
 	$: propNames = getPropsObject(
 		nodePathProperty,
@@ -79,7 +81,8 @@
 		expandedProperty,
 		selectedProperty,
 		useCallbackProperty,
-		priorityProperty
+		priorityProperty,
+		isDraggableProperty
 	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
@@ -138,7 +141,8 @@
 		expanded,
 		selected,
 		useCallback,
-		priority
+		priority,
+		isDraggable
 	) {
 		return {
 			nodePathProperty: nodePath,
@@ -147,6 +151,7 @@
 			useCallbackProperty: useCallback,
 			priorityProperty: priority,
 			hasChildrenProperty: hasChildren,
+			isDraggableProperty: isDraggable
 		};
 	}
 
@@ -437,7 +442,7 @@
 				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]? currentlyDraggedClass : "" }"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
 				class:hover={highlighThisNode(node,highlightedNode,validTarget) }
-				draggable={dragAndDrop}
+				draggable={dragAndDrop && (node[propNames.isDraggableProperty] != false)}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
 				on:dragover={(e) => handleDragOver(e, node)}

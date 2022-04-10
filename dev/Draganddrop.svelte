@@ -12,7 +12,7 @@
 			__useCallback: true,
 			hasChildren: true,
 		},
-		{ nodePath: "2", title: "2" },
+		{ nodePath: "2", title: "2", isDraggable:false},
 
 		{ nodePath: "3", title: "3", hasChildren: true, __expanded: true },
 		{ nodePath: "3.4", title: "	Omniknight" },
