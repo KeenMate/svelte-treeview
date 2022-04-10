@@ -15,37 +15,6 @@
 		{ nodePath: "2", title: "2" },
 
 		{ nodePath: "3", title: "3", hasChildren: true, __expanded: true },
-		// { nodePath: "3.1", title: "Hecarim" },
-		// { nodePath: "3.2", title: "3.2", hasChildren: true, __expanded: false },
-		// {
-		// 	nodePath: "3.2.2",
-		// 	title: "Visage",
-		// 	__expanded: true,
-		// 	__selected: true,
-		// 	test: "test223",
-		// },
-		// {
-		// 	nodePath: "3.2.3",
-		// 	title: "Lycan",
-		// 	__expanded: true,
-		// 	__selected: true,
-		// 	test: "test223",
-		// },
-		// {
-		// 	nodePath: "3.2.4",
-		// 	title: "Bloodseeker",
-		// 	__expanded: true,
-		// 	__selected: true,
-		// },
-
-		// { nodePath: "3.3", title: "3.3", hasChildren: true, __expanded: true },
-
-		// {
-		// 	nodePath: "3.3.1",
-		// 	title: "3.3.1",
-		// 	__expanded: true,
-		// 	__selected: false,
-		// },
 		{ nodePath: "3.4", title: "	Omniknight" },
 		{ nodePath: "4", hasChildren: true, __expanded: true },
 		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },

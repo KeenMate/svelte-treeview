@@ -120,7 +120,7 @@
 	);
 	$: ComputeVisualTree(filteredTree);
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-	$: tree = expandToLevel(tree, expandedLevel, propNames);
+	$: tree = expandToLevel(tree ?? [], expandedLevel, propNames);
 
 	function ComputeVisualTree(filteredTree) {
 		tree = computeInitialVisualStates(
@@ -404,6 +404,8 @@
 		filteredTree ?? tree,
 		propNames
 	);
+
+	$:tree,(tree == null || tree == undefined )? tree = [] : ''
 </script>
 
 <ul
