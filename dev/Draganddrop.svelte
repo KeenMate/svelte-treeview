@@ -18,10 +18,10 @@
 		{ nodePath: "3.4", title: "	Omniknight" },
 		{ nodePath: "4", hasChildren: true, __expanded: true },
 		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
-		{ nodePath: "4.6", priority: 6, title: "ITEM_2" },
+		{ nodePath: "4.6", priority: 6, title: "ITEM_2" , insertDisabled: true },
 		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
-		{ nodePath: "4.3", priority: 3, title: "ITEM_4" },
-		{ nodePath: "4.4", priority: 4, title: "ITEM_5" },
+		{ nodePath: "4.3", priority: 3, title: "ITEM_4", nestDisabled:true},
+		{ nodePath: "4.4", priority: 4, title: "ITEM_5" ,dropDisabled:true},
 		{ nodePath: "4.5", priority: 10, title: "ITEM_6" , isDraggable:false},
 	];
 
@@ -88,11 +88,11 @@
 	}
 
 	function beforeCallback(node, oldParent, targetNode, nest) {
-		alert(
-			`moved ${node?.nodePath} from ${oldParent?.nodePath} to ${
-				targetNode?.nodePath
-			} while ${nest ? "nesting" : "not nesting"}`
-		);
+		// alert(
+		// 	`moved ${node?.nodePath} from ${oldParent?.nodePath} to ${
+		// 		targetNode?.nodePath
+		// 	} while ${nest ? "nesting" : "not nesting"}`
+		// );
 	}
 
 	function addTo() {
@@ -128,6 +128,8 @@ TreeView drag and drop test
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
 	{expandedLevel}
+	nestDisabledPropery="dropDisabled"
+	insertDisabledPropery="dropDisabled"
 
 >
 	{JSON.stringify(node)}

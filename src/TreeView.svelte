@@ -18,7 +18,7 @@
 		expandToLevel,
 		changeEveryExpansion,
 		getInsertionPosition,
-		huminifyInsType
+		huminifyInsType,
 	} from "./TreeHelpers";
 
 	//! required
@@ -47,15 +47,14 @@
 
 	//* classes for customization of tree
 	export let treeClass = "";
-	export let	nodeClass = "";
-	export let	expandedToggleClass = "";
-	export let	collapsedToggleClass = "";
+	export let nodeClass = "";
+	export let expandedToggleClass = "";
+	export let collapsedToggleClass = "";
 	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
 	export let inserLineClass = "";
 	export let inserLineNestClass = "";
-	export let currentlyDraggedClass = "currently-dragged"
-
+	export let currentlyDraggedClass = "currently-dragged";
 
 	//* properties
 	export let nodePathProperty = "nodePath";
@@ -65,6 +64,8 @@
 	export let useCallbackProperty = "__useCallback";
 	export let priorityProperty = "priority";
 	export let isDraggableProperty = "isDraggable";
+	export let insertDisabledPropery = "insertDisabled";
+	export let nestDisabledPropery = "nestDisabled";
 
 	let propNames = getPropsObject(
 		nodePathProperty,
@@ -73,7 +74,9 @@
 		selectedProperty,
 		useCallbackProperty,
 		priorityProperty,
-		isDraggableProperty
+		isDraggableProperty,
+		insertDisabledPropery,
+		nestDisabledPropery
 	);
 	$: propNames = getPropsObject(
 		nodePathProperty,
@@ -82,7 +85,9 @@
 		selectedProperty,
 		useCallbackProperty,
 		priorityProperty,
-		isDraggableProperty
+		isDraggableProperty,
+		insertDisabledPropery,
+		nestDisabledPropery
 	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
@@ -114,7 +119,7 @@
 
 	$: parentChildrenTree = OrderByPriority(
 		getParentChildrenTree(
-			filteredTree? filteredTree :tree ,
+			filteredTree ? filteredTree : tree,
 			parentId,
 			isChild,
 			getParentId
@@ -142,7 +147,9 @@
 		selected,
 		useCallback,
 		priority,
-		isDraggable
+		isDraggable,
+		insertDisabled,
+		nestDisabled
 	) {
 		return {
 			nodePathProperty: nodePath,
@@ -151,7 +158,9 @@
 			useCallbackProperty: useCallback,
 			priorityProperty: priority,
 			hasChildrenProperty: hasChildren,
-			isDraggableProperty: isDraggable
+			isDraggableProperty: isDraggable,
+			insertDisabledPropery: insertDisabled,
+			nestDisabledPropery: nestDisabled,
 		};
 	}
 
@@ -266,9 +275,9 @@
 
 	//#region drag and drop
 	function handleDragStart(e, node) {
-		if(node[propNames.isDraggableProperty] === false){
-			e.preventDefault()
-			return
+		if (node[propNames.isDraggableProperty] === false) {
+			e.preventDefault();
+			return;
 		}
 		console.log("dragstart from: " + node[propNames.nodePathProperty]);
 		e.dataTransfer.dropEffect = "move";
@@ -301,8 +310,22 @@
 		);
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
+
+		//checking if node has insertDisabledPropery or nestDisabledPropery
+
+		if (insType == 0 && node[propNames.nestDisabledPropery] === true) return;
+		else if (node[propNames.insertDisabledPropery] === true) return;
+
 		//callback can cancell move
-		if (beforeMovedCallback && beforeMovedCallback(oldNode, oldParent, node, huminifyInsType(insType)) === false)
+		if (
+			beforeMovedCallback &&
+			beforeMovedCallback(
+				oldNode,
+				oldParent,
+				node,
+				huminifyInsType(insType)
+			) === false
+		)
 			return;
 
 		tree = moveNode(
@@ -315,8 +338,12 @@
 			propNames
 		);
 
-		let newParent = tree.find((x) => x[propNames.nodePathProperty] == getParentNodePath(newNode[propNames.nodePathProperty])) ?? null
-
+		let newParent =
+			tree.find(
+				(x) =>
+					x[propNames.nodePathProperty] ==
+					getParentNodePath(newNode[propNames.nodePathProperty])
+			) ?? null;
 
 		dispatch("moved", {
 			oldParent: oldParent,
@@ -347,7 +374,7 @@
 		//if you arent dropping parent to child allow drop
 		if (
 			dragAndDrop &&
-			!node[propNames.nodePathProperty].startsWith(draggedPath)
+			!node[propNames.nodePathProperty].startsWith(draggedPath) && !(node[propNames.insertDisabledPropery] === true && node[propNames.nestDisabledPropery] === true)
 		) {
 			validTarget = true;
 			e.preventDefault();
@@ -357,23 +384,23 @@
 	}
 
 	function handleDragEnter(e, node) {
-		setTimeout( () => {
-		validTarget = false;
-		dragenterTimestamp = new Date();
-		// will cause flashing when moving wrom node to node while be able to nest
-		//* have to be here if you only use time
-		highlightedNode = node;
+		setTimeout(() => {
+			validTarget = false;
+			dragenterTimestamp = new Date();
+			// will cause flashing when moving wrom node to node while be able to nest
+			//* have to be here if you only use time
+			highlightedNode = node;
 
-		if (timeToNest) {
-			canNestTime = false;
+			if (timeToNest) {
+				canNestTime = false;
 
-			clearTimeout(dragTimeout);
+				clearTimeout(dragTimeout);
 
-			dragTimeout = setTimeout(() => {
-				canNestTime = true;
-			}, timeToNest);
-		}
-	},0)
+				dragTimeout = setTimeout(() => {
+					canNestTime = true;
+				}, timeToNest);
+			}
+		}, 0);
 		e.preventDefault();
 	}
 
@@ -384,14 +411,44 @@
 		}, 1);
 	}
 
-	function handleDragleave(e,node){
-			highlightedNode = null;
+	function handleDragleave(e, node) {
+		highlightedNode = null;
 	}
 	/**
-	*check if this node is one being hovered over (highlited) and is valid target
-	*/
-	function highlighThisNode(n,hn,vt){
-		return vt && hn?.[propNames.nodePathProperty] == n?.[propNames.nodePathProperty]
+	 *check if this node is one being hovered over (highlited) and is valid target
+	 */
+	function highlighThisNode(n, hn, vt) {
+		return (
+			vt && hn?.[propNames.nodePathProperty] == n?.[propNames.nodePathProperty]
+		);
+	}
+	/**
+	 * returns true, it should highlight nesting on this node
+	 * @param n node
+	 * @param hn highlited node
+	 * @param vt valid target
+	 * @param cn can nest
+	 */
+	function highlightNesting(n, hn, vt, cn) {
+		return (
+			cn &&
+			highlighThisNode(n, hn, vt) &&
+			n[propNames.nestDisabledPropery] !== true
+		);
+	}
+	/**
+	 * returns true, it should highlight nesting on this node
+	 * @param n node
+	 * @param hn highlited node
+	 * @param vt valid target
+	 * @param cn can nest
+	 */
+	function highlightInsert(n, hn, vt, cn) {
+		return (
+			!cn &&
+			highlighThisNode(n, hn, vt) &&
+			n[propNames.insertDisabledPropery] !== true
+		);
 	}
 
 	//#endregion
@@ -414,7 +471,7 @@
 		propNames
 	);
 
-	$:tree,(tree == null || tree == undefined )? tree = [] : ''
+	$: tree, tree == null || tree == undefined ? (tree = []) : "";
 </script>
 
 <ul
@@ -434,7 +491,7 @@
 			}}
 		>
 			<!-- place here if insering above  -->
-			{#if insPos == 1 && !canNest && highlighThisNode(node,highlightedNode,validTarget) }
+			{#if insPos == 1 && highlightInsert(node, highlightedNode, validTarget, canNest)}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
@@ -442,11 +499,15 @@
 
 			<div
 				class="tree-item
-				{canNest && highlighThisNode(node,highlightedNode,validTarget) ? expandClass : ''}
-				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]? currentlyDraggedClass : "" }"
+				{highlightNesting(node, highlightedNode, validTarget, canNest)
+					? expandClass
+					: ''}
+				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]
+					? currentlyDraggedClass
+					: ''}"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
-				class:hover={highlighThisNode(node,highlightedNode,validTarget) }
-				draggable={dragAndDrop && (node[propNames.isDraggableProperty] !== false)}
+				class:hover={highlightInsert(node,highlightedNode,validTarget,canNest) || highlightNesting(node,highlightedNode,validTarget,canNest)}
+				draggable={dragAndDrop && node[propNames.isDraggableProperty] !== false}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
 				on:dragover={(e) => handleDragOver(e, node)}
@@ -514,7 +575,7 @@
 				<slot {node} />
 			</div>
 
-			{#if canNest && highlighThisNode(node,highlightedNode,validTarget)}
+			{#if highlightNesting(node, highlightedNode, validTarget,canNest)}
 				<div class="insert-line-wrapper">
 					<div
 						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
@@ -552,6 +613,8 @@
 					{useCallbackProperty}
 					{priorityProperty}
 					{isDraggableProperty}
+					{insertDisabledPropery}
+					{nestDisabledPropery}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold
@@ -567,11 +630,11 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if !node[propNames.expandedProperty]&& node[propNames.hasChildrenProperty]}
+			{#if !node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && !canNest && highlighThisNode(node,highlightedNode,validTarget)}
+			{#if insPos == -1 && highlightInsert(node, highlightedNode, validTarget,canNest)}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
@@ -670,6 +733,6 @@
 				position: relative
 
 			.currently-dragged
-				color: grey
+				color: LightGray
 
 </style>
