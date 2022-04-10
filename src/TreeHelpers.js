@@ -254,7 +254,7 @@ function recomputeAllParentVisualState(
 	filteredTree,
 	propNames
 ) {
-	let parent = getParentId({ nodePath: nodePath });
+	let parent = getParentId({ [propNames.nodePathProperty]: nodePath });
 
 	let newstate;
 	filteredTree.forEach((x) => {
