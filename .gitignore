@@ -108,3 +108,4 @@ dev/build/bundle.css
 dev/build/bundle.js
 dev/build/bundle.js.map
 dev/build/css/quill.snow.css
+.vscode/settings.json

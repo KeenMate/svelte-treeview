@@ -128,8 +128,8 @@ TreeView drag and drop test
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
 	{expandedLevel}
-	nestDisabledPropery="dropDisabled"
-	insertDisabledPropery="dropDisabled"
+	nestDisabledProperty="dropDisabled"
+	insertDisabledProperty="dropDisabled"
 
 >
 	{JSON.stringify(node)}
