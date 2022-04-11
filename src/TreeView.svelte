@@ -64,8 +64,8 @@
 	export let useCallbackProperty = "__useCallback";
 	export let priorityProperty = "priority";
 	export let isDraggableProperty = "isDraggable";
-	export let insertDisabledPropery = "insertDisabled";
-	export let nestDisabledPropery = "nestDisabled";
+	export let insertDisabledProperty = "insertDisabled";
+	export let nestDisabledProperty = "nestDisabled";
 
 	let propNames = getPropsObject(
 		nodePathProperty,
@@ -75,8 +75,8 @@
 		useCallbackProperty,
 		priorityProperty,
 		isDraggableProperty,
-		insertDisabledPropery,
-		nestDisabledPropery
+		insertDisabledProperty,
+		nestDisabledProperty
 	);
 	$: propNames = getPropsObject(
 		nodePathProperty,
@@ -86,8 +86,8 @@
 		useCallbackProperty,
 		priorityProperty,
 		isDraggableProperty,
-		insertDisabledPropery,
-		nestDisabledPropery
+		insertDisabledProperty,
+		nestDisabledProperty
 	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
@@ -159,8 +159,8 @@
 			priorityProperty: priority,
 			hasChildrenProperty: hasChildren,
 			isDraggableProperty: isDraggable,
-			insertDisabledPropery: insertDisabled,
-			nestDisabledPropery: nestDisabled,
+			insertDisabledProperty: insertDisabled,
+			nestDisabledProperty: nestDisabled,
 		};
 	}
 
@@ -311,10 +311,10 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 
-		//checking if node has insertDisabledPropery or nestDisabledPropery
+		//checking if node has insertDisabledProperty or nestDisabledProperty
 
-		if (insType == 0 && node[propNames.nestDisabledPropery] === true) return;
-		else if (node[propNames.insertDisabledPropery] === true) return;
+		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
+		else if (node[propNames.insertDisabledProperty] === true) return;
 
 		//callback can cancell move
 		if (
@@ -374,7 +374,7 @@
 		//if you arent dropping parent to child allow drop
 		if (
 			dragAndDrop &&
-			!node[propNames.nodePathProperty].startsWith(draggedPath) && !(node[propNames.insertDisabledPropery] === true && node[propNames.nestDisabledPropery] === true)
+			!node[propNames.nodePathProperty].startsWith(draggedPath) && !(node[propNames.insertDisabledProperty] === true && node[propNames.nestDisabledProperty] === true)
 		) {
 			validTarget = true;
 			e.preventDefault();
@@ -433,7 +433,7 @@
 		return (
 			cn &&
 			highlighThisNode(n, hn, vt) &&
-			n[propNames.nestDisabledPropery] !== true
+			n[propNames.nestDisabledProperty] !== true
 		);
 	}
 	/**
@@ -447,7 +447,7 @@
 		return (
 			!cn &&
 			highlighThisNode(n, hn, vt) &&
-			n[propNames.insertDisabledPropery] !== true
+			n[propNames.insertDisabledProperty] !== true
 		);
 	}
 
@@ -613,8 +613,8 @@
 					{useCallbackProperty}
 					{priorityProperty}
 					{isDraggableProperty}
-					{insertDisabledPropery}
-					{nestDisabledPropery}
+					{insertDisabledProperty}
+					{nestDisabledProperty}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold

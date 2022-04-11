@@ -32,8 +32,8 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
  - **usecallbackProperty** (string, default: *"__useCallback"*)
  - **priorityProperty** (string, default: *"__priority"*)
  - **isDraggableProperty** (string, default: *"isDraggable"*) when false, wont allow you to start dragging element
- - **insertDisabledPropery** (string, default: *"insertDisabled"*) when true, you wont be able to drop element below are above nod. You still be able to nest it
- - **nestDisabledPropery** (string, default: *"nestDisabled"*) when true, wont be able to drop node inside (nest it)
+ - **insertDisabledProperty** (string, default: *"insertDisabled"*) when true, you wont be able to drop element below are above nod. You still be able to nest it
+ - **nestDisabledProperty** (string, default: *"nestDisabled"*) when true, wont be able to drop node inside (nest it)
  - 
  - **treeClass** (string css class, default: *""*)
  - **nodeClass** (string css class, default: *""*)
@@ -166,7 +166,7 @@ After setting dragAndDrop to true, you will be able to change order of nodes and
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).    
 You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass** 
 
-TODO add note about insertDisabledPropery and nestDisabledPropery
+TODO add note about insertDisabledProperty and nestDisabledProperty
 
 ## context menu
 
