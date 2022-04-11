@@ -314,7 +314,7 @@
 		//checking if node has insertDisabledProperty or nestDisabledProperty
 
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
-		else if (node[propNames.insertDisabledProperty] === true) return;
+		else if ((insType == -1 || insType == 1) &&  node[propNames.insertDisabledProperty] === true) return;
 
 		//callback can cancell move
 		if (
