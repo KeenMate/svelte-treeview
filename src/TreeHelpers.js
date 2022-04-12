@@ -395,9 +395,9 @@ export function moveNode(
 	let insideParent =
 		!nest &&
 		getParentNodePath(movedNodePath) == getParentNodePath(targetNodePath);
-	let newParrentNodePath = movedNodePath;
+	let newParentNodePath = movedNodePath;
 
-	//dont create new node if you only moved inside same parrent
+	//dont create new node if you only moved inside same parent
 	if (!insideParent) {
 		let nodeId;
 		if (recalculateNodePath) {
@@ -409,10 +409,10 @@ export function moveNode(
 					: 0
 			);
 		}
-		newParrentNodePath = (parentNodePath ? parentNodePath + "." : "") + nodeId;
+		newParentNodePath = (parentNodePath ? parentNodePath + "." : "") + nodeId;
 	}
 
-	//console.log(newParrentNodePath);
+	//console.log(newParentNodePath);
 
 	//* find target node
 	let targetNode = tree.find(
@@ -420,7 +420,7 @@ export function moveNode(
 	);
 	let movedNode;
 
-	//console.log("parentNodePath: " + newParrentNodePath);
+	//console.log("parentNodePath: " + newParentNodePath);
 
 	tree = tree.map((node) => {
 		//make sure that parent's haschild is set to true, so that children
@@ -437,14 +437,14 @@ export function moveNode(
 			//replace old parent with new
 			let newPath = node[propNames.nodePathProperty].replace(
 				movedNodePath,
-				newParrentNodePath
+				newParentNodePath
 			);
 			//console.log(node[propNames.nodePathProperty] + " -> " + newPath);
 			node[propNames.nodePathProperty] = newPath;
 		}
 
 		//if it is moved node
-		if (node[propNames.nodePathProperty] == newParrentNodePath) {
+		if (node[propNames.nodePathProperty] == newParentNodePath) {
 			movedNode = node;
 
 			if (nest || targetNode[propNames.priorityProperty] != null) {
@@ -464,7 +464,7 @@ export function moveNode(
 				InsertPriority(
 					tree,
 					parentNodePath,
-					newParrentNodePath,
+					newParentNodePath,
 					newpriority,
 					isChild,
 					propNames
@@ -483,7 +483,7 @@ export function moveNode(
 	//
 
 	let oldIndex = tree.findIndex(
-		(x) => x[propNames.nodePathProperty] == newParrentNodePath
+		(x) => x[propNames.nodePathProperty] == newParentNodePath
 	);
 	tree.splice(oldIndex, 1);
 
@@ -496,22 +496,27 @@ export function moveNode(
 
 	tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
 
-	//hide plus icon if parrent of moved node doesnt have any more children
-	let movedNodeParrent = tree.find(
+	//TODO maybe add option to setting hasChildren to false when moved last children
+
+	/*
+	//hide plus icon if parent of moved node doesnt have any more children
+	let oldParent = tree.find(
 		(x) => x[propNames.nodePathProperty] == getParentNodePath(movedNodePath)
 	);
+
+	//moved
 	if (
-		movedNodeParrent &&
+		oldParent &&
 		!allCHildren(
 			tree,
-			movedNodeParrent[propNames.nodePathProperty],
+			oldParent[propNames.nodePathProperty],
 			isChild,
 			propNames
 		).length
 	) {
-		movedNodeParrent[propNames.hasChildrenProperty] = false;
+		oldParent[propNames.hasChildrenProperty] = false;
 	}
-
+*/
 	return tree;
 }
 
