@@ -1,6 +1,4 @@
-import orderBy from "lodash.unionby";
-//#region helpers
-/* Tree view helpers */
+import orderBy from "lodash.unionby"; // used by tree merge
 
 //#region basic helpres
 
@@ -496,7 +494,7 @@ export function moveNode(
 
 	//insert below expcept if inspos is 1
 
-	tree.splice(index + ((insType == 1) ? 0 : 1), 0, movedNode);
+	tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
 
 	//hide plus icon if parrent of moved node doesnt have any more children
 	let movedNodeParrent = tree.find(
@@ -567,14 +565,14 @@ export function getInsertionPosition(e) {
 	return -1;
 }
 
-export function huminifyInsType(insType){
+export function huminifyInsType(insType) {
 	switch (insType) {
 		case 1:
-			return "before"
+			return "before";
 		case 0:
-			return "inside"
+			return "inside";
 		case -1:
-			return "after"
+			return "after";
 	}
 }
 
@@ -632,10 +630,6 @@ function addParents(tree, result, node, propNames) {
 
 	return result;
 }
-
-//#endregion
-
-/* Tree view helpers end */
 
 //#endregion
 

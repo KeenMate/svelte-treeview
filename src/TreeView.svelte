@@ -225,12 +225,12 @@
 		tree = changeEveryExpansion(tree, changeTo, propNames);
 	}
 
-	function shouldExpand(expandProp,depth,expandTo){
+	function shouldExpand(expandProp, depth, expandTo) {
 		//expanded prop has priority over expanded Level
-		if(expandProp != undefined || expandProp != null){
-			return expandProp
+		if (expandProp != undefined || expandProp != null) {
+			return expandProp;
 		}
-		return depth <= expandTo
+		return depth <= expandTo;
 	}
 
 	//#endregion
@@ -322,7 +322,11 @@
 		//checking if node has insertDisabledProperty or nestDisabledProperty
 
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
-		else if ((insType == -1 || insType == 1) &&  node[propNames.insertDisabledProperty] === true) return;
+		else if (
+			(insType == -1 || insType == 1) &&
+			node[propNames.insertDisabledProperty] === true
+		)
+			return;
 
 		//callback can cancell move
 		if (
@@ -382,7 +386,11 @@
 		//if you arent dropping parent to child allow drop
 		if (
 			dragAndDrop &&
-			!node[propNames.nodePathProperty].startsWith(draggedPath) && !(node[propNames.insertDisabledProperty] === true && node[propNames.nestDisabledProperty] === true)
+			!node[propNames.nodePathProperty].startsWith(draggedPath) &&
+			!(
+				node[propNames.insertDisabledProperty] === true &&
+				node[propNames.nestDisabledProperty] === true
+			)
 		) {
 			validTarget = true;
 			e.preventDefault();
@@ -514,7 +522,12 @@
 					? currentlyDraggedClass
 					: ''}"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
-				class:hover={highlightInsert(node,highlightedNode,validTarget,canNest) || highlightNesting(node,highlightedNode,validTarget,canNest)}
+				class:hover={highlightInsert(
+					node,
+					highlightedNode,
+					validTarget,
+					canNest
+				) || highlightNesting(node, highlightedNode, validTarget, canNest)}
 				draggable={dragAndDrop && node[propNames.isDraggableProperty] !== false}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:drop={(e) => handleDragDrop(e, node)}
@@ -526,11 +539,23 @@
 				{#if node[propNames.hasChildrenProperty]}
 					<span on:click={() => toggleExpansion(node)}>
 						<i
-							class="far {shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)
+							class="far {shouldExpand(
+								node[propNames.expandedProperty],
+								childDepth,
+								expandedLevel
+							)
 								? expandedToggleClass
 								: collapsedToggleClass}"
-							class:fa-minus-square={shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)}
-							class:fa-plus-square={!shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)}
+							class:fa-minus-square={shouldExpand(
+								node[propNames.expandedProperty],
+								childDepth,
+								expandedLevel
+							)}
+							class:fa-plus-square={!shouldExpand(
+								node[propNames.expandedProperty],
+								childDepth,
+								expandedLevel
+							)}
 						/>
 					</span>
 				{:else}
@@ -583,14 +608,14 @@
 				<slot {node} />
 			</div>
 
-			{#if highlightNesting(node, highlightedNode, validTarget,canNest)}
+			{#if highlightNesting(node, highlightedNode, validTarget, canNest)}
 				<div class="insert-line-wrapper">
 					<div
 						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
 					/>
 				</div>
 			{/if}
-			{#if shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel) && node[propNames.hasChildrenProperty]}
+			{#if shouldExpand(node[propNames.expandedProperty], childDepth, expandedLevel) && node[propNames.hasChildrenProperty]}
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
@@ -639,11 +664,11 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if !shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel) && node[propNames.hasChildrenProperty]}
+			{#if !shouldExpand(node[propNames.expandedProperty], childDepth, expandedLevel) && node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && highlightInsert(node, highlightedNode, validTarget,canNest)}
+			{#if insPos == -1 && highlightInsert(node, highlightedNode, validTarget, canNest)}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
