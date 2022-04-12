@@ -53,6 +53,7 @@
 			__selected: false,
 		},
 	];
+
 	let dragAndDrop = true,
 		showContexMenu = true,
 		enableVerticalLines = false,
@@ -125,7 +126,6 @@ TreeView drag and drop test
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
 	bind:expandedLevel
-
 >
 	{JSON.stringify(node)}
 
