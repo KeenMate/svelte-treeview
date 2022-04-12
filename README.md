@@ -66,7 +66,7 @@ Table of Contents
 - **selected** {node }
 - **unselected** {node }
 
-## function on component
+## Function on component
 
 you call them on binded component
 
@@ -92,7 +92,7 @@ bind:this={thisTree}
 </TreeView>
 ```
 
-## Helper functions
+## Helper Functions
 
 - **searchTree(tree, filterFunction, recursive,propNames)**  = function that will filter tree using filterFunction and adds all parent so that it can render. If recursive is true, it will only search through "lef nodes" (nodes that dont have children)
 - **mergeTrees(oldTree,addedTree,nodePathProperty="nodePath")**  = will merge new tree into old one, so that expanded, etc. wont be reseted.
@@ -107,7 +107,7 @@ tree = mergeTrees(tree,treeToAdd);
 filteredTree = searchTree(tree, filterFunction, recursive,propNames)
 ```
 
-## basic usage
+## Basic Usage
 
 You need to provide treeId and tree, that is array of node where every node has nodepath defined. Parent nodes have to have hasChildren set to true. Next you have to set a default slot with how you want you nodes to be rendered.You can add your own props to nodes and used them here in  events, contextmenus and callbacks. Treeview uses **expandedProperty** to determine expansion.
 
@@ -139,7 +139,7 @@ let tree = [
 
 ```
 
-## callbacks
+## Callbacks
 
 To dynamicly load data, you have to have hasChildren(to show + icon) and **usecallbackProperty** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as parametr. Function should return Promise or array of nodes, that will be added to tree. **usecallbackProperty** will be then set to false, so that callback will only be called once.
 
@@ -177,11 +177,11 @@ let num =0
 
 ```
 
-## selection
+## Selection
 
-## search
+## Search
 
-## drag and drop
+## Drag and Drop
 
 After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging.When **isDraggableProperty** on node is set to false you wont be able to grab it. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).
@@ -189,7 +189,7 @@ You can also customize line show when dragging by changing **inserLineNestClass*
 
 TODO add note about insertDisabledProperty and nestDisabledProperty
 
-## context menu
+## Context menu
 
 To enable context menu you first need to add your desired context menu to slot named context-menu. you can accest clicked node with let:node. You can use MenuDivider and MenuOption from this package to easy creation of ctxmenu.Then just set **showContexMenu** to true and context menu will now be showen when you right click on node.
 
