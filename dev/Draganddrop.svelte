@@ -11,18 +11,31 @@
 			__visual_state: "indeterminate",
 			__useCallback: true,
 			hasChildren: true,
+			checkboxVisible: true,
 		},
-		{ nodePath: "2", title: "2", isDraggable:false},
+		{ nodePath: "2", title: "2", isDraggable: false, checkboxVisible: false },
 
-		{ nodePath: "3", title: "3", hasChildren: true},
+		{ nodePath: "3", title: "3", hasChildren: true },
 		{ nodePath: "3.4", title: "	Omniknight" },
-		{ nodePath: "4", hasChildren: true},
+		{ nodePath: "4", hasChildren: true },
 		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
-		{ nodePath: "4.6", priority: 6, title: "ITEM_2" , insertDisabled: true },
-		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
-		{ nodePath: "4.3", priority: 3, title: "ITEM_4", nestDisabled:true},
-		{ nodePath: "4.4", priority: 4, title: "ITEM_5" ,dropDisabled:true},
-		{ nodePath: "4.5", priority: 10, title: "ITEM_6" , isDraggable:false},
+		{ nodePath: "4.6", priority: 6, title: "ITEM_2", insertDisabled: true },
+		{ nodePath: "4.2", priority: 2, title: "ITEM_3", checkboxVisible: false },
+		{
+			nodePath: "4.3",
+			priority: 3,
+			title: "ITEM_4",
+			nestDisabled: true,
+			checkboxVisible: true,
+		},
+		{ nodePath: "4.4", priority: 4, title: "ITEM_5", dropDisabled: true },
+		{
+			nodePath: "4.5",
+			priority: 10,
+			title: "ITEM_6",
+			isDraggable: false,
+			checkboxVisible: true,
+		},
 	];
 
 	let treeToAdd = [
@@ -38,6 +51,7 @@
 			title: "Lycan",
 			__selected: true,
 			test: "test223",
+			checkboxVisible: true,
 		},
 		{
 			nodePath: "3.2.4",
@@ -45,7 +59,7 @@
 			__selected: true,
 		},
 
-		{ nodePath: "3.3", title: "3.3", hasChildren: true},
+		{ nodePath: "3.3", title: "3.3", hasChildren: true },
 
 		{
 			nodePath: "3.3.1",
@@ -96,17 +110,42 @@
 	function addTo() {
 		tree = mergeTrees(tree, treeToAdd);
 	}
+
+	let recursive = true,
+		leafNodeCheckboxesOnly = true,
+		checkboxesDisabled = true,
+		checkboxes = "all";
 </script>
 
-TreeView drag and drop test
-<input type="checkbox" bind:checked={dragAndDrop} />
-<input type="checkbox" bind:checked={showContexMenu} />
-<input type="checkbox" bind:checked={enableVerticalLines} />
-<input type="number" bind:value={expandedLevel} />
+<h1>Page for testing</h1> <br />
+dragAndDrop<input type="checkbox" bind:checked={dragAndDrop} /><br />
+showContexMenu<input type="checkbox" bind:checked={showContexMenu} /><br />
+enableVerticalLines<input
+	type="checkbox"
+	bind:checked={enableVerticalLines}
+/><br />
+expandedLevel<input type="number" bind:value={expandedLevel} /><br />
+
+recursive:<input type="checkbox" bind:checked={recursive} /> <br />
+leafNodeCheckboxesOnly:<input
+	type="checkbox"
+	bind:checked={leafNodeCheckboxesOnly}
+/> <br />
+checkboxesDisabled:<input
+	type="checkbox"
+	bind:checked={checkboxesDisabled}
+/><br />
+checkboxes:<select bind:value={checkboxes}>
+	<option value="all" selected>all</option>
+	<option value="perNode">perNode</option>
+	<option value="none">none</option>
+</select> <br />
+
 <button on:click={addTo}> add</button>
 
 <button on:click={thisTree.changeAllExpansion(true)}> true</button>
 <button on:click={thisTree.changeAllExpansion(false)}> false</button>
+<button on:click={thisTree.changeAllExpansion(undefined)}> delete all expansion</button>
 
 <TreeView
 	bind:this={thisTree}
@@ -114,8 +153,6 @@ TreeView drag and drop test
 	treeId="tree"
 	let:node
 	maxExpandedDepth={4}
-	recursive
-	checkboxes
 	bind:filteredTree={tree}
 	on:selection={(e) => console.log(e.detail)}
 	on:expansion={(e) => console.log(e.detail)}
@@ -126,6 +163,10 @@ TreeView drag and drop test
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
 	bind:expandedLevel
+	{recursive}
+	{leafNodeCheckboxesOnly}
+	{checkboxesDisabled}
+	{checkboxes}
 >
 	{JSON.stringify(node)}
 
