@@ -36,7 +36,7 @@ Table of Contents
 - **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null ) = if it return false, move will be cancelled
 - **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use
 - **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
-- **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). **expandedProperty** has priority over this. It wont modify **expandedProperty** on nodes so you can dynamicly change this and tree will rerender
+- **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expandedProperty** has priority over this. It wont modify **expandedProperty** on nodes so you can dynamicly change this and tree will rerender
 - **nodePathProperty** (string, default: *"nodePath"*)
 - **hasChildrenProperty** (string, default: *"hasChildren"*)
 - **expandedProperty** (string, default: *"__expanded"*)

@@ -370,8 +370,9 @@ export function deleteSelected(tree, propNames) {
  * @param {nodePath} movedNodePath - nodepath of moved(dragged) node
  * @param {nodePath} targetNodePath - nodepath of node where it should be moved ( either bellow it in priority or as child)
  * @param {function} isChild - funcion to get if child
- * @param {boolean} nest - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
- * @param {string} priorityProp - prop where priority is stored
+ * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
+ * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
+ * @param {Object} propNames - object where all propNames are stored
  */
 export function moveNode(
 	tree,
@@ -481,6 +482,8 @@ export function moveNode(
 	});
 
 	//* insert node at right possition of array
+	//
+
 	let oldIndex = tree.findIndex(
 		(x) => x[propNames.nodePathProperty] == newParrentNodePath
 	);
@@ -490,7 +493,10 @@ export function moveNode(
 		(x) =>
 			x[propNames.nodePathProperty] == targetNode[propNames.nodePathProperty]
 	);
-	tree.splice(index + 1, 0, movedNode);
+
+	//insert below expcept if inspos is 1
+
+	tree.splice(index + ((insType == 1) ? 0 : 1), 0, movedNode);
 
 	//hide plus icon if parrent of moved node doesnt have any more children
 	let movedNodeParrent = tree.find(
