@@ -15,7 +15,7 @@
 		ChangeSelection,
 		ChangeSelectForAllChildren,
 		moveNode,
-		expandToLevel,
+		//expandToLevel,
 		changeEveryExpansion,
 		getInsertionPosition,
 		huminifyInsType,
@@ -128,7 +128,7 @@
 	);
 	$: ComputeVisualTree(filteredTree);
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-	$: tree = expandToLevel(tree ?? [], expandedLevel, propNames);
+	//$: tree = expandToLevel(tree ?? [], expandedLevel, propNames);
 
 	function ComputeVisualTree(filteredTree) {
 		tree = computeInitialVisualStates(
@@ -223,6 +223,14 @@
 
 	export function changeAllExpansion(changeTo) {
 		tree = changeEveryExpansion(tree, changeTo, propNames);
+	}
+
+	function shouldExpand(expandProp,depth,expandTo){
+		//expanded prop has priority over expanded Level
+		if(expandProp != undefined || expandProp != null){
+			return expandProp
+		}
+		return depth <= expandTo
 	}
 
 	//#endregion
@@ -518,11 +526,11 @@
 				{#if node[propNames.hasChildrenProperty]}
 					<span on:click={() => toggleExpansion(node)}>
 						<i
-							class="far {node[propNames.expandedProperty]
+							class="far {shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)
 								? expandedToggleClass
 								: collapsedToggleClass}"
-							class:fa-minus-square={node[propNames.expandedProperty]}
-							class:fa-plus-square={!node[propNames.expandedProperty]}
+							class:fa-minus-square={shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)}
+							class:fa-plus-square={!shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel)}
 						/>
 					</span>
 				{:else}
@@ -582,7 +590,7 @@
 					/>
 				</div>
 			{/if}
-			{#if node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
+			{#if shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel) && node[propNames.hasChildrenProperty]}
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
@@ -598,6 +606,7 @@
 					let:node={nodeNested}
 					{leafNodeCheckboxesOnly}
 					{disableOrHide}
+					{expandedLevel}
 					bind:draggedPath
 					bind:dragAndDrop
 					on:selection
@@ -630,7 +639,7 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if !node[propNames.expandedProperty] && node[propNames.hasChildrenProperty]}
+			{#if !shouldExpand(node[propNames.expandedProperty],childDepth,expandedLevel) && node[propNames.hasChildrenProperty]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->

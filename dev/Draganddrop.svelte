@@ -14,9 +14,9 @@
 		},
 		{ nodePath: "2", title: "2", isDraggable:false},
 
-		{ nodePath: "3", title: "3", hasChildren: true, __expanded: true },
+		{ nodePath: "3", title: "3", hasChildren: true},
 		{ nodePath: "3.4", title: "	Omniknight" },
-		{ nodePath: "4", hasChildren: true, __expanded: true },
+		{ nodePath: "4", hasChildren: true},
 		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
 		{ nodePath: "4.6", priority: 6, title: "ITEM_2" , insertDisabled: true },
 		{ nodePath: "4.2", priority: 2, title: "ITEM_3" },
@@ -36,23 +36,20 @@
 		{
 			nodePath: "3.2.3",
 			title: "Lycan",
-			__expanded: true,
 			__selected: true,
 			test: "test223",
 		},
 		{
 			nodePath: "3.2.4",
 			title: "Bloodseeker",
-			__expanded: true,
 			__selected: true,
 		},
 
-		{ nodePath: "3.3", title: "3.3", hasChildren: true, __expanded: true },
+		{ nodePath: "3.3", title: "3.3", hasChildren: true},
 
 		{
 			nodePath: "3.3.1",
 			title: "3.3.1",
-			__expanded: true,
 			__selected: false,
 		},
 	];
@@ -127,9 +124,7 @@ TreeView drag and drop test
 	expandCallback={callback}
 	beforeMovedCallback={beforeCallback}
 	{enableVerticalLines}
-	{expandedLevel}
-	nestDisabledProperty="dropDisabled"
-	insertDisabledProperty="dropDisabled"
+	bind:expandedLevel
 
 >
 	{JSON.stringify(node)}
