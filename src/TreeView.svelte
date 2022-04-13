@@ -37,7 +37,7 @@
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
-	export let pixelNestTreshold = 150;
+	export let pixelNestTreshold = 50;
 	export let expandCallback = null;
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
@@ -116,7 +116,6 @@
 	let insPos;
 	//if insert is disabled => nest right away and never nest if its disabled
 	$: canNest = ((highlightedNode?.[propNames?.insertDisabledProperty]) ||  canNestPos || canNestTime) && (highlightedNode?.[propNames?.nestDisabledProperty] !== true)
-	$: console.log(canNest)
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
