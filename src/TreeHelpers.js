@@ -62,16 +62,20 @@ export function mergeTrees(oldTree, addedTree, nodePathProperty = "nodePath") {
 	return orderBy(addedTree, oldTree, nodePathProperty);
 }
 
-export function changeExpansion(tree, nodePath, propNames) {
+/** toggles expansion on
+ */
+export function changeExpansion(tree, node, changeTo,propNames) {
 	return tree.map((x) => {
 		let t = x;
-		if (x[propNames.nodePathProperty] == nodePath) {
-			t[propNames.expandedProperty] = !x[propNames.expandedProperty];
+		if (x[propNames.nodePathProperty] == node?.[propNames.nodePathProperty]) {
+			t[propNames.expandedProperty] = changeTo
 		}
 		return t;
 	});
 }
 
+/** orders nodes by priorityProp
+ */
 export function OrderByPriority(tree, propNames) {
 	tree.sort((a, b) => {
 		if (b[propNames.priorityProperty] > a[propNames.priorityProperty])
@@ -81,8 +85,7 @@ export function OrderByPriority(tree, propNames) {
 	return tree;
 }
 
-/**
- * changes expansion of evry node that has hasChildren set to true
+/** changes expansion of every node that has hasChildren set to true
  */
 export function changeEveryExpansion(tree, changeTo, propNames) {
 	return tree.map((node) => {
@@ -92,6 +95,8 @@ export function changeEveryExpansion(tree, changeTo, propNames) {
 	});
 }
 
+/** changes expansion of every node that has hasChildren set to true if they are abose set level and expansion property isnt set
+ */
 export function expandToLevel(tree, level, propNames) {
 	return tree.map((n) => {
 		if (
@@ -125,8 +130,8 @@ export function ChangeSelection(
 	propNames
 ) {
 	if (!recursiveely) {
-		//non recursiveely
 
+		//non recursiveely
 		return addOrRemoveSelection(tree, nodePath, propNames);
 	} else {
 		//recursiveely
@@ -207,6 +212,7 @@ function changeSelectedIfNParent(node, changeTo, propNames) {
 	return node;
 }
 
+/**Calculates visual state based on children  */
 function getVisualState(filteredTree, node, isChild, getParentId, propNames) {
 	let children = getParentChildrenTree(
 		filteredTree,
@@ -243,7 +249,7 @@ function getVisualState(filteredTree, node, isChild, getParentId, propNames) {
 	}
 }
 
-//changes status of all parents of given nodepath until root
+/** recursibly recomputes parent visual state until root */
 function recomputeAllParentVisualState(
 	tree,
 	nodePath,
@@ -281,7 +287,7 @@ function recomputeAllParentVisualState(
 	return tree;
 }
 
-//computes visual states for all nodes with children
+/** Computes visual states for all nodes. Used for computing initial visual states when tree changes  */
 export function computeInitialVisualStates(
 	tree,
 	isChild,
@@ -311,7 +317,7 @@ export function computeInitialVisualStates(
 	});
 	return tree;
 }
-
+/** Recursivly computes visual state for children  */
 function computeChildrenVisualStates(
 	tree,
 	node,
@@ -520,8 +526,9 @@ export function moveNode(
 	return tree;
 }
 
-//recomputes all priorities after inserted priority
-//also changes all priorities to be one apart (1,5,6 => 1,2,3)
+/** recomputes all priorities after inserted priority.F
+ * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
+*/
 function InsertPriority(
 	tree,
 	parentNode,
@@ -544,7 +551,7 @@ function InsertPriority(
 	});
 }
 
-//return biggest value of nodepath number that children are using +1
+/** return biggest value of nodepath number that children are using +1 */
 function getNextNodeId(tree, parentPath, isChild, propNames) {
 	let max = 0;
 	//findes biggest nodeNumber for
