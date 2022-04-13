@@ -46,7 +46,9 @@ Table of Contents
 - ***showContexMenu*** (bool, default: false)  
    Will show context menu you defined in context-menu slot when you right click any node
 - ***beforeMovedCallback*** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null )  
-  if it return false, move will be cancelled
+ Called when you droped node before any recalculation takes place. You can cancel move by returning false
+- ***dragEnterCallback*** (function with params: (movedNode,oldParent,TargetNode), default: null )  
+  Called when dragged nodes enters different node. By returnting false, it will set that node as nonvalid target so you wont be able to it and it doesnt show guide lines. Dont do any expensive operations here and dont modify tree.
 - ***enableVerticalLines*** (bool, default: false)  
   This property controls if vertical lines are displayed in front of each node for easier use
 - ***recalculateNodePath*** (bool,default: true)  
@@ -206,6 +208,8 @@ let num =0
 After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging.When **isDraggableProperty** on node is set to false you wont be able to grab it. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).
 You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass**
+
+**dragEnterCallback** is called when you enter new node while dragging. If it return false, node wont be valid node location
 
 TODO add note about insertDisabledProperty and nestDisabledProperty
 
