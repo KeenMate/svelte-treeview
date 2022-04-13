@@ -24,6 +24,8 @@
 	//! required
 	export let tree = null; //array of nodes with nodePath
 	export let treeId = null; //string
+
+	//!user set
 	export let maxExpandedDepth = 3; //number
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree; //array of nodes with nodePath
@@ -37,20 +39,20 @@
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
-	export let pixelNestTreshold = 150;
+	export let pixelNestTreshold = 50;
 	export let expandCallback = null;
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
 	export let enableVerticalLines = false;
 	export let recalculateNodePath = true;
 	export let expandedLevel = 0;
+	export let dragEnterCallback = null;
 
 	//* classes for customization of tree
 	export let treeClass = "";
 	export let nodeClass = "";
 	export let expandedToggleClass = "";
 	export let collapsedToggleClass = "";
-	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
 	export let inserLineClass = "";
 	export let inserLineNestClass = "";
@@ -115,8 +117,11 @@
 	let validTarget = false;
 	let insPos;
 	//if insert is disabled => nest right away and never nest if its disabled
-	$: canNest = ((highlightedNode?.[propNames?.insertDisabledProperty]) ||  canNestPos || canNestTime) && (highlightedNode?.[propNames?.nestDisabledProperty] !== true)
-	$: console.log(canNest)
+	$: canNest =
+		(highlightedNode?.[propNames?.insertDisabledProperty] ||
+			canNestPos ||
+			canNestTime) &&
+		highlightedNode?.[propNames?.nestDisabledProperty] !== true;
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
@@ -130,19 +135,8 @@
 		),
 		propNames
 	);
-	$: ComputeVisualTree(filteredTree);
-	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-	//$: tree = expandToLevel(tree ?? [], expandedLevel, propNames);
 
-	function ComputeVisualTree(filteredTree) {
-		tree = computeInitialVisualStates(
-			tree,
-			isChild,
-			getParentId,
-			filteredTree ?? tree,
-			propNames
-		);
-	}
+	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
 
 	function getPropsObject(
 		nodePath,
@@ -172,13 +166,8 @@
 
 	//#region expansions
 
-	function expandNodes(nodes) {
-		if (!nodes || !nodes.length) return;
-		nodes.forEach((x) => toggleExpansion(x, true));
-	}
-
-	function toggleExpansion(node, setValueTo = null) {
-		tree = changeExpansion(tree, node[propNames.nodePathProperty], propNames);
+	function toggleExpansion(node, expanded) {
+		tree = changeExpansion(tree, node, !expanded, propNames);
 
 		let val = node[propNames.expandedProperty];
 
@@ -216,15 +205,7 @@
 	//awaits function provided in expandCallback
 	async function fetchNodeDataAsync(node) {
 		let data = await expandCallback(node);
-		//.log("loaded new nodes: ");
-		//console.log(data);
 		return data;
-	}
-
-	function recomputeExpandedNodes() {
-		if (childDepth < parsedMaxExpandedDepth) {
-			expandNodes(parentChildrenTree);
-		}
 	}
 
 	export function changeAllExpansion(changeTo) {
@@ -243,6 +224,17 @@
 
 	//#region checkboxes
 
+	$: ComputeVisualTree(filteredTree);
+	function ComputeVisualTree(filteredTree) {
+		tree = computeInitialVisualStates(
+			tree,
+			isChild,
+			getParentId,
+			filteredTree ?? tree,
+			propNames
+		);
+	}
+
 	//checkboxes
 	function selectionChanged(node) {
 		//console.log(nodePath);
@@ -258,7 +250,7 @@
 		selectionEvents(node);
 	}
 
-	//selectes
+	//fired when in recursive mode you click on Leaf node
 	function selectChildren(node, e) {
 		tree = ChangeSelectForAllChildren(
 			tree,
@@ -278,6 +270,7 @@
 			node: node,
 			value: val,
 		});
+
 		if (val) {
 			dispatch("selected", node);
 		} else {
@@ -286,7 +279,6 @@
 	}
 
 	function showCheckboxes(node, checkboxes) {
-		//console.log(node);
 		//show if prop isnt false
 		if (checkboxes == "all") {
 			return !(node[propNames.checkboxVisibleProperty] == false);
@@ -307,7 +299,9 @@
 			e.preventDefault();
 			return;
 		}
+
 		console.log("dragstart from: " + node[propNames.nodePathProperty]);
+
 		e.dataTransfer.dropEffect = "move";
 		e.dataTransfer.setData("node_id", node[propNames.nodePathProperty]);
 		draggedPath = node[propNames.nodePathProperty];
@@ -317,7 +311,9 @@
 		//should be necesary but just in case
 		highlightedNode = null;
 		if (!dragAndDrop) return;
+
 		draggedPath = e.dataTransfer.getData("node_id");
+
 		console.log(
 			draggedPath + " dropped on: " + node[propNames.nodePathProperty]
 		);
@@ -339,8 +335,7 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 
-		//checking if node has insertDisabledProperty or nestDisabledProperty
-
+		//cancel move if its not valid
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
 		else if (
 			(insType == -1 || insType == 1) &&
@@ -393,35 +388,24 @@
 	}
 
 	function handleDragOver(e, node) {
-		//if you are further away from right then treshold allow nesting
 		insPos = getInsertionPosition(e);
+
+		//if you are further away from right then treshold allow nesting
+
 		let diff = e.x - e.target.getBoundingClientRect().x;
-		//console.log(diff + " - " + (diff > pixelNestTreshold))
 		if (pixelNestTreshold && diff > pixelNestTreshold) {
 			canNestPos = true;
 		} else {
 			canNestPos = false;
 		}
 
-		//prevents dropping parent into child
-		if (
-			dragAndDrop &&
-			!node[propNames.nodePathProperty].startsWith(draggedPath) &&
-			!(
-				node[propNames.insertDisabledProperty] === true &&
-				node[propNames.nestDisabledProperty] === true
-			)
-		) {
-			validTarget = true;
-			e.preventDefault();
-		} else {
-			validTarget = false;
-		}
+		//allow drop if valid target
+		if (validTarget) e.preventDefault();
 	}
 
 	function handleDragEnter(e, node) {
 		setTimeout(() => {
-			validTarget = false;
+			validTarget = true;
 			dragenterTimestamp = new Date();
 			// will cause flashing when moving wrom node to node while be able to nest
 			//* have to be here if you only use time
@@ -430,17 +414,44 @@
 			if (timeToNest) {
 				canNestTime = false;
 
+				//this is so that only one timeout is ticking at one time
 				clearTimeout(dragTimeout);
 
 				dragTimeout = setTimeout(() => {
 					canNestTime = true;
 				}, timeToNest);
 			}
-		}, 0);
+
+			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
+			if (
+				node[propNames.nodePathProperty].startsWith(draggedPath) ||
+				(node[propNames.insertDisabledProperty] === true &&
+					node[propNames.nestDisabledProperty] === true)
+			) {
+				validTarget = false;
+			}
+
+			//if defined calling callback
+			if (dragEnterCallback) {
+				//get node for event
+				let draggedNode = tree.find(
+					(n) => n[propNames.nodePathProperty] == draggedPath
+				);
+				let oldParent = tree.find(
+					(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
+				);
+
+				//callback returning false means that it isnt valid target
+				if (dragEnterCallback(draggedNode, oldParent, node) === false) {
+					validTarget = false;
+				}
+			}
+		}, 1);
 		e.preventDefault();
 	}
 
 	function handleDragEnd(e, node) {
+		//reset prop on next tick
 		setTimeout(() => {
 			draggedPath = null;
 			highlightedNode = null;
@@ -538,7 +549,8 @@
 				{highlightNesting(node, highlightedNode, validTarget, canNest)
 					? expandClass
 					: ''}
-				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]
+				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty] ||
+				node?.[propNames.nodePathProperty]?.startsWith(draggedPath)
 					? currentlyDraggedClass
 					: ''}"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
@@ -557,7 +569,17 @@
 				on:dragleave={(e) => handleDragleave(e, node)}
 			>
 				{#if node[propNames.hasChildrenProperty]}
-					<span on:click={() => toggleExpansion(node)}>
+					<span
+						on:click={() =>
+							toggleExpansion(
+								node,
+								shouldExpand(
+									node[propNames.expandedProperty],
+									childDepth,
+									expandedLevel
+								) && !node[propNames.useCallbackProperty]
+							)}
+					>
 						<i
 							class="far {shouldExpand(
 								node[propNames.expandedProperty],
@@ -675,6 +697,7 @@
 					{expandCallback}
 					on:moved
 					{beforeMovedCallback}
+					{dragEnterCallback}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>
