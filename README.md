@@ -20,41 +20,61 @@ Table of Contents
 
 ## Props
 
-- **tree** (array of nodes, default: *null*) = tree itself. THIS CAN NEVER BE NULL/UNDEFINED
-- **treeId** (string, default: *null*) = you HAVE to set this to unique string
-- **maxExpandedDepth** (number, default: *3*)
-- **filteredTree** (array of nodes, default: *null*) searched tree
-- **checkboxes** (bool, default: *false*) Will show checkboxes next to nodes. when click it will toggle selectedProperty on clicked node. You can specify this behavior with **recursive**, **leafNodeCheckboxesOnly** and **disableOrHide**.
-- **recursive** (bool, default: *false*) When true, you can only select "leaf nodes" (nodes when **hasChildrenProperty** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selectedProperty**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
-- **leafNodeCheckboxesOnly** ( bool, default: *false*) you wont be able to click on any other checkboxes that on leaf nodes.
-- **disableOrHide** (bool, default: *false*) will only disable checkboxes, instead of not showing them
-- **dragAndDrop** (bool, default: *false*) will enable drag and drop behavior viz drag and drop section
-- **timeToNest** (number in ms, default: *null*) after that time hovering over one node, it will nest.
-- **pixelNestTreshold** (number in px, default: *150*) when you move cursor to then left by x pixels will nest
-- **expandCallback** (function that takes node as argument, default: *null*)  called when node with **usecallbackProperty** set to true is expanded. Only called once.
-- **showContexMenu** (bool, default: false) Will show context menu you defined in context-menu slot when you right click any node
-- **beforeMovedCallback** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null ) = if it return false, move will be cancelled
-- **enableVerticalLines** (bool, default: false) = This property controls if vertical lines are displayed in front of each node for easier use
-- **recalculateNodePath** (bool,default: true) = If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
-- **expandedLevel** (number,default:0) = will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expandedProperty** has priority over this. It wont modify **expandedProperty** on nodes so you can dynamicly change this and tree will rerender
-- **nodePathProperty** (string, default: *"nodePath"*)
-- **hasChildrenProperty** (string, default: *"hasChildren"*)
-- **expandedProperty** (string, default: *"__expanded"*)
-- **selectedProperty** (string, default: *"__selected"*)
-- **usecallbackProperty** (string, default: *"__useCallback"*)
-- **priorityProperty** (string, default: *"__priority"*)
-- **isDraggableProperty** (string, default: *"isDraggable"*) when false, wont allow you to start dragging element
-- **insertDisabledProperty** (string, default: *"insertDisabled"*) when true, you wont be able to drop element below are above nod. You still be able to nest it
-- **nestDisabledProperty** (string, default: *"nestDisabled"*) when true, wont be able to drop node inside (nest it)
--
-- **treeClass** (string css class, default: *""*)
-- **nodeClass** (string css class, default: *""*)
-- **expandedToggleClass** (string css class, default: *""*)
-- **collapsedToggleClass** (string css class, default: *""*)
-- **currentlyDraggedClass** (string css class, default: *"currently-dragged"*)
-- **expandClass** (string css class, default: *"inserting-highlighted"*)
-- **inserLineClass** (string css class, default: *""*)
-- **inserLineNestClass** (string css class, default: *""*)
+- ***tree*** (array of nodes, default: *null*)
+   tree itself.
+- ***treeId*** (string, default: *null*)
+  you HAVE to set this to unique string
+- ***maxExpandedDepth*** (number, default: *3*)
+- ***filteredTree*** (array of nodes, default: *null*)
+   searched tree
+- ***checkboxes*** (string "none"|"perNode"|"All", default: *false*)  
+   When all checkboxes will be shown if **checkboxVisibleProperty** isnt false,whe perNode only nodes with **checkboxVisibleProperty** set to true will be shown. None will override **checkboxVisibleProperty** .When click on checkbox it will toggle selectedProperty on clicked node. You can specify this behavior with **recursive**, **leafNodeCheckboxesOnly** and **checkboxesDisabled**.
+- ***recursive*** (bool, default: *false*)  
+   When true, you can only select "leaf nodes" (nodes when **hasChildrenProperty** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selectedProperty**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
+- ***leafNodeCheckboxesOnly*** ( bool, default: *false*)  
+   you wont be able to click on any other checkboxes that on leaf nodes.
+- ***checkboxesDisabled*** (bool, default: *false*)  
+   will only disable checkboxes, instead of not showing them.
+- ***dragAndDrop*** (bool, default: *false*)  
+   will enable drag and drop behavior viz drag and drop section
+- ***timeToNest*** (number in ms, default: *null*)  
+   after that time hovering over one node, it will nest.
+- ***pixelNestTreshold*** (number in px, default: *150*)  
+   when you move cursor to then left by x pixels will nest
+- ***expandCallback*** (function that takes node as argument, default: *null*)  
+    called when node with **usecallbackProperty** set to true is expanded. Only called once.
+- ***showContexMenu*** (bool, default: false)  
+   Will show context menu you defined in context-menu slot when you right click any node
+- ***beforeMovedCallback*** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null )  
+  if it return false, move will be cancelled
+- ***enableVerticalLines*** (bool, default: false)  
+  This property controls if vertical lines are displayed in front of each node for easier use
+- ***recalculateNodePath*** (bool,default: true)  
+  If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
+- ***expandedLevel*** (number,default:0)  
+  will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expandedProperty** has priority over this. It wont modify **expandedProperty** on nodes so you can dynamicly change this and tree will rerender
+- ***nodePathProperty*** (string, default: *"nodePath"*)  
+- ***hasChildrenProperty*** (string, default: *"hasChildren"*)  
+- ***expandedProperty*** (string, default: *"__expanded"*)  
+- ***selectedProperty*** (string, default: *"__selected"*)  
+- ***usecallbackProperty*** (string, default: *"__useCallback"*)  
+- ***priorityProperty*** (string, default: *"__priority"*)  
+- ***isDraggableProperty*** (string, default: *"isDraggable"*)  
+  when false, wont allow you to start dragging element
+- ***insertDisabledProperty*** (string, default: *"insertDisabled"*)  
+  when true, you wont be able to drop element below are above nod. You still be able to nest it. When dragging over element it will always nest.
+- ***nestDisabledProperty*** (string, default: *"nestDisabled"*)  
+  when true, wont be able to drop node inside (nest it)
+- ***checkboxVisibleProperty*** (string, default: *"checkboxVisible"*)  
+  modifies visibility of checkbox. When checkboxes are "none" wont show them event if this is true
+- ***treeClass*** (string css class, default: *""*)  
+- ***nodeClass*** (string css class, default: *""*)  
+- ***expandedToggleClass*** (string css class, default: *""*)  
+- ***collapsedToggleClass*** (string css class, default: *""*)  
+- ***currentlyDraggedClass*** (string css class, default: *"currently-dragged"*)  
+- ***expandClass*** (string css class, default: *"inserting-highlighted"*)  
+- ***inserLineClass*** (string css class, default: *""*)  
+- ***inserLineNestClass*** (string css class, default: *""*)  
 
 ## Events
 

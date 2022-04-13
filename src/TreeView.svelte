@@ -28,11 +28,11 @@
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree; //array of nodes with nodePath
 	export let recursive = false; //bool
-	export let checkboxes = false; //bool
+	export let checkboxes = "none"; //bool
 	//if true, will show checkboxes to elements with children
 	export let leafNodeCheckboxesOnly = false; //bool
 	//true = disabel hide = false
-	export let disableOrHide = false; //bool
+	export let checkboxesDisabled = false; //bool
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
@@ -66,6 +66,7 @@
 	export let isDraggableProperty = "isDraggable";
 	export let insertDisabledProperty = "insertDisabled";
 	export let nestDisabledProperty = "nestDisabled";
+	export let checkboxVisibleProperty = "checkboxVisible";
 
 	let propNames = getPropsObject(
 		nodePathProperty,
@@ -76,7 +77,8 @@
 		priorityProperty,
 		isDraggableProperty,
 		insertDisabledProperty,
-		nestDisabledProperty
+		nestDisabledProperty,
+		checkboxVisibleProperty
 	);
 	$: propNames = getPropsObject(
 		nodePathProperty,
@@ -87,7 +89,8 @@
 		priorityProperty,
 		isDraggableProperty,
 		insertDisabledProperty,
-		nestDisabledProperty
+		nestDisabledProperty,
+		checkboxVisibleProperty
 	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
@@ -111,8 +114,9 @@
 	let dragTimeout;
 	let validTarget = false;
 	let insPos;
-	$: canNest = canNestPos || canNestTime;
-
+	//if insert is disabled => nest right away and never nest if its disabled
+	$: canNest = ((highlightedNode?.[propNames?.insertDisabledProperty]) ||  canNestPos || canNestTime) && (highlightedNode?.[propNames?.nestDisabledProperty] !== true)
+	$: console.log(canNest)
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
@@ -149,7 +153,8 @@
 		priority,
 		isDraggable,
 		insertDisabled,
-		nestDisabled
+		nestDisabled,
+		checkboxVisible
 	) {
 		return {
 			nodePathProperty: nodePath,
@@ -161,6 +166,7 @@
 			isDraggableProperty: isDraggable,
 			insertDisabledProperty: insertDisabled,
 			nestDisabledProperty: nestDisabled,
+			checkboxVisibleProperty: checkboxVisible,
 		};
 	}
 
@@ -279,6 +285,20 @@
 		}
 	}
 
+	function showCheckboxes(node, checkboxes) {
+		//console.log(node);
+		//show if prop isnt false
+		if (checkboxes == "all") {
+			return !(node[propNames.checkboxVisibleProperty] == false);
+		}
+		//show only if pop is true
+		if (checkboxes == "perNode") {
+			return node[propNames.checkboxVisibleProperty] == true;
+		}
+		//dont show at all
+		return false;
+	}
+
 	//#endregion
 
 	//#region drag and drop
@@ -383,7 +403,7 @@
 			canNestPos = false;
 		}
 
-		//if you arent dropping parent to child allow drop
+		//prevents dropping parent into child
 		if (
 			dragAndDrop &&
 			!node[propNames.nodePathProperty].startsWith(draggedPath) &&
@@ -555,15 +575,15 @@
 								node[propNames.expandedProperty],
 								childDepth,
 								expandedLevel
-							)}
+							) || node[propNames.useCallbackProperty]}
 						/>
 					</span>
 				{:else}
 					<span />
 				{/if}
-				{#if checkboxes}
-					{#if recursive}
-						{#if !hasChildren(tree, node[propNames.nodePathProperty], propNames)}
+				{#if checkboxes == "perNode" || checkboxes == "all"}
+					{#if showCheckboxes(node, checkboxes)}
+						{#if !recursive || (recursive && !node[propNames.hasChildrenProperty])}
 							<input
 								type="checkbox"
 								id={getNodeId(node)}
@@ -581,27 +601,22 @@
 								checked={node.__visual_state == "true" ? "false" : ""}
 								indeterminate={node.__visual_state == "indeterminate"}
 							/>
-						{:else if disableOrHide}
-							<input
-								type="checkbox"
-								id={getNodeId(node)}
-								onclick="return false;"
-								disabled={true}
-							/>
 						{:else}
 							<input
 								type="checkbox"
 								id={getNodeId(node)}
 								onclick="return false;"
-								class:invisible={!disableOrHide}
+								disabled={true}
+								class:invisible={!checkboxesDisabled}
 							/>
 						{/if}
 					{:else}
 						<input
 							type="checkbox"
 							id={getNodeId(node)}
-							on:change={() => selectionChanged(node)}
-							checked={node[propNames.selectedProperty] ? "false" : ""}
+							onclick="return false;"
+							disabled={true}
+							class:invisible={!checkboxesDisabled}
 						/>
 					{/if}
 				{/if}
@@ -630,7 +645,7 @@
 					parentId={getId(node)}
 					let:node={nodeNested}
 					{leafNodeCheckboxesOnly}
-					{disableOrHide}
+					{checkboxesDisabled}
 					{expandedLevel}
 					bind:draggedPath
 					bind:dragAndDrop
@@ -742,7 +757,7 @@
 				transform: rotate(90deg)
 
 			.invisible
-				visibility: none
+				visibility: hidden
 
 			.inserting-highlighted
 				color: red
