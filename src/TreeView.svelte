@@ -166,8 +166,8 @@
 
 	//#region expansions
 
-	function toggleExpansion(node,expanded) {
-		tree = changeExpansion(tree, node,!expanded, propNames);
+	function toggleExpansion(node, expanded) {
+		tree = changeExpansion(tree, node, !expanded, propNames);
 
 		let val = node[propNames.expandedProperty];
 
@@ -569,11 +569,17 @@
 				on:dragleave={(e) => handleDragleave(e, node)}
 			>
 				{#if node[propNames.hasChildrenProperty]}
-					<span on:click={() => toggleExpansion(node,shouldExpand(
-						node[propNames.expandedProperty],
-						childDepth,
-						expandedLevel
-					) && !node[propNames.useCallbackProperty])}>
+					<span
+						on:click={() =>
+							toggleExpansion(
+								node,
+								shouldExpand(
+									node[propNames.expandedProperty],
+									childDepth,
+									expandedLevel
+								) && !node[propNames.useCallbackProperty]
+							)}
+					>
 						<i
 							class="far {shouldExpand(
 								node[propNames.expandedProperty],
