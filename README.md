@@ -62,7 +62,7 @@ Table of Contents
 - ***isDraggableProperty*** (string, default: *"isDraggable"*)  
   when false, wont allow you to start dragging element
 - ***insertDisabledProperty*** (string, default: *"insertDisabled"*)  
-  when true, you wont be able to drop element below are above nod. You still be able to nest it
+  when true, you wont be able to drop element below are above nod. You still be able to nest it. When dragging over element it will always nest.
 - ***nestDisabledProperty*** (string, default: *"nestDisabled"*)  
   when true, wont be able to drop node inside (nest it)
 - ***checkboxVisibleProperty*** (string, default: *"checkboxVisible"*)  
