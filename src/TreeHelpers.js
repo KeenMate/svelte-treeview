@@ -64,11 +64,11 @@ export function mergeTrees(oldTree, addedTree, nodePathProperty = "nodePath") {
 
 /** toggles expansion on
  */
-export function changeExpansion(tree, node, changeTo,propNames) {
+export function changeExpansion(tree, node, changeTo, propNames) {
 	return tree.map((x) => {
 		let t = x;
 		if (x[propNames.nodePathProperty] == node?.[propNames.nodePathProperty]) {
-			t[propNames.expandedProperty] = changeTo
+			t[propNames.expandedProperty] = changeTo;
 		}
 		return t;
 	});
@@ -130,7 +130,6 @@ export function ChangeSelection(
 	propNames
 ) {
 	if (!recursiveely) {
-
 		//non recursiveely
 		return addOrRemoveSelection(tree, nodePath, propNames);
 	} else {
@@ -528,7 +527,7 @@ export function moveNode(
 
 /** recomputes all priorities after inserted priority.F
  * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
-*/
+ */
 function InsertPriority(
 	tree,
 	parentNode,
