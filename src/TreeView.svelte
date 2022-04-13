@@ -114,8 +114,9 @@
 	let dragTimeout;
 	let validTarget = false;
 	let insPos;
-	$: canNest = canNestPos || canNestTime;
-
+	//if insert is disabled => nest right away and never nest if its disabled
+	$: canNest = ((highlightedNode?.[propNames?.insertDisabledProperty]) ||  canNestPos || canNestTime) && (highlightedNode?.[propNames?.nestDisabledProperty] !== true)
+	$: console.log(canNest)
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
@@ -402,7 +403,7 @@
 			canNestPos = false;
 		}
 
-		//if you arent dropping parent to child allow drop
+		//prevents dropping parent into child
 		if (
 			dragAndDrop &&
 			!node[propNames.nodePathProperty].startsWith(draggedPath) &&
