@@ -25,6 +25,7 @@
 	export let tree = null; //array of nodes with nodePath
 	export let treeId = null; //string
 
+	//!user set
 	export let maxExpandedDepth = 3; //number
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree; //array of nodes with nodePath
@@ -134,19 +135,8 @@
 		),
 		propNames
 	);
-	$: ComputeVisualTree(filteredTree);
-	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-	//$: tree = expandToLevel(tree ?? [], expandedLevel, propNames);
 
-	function ComputeVisualTree(filteredTree) {
-		tree = computeInitialVisualStates(
-			tree,
-			isChild,
-			getParentId,
-			filteredTree ?? tree,
-			propNames
-		);
-	}
+	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
 
 	function getPropsObject(
 		nodePath,
@@ -176,13 +166,8 @@
 
 	//#region expansions
 
-	function expandNodes(nodes) {
-		if (!nodes || !nodes.length) return;
-		nodes.forEach((x) => toggleExpansion(x, true));
-	}
-
-	function toggleExpansion(node, setValueTo = null) {
-		tree = changeExpansion(tree, node[propNames.nodePathProperty], propNames);
+	function toggleExpansion(node,expanded) {
+		tree = changeExpansion(tree, node,!expanded, propNames);
 
 		let val = node[propNames.expandedProperty];
 
@@ -220,15 +205,7 @@
 	//awaits function provided in expandCallback
 	async function fetchNodeDataAsync(node) {
 		let data = await expandCallback(node);
-		//.log("loaded new nodes: ");
-		//console.log(data);
 		return data;
-	}
-
-	function recomputeExpandedNodes() {
-		if (childDepth < parsedMaxExpandedDepth) {
-			expandNodes(parentChildrenTree);
-		}
 	}
 
 	export function changeAllExpansion(changeTo) {
@@ -247,6 +224,17 @@
 
 	//#region checkboxes
 
+	$: ComputeVisualTree(filteredTree);
+	function ComputeVisualTree(filteredTree) {
+		tree = computeInitialVisualStates(
+			tree,
+			isChild,
+			getParentId,
+			filteredTree ?? tree,
+			propNames
+		);
+	}
+
 	//checkboxes
 	function selectionChanged(node) {
 		//console.log(nodePath);
@@ -262,7 +250,7 @@
 		selectionEvents(node);
 	}
 
-	//selectes
+	//fired when in recursive mode you click on Leaf node
 	function selectChildren(node, e) {
 		tree = ChangeSelectForAllChildren(
 			tree,
@@ -282,6 +270,7 @@
 			node: node,
 			value: val,
 		});
+
 		if (val) {
 			dispatch("selected", node);
 		} else {
@@ -290,7 +279,6 @@
 	}
 
 	function showCheckboxes(node, checkboxes) {
-		//console.log(node);
 		//show if prop isnt false
 		if (checkboxes == "all") {
 			return !(node[propNames.checkboxVisibleProperty] == false);
@@ -311,7 +299,9 @@
 			e.preventDefault();
 			return;
 		}
+
 		console.log("dragstart from: " + node[propNames.nodePathProperty]);
+
 		e.dataTransfer.dropEffect = "move";
 		e.dataTransfer.setData("node_id", node[propNames.nodePathProperty]);
 		draggedPath = node[propNames.nodePathProperty];
@@ -321,7 +311,9 @@
 		//should be necesary but just in case
 		highlightedNode = null;
 		if (!dragAndDrop) return;
+
 		draggedPath = e.dataTransfer.getData("node_id");
+
 		console.log(
 			draggedPath + " dropped on: " + node[propNames.nodePathProperty]
 		);
@@ -343,8 +335,7 @@
 
 		let insType = canNest ? 0 : getInsertionPosition(e);
 
-		//checking if node has insertDisabledProperty or nestDisabledProperty
-
+		//cancel move if its not valid
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
 		else if (
 			(insType == -1 || insType == 1) &&
@@ -397,16 +388,18 @@
 	}
 
 	function handleDragOver(e, node) {
-		//if you are further away from right then treshold allow nesting
 		insPos = getInsertionPosition(e);
+
+		//if you are further away from right then treshold allow nesting
+
 		let diff = e.x - e.target.getBoundingClientRect().x;
-		//console.log(diff + " - " + (diff > pixelNestTreshold))
 		if (pixelNestTreshold && diff > pixelNestTreshold) {
 			canNestPos = true;
 		} else {
 			canNestPos = false;
 		}
-		//allow drop if
+
+		//allow drop if valid target
 		if (validTarget) e.preventDefault();
 	}
 
@@ -421,6 +414,7 @@
 			if (timeToNest) {
 				canNestTime = false;
 
+				//this is so that only one timeout is ticking at one time
 				clearTimeout(dragTimeout);
 
 				dragTimeout = setTimeout(() => {
@@ -439,10 +433,10 @@
 
 			//if defined calling callback
 			if (dragEnterCallback) {
+				//get node for event
 				let draggedNode = tree.find(
 					(n) => n[propNames.nodePathProperty] == draggedPath
 				);
-
 				let oldParent = tree.find(
 					(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 				);
@@ -457,6 +451,7 @@
 	}
 
 	function handleDragEnd(e, node) {
+		//reset prop on next tick
 		setTimeout(() => {
 			draggedPath = null;
 			highlightedNode = null;
@@ -574,7 +569,11 @@
 				on:dragleave={(e) => handleDragleave(e, node)}
 			>
 				{#if node[propNames.hasChildrenProperty]}
-					<span on:click={() => toggleExpansion(node)}>
+					<span on:click={() => toggleExpansion(node,shouldExpand(
+						node[propNames.expandedProperty],
+						childDepth,
+						expandedLevel
+					) && !node[propNames.useCallbackProperty])}>
 						<i
 							class="far {shouldExpand(
 								node[propNames.expandedProperty],
