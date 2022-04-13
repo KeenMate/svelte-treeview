@@ -24,6 +24,7 @@
 	//! required
 	export let tree = null; //array of nodes with nodePath
 	export let treeId = null; //string
+
 	export let maxExpandedDepth = 3; //number
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree; //array of nodes with nodePath
@@ -44,13 +45,13 @@
 	export let enableVerticalLines = false;
 	export let recalculateNodePath = true;
 	export let expandedLevel = 0;
+	export let dragEnterCallback = null;
 
 	//* classes for customization of tree
 	export let treeClass = "";
 	export let nodeClass = "";
 	export let expandedToggleClass = "";
 	export let collapsedToggleClass = "";
-	//class shown on div when it should expand on drag and drop
 	export let expandClass = "inserting-highlighted";
 	export let inserLineClass = "";
 	export let inserLineNestClass = "";
@@ -115,7 +116,11 @@
 	let validTarget = false;
 	let insPos;
 	//if insert is disabled => nest right away and never nest if its disabled
-	$: canNest = ((highlightedNode?.[propNames?.insertDisabledProperty]) ||  canNestPos || canNestTime) && (highlightedNode?.[propNames?.nestDisabledProperty] !== true)
+	$: canNest =
+		(highlightedNode?.[propNames?.insertDisabledProperty] ||
+			canNestPos ||
+			canNestTime) &&
+		highlightedNode?.[propNames?.nestDisabledProperty] !== true;
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
@@ -401,26 +406,13 @@
 		} else {
 			canNestPos = false;
 		}
-
-		//prevents dropping parent into child
-		if (
-			dragAndDrop &&
-			!node[propNames.nodePathProperty].startsWith(draggedPath) &&
-			!(
-				node[propNames.insertDisabledProperty] === true &&
-				node[propNames.nestDisabledProperty] === true
-			)
-		) {
-			validTarget = true;
-			e.preventDefault();
-		} else {
-			validTarget = false;
-		}
+		//allow drop if
+		if (validTarget) e.preventDefault();
 	}
 
 	function handleDragEnter(e, node) {
 		setTimeout(() => {
-			validTarget = false;
+			validTarget = true;
 			dragenterTimestamp = new Date();
 			// will cause flashing when moving wrom node to node while be able to nest
 			//* have to be here if you only use time
@@ -435,7 +427,32 @@
 					canNestTime = true;
 				}, timeToNest);
 			}
-		}, 0);
+
+			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
+			if (
+				node[propNames.nodePathProperty].startsWith(draggedPath) ||
+				(node[propNames.insertDisabledProperty] === true &&
+					node[propNames.nestDisabledProperty] === true)
+			) {
+				validTarget = false;
+			}
+
+			//if defined calling callback
+			if (dragEnterCallback) {
+				let draggedNode = tree.find(
+					(n) => n[propNames.nodePathProperty] == draggedPath
+				);
+
+				let oldParent = tree.find(
+					(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
+				);
+
+				//callback returning false means that it isnt valid target
+				if (dragEnterCallback(draggedNode, oldParent, node) === false) {
+					validTarget = false;
+				}
+			}
+		}, 1);
 		e.preventDefault();
 	}
 
@@ -537,7 +554,8 @@
 				{highlightNesting(node, highlightedNode, validTarget, canNest)
 					? expandClass
 					: ''}
-				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty]
+				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty] ||
+				node?.[propNames.nodePathProperty]?.startsWith(draggedPath)
 					? currentlyDraggedClass
 					: ''}"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
@@ -674,6 +692,7 @@
 					{expandCallback}
 					on:moved
 					{beforeMovedCallback}
+					{dragEnterCallback}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>

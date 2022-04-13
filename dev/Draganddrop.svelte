@@ -107,6 +107,10 @@
 		// );
 	}
 
+	function dragCallback(movedNode, oldParent, targetNode) {
+		if (targetNode.nodePath.includes("1")) return false;
+	}
+
 	function addTo() {
 		tree = mergeTrees(tree, treeToAdd);
 	}
@@ -117,7 +121,8 @@
 		checkboxes = "all";
 </script>
 
-<h1>Page for testing</h1> <br />
+<h1>Page for testing</h1>
+<br />
 dragAndDrop<input type="checkbox" bind:checked={dragAndDrop} /><br />
 showContexMenu<input type="checkbox" bind:checked={showContexMenu} /><br />
 enableVerticalLines<input
@@ -145,7 +150,9 @@ checkboxes:<select bind:value={checkboxes}>
 
 <button on:click={thisTree.changeAllExpansion(true)}> true</button>
 <button on:click={thisTree.changeAllExpansion(false)}> false</button>
-<button on:click={thisTree.changeAllExpansion(undefined)}> delete all expansion</button>
+<button on:click={thisTree.changeAllExpansion(undefined)}>
+	delete all expansion</button
+>
 
 <TreeView
 	bind:this={thisTree}
@@ -161,6 +168,7 @@ checkboxes:<select bind:value={checkboxes}>
 	{showContexMenu}
 	expandCallback={callback}
 	beforeMovedCallback={beforeCallback}
+	dragEnterCallback={dragCallback}
 	{enableVerticalLines}
 	bind:expandedLevel
 	{recursive}
