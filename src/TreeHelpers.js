@@ -566,9 +566,9 @@ function getNextNodeId(tree, parentPath, isChild, propNames) {
 	return parseInt(max) + 1;
 }
 
-export function getInsertionPosition(e) {
-	let targetCords = e.target.getBoundingClientRect();
-	let half = targetCords.bottom - targetCords.height / 2;
+export function getInsertionPosition(e,element) {
+	let targetCords = element.getBoundingClientRect();
+	let half = targetCords.bottom - (targetCords.height / 2);
 
 	if (e.y < half) {
 		return 1;
