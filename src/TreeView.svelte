@@ -307,7 +307,7 @@
 		draggedPath = node[propNames.nodePathProperty];
 	}
 
-	function handleDragDrop(e, node) {
+	function handleDragDrop(e, node, el) {
 		//should be necesary but just in case
 		highlightedNode = null;
 		if (!dragAndDrop) return;
@@ -333,7 +333,7 @@
 			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
 		);
 
-		let insType = canNest ? 0 : getInsertionPosition(e);
+		let insType = canNest ? 0 : getInsertionPosition(e, el);
 
 		//cancel move if its not valid
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
@@ -387,8 +387,8 @@
 		highlightedNode = null;
 	}
 
-	function handleDragOver(e, node) {
-		insPos = getInsertionPosition(e);
+	function handleDragOver(e, node, el) {
+		insPos = getInsertionPosition(e, el);
 
 		//if you are further away from right then treshold allow nesting
 
@@ -403,8 +403,10 @@
 		if (validTarget) e.preventDefault();
 	}
 
-	function handleDragEnter(e, node) {
+	function handleDragEnter(e, node, el) {
 		setTimeout(() => {
+			insPos = getInsertionPosition(e, el);
+
 			validTarget = true;
 			dragenterTimestamp = new Date();
 			// will cause flashing when moving wrom node to node while be able to nest
@@ -459,7 +461,7 @@
 	}
 
 	function handleDragleave(e, node) {
-		highlightedNode = null;
+		// highlightedNode = null;
 	}
 	/**
 	 *check if this node is one being hovered over (highlited) and is valid target
@@ -519,6 +521,8 @@
 	);
 
 	$: tree, tree == null || tree == undefined ? (tree = []) : "";
+
+	let liElements = [];
 </script>
 
 <ul
@@ -536,8 +540,18 @@
 					? openContextMenu(e, node)
 					: dispatch("open-ctxmenu", { e: e, node: node });
 			}}
+			on:drop|stopPropagation={(e) =>
+				handleDragDrop(e, node, liElements[getNodeId(node)])}
+			on:dragover|stopPropagation={(e) =>
+				handleDragOver(e, node, liElements[getNodeId(node)])}
+			on:dragenter|stopPropagation={(e) =>
+				handleDragEnter(e, node, liElements[getNodeId(node)])}
+			on:dragleave|stopPropagation={(e) =>
+				handleDragleave(e, node, liElements[getNodeId(node)])}
+			bind:this={liElements[getNodeId(node)]}
 		>
 			<!-- place here if insering above  -->
+
 			{#if insPos == 1 && highlightInsert(node, highlightedNode, validTarget, canNest)}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
@@ -562,11 +576,7 @@
 				) || highlightNesting(node, highlightedNode, validTarget, canNest)}
 				draggable={dragAndDrop && node[propNames.isDraggableProperty] !== false}
 				on:dragstart={(e) => handleDragStart(e, node)}
-				on:drop={(e) => handleDragDrop(e, node)}
-				on:dragover={(e) => handleDragOver(e, node)}
-				on:dragenter={(e) => handleDragEnter(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
-				on:dragleave={(e) => handleDragleave(e, node)}
 			>
 				{#if node[propNames.hasChildrenProperty]}
 					<span
@@ -722,52 +732,72 @@
 </ContextMenu>
 
 <style lang="sass">
-	$treeview-lines: dotted black 1px
+	$treeview-lines: solid black 1px
 
 	:global
 		.treeview
-			&.show-lines
-				> :first-child
-					padding-left: 1px
-				li
-					border: $treeview-lines
-					border-width: 0 0 1px 1px
-
-					&:last-child > ul
-						border-left: 1px solid white
-					ul
-						border-top: $treeview-lines
-						margin-left: -1px
-						border-left: none
-				.has-children
-					border-bottom: 0px
-
-
-			padding-left: 1em
+			margin: 0
+			padding: 0
+			list-style: none
 			ul, li
-				list-style: none
 				margin: 0
 				padding: 0
+				list-style: none
 			ul
-				//margin-left: 1.5em
-			li
-				//padding: 0.3em 0
-				div
-					margin-left: 0
+				margin-left: 0.4em
+				position: relative
 				ul
-					padding-left: 1.25em
+				margin-left: .3em
+				&:before
+					content: ""
+					display: block
+					width: 0
+					position: absolute
+					top: 0
+					bottom: 0
+					left: 0
+					border-left: $treeview-lines
+				li:before
+					content: ""
+					display: block
+					width: 10px
+					height: 0
+					border-top: $treeview-lines
+					margin-top: -1px
+					position: absolute
+					top: 1em
+					left: 0
+				li:not(.has-children):before
+					width: 26px
+
+
+
+				li:last-child:before
+					background: #fff
+					height: auto
+					top: 1em
+					bottom: 0
+
+
+
+			li
+				margin: 0
+				padding: 0 0.8em
+				color: #555
+				font-weight: 700
+				position: relative
+				&:not(.has-children)
+						.tree-item
+							margin-left: 14px
 
 			.tree-item
 				display: flex
 				column-gap: 0.4em
 				align-items: center
-				background: white
-				position: relative
-				top: 0.75em
-				margin-left: 26px
+				padding:  4px 0
 
 			.div-has-children
-				margin-left: 11px
+				//margin-left: 11px
 
 			.no-arrow
 				padding-left: .5rem
@@ -788,7 +818,7 @@
 				font-weight: bold
 			.insert-line
 				position: absolute
-				top: 0.75em
+				// top: 0.75em
 				left: 0
 				z-index: 99
 				height: 2px
@@ -796,10 +826,13 @@
 				background-color: blue
 				display: block
 				border-radius: 3px
-				margin-left: 2.5em
+				margin-left: 28px
+				margin-bottom: -2px
+				margin-top: -2px
 			.insert-line-child
-				margin-left: 5em
+				margin-left: calc( 28px + 5em )
 				background-color: red
+				height: 6px
 
 			.insert-line-wrapper
 				position: relative
