@@ -70,10 +70,11 @@
 
 	let dragAndDrop = true,
 		showContexMenu = true,
-		enableVerticalLines = false,
+		enableVerticalLines = true,
 		num = 0,
 		thisTree,
-		expandedLevel;
+		expandedLevel,
+		treeClass;
 
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
@@ -145,7 +146,8 @@ checkboxes:<select bind:value={checkboxes}>
 	<option value="perNode">perNode</option>
 	<option value="none">none</option>
 </select> <br />
-
+tree class<input type="text" bind:value={treeClass} />
+<br />
 <button on:click={addTo}> add</button>
 
 <button on:click={thisTree.changeAllExpansion(true)}> true</button>
@@ -175,6 +177,7 @@ checkboxes:<select bind:value={checkboxes}>
 	{leafNodeCheckboxesOnly}
 	{checkboxesDisabled}
 	{checkboxes}
+	{treeClass}
 >
 	{JSON.stringify(node)}
 

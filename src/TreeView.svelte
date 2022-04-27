@@ -49,13 +49,13 @@
 	export let dragEnterCallback = null;
 
 	//* classes for customization of tree
-	export let treeClass = "";
-	export let nodeClass = "";
-	export let expandedToggleClass = "";
-	export let collapsedToggleClass = "";
+	export let treeClass = "treeview";
+	export let nodeClass = null;
+	export let expandedToggleClass = null;
+	export let collapsedToggleClass = null;
 	export let expandClass = "inserting-highlighted";
-	export let inserLineClass = "";
-	export let inserLineNestClass = "";
+	export let inserLineClass = null;
+	export let inserLineNestClass = null;
 	export let currentlyDraggedClass = "currently-dragged";
 
 	//* properties
@@ -526,10 +526,9 @@
 </script>
 
 <ul
-	class:treeview={childDepth === 0}
 	class:show-lines={childDepth === 0 && enableVerticalLines}
 	class:child-menu={childDepth > 0}
-	class={treeClass}
+	class={childDepth === 0 ? treeClass : ""}
 >
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
@@ -732,10 +731,17 @@
 </ContextMenu>
 
 <style lang="sass">
-	$treeview-lines: solid black 1px
 
 	:global
+		$treeview-lines: solid black 1px
 		.treeview
+			//will show lines if you set show-lines to root element
+			&.show-lines
+				ul
+					&:before
+						border-left: $treeview-lines
+					li:before
+						border-top: $treeview-lines
 			margin: 0
 			padding: 0
 			list-style: none
@@ -756,16 +762,16 @@
 					top: 0
 					bottom: 0
 					left: 0
-					border-left: $treeview-lines
+					// border-left: $treeview-lines
 				li:before
 					content: ""
 					display: block
 					width: 10px
 					height: 0
-					border-top: $treeview-lines
+					// border-top: $treeview-lines
 					margin-top: -1px
 					position: absolute
-					top: 1em
+					top: 0.8em
 					left: 0
 				li:not(.has-children):before
 					width: 26px

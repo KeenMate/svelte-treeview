@@ -69,7 +69,8 @@ Table of Contents
   when true, wont be able to drop node inside (nest it)
 - ***checkboxVisibleProperty*** (string, default: *"checkboxVisible"*)  
   modifies visibility of checkbox. When checkboxes are "none" wont show them event if this is true
-- ***treeClass*** (string css class, default: *""*)  
+- ***treeClass*** (string css class, default: *"treeview"*)  
+  Setting this to anything else that default value will disable all styling so you can set everything yourself
 - ***nodeClass*** (string css class, default: *""*)  
 - ***expandedToggleClass*** (string css class, default: *""*)  
 - ***collapsedToggleClass*** (string css class, default: *""*)  
