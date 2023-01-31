@@ -28,9 +28,9 @@
 	//!user set
 	export let maxExpandedDepth = 3; //number
 	//tree that will be rendered(will be same as tree if null)
-	export let filteredTree; //array of nodes with nodePath
+	export let filteredTree = null; //array of nodes with nodePath
 	export let recursive = false; //bool
-	export let checkboxes = "none"; //bool
+	export let checkboxes = "none"; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
 	export let leafNodeCheckboxesOnly = false; //bool
 	//true = disabel hide = false
