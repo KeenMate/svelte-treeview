@@ -1,9 +1,9 @@
 <script>
 	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
-	import { TreeHelper } from "./TreeHelpers";
+	import { TreeHelper } from "./helpers/tree-helper";
 	import {
-  defaultCurrentlyDraggedClass,
+		defaultCurrentlyDraggedClass,
 		defaultExpandClass,
 		defaultPixelTreshold,
 		defaultPropNames,
@@ -76,10 +76,10 @@
 		highlightedNode?.[propNames.nestDisabledProperty] !== true;
 	//
 	let ctxMenu;
-	const getNodeId = (node) => `${treeId}-${node[propNames.nodePathProperty]}`;
+	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
 
 	$: parentChildrenTree = helper.OrderByPriority(
-		helper.getParentChildrenTree(filteredTree ? filteredTree : tree, parentId)
+		helper.getParentChildrenTree(filteredTree ?? tree, parentId)
 	);
 
 	//#region expansions
@@ -96,7 +96,7 @@
 			node[propNames.useCallbackProperty] == true
 		) {
 			//console.log("calling callback");
-			fetchNodeDataAsync(node)
+			expandCallback(node)
 				.then((val) => {
 					tree = tree.concat(val);
 					node[propNames.useCallbackProperty] = false;
@@ -109,21 +109,15 @@
 
 		//expansion events
 		dispatch("expansion", {
-			node: node[propNames.nodePathProperty],
+			node: node,
 			value: val,
 		});
 
 		if (val) {
-			dispatch("expanded", node[propNames.nodePathProperty]);
+			dispatch("expanded", node);
 		} else {
-			dispatch("closed", node[propNames.nodePathProperty]);
+			dispatch("closed", node);
 		}
-	}
-
-	//awaits function provided in expandCallback
-	async function fetchNodeDataAsync(node) {
-		let data = await expandCallback(node);
-		return data;
 	}
 
 	export function changeAllExpansion(changeTo) {
@@ -158,7 +152,7 @@
 		tree = helper.ChangeSelection(
 			recursive,
 			tree,
-			node[propNames.nodePathProperty],
+			helper.path(node),
 
 			filteredTree ?? tree
 		);
@@ -169,7 +163,7 @@
 	function selectChildren(node, e) {
 		tree = helper.ChangeSelectForAllChildren(
 			tree,
-			node[propNames.nodePathProperty],
+			helper.path(node),
 
 			e.target.checked,
 
@@ -214,11 +208,11 @@
 			return;
 		}
 
-		console.log("dragstart from: " + node[propNames.nodePathProperty]);
+		console.log("dragstart from: " + helper.path(node));
 
 		e.dataTransfer.dropEffect = "move";
-		e.dataTransfer.setData("node_id", node[propNames.nodePathProperty]);
-		draggedPath = node[propNames.nodePathProperty];
+		e.dataTransfer.setData("node_id", helper.path(node));
+		draggedPath = helper.path(node);
 	}
 
 	function handleDragDrop(e, node, el) {
@@ -228,9 +222,7 @@
 
 		draggedPath = e.dataTransfer.getData("node_id");
 
-		console.log(
-			draggedPath + " dropped on: " + node[propNames.nodePathProperty]
-		);
+		console.log(draggedPath + " dropped on: " + helper.path(node));
 
 		//important to check if timetonest is set, otherwise you could spend 30 minutes fixing this shit :)
 		if (timeToNest) {
@@ -238,14 +230,12 @@
 				(dragenterTimestamp ? new Date() - dragenterTimestamp : 1) > timeToNest;
 		}
 
-		let newNode = tree.find(
-			(n) => n[propNames.nodePathProperty] == draggedPath
-		);
+		let newNode = helper.findNode(tree, draggedPath);
 
 		let oldNode = { ...newNode };
-		let oldParent = tree.find(
-			(n) =>
-				n[propNames.nodePathProperty] == helper.getParentNodePath(draggedPath)
+		let oldParent = helper.findNode(
+			tree,
+			helper.getParentNodePath(draggedPath)
 		);
 
 		let insType = canNest ? 0 : helper.getInsertionPosition(e, el);
@@ -273,18 +263,15 @@
 		tree = helper.moveNode(
 			tree,
 			draggedPath,
-			node[propNames.nodePathProperty],
+			helper.path(node),
 
 			insType,
 			recalculateNodePath
 		);
 
 		let newParent =
-			tree.find(
-				(x) =>
-					x[propNames.nodePathProperty] ==
-					helper.getParentNodePath(newNode[propNames.nodePathProperty])
-			) ?? null;
+			helper.findNode(tree, helper.getParentNodePath(helper.path(newNode))) ??
+			null;
 
 		dispatch("moved", {
 			oldParent: oldParent,
@@ -340,7 +327,7 @@
 
 			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
 			if (
-				node[propNames.nodePathProperty].startsWith(draggedPath) ||
+				helper.path(node).startsWith(draggedPath) ||
 				(node[propNames.insertDisabledProperty] === true &&
 					node[propNames.nestDisabledProperty] === true)
 			) {
@@ -350,13 +337,10 @@
 			//if defined calling callback
 			if (dragEnterCallback) {
 				//get node for event
-				let draggedNode = tree.find(
-					(n) => n[propNames.nodePathProperty] == draggedPath
-				);
-				let oldParent = tree.find(
-					(n) =>
-						n[propNames.nodePathProperty] ==
-						helper.getParentNodePath(draggedPath)
+				let draggedNode = helper.findNode(tree, draggedPath);
+				let oldParent = helper.findNode(
+					tree,
+					helper.getParentNodePath(draggedPath)
 				);
 
 				//callback returning false means that it isnt valid target
@@ -382,37 +366,35 @@
 	/**
 	 *check if this node is one being hovered over (highlited) and is valid target
 	 */
-	function highlighThisNode(n, hn, vt) {
+	function highlighThisNode(node, highlitedNode, validTarget) {
+		return validTarget && helper.path(highlitedNode) == helper.path(node);
+	}
+	/**
+	 * returns true, it should highlight nesting on this node
+	 * @param node node
+	 * @param highlitedNode highlited node
+	 * @param validTarget valid target
+	 * @param canNest can nest
+	 */
+	function highlightNesting(node, highlitedNode, validTarget, canNest) {
 		return (
-			vt && hn?.[propNames.nodePathProperty] == n?.[propNames.nodePathProperty]
+			canNest &&
+			highlighThisNode(node, highlitedNode, validTarget) &&
+			node[propNames.nestDisabledProperty] !== true
 		);
 	}
 	/**
 	 * returns true, it should highlight nesting on this node
-	 * @param n node
-	 * @param hn highlited node
-	 * @param vt valid target
-	 * @param cn can nest
+	 * @param node node
+	 * @param highlitedNode highlited node
+	 * @param validTarget valid target
+	 * @param canNest can nest
 	 */
-	function highlightNesting(n, hn, vt, cn) {
+	function highlightInsert(node, highlitedNode, validTarget, canNest) {
 		return (
-			cn &&
-			highlighThisNode(n, hn, vt) &&
-			n[propNames.nestDisabledProperty] !== true
-		);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param n node
-	 * @param hn highlited node
-	 * @param vt valid target
-	 * @param cn can nest
-	 */
-	function highlightInsert(n, hn, vt, cn) {
-		return (
-			!cn &&
-			highlighThisNode(n, hn, vt) &&
-			n[propNames.insertDisabledProperty] !== true
+			!canNest &&
+			highlighThisNode(node, highlitedNode, validTarget) &&
+			node[propNames.insertDisabledProperty] !== true
 		);
 	}
 
@@ -446,7 +428,7 @@
 >
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
-			class:is-child={helper.nodePathIsChild(node[propNames.nodePathProperty])}
+			class:is-child={helper.nodePathIsChild(helper.path(node))}
 			class:has-children={node[propNames.hasChildrenProperty]}
 			on:contextmenu|stopPropagation={(e) => {
 				childDepth == 0
@@ -476,8 +458,8 @@
 				{highlightNesting(node, highlightedNode, validTarget, canNest)
 					? expandClass
 					: ''}
-				{nodeClass} {draggedPath == node?.[propNames.nodePathProperty] ||
-				node?.[propNames.nodePathProperty]?.startsWith(draggedPath)
+				{nodeClass} {draggedPath == helper.path(node) ||
+				helper.path(node)?.startsWith(draggedPath)
 					? currentlyDraggedClass
 					: ''}"
 				class:div-has-children={node[propNames.hasChildrenProperty]}
@@ -584,7 +566,7 @@
 					bind:filteredTree
 					{recursive}
 					childDepth={childDepth + 1}
-					parentId={node[propNames.nodePathProperty]}
+					parentId={helper.path(node)}
 					let:node={nodeNested}
 					{leafNodeCheckboxesOnly}
 					{checkboxesDisabled}

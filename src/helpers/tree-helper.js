@@ -6,7 +6,7 @@ export class TreeHelper {
 	}
 
 	path(node) {
-		return node[this.props.nodePathProperty];
+		return node?.[this.props.nodePathProperty];
 	}
 
 	//#region basic helpres
@@ -17,6 +17,10 @@ export class TreeHelper {
 
 	hasChildren(tree, nodePath) {
 		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
+	}
+
+	findNode(tree, nodePath) {
+		return tree.find((node) => this.path(node) === nodePath);
 	}
 
 	nodePathIsChild(nodePath) {
@@ -58,9 +62,7 @@ export class TreeHelper {
 
 	joinTrees(filteredTree, tree) {
 		return tree.map(
-			(tnode) =>
-				filteredTree.find((fnode) => this.path(tnode) === this.path(fnode)) ||
-				tnode
+			(tnode) => findNode(filteredTree, this.path(tnode)) || tnode
 		);
 	}
 
@@ -362,7 +364,8 @@ export class TreeHelper {
 		//console.log(newParentNodePath);
 
 		//* find target node
-		let targetNode = tree.find((x) => this.path(x) == targetNodePath);
+
+		let targetNode = this.findNode(tree, targetNodePath);
 		let movedNode;
 
 		//console.log("parentNodePath: " + newParentNodePath);
@@ -431,9 +434,7 @@ export class TreeHelper {
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 
 		//hide plus icon if parent of moved node doesnt have any more children
-		let oldParent = tree.find(
-			(x) => this.path(x) == this.getParentNodePath(movedNodePath)
-		);
+		let oldParent = this.findNode(tree, this.getParentNodePath(movedNodePath));
 
 		//moved
 		if (oldParent && !this.allCHildren(tree, this.path(oldParent)).length) {
