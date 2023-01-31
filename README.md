@@ -1,5 +1,8 @@
 # Svelte Treeview
 
+
+# API CHANGE IN DEV BRANCH, UDPATE README
+
 The most elaborate treeview for svelte on earth (or even in our galaxy).  
 
 [DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree)
@@ -7,6 +10,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 Table of Contents
 
 - [Svelte Treeview](#svelte-treeview)
+- [API CHANGE IN DEV BRANCH, UDPATE README](#api-change-in-dev-branch-udpate-readme)
   - [Props](#props)
   - [Events](#events)
   - [function on component](#function-on-component)
