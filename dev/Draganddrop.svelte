@@ -1,5 +1,5 @@
 <script>
-	import { TreeView, mergeTrees } from "../index.js";
+	import { TreeView, TreeHelper } from "../index.js";
 
 	import MenuDivider from "../src/MenuDivider.svelte";
 	import MenuOption from "../src/MenuOption.svelte";
@@ -113,6 +113,7 @@
 	}
 
 	function addTo() {
+		let helper = new TreeHelper()
 		tree = mergeTrees(tree, treeToAdd);
 	}
 
