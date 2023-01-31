@@ -2,7 +2,7 @@
 	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
 	import { TreeHelper } from "./TreeHelpers";
-
+	import { defaultPropNames } from "./consts";
 	const dispatch = createEventDispatcher();
 
 	//! required
@@ -43,42 +43,9 @@
 	export let currentlyDraggedClass = "currently-dragged";
 
 	//* properties
-	export let nodePathProperty = "nodePath";
-	export let hasChildrenProperty = "hasChildren";
-	export let expandedProperty = "__expanded";
-	export let selectedProperty = "__selected";
-	export let useCallbackProperty = "__useCallback";
-	export let priorityProperty = "priority";
-	export let isDraggableProperty = "isDraggable";
-	export let insertDisabledProperty = "insertDisabled";
-	export let nestDisabledProperty = "nestDisabled";
-	export let checkboxVisibleProperty = "checkboxVisible";
+	export let propNames = defaultPropNames;
 
-	let propNames = getPropsObject(
-		nodePathProperty,
-		hasChildrenProperty,
-		expandedProperty,
-		selectedProperty,
-		useCallbackProperty,
-		priorityProperty,
-		isDraggableProperty,
-		insertDisabledProperty,
-		nestDisabledProperty,
-		checkboxVisibleProperty
-	);
 	let helper = new TreeHelper(propNames);
-	$: propNames = getPropsObject(
-		nodePathProperty,
-		hasChildrenProperty,
-		expandedProperty,
-		selectedProperty,
-		useCallbackProperty,
-		priorityProperty,
-		isDraggableProperty,
-		insertDisabledProperty,
-		nestDisabledProperty,
-		checkboxVisibleProperty
-	);
 
 	export let getId = (x) => x[propNames.nodePathProperty];
 	export let getParentId = (x) =>
@@ -123,32 +90,6 @@
 	);
 
 	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
-
-	function getPropsObject(
-		nodePath,
-		hasChildren,
-		expanded,
-		selected,
-		useCallback,
-		priority,
-		isDraggable,
-		insertDisabled,
-		nestDisabled,
-		checkboxVisible
-	) {
-		return {
-			nodePathProperty: nodePath,
-			expandedProperty: expanded,
-			selectedProperty: selected,
-			useCallbackProperty: useCallback,
-			priorityProperty: priority,
-			hasChildrenProperty: hasChildren,
-			isDraggableProperty: isDraggable,
-			insertDisabledProperty: insertDisabled,
-			nestDisabledProperty: nestDisabled,
-			checkboxVisibleProperty: checkboxVisible,
-		};
-	}
 
 	//#region expansions
 
@@ -676,15 +617,7 @@
 					on:expansion
 					on:expanded
 					on:closed
-					{nodePathProperty}
-					{hasChildrenProperty}
-					{expandedProperty}
-					{selectedProperty}
-					{useCallbackProperty}
-					{priorityProperty}
-					{isDraggableProperty}
-					{insertDisabledProperty}
-					{nestDisabledProperty}
+					{propNames}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold
