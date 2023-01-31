@@ -379,7 +379,7 @@ export class TreeHelper {
 				//replace old parent with new
 				let newPath = this.path(node).replace(movedNodePath, newParentNodePath);
 				//console.log(this.path(node) + " -> " + newPath);
-				this.path(node) = newPath;
+				node[this.props.nodePathProperty] = newPath;
 			}
 
 			//if it is moved node
@@ -419,16 +419,10 @@ export class TreeHelper {
 		//* insert node at right possition of array
 		//
 
-		let oldIndex = tree.findIndex(
-			(x) => this.path(x) == newParentNodePath
-		);
+		let oldIndex = tree.findIndex((x) => this.path(x) == newParentNodePath);
 		tree.splice(oldIndex, 1);
 
-		let index = tree.findIndex(
-			(x) =>
-			this.path(x) ==
-			this.path(targetNode)
-		);
+		let index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
 
 		//insert below expcept if inspos is 1
 
@@ -436,25 +430,16 @@ export class TreeHelper {
 
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 
-		/*
-	//hide plus icon if parent of moved node doesnt have any more children
-	let oldParent = tree.find(
-		(x) => this.path(x) == this.getParentNodePath(movedNodePath)
-	);
+		//hide plus icon if parent of moved node doesnt have any more children
+		let oldParent = tree.find(
+			(x) => this.path(x) == this.getParentNodePath(movedNodePath)
+		);
 
-	//moved
-	if (
-		oldParent &&
-		!this.allCHildren(
-			tree,
-			this.path(oldParent),
+		//moved
+		if (oldParent && !this.allCHildren(tree, this.path(oldParent)).length) {
+			oldParent[this.props.hasChildrenProperty] = false;
+		}
 
-			propNames
-		).length
-	) {
-		oldParent[this.props.hasChildrenProperty] = false;
-	}
-*/
 		return tree;
 	}
 
@@ -480,9 +465,7 @@ export class TreeHelper {
 		this.allCHildren(tree, parentPath).forEach((node) => {
 			let parent = this.getParentNodePath(this.path(node));
 			if (parent == parentPath) {
-				let num = this.path(node).substring(
-					parent ? parent.length + 1 : 0
-				);
+				let num = this.path(node).substring(parent ? parent.length + 1 : 0);
 				if (parseInt(num) >= parseInt(max)) max = num;
 			}
 		});
@@ -556,9 +539,7 @@ export class TreeHelper {
 		parentNodes.forEach((n) => {
 			if (
 				result.findIndex((x) => {
-					return (
-						this.path(n) === this.path(x)
-					);
+					return this.path(n) === this.path(x);
 				}) < 0
 			)
 				result.push(n);
