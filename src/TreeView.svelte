@@ -1,7 +1,7 @@
 <script>
 	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
-	import { TreeHelper } from "./helpers/tree-helper";
+	import createTreeHelper from "./helpers/tree-helper";
 	import {
 		defaultCurrentlyDraggedClass,
 		defaultExpandClass,
@@ -50,7 +50,7 @@
 	//* properties
 	export let propNames = defaultPropNames;
 
-	let helper = new TreeHelper(propNames);
+	const helper = createTreeHelper(propNames);
 
 	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
@@ -78,7 +78,7 @@
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
 
-	$: parentChildrenTree = helper.OrderByPriority(
+	$: parentChildrenTree = helper.dragDrop.OrderByPriority(
 		helper.getParentChildrenTree(filteredTree ?? tree, parentId)
 	);
 
@@ -138,7 +138,7 @@
 
 	$: ComputeVisualTree(filteredTree);
 	function ComputeVisualTree(filteredTree) {
-		tree = helper.computeInitialVisualStates(
+		tree = helper.selection.computeInitialVisualStates(
 			tree,
 
 			filteredTree ?? tree
@@ -149,7 +149,7 @@
 	function selectionChanged(node) {
 		console.log(tree);
 		//console.log(nodePath);
-		tree = helper.ChangeSelection(
+		tree = helper.selection.ChangeSelection(
 			recursive,
 			tree,
 			helper.path(node),
@@ -161,7 +161,7 @@
 
 	//fired when in recursive mode you click on Leaf node
 	function selectChildren(node, e) {
-		tree = helper.ChangeSelectForAllChildren(
+		tree = helper.selection.ChangeSelectForAllChildren(
 			tree,
 			helper.path(node),
 
@@ -238,7 +238,7 @@
 			helper.getParentNodePath(draggedPath)
 		);
 
-		let insType = canNest ? 0 : helper.getInsertionPosition(e, el);
+		let insType = canNest ? 0 : helper.dragDrop.getInsertionPosition(e, el);
 
 		//cancel move if its not valid
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
@@ -255,12 +255,12 @@
 				oldNode,
 				oldParent,
 				node,
-				helper.huminifyInsType(insType)
+				helper.dragDrop.huminifyInsType(insType)
 			) === false
 		)
 			return;
 
-		tree = helper.moveNode(
+		tree = helper.dragDrop.moveNode(
 			tree,
 			draggedPath,
 			helper.path(node),
@@ -279,7 +279,7 @@
 			oldNode: oldNode,
 			newNode: newNode,
 			targetNode: node,
-			insType: helper.huminifyInsType(insType),
+			insType: helper.dragDrop.huminifyInsType(insType),
 		});
 
 		//reset props
@@ -289,7 +289,7 @@
 	}
 
 	function handleDragOver(e, node, el) {
-		insPos = helper.getInsertionPosition(e, el);
+		insPos = helper.dragDrop.getInsertionPosition(e, el);
 
 		//if you are further away from right then treshold allow nesting
 
@@ -306,7 +306,7 @@
 
 	function handleDragEnter(e, node, el) {
 		setTimeout(() => {
-			insPos = helper.getInsertionPosition(e, el);
+			insPos = helper.dragDrop.getInsertionPosition(e, el);
 
 			validTarget = true;
 			dragenterTimestamp = new Date();
@@ -410,7 +410,7 @@
 	//#endregion
 
 	//computes all visual states when component is first created
-	tree = helper.computeInitialVisualStates(
+	tree = helper.selection.computeInitialVisualStates(
 		tree,
 
 		filteredTree ?? tree
