@@ -47,12 +47,6 @@
 
 	let helper = new TreeHelper(propNames);
 
-	export let getId = (x) => x[propNames.nodePathProperty];
-	export let getParentId = (x) =>
-		helper.getParentNodePath(x[propNames.nodePathProperty]);
-	export let isChild = (x) =>
-		helper.nodePathIsChild(x[propNames.nodePathProperty]);
-
 	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
 	export let draggedPath = null;
@@ -77,14 +71,14 @@
 		highlightedNode?.[propNames?.nestDisabledProperty] !== true;
 	//
 	let ctxMenu;
-	const getNodeId = (node) => `${treeId}-${getId(node)}`;
+	const getNodeId = (node) => `${treeId}-${node[propNames.nodePathProperty]}`;
 
 	$: parentChildrenTree = helper.OrderByPriority(
 		helper.getParentChildrenTree(
 			filteredTree ? filteredTree : tree,
 			parentId,
-			isChild,
-			getParentId
+
+			propNames
 		),
 		propNames
 	);
@@ -155,8 +149,7 @@
 	function ComputeVisualTree(filteredTree) {
 		tree = helper.computeInitialVisualStates(
 			tree,
-			isChild,
-			getParentId,
+
 			filteredTree ?? tree,
 			propNames
 		);
@@ -170,8 +163,7 @@
 			recursive,
 			tree,
 			node[propNames.nodePathProperty],
-			isChild,
-			getParentId,
+
 			filteredTree ?? tree,
 			propNames
 		);
@@ -183,9 +175,9 @@
 		tree = helper.ChangeSelectForAllChildren(
 			tree,
 			node[propNames.nodePathProperty],
-			isChild,
+
 			e.target.checked,
-			getParentId,
+
 			filteredTree ?? tree,
 			propNames
 		);
@@ -288,7 +280,7 @@
 			tree,
 			draggedPath,
 			node[propNames.nodePathProperty],
-			isChild,
+
 			insType,
 			recalculateNodePath,
 			propNames
@@ -445,8 +437,7 @@
 	//computes all visual states when component is first created
 	tree = helper.computeInitialVisualStates(
 		tree,
-		isChild,
-		getParentId,
+
 		filteredTree ?? tree,
 		propNames
 	);
@@ -463,7 +454,7 @@
 >
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
-			class:is-child={isChild(node)}
+			class:is-child={helper.nodePathIsChild(node[propNames.nodePathProperty])}
 			class:has-children={node[propNames.hasChildrenProperty]}
 			on:contextmenu|stopPropagation={(e) => {
 				childDepth == 0
@@ -596,15 +587,13 @@
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
-					{getId}
 					{checkboxes}
-					{getParentId}
 					{maxExpandedDepth}
 					bind:tree
 					bind:filteredTree
 					{recursive}
 					childDepth={childDepth + 1}
-					parentId={getId(node)}
+					parentId={node[propNames.nodePathProperty]}
 					let:node={nodeNested}
 					{leafNodeCheckboxesOnly}
 					{checkboxesDisabled}

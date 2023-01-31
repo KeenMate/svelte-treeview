@@ -17,18 +17,20 @@ export class TreeHelper {
 		return !nodePath || !!(nodePath.match(/\./g) || []).length;
 	}
 
-	getParentChildrenTree(tree, parentId, isChild, getParentId) {
+	getParentChildrenTree(tree, parentId, propNames) {
 		return (tree || []).filter((x) =>
-			!parentId ? !isChild(x) : getParentId(x) === parentId
+			!parentId
+				? !this.nodePathIsChild(x[propNames.nodePathProperty])
+				: this.getParentNodePath(x[propNames.nodePathProperty]) === parentId
 		);
 	}
 
-	allCHildren(tree, parentId, isChild, propNames) {
+	allCHildren(tree, parentId, propNames) {
 		let children;
 		children = tree.filter((x) => {
 			if (!parentId) {
 				//top level
-				return !isChild(x);
+				return !this.nodePathIsChild(x[propNames.nodePathProperty]);
 			} else {
 				return (
 					x[propNames.nodePathProperty].startsWith(parentId.toString()) &&
@@ -125,8 +127,7 @@ export class TreeHelper {
 		recursiveely,
 		tree,
 		nodePath,
-		isChild,
-		getParentId,
+
 		filteredTree,
 		propNames
 	) {
@@ -136,8 +137,7 @@ export class TreeHelper {
 			tree = this.recomputeAllParentVisualState(
 				tree,
 				nodePath,
-				isChild,
-				getParentId,
+
 				filteredTree,
 				propNames
 			);
@@ -160,9 +160,9 @@ export class TreeHelper {
 	ChangeSelectForAllChildren(
 		tree,
 		parentId,
-		isChild,
+
 		changeTo,
-		getParentId,
+
 		filteredTree,
 		propNames
 	) {
@@ -174,7 +174,7 @@ export class TreeHelper {
 
 			if (!parentId) {
 				//top level
-				if (!isChild(x)) {
+				if (!this.nodePathIsChild(x[propNames.nodePathProperty])) {
 					x = this.changeSelectedIfNParent(x, changeTo, propNames);
 				}
 			} else {
@@ -191,8 +191,7 @@ export class TreeHelper {
 		tree = this.recomputeAllParentVisualState(
 			tree,
 			parentId,
-			isChild,
-			getParentId,
+
 			filteredTree,
 			propNames
 		);
@@ -210,12 +209,12 @@ export class TreeHelper {
 	}
 
 	/**Calculates visual state based on children  */
-	getVisualState(filteredTree, node, isChild, getParentId, propNames) {
+	getVisualState(filteredTree, node, propNames) {
 		let children = this.getParentChildrenTree(
 			filteredTree,
 			node[propNames.nodePathProperty],
-			isChild,
-			getParentId
+
+			propNames
 		);
 
 		if (!children || children?.length == 0) return "false";
@@ -250,12 +249,11 @@ export class TreeHelper {
 	recomputeAllParentVisualState(
 		tree,
 		nodePath,
-		isChild,
-		getParentId,
+
 		filteredTree,
 		propNames
 	) {
-		let parent = getParentId({ [propNames.nodePathProperty]: nodePath });
+		let parent = this.getParentNodePath(nodePath);
 
 		let newstate;
 		filteredTree.forEach((x) => {
@@ -263,8 +261,7 @@ export class TreeHelper {
 				newstate = this.getVisualState(
 					filteredTree,
 					x,
-					isChild,
-					getParentId,
+
 					propNames
 				);
 				x.__visual_state = newstate;
@@ -275,8 +272,7 @@ export class TreeHelper {
 			tree = this.recomputeAllParentVisualState(
 				tree,
 				parent,
-				isChild,
-				getParentId,
+
 				filteredTree,
 				propNames
 			);
@@ -287,32 +283,29 @@ export class TreeHelper {
 	/** Computes visual states for all nodes. Used for computing initial visual states when tree changes  */
 	computeInitialVisualStates(
 		tree,
-		isChild,
-		getParentId,
+
 		filteredTree,
 		propNames
 	) {
 		let rootELements = this.getParentChildrenTree(
 			tree,
 			null,
-			isChild,
-			getParentId
+
+			propNames
 		);
 		rootELements.forEach((x) => {
 			if (x[propNames.hasChildrenProperty] == true) {
 				tree = this.computeChildrenVisualStates(
 					tree,
 					x,
-					isChild,
-					getParentId,
+
 					filteredTree,
 					propNames
 				);
 				x.__visual_state = this.getVisualState(
 					filteredTree,
 					x,
-					isChild,
-					getParentId,
+
 					propNames
 				);
 			}
@@ -323,16 +316,15 @@ export class TreeHelper {
 	computeChildrenVisualStates(
 		tree,
 		node,
-		isChild,
-		getParentId,
+
 		filteredTree,
 		propNames
 	) {
 		let children = this.getParentChildrenTree(
 			tree,
 			node[propNames.nodePathProperty],
-			isChild,
-			getParentId
+
+			propNames
 		);
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
@@ -340,18 +332,10 @@ export class TreeHelper {
 				tree = this.computeChildrenVisualStates(
 					tree,
 					x,
-					isChild,
-					getParentId,
 					filteredTree,
 					propNames
 				);
-				x.__visual_state = this.getVisualState(
-					filteredTree,
-					x,
-					isChild,
-					getParentId,
-					propNames
-				);
+				x.__visual_state = this.getVisualState(filteredTree, x, propNames);
 			}
 		});
 		return tree;
@@ -375,7 +359,6 @@ export class TreeHelper {
 	 * @param {Object[]} tree - tree
 	 * @param {nodePath} movedNodePath - nodepath of moved(dragged) node
 	 * @param {nodePath} targetNodePath - nodepath of node where it should be moved ( either bellow it in priority or as child)
-	 * @param {} isChild - funcion to get if child
 	 * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
 	 * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
 	 * @param {Object} propNames - object where all propNames are stored
@@ -384,7 +367,6 @@ export class TreeHelper {
 		tree,
 		movedNodePath,
 		targetNodePath,
-		isChild,
 		insType,
 		recalculateNodePath,
 		propNames
@@ -410,7 +392,7 @@ export class TreeHelper {
 		if (!insideParent) {
 			let nodeId;
 			if (recalculateNodePath) {
-				nodeId = this.getNextNodeId(tree, parentNodePath, isChild, propNames);
+				nodeId = this.getNextNodeId(tree, parentNodePath, propNames);
 			} else {
 				nodeId = movedNodePath.substring(
 					this.getParentNodePath(movedNodePath)
@@ -475,7 +457,7 @@ export class TreeHelper {
 						parentNodePath,
 						newParentNodePath,
 						newpriority,
-						isChild,
+
 						propNames
 					);
 
@@ -519,7 +501,7 @@ export class TreeHelper {
 		!this.allCHildren(
 			tree,
 			oldParent[propNames.nodePathProperty],
-			isChild,
+
 			propNames
 		).length
 	) {
@@ -537,12 +519,12 @@ export class TreeHelper {
 		parentNode,
 		movedNodePath,
 		insertedPriority,
-		isChild,
+
 		propNames
 	) {
 		let nextPriority = insertedPriority + 1;
 		this.OrderByPriority(
-			this.allCHildren(tree, parentNode, isChild, propNames),
+			this.allCHildren(tree, parentNode, propNames),
 			propNames
 		).forEach((n) => {
 			if (
@@ -555,10 +537,10 @@ export class TreeHelper {
 	}
 
 	/** return biggest value of nodepath number that children are using +1 */
-	getNextNodeId(tree, parentPath, isChild, propNames) {
+	getNextNodeId(tree, parentPath, propNames) {
 		let max = 0;
 		//findes biggest nodeNumber for
-		this.allCHildren(tree, parentPath, isChild, propNames).forEach((node) => {
+		this.allCHildren(tree, parentPath, propNames).forEach((node) => {
 			let parent = this.getParentNodePath(node[propNames.nodePathProperty]);
 			if (parent == parentPath) {
 				let num = node[propNames.nodePathProperty].substring(
