@@ -1,25 +1,9 @@
 <script>
 	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
+	import { TreeHelper } from "./TreeHelpers";
 
 	const dispatch = createEventDispatcher();
-
-	import {
-		getParentNodePath,
-		hasChildren,
-		nodePathIsChild,
-		OrderByPriority,
-		getParentChildrenTree,
-		computeInitialVisualStates,
-		changeExpansion,
-		ChangeSelection,
-		ChangeSelectForAllChildren,
-		moveNode,
-		//expandToLevel,
-		changeEveryExpansion,
-		getInsertionPosition,
-		huminifyInsType,
-	} from "./TreeHelpers";
 
 	//! required
 	export let tree = null; //array of nodes with nodePath
@@ -82,6 +66,7 @@
 		nestDisabledProperty,
 		checkboxVisibleProperty
 	);
+	let helper = new TreeHelper(propNames);
 	$: propNames = getPropsObject(
 		nodePathProperty,
 		hasChildrenProperty,
@@ -97,8 +82,9 @@
 
 	export let getId = (x) => x[propNames.nodePathProperty];
 	export let getParentId = (x) =>
-		getParentNodePath(x[propNames.nodePathProperty]);
-	export let isChild = (x) => nodePathIsChild(x[propNames.nodePathProperty]);
+		helper.getParentNodePath(x[propNames.nodePathProperty]);
+	export let isChild = (x) =>
+		helper.nodePathIsChild(x[propNames.nodePathProperty]);
 
 	//! DONT SET ONLY USED INTERNALLY
 	//path of currently dragged node
@@ -126,8 +112,8 @@
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${getId(node)}`;
 
-	$: parentChildrenTree = OrderByPriority(
-		getParentChildrenTree(
+	$: parentChildrenTree = helper.OrderByPriority(
+		helper.getParentChildrenTree(
 			filteredTree ? filteredTree : tree,
 			parentId,
 			isChild,
@@ -167,7 +153,7 @@
 	//#region expansions
 
 	function toggleExpansion(node, expanded) {
-		tree = changeExpansion(tree, node, !expanded, propNames);
+		tree = helper.changeExpansion(tree, node, !expanded, propNames);
 
 		let val = node[propNames.expandedProperty];
 
@@ -209,7 +195,7 @@
 	}
 
 	export function changeAllExpansion(changeTo) {
-		tree = changeEveryExpansion(tree, changeTo, propNames);
+		tree = helper.changeEveryExpansion(tree, changeTo, propNames);
 	}
 
 	function shouldExpand(expandProp, depth, expandTo) {
@@ -226,7 +212,7 @@
 
 	$: ComputeVisualTree(filteredTree);
 	function ComputeVisualTree(filteredTree) {
-		tree = computeInitialVisualStates(
+		tree = helper.computeInitialVisualStates(
 			tree,
 			isChild,
 			getParentId,
@@ -237,8 +223,9 @@
 
 	//checkboxes
 	function selectionChanged(node) {
+		console.log(tree);
 		//console.log(nodePath);
-		tree = ChangeSelection(
+		tree = helper.ChangeSelection(
 			recursive,
 			tree,
 			node[propNames.nodePathProperty],
@@ -252,7 +239,7 @@
 
 	//fired when in recursive mode you click on Leaf node
 	function selectChildren(node, e) {
-		tree = ChangeSelectForAllChildren(
+		tree = helper.ChangeSelectForAllChildren(
 			tree,
 			node[propNames.nodePathProperty],
 			isChild,
@@ -330,10 +317,11 @@
 
 		let oldNode = { ...newNode };
 		let oldParent = tree.find(
-			(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
+			(n) =>
+				n[propNames.nodePathProperty] == helper.getParentNodePath(draggedPath)
 		);
 
-		let insType = canNest ? 0 : getInsertionPosition(e, el);
+		let insType = canNest ? 0 : helper.getInsertionPosition(e, el);
 
 		//cancel move if its not valid
 		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
@@ -350,12 +338,12 @@
 				oldNode,
 				oldParent,
 				node,
-				huminifyInsType(insType)
+				helper.huminifyInsType(insType)
 			) === false
 		)
 			return;
 
-		tree = moveNode(
+		tree = helper.moveNode(
 			tree,
 			draggedPath,
 			node[propNames.nodePathProperty],
@@ -369,7 +357,7 @@
 			tree.find(
 				(x) =>
 					x[propNames.nodePathProperty] ==
-					getParentNodePath(newNode[propNames.nodePathProperty])
+					helper.getParentNodePath(newNode[propNames.nodePathProperty])
 			) ?? null;
 
 		dispatch("moved", {
@@ -378,7 +366,7 @@
 			oldNode: oldNode,
 			newNode: newNode,
 			targetNode: node,
-			insType: huminifyInsType(insType),
+			insType: helper.huminifyInsType(insType),
 		});
 
 		//reset props
@@ -388,7 +376,7 @@
 	}
 
 	function handleDragOver(e, node, el) {
-		insPos = getInsertionPosition(e, el);
+		insPos = helper.getInsertionPosition(e, el);
 
 		//if you are further away from right then treshold allow nesting
 
@@ -405,7 +393,7 @@
 
 	function handleDragEnter(e, node, el) {
 		setTimeout(() => {
-			insPos = getInsertionPosition(e, el);
+			insPos = helper.getInsertionPosition(e, el);
 
 			validTarget = true;
 			dragenterTimestamp = new Date();
@@ -440,7 +428,9 @@
 					(n) => n[propNames.nodePathProperty] == draggedPath
 				);
 				let oldParent = tree.find(
-					(n) => n[propNames.nodePathProperty] == getParentNodePath(draggedPath)
+					(n) =>
+						n[propNames.nodePathProperty] ==
+						helper.getParentNodePath(draggedPath)
 				);
 
 				//callback returning false means that it isnt valid target
@@ -512,7 +502,7 @@
 	//#endregion
 
 	//computes all visual states when component is first created
-	tree = computeInitialVisualStates(
+	tree = helper.computeInitialVisualStates(
 		tree,
 		isChild,
 		getParentId,
