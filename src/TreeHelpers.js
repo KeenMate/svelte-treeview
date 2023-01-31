@@ -1,15 +1,19 @@
 import orderBy from "lodash.unionby"; // used by tree merge
 
 export class TreeHelper {
+	constructor(propNames) {
+		this.props = propNames;
+	}
+
 	//#region basic helpres
 
 	getParentNodePath(nodePath) {
 		return nodePath?.substring(0, nodePath.lastIndexOf("."));
 	}
 
-	hasChildren(tree, nodePath, propNames) {
+	hasChildren(tree, nodePath) {
 		return tree?.find(
-			(x) => this.getParentNodePath(x[propNames.nodePathProperty]) === nodePath
+			(x) => this.getParentNodePath(x[this.props.nodePathProperty]) === nodePath
 		);
 	}
 
@@ -17,46 +21,46 @@ export class TreeHelper {
 		return !nodePath || !!(nodePath.match(/\./g) || []).length;
 	}
 
-	getParentChildrenTree(tree, parentId, propNames) {
+	getParentChildrenTree(tree, parentId) {
 		return (tree || []).filter((x) =>
 			!parentId
-				? !this.nodePathIsChild(x[propNames.nodePathProperty])
-				: this.getParentNodePath(x[propNames.nodePathProperty]) === parentId
+				? !this.nodePathIsChild(x[this.props.nodePathProperty])
+				: this.getParentNodePath(x[this.props.nodePathProperty]) === parentId
 		);
 	}
 
-	allCHildren(tree, parentId, propNames) {
+	allCHildren(tree, parentId) {
 		let children;
 		children = tree.filter((x) => {
 			if (!parentId) {
 				//top level
-				return !this.nodePathIsChild(x[propNames.nodePathProperty]);
+				return !this.nodePathIsChild(x[this.props.nodePathProperty]);
 			} else {
 				return (
-					x[propNames.nodePathProperty].startsWith(parentId.toString()) &&
-					x[propNames.nodePathProperty] != parentId
+					x[this.props.nodePathProperty].startsWith(parentId.toString()) &&
+					x[this.props.nodePathProperty] != parentId
 				);
 			}
 		});
 		return children;
 	}
 
-	getAllLeafNodes(tree, propNames) {
+	getAllLeafNodes(tree) {
 		return tree.filter((x) => {
 			return (
-				x[propNames.hasChildrenProperty] == undefined ||
-				x[propNames.hasChildrenProperty] == false
+				x[this.props.hasChildrenProperty] == undefined ||
+				x[this.props.hasChildrenProperty] == false
 			);
 		});
 	}
 
-	joinTrees(filteredTree, tree, propNames) {
+	joinTrees(filteredTree, tree) {
 		return tree.map(
 			(tnode) =>
 				filteredTree.find(
 					(fnode) =>
-						tnode[propNames.nodePathProperty] ===
-						fnode[propNames.nodePathProperty]
+						tnode[this.props.nodePathProperty] ===
+						fnode[this.props.nodePathProperty]
 				) || tnode
 		);
 	}
@@ -67,11 +71,13 @@ export class TreeHelper {
 
 	/** toggles expansion on
 	 */
-	changeExpansion(tree, node, changeTo, propNames) {
+	changeExpansion(tree, node, changeTo) {
 		return tree.map((x) => {
 			let t = x;
-			if (x[propNames.nodePathProperty] == node?.[propNames.nodePathProperty]) {
-				t[propNames.expandedProperty] = changeTo;
+			if (
+				x[this.props.nodePathProperty] == node?.[this.props.nodePathProperty]
+			) {
+				t[this.props.expandedProperty] = changeTo;
 			}
 			return t;
 		});
@@ -79,9 +85,9 @@ export class TreeHelper {
 
 	/** orders nodes by priorityProp
 	 */
-	OrderByPriority(tree, propNames) {
+	OrderByPriority(tree) {
 		tree.sort((a, b) => {
-			if (b[propNames.priorityProperty] > a[propNames.priorityProperty])
+			if (b[this.props.priorityProperty] > a[this.props.priorityProperty])
 				return -1;
 			return 1;
 		});
@@ -90,25 +96,25 @@ export class TreeHelper {
 
 	/** changes expansion of every node that has this.hasChildren set to true
 	 */
-	changeEveryExpansion(tree, changeTo, propNames) {
+	changeEveryExpansion(tree, changeTo) {
 		return tree.map((node) => {
-			if (node[propNames.hasChildrenProperty] == true)
-				node[propNames.expandedProperty] = changeTo;
+			if (node[this.props.hasChildrenProperty] == true)
+				node[this.props.expandedProperty] = changeTo;
 			return node;
 		});
 	}
 
 	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
 	 */
-	expandToLevel(tree, level, propNames) {
+	expandToLevel(tree, level) {
 		return tree.map((n) => {
 			if (
-				n[propNames.expandedProperty] == undefined &&
-				n[propNames.expandedProperty] == null &&
-				n[propNames.useCallbackProperty] != true &&
-				this.getDepthLevel(n[propNames.nodePathProperty]) <= level
+				n[this.props.expandedProperty] == undefined &&
+				n[this.props.expandedProperty] == null &&
+				n[this.props.useCallbackProperty] != true &&
+				this.getDepthLevel(n[this.props.nodePathProperty]) <= level
 			) {
-				n[propNames.expandedProperty] = true;
+				n[this.props.expandedProperty] = true;
 			}
 			return n;
 		});
@@ -128,30 +134,28 @@ export class TreeHelper {
 		tree,
 		nodePath,
 
-		filteredTree,
-		propNames
+		filteredTree
 	) {
-		tree = this.addOrRemoveSelection(tree, nodePath, propNames);
+		tree = this.addOrRemoveSelection(tree, nodePath);
 
 		if (recursiveely) {
 			tree = this.recomputeAllParentVisualState(
 				tree,
 				nodePath,
 
-				filteredTree,
-				propNames
+				filteredTree
 			);
 		}
 		return tree;
 	}
 
-	addOrRemoveSelection(tree, nodePath, propNames) {
+	addOrRemoveSelection(tree, nodePath) {
 		console.log(tree);
 		return tree.map((x) => {
 			let t = x;
-			if (x[propNames.nodePathProperty] == nodePath) {
-				t[propNames.selectedProperty] = !x[propNames.selectedProperty];
-				//t.__visual_state = !x[propNames.selectedProperty];
+			if (x[this.props.nodePathProperty] == nodePath) {
+				t[this.props.selectedProperty] = !x[this.props.selectedProperty];
+				//t.__visual_state = !x[this.props.selectedProperty];
 			}
 			return t;
 		});
@@ -163,27 +167,26 @@ export class TreeHelper {
 
 		changeTo,
 
-		filteredTree,
-		propNames
+		filteredTree
 	) {
 		tree = tree.map((x) => {
 			//changes itself
-			if (parentId == x[propNames.nodePathProperty]) {
-				x = this.changeSelectedIfNParent(x, changeTo, propNames);
+			if (parentId == x[this.props.nodePathProperty]) {
+				x = this.changeSelectedIfNParent(x, changeTo);
 			}
 
 			if (!parentId) {
 				//top level
-				if (!this.nodePathIsChild(x[propNames.nodePathProperty])) {
-					x = this.changeSelectedIfNParent(x, changeTo, propNames);
+				if (!this.nodePathIsChild(x[this.props.nodePathProperty])) {
+					x = this.changeSelectedIfNParent(x, changeTo);
 				}
 			} else {
 				//if parentId isnt root
 				if (
-					x[propNames.nodePathProperty].startsWith(parentId.toString()) &&
-					x[propNames.nodePathProperty] != parentId.toString()
+					x[this.props.nodePathProperty].startsWith(parentId.toString()) &&
+					x[this.props.nodePathProperty] != parentId.toString()
 				) {
-					x = this.changeSelectedIfNParent(x, changeTo, propNames);
+					x = this.changeSelectedIfNParent(x, changeTo);
 				}
 			}
 			return x;
@@ -192,16 +195,15 @@ export class TreeHelper {
 			tree,
 			parentId,
 
-			filteredTree,
-			propNames
+			filteredTree
 		);
 		return tree;
 	}
 
 	//changes selectedproperty or visual state depending on
-	changeSelectedIfNParent(node, changeTo, propNames) {
-		if (!node[propNames.hasChildrenProperty]) {
-			node[propNames.selectedProperty] = changeTo;
+	changeSelectedIfNParent(node, changeTo) {
+		if (!node[this.props.hasChildrenProperty]) {
+			node[this.props.selectedProperty] = changeTo;
 		} else {
 			node.__visual_state = changeTo.toString();
 		}
@@ -209,12 +211,10 @@ export class TreeHelper {
 	}
 
 	/**Calculates visual state based on children  */
-	getVisualState(filteredTree, node, propNames) {
+	getVisualState(filteredTree, node) {
 		let children = this.getParentChildrenTree(
 			filteredTree,
-			node[propNames.nodePathProperty],
-
-			propNames
+			node[this.props.nodePathProperty]
 		);
 
 		if (!children || children?.length == 0) return "false";
@@ -223,7 +223,7 @@ export class TreeHelper {
 		if (
 			children.every((x) => {
 				return (
-					x[propNames.selectedProperty] === true || x.__visual_state === "true"
+					x[this.props.selectedProperty] === true || x.__visual_state === "true"
 				);
 			})
 		) {
@@ -233,7 +233,7 @@ export class TreeHelper {
 		else if (
 			children.some((x) => {
 				return (
-					x[propNames.selectedProperty] === true ||
+					x[this.props.selectedProperty] === true ||
 					x.__visual_state === "indeterminate" ||
 					x.__visual_state === "true"
 				);
@@ -250,20 +250,14 @@ export class TreeHelper {
 		tree,
 		nodePath,
 
-		filteredTree,
-		propNames
+		filteredTree
 	) {
 		let parent = this.getParentNodePath(nodePath);
 
 		let newstate;
 		filteredTree.forEach((x) => {
-			if (x[propNames.nodePathProperty] == parent) {
-				newstate = this.getVisualState(
-					filteredTree,
-					x,
-
-					propNames
-				);
+			if (x[this.props.nodePathProperty] == parent) {
+				newstate = this.getVisualState(filteredTree, x);
 				x.__visual_state = newstate;
 				//console.log("recomputing" + parent + " ->" + newstate);
 			}
@@ -273,8 +267,7 @@ export class TreeHelper {
 				tree,
 				parent,
 
-				filteredTree,
-				propNames
+				filteredTree
 			);
 		}
 		return tree;
@@ -284,30 +277,18 @@ export class TreeHelper {
 	computeInitialVisualStates(
 		tree,
 
-		filteredTree,
-		propNames
+		filteredTree
 	) {
-		let rootELements = this.getParentChildrenTree(
-			tree,
-			null,
-
-			propNames
-		);
+		let rootELements = this.getParentChildrenTree(tree, null);
 		rootELements.forEach((x) => {
-			if (x[propNames.hasChildrenProperty] == true) {
+			if (x[this.props.hasChildrenProperty] == true) {
 				tree = this.computeChildrenVisualStates(
 					tree,
 					x,
 
-					filteredTree,
-					propNames
+					filteredTree
 				);
-				x.__visual_state = this.getVisualState(
-					filteredTree,
-					x,
-
-					propNames
-				);
+				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
 		});
 		return tree;
@@ -317,34 +298,26 @@ export class TreeHelper {
 		tree,
 		node,
 
-		filteredTree,
-		propNames
+		filteredTree
 	) {
 		let children = this.getParentChildrenTree(
 			tree,
-			node[propNames.nodePathProperty],
-
-			propNames
+			node[this.props.nodePathProperty]
 		);
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
-			if (x[propNames.hasChildrenProperty] == true) {
-				tree = this.computeChildrenVisualStates(
-					tree,
-					x,
-					filteredTree,
-					propNames
-				);
-				x.__visual_state = this.getVisualState(filteredTree, x, propNames);
+			if (x[this.props.hasChildrenProperty] == true) {
+				tree = this.computeChildrenVisualStates(tree, x, filteredTree);
+				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
 		});
 		return tree;
 	}
 
-	deleteSelected(tree, propNames) {
+	deleteSelected(tree) {
 		return tree.map((t) => {
 			let x = t;
-			x[propNames.selectedProperty] = false;
+			x[this.props.selectedProperty] = false;
 			x.__visual_state = undefined;
 			return x;
 		});
@@ -361,16 +334,8 @@ export class TreeHelper {
 	 * @param {nodePath} targetNodePath - nodepath of node where it should be moved ( either bellow it in priority or as child)
 	 * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
 	 * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
-	 * @param {Object} propNames - object where all propNames are stored
 	 */
-	moveNode(
-		tree,
-		movedNodePath,
-		targetNodePath,
-		insType,
-		recalculateNodePath,
-		propNames
-	) {
+	moveNode(tree, movedNodePath, targetNodePath, insType, recalculateNodePath) {
 		//console.log(insType);
 		let nest = insType == 0;
 
@@ -392,7 +357,7 @@ export class TreeHelper {
 		if (!insideParent) {
 			let nodeId;
 			if (recalculateNodePath) {
-				nodeId = this.getNextNodeId(tree, parentNodePath, propNames);
+				nodeId = this.getNextNodeId(tree, parentNodePath);
 			} else {
 				nodeId = movedNodePath.substring(
 					this.getParentNodePath(movedNodePath)
@@ -407,7 +372,7 @@ export class TreeHelper {
 
 		//* find target node
 		let targetNode = tree.find(
-			(x) => x[propNames.nodePathProperty] == targetNodePath
+			(x) => x[this.props.nodePathProperty] == targetNodePath
 		);
 		let movedNode;
 
@@ -415,38 +380,38 @@ export class TreeHelper {
 
 		tree = tree.map((node) => {
 			//make sure that parent's haschild is set to true, so that children
-			if (node[propNames.nodePathProperty] == parentNodePath) {
-				node[propNames.hasChildrenProperty] = true;
-				node[propNames.expandedProperty] = true;
+			if (node[this.props.nodePathProperty] == parentNodePath) {
+				node[this.props.hasChildrenProperty] = true;
+				node[this.props.expandedProperty] = true;
 			}
 
 			//move moved nodes to new location ( if location is being changed)
 			if (
 				!insideParent &&
-				node[propNames.nodePathProperty].startsWith(movedNodePath)
+				node[this.props.nodePathProperty].startsWith(movedNodePath)
 			) {
 				//replace old parent with new
-				let newPath = node[propNames.nodePathProperty].replace(
+				let newPath = node[this.props.nodePathProperty].replace(
 					movedNodePath,
 					newParentNodePath
 				);
-				//console.log(node[propNames.nodePathProperty] + " -> " + newPath);
-				node[propNames.nodePathProperty] = newPath;
+				//console.log(node[this.props.nodePathProperty] + " -> " + newPath);
+				node[this.props.nodePathProperty] = newPath;
 			}
 
 			//if it is moved node
-			if (node[propNames.nodePathProperty] == newParentNodePath) {
+			if (node[this.props.nodePathProperty] == newParentNodePath) {
 				movedNode = node;
 
-				if (nest || targetNode[propNames.priorityProperty] != null) {
+				if (nest || targetNode[this.props.priorityProperty] != null) {
 					let newpriority = 0;
 					if (!nest) {
 						//calculate next
-						newpriority = targetNode[propNames.priorityProperty] ?? 0;
+						newpriority = targetNode[this.props.priorityProperty] ?? 0;
 						if (insType == -1) {
 							newpriority += 1;
 						} else {
-							//targetNode[propNames.priorityProperty] -= 1;
+							//targetNode[this.props.priorityProperty] -= 1;
 						}
 					}
 
@@ -456,15 +421,13 @@ export class TreeHelper {
 						tree,
 						parentNodePath,
 						newParentNodePath,
-						newpriority,
-
-						propNames
+						newpriority
 					);
 
-					node[propNames.priorityProperty] = newpriority;
+					node[this.props.priorityProperty] = newpriority;
 				} else {
 					//so old priority doesnt mess up orderring
-					movedNode[propNames.priorityProperty] = undefined;
+					movedNode[this.props.priorityProperty] = undefined;
 				}
 			}
 			return node;
@@ -474,13 +437,14 @@ export class TreeHelper {
 		//
 
 		let oldIndex = tree.findIndex(
-			(x) => x[propNames.nodePathProperty] == newParentNodePath
+			(x) => x[this.props.nodePathProperty] == newParentNodePath
 		);
 		tree.splice(oldIndex, 1);
 
 		let index = tree.findIndex(
 			(x) =>
-				x[propNames.nodePathProperty] == targetNode[propNames.nodePathProperty]
+				x[this.props.nodePathProperty] ==
+				targetNode[this.props.nodePathProperty]
 		);
 
 		//insert below expcept if inspos is 1
@@ -492,7 +456,7 @@ export class TreeHelper {
 		/*
 	//hide plus icon if parent of moved node doesnt have any more children
 	let oldParent = tree.find(
-		(x) => x[propNames.nodePathProperty] == this.getParentNodePath(movedNodePath)
+		(x) => x[this.props.nodePathProperty] == this.getParentNodePath(movedNodePath)
 	);
 
 	//moved
@@ -500,12 +464,12 @@ export class TreeHelper {
 		oldParent &&
 		!this.allCHildren(
 			tree,
-			oldParent[propNames.nodePathProperty],
+			oldParent[this.props.nodePathProperty],
 
 			propNames
 		).length
 	) {
-		oldParent[propNames.hasChildrenProperty] = false;
+		oldParent[this.props.hasChildrenProperty] = false;
 	}
 */
 		return tree;
@@ -514,36 +478,26 @@ export class TreeHelper {
 	/** recomputes all priorities after inserted priority.F
 	 * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
 	 */
-	InsertPriority(
-		tree,
-		parentNode,
-		movedNodePath,
-		insertedPriority,
-
-		propNames
-	) {
+	InsertPriority(tree, parentNode, movedNodePath, insertedPriority) {
 		let nextPriority = insertedPriority + 1;
-		this.OrderByPriority(
-			this.allCHildren(tree, parentNode, propNames),
-			propNames
-		).forEach((n) => {
+		this.OrderByPriority(this.allCHildren(tree, parentNode)).forEach((n) => {
 			if (
-				n[propNames.priorityProperty] >= insertedPriority &&
-				n[propNames.nodePathProperty] != movedNodePath
+				n[this.props.priorityProperty] >= insertedPriority &&
+				n[this.props.nodePathProperty] != movedNodePath
 			) {
-				n[propNames.priorityProperty] = nextPriority++;
+				n[this.props.priorityProperty] = nextPriority++;
 			}
 		});
 	}
 
 	/** return biggest value of nodepath number that children are using +1 */
-	getNextNodeId(tree, parentPath, propNames) {
+	getNextNodeId(tree, parentPath) {
 		let max = 0;
 		//findes biggest nodeNumber for
-		this.allCHildren(tree, parentPath, propNames).forEach((node) => {
-			let parent = this.getParentNodePath(node[propNames.nodePathProperty]);
+		this.allCHildren(tree, parentPath).forEach((node) => {
+			let parent = this.getParentNodePath(node[this.props.nodePathProperty]);
 			if (parent == parentPath) {
-				let num = node[propNames.nodePathProperty].substring(
+				let num = node[this.props.nodePathProperty].substring(
 					parent ? parent.length + 1 : 0
 				);
 				if (parseInt(num) >= parseInt(max)) max = num;
@@ -578,11 +532,11 @@ export class TreeHelper {
 	//#region searching
 
 	//return filtered tree
-	searchTree(tree, filter, recursive, propNames) {
+	searchTree(tree, filter, recursive) {
 		let result = [],
 			matchingNodes = [];
 		if (recursive) {
-			matchingNodes = this.getAllLeafNodes(tree, propNames).filter(filter);
+			matchingNodes = this.getAllLeafNodes(tree).filter(filter);
 		} else {
 			matchingNodes = tree.filter(filter);
 		}
@@ -595,11 +549,11 @@ export class TreeHelper {
 		return result;
 	}
 
-	addParents(tree, result, node, propNames) {
+	addParents(tree, result, node) {
 		let parentsIds = [],
 			parentNodes = [];
 		if (result === undefined) result = [];
-		let nodePath = node[propNames.nodePathProperty];
+		let nodePath = node[this.props.nodePathProperty];
 		while (nodePath.length > 0) {
 			nodePath = this.getParentNodePath(nodePath);
 			parentsIds.push(nodePath);
@@ -609,7 +563,7 @@ export class TreeHelper {
 		tree.forEach((n) => {
 			if (
 				parentsIds.some((parentId) => {
-					return n[propNames.nodePathProperty] === parentId;
+					return n[this.props.nodePathProperty] === parentId;
 				})
 			) {
 				parentNodes.push(n);
@@ -620,7 +574,7 @@ export class TreeHelper {
 			if (
 				result.findIndex((x) => {
 					return (
-						n[propNames.nodePathProperty] === x[propNames.nodePathProperty]
+						n[this.props.nodePathProperty] === x[this.props.nodePathProperty]
 					);
 				}) < 0
 			)
