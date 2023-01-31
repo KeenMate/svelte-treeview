@@ -2,7 +2,13 @@
 	import ContextMenu from "./ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
 	import { TreeHelper } from "./TreeHelpers";
-	import { defaultPropNames } from "./consts";
+	import {
+  defaultCurrentlyDraggedClass,
+		defaultExpandClass,
+		defaultPixelTreshold,
+		defaultPropNames,
+		defaultTreeClass,
+	} from "./consts";
 	const dispatch = createEventDispatcher();
 
 	//! required
@@ -22,7 +28,7 @@
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
-	export let pixelNestTreshold = 50;
+	export let pixelNestTreshold = defaultPixelTreshold;
 	export let expandCallback = null;
 	export let showContexMenu = false;
 	export let beforeMovedCallback = null;
@@ -32,14 +38,14 @@
 	export let dragEnterCallback = null;
 
 	//* classes for customization of tree
-	export let treeClass = "treeview";
+	export let treeClass = defaultTreeClass;
 	export let nodeClass = null;
 	export let expandedToggleClass = null;
 	export let collapsedToggleClass = null;
-	export let expandClass = "inserting-highlighted";
+	export let expandClass = defaultExpandClass;
 	export let inserLineClass = null;
 	export let inserLineNestClass = null;
-	export let currentlyDraggedClass = "currently-dragged";
+	export let currentlyDraggedClass = defaultCurrentlyDraggedClass;
 
 	//* properties
 	export let propNames = defaultPropNames;

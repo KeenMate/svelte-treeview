@@ -10,3 +10,9 @@ export const defaultPropNames = {
 	nestDisabledProperty: "nestDisabled",
 	checkboxVisibleProperty: "checkboxVisible",
 };
+
+export const defaultPixelTreshold = 50
+
+export const defaultTreeClass = "treeview"
+export const defaultExpandClass = "inserting-highlighted"
+export const defaultCurrentlyDraggedClass = "currently-dragged"
