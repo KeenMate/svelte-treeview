@@ -10,7 +10,6 @@
 	export let treeId = null; //string
 
 	//!user set
-	export let maxExpandedDepth = 3; //number
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree = null; //array of nodes with nodePath
 	export let recursive = false; //bool
@@ -65,30 +64,22 @@
 	let insPos;
 	//if insert is disabled => nest right away and never nest if its disabled
 	$: canNest =
-		(highlightedNode?.[propNames?.insertDisabledProperty] ||
+		(highlightedNode?.[propNames.insertDisabledProperty] ||
 			canNestPos ||
 			canNestTime) &&
-		highlightedNode?.[propNames?.nestDisabledProperty] !== true;
+		highlightedNode?.[propNames.nestDisabledProperty] !== true;
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${node[propNames.nodePathProperty]}`;
 
 	$: parentChildrenTree = helper.OrderByPriority(
-		helper.getParentChildrenTree(
-			filteredTree ? filteredTree : tree,
-			parentId,
-
-			propNames
-		),
-		propNames
+		helper.getParentChildrenTree(filteredTree ? filteredTree : tree, parentId)
 	);
-
-	$: parsedMaxExpandedDepth = Number(maxExpandedDepth ?? 0);
 
 	//#region expansions
 
 	function toggleExpansion(node, expanded) {
-		tree = helper.changeExpansion(tree, node, !expanded, propNames);
+		tree = helper.changeExpansion(tree, node, !expanded);
 
 		let val = node[propNames.expandedProperty];
 
@@ -130,7 +121,7 @@
 	}
 
 	export function changeAllExpansion(changeTo) {
-		tree = helper.changeEveryExpansion(tree, changeTo, propNames);
+		tree = helper.changeEveryExpansion(tree, changeTo);
 	}
 
 	function shouldExpand(expandProp, depth, expandTo) {
@@ -150,8 +141,7 @@
 		tree = helper.computeInitialVisualStates(
 			tree,
 
-			filteredTree ?? tree,
-			propNames
+			filteredTree ?? tree
 		);
 	}
 
@@ -164,8 +154,7 @@
 			tree,
 			node[propNames.nodePathProperty],
 
-			filteredTree ?? tree,
-			propNames
+			filteredTree ?? tree
 		);
 		selectionEvents(node);
 	}
@@ -178,8 +167,7 @@
 
 			e.target.checked,
 
-			filteredTree ?? tree,
-			propNames
+			filteredTree ?? tree
 		);
 		selectionEvents(node);
 	}
@@ -282,8 +270,7 @@
 			node[propNames.nodePathProperty],
 
 			insType,
-			recalculateNodePath,
-			propNames
+			recalculateNodePath
 		);
 
 		let newParent =
@@ -438,8 +425,7 @@
 	tree = helper.computeInitialVisualStates(
 		tree,
 
-		filteredTree ?? tree,
-		propNames
+		filteredTree ?? tree
 	);
 
 	$: tree, tree == null || tree == undefined ? (tree = []) : "";
@@ -546,7 +532,7 @@
 						{:else if !leafNodeCheckboxesOnly}
 							<input
 								type="checkbox"
-								id={getNodeId(node)}
+								id={getNodeId(node) + "__checkbox"}
 								on:click={(e) => {
 									e.preventDefault;
 									selectChildren(node, e);
@@ -588,7 +574,6 @@
 					branchRootNode={node}
 					{treeId}
 					{checkboxes}
-					{maxExpandedDepth}
 					bind:tree
 					bind:filteredTree
 					{recursive}
