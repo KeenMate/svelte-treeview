@@ -108,16 +108,15 @@ export class DragAndDropHelper {
 		});
 
 		//* insert node at right possition of array
-		//
 
 		let oldIndex = tree.findIndex((x) => this.path(x) == newParentNodePath);
 		tree.splice(oldIndex, 1);
 
 		let index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
 
-		//insert below expcept if inspos is 1
-
 		tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
+
+		console.log(tree);
 
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 
@@ -194,8 +193,8 @@ export class DragAndDropHelper {
 	 */
 	OrderByPriority(tree) {
 		tree.sort((a, b) => {
-			if (b[this.props.priority] > a[this.props.priority])
-				return -1;
+			if (b[this.props.priority] > a[this.props.priority]) return -1;
+			if (b[this.props.priority] == a[this.props.priority]) return 0;
 			return 1;
 		});
 		return tree;

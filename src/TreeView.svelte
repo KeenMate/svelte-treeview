@@ -148,7 +148,6 @@
 			recursive,
 			tree,
 			helper.path(node),
-
 			filteredTree ?? tree
 		);
 		selectionEvents(node);
@@ -159,9 +158,7 @@
 		tree = helper.selection.ChangeSelectForAllChildren(
 			tree,
 			helper.path(node),
-
 			!checked,
-
 			filteredTree ?? tree
 		);
 		selectionEvents(node);
