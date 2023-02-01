@@ -142,7 +142,6 @@
 
 	//checkboxes
 	function selectionChanged(node) {
-		console.log(tree);
 		//console.log(nodePath);
 		tree = helper.selection.ChangeSelection(
 			recursive,
