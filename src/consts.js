@@ -11,8 +11,14 @@ export const defaultPropNames = {
 	checkbox: "checkbox",
 };
 
-export const defaultPixelTreshold = 50
+export const defaultPixelTreshold = 50;
 
-export const defaultTreeClass = "treeview"
-export const defaultExpandClass = "inserting-highlighted"
-export const defaultCurrentlyDraggedClass = "currently-dragged"
+export const defaultTreeClass = "treeview";
+export const defaultExpandClass = "inserting-highlighted";
+export const defaultCurrentlyDraggedClass = "currently-dragged";
+
+export const checkboxesType = {
+	all: "all",
+	perNode: "perNode",
+	none: "none",
+};

@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher } from "svelte";
+	import { checkboxesType } from "./consts";
 
 	export let checkboxes;
 	export let helper;
@@ -11,14 +12,16 @@
 	const dispatch = createEventDispatcher();
 </script>
 
-{#if checkboxes == "perNode" || checkboxes == "all"}
+{#if checkboxes == checkboxesType.perNode || checkboxes == checkboxesType.all}
 	{#if helper.selection.isSelectable(node, checkboxes)}
+		<!-- select node -->
 		{#if !recursive || (recursive && !node[helper.props.hasChildren])}
 			<input
 				type="checkbox"
 				on:change={() => dispatch("select", node)}
 				checked={node[helper.props.selected] ? "false" : ""}
 			/>
+			<!-- select children-->
 		{:else if !onlyLeafCheckboxes}
 			<input
 				type="checkbox"
