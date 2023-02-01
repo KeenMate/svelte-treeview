@@ -13,22 +13,22 @@
 			__visual_state: "indeterminate",
 			__useCallback: true,
 			hasChildren: true,
-			checkboxVisible: true,
+			checkbox: true,
 		},
-		{ nodePath: "2", title: "2", isDraggable: false, checkboxVisible: false },
+		{ nodePath: "2", title: "2", isDraggable: false, checkbox: false },
 
 		{ nodePath: "3", title: "3", hasChildren: true },
 		{ nodePath: "3.4", title: "	Omniknight" },
 		{ nodePath: "4", hasChildren: true },
 		{ nodePath: "4.1", priority: 0, title: "ITEM_1" },
 		{ nodePath: "4.6", priority: 6, title: "ITEM_2", insertDisabled: true },
-		{ nodePath: "4.2", priority: 2, title: "ITEM_3", checkboxVisible: false },
+		{ nodePath: "4.2", priority: 2, title: "ITEM_3", checkbox: false },
 		{
 			nodePath: "4.3",
 			priority: 3,
 			title: "ITEM_4",
 			nestDisabled: true,
-			checkboxVisible: true,
+			checkbox: true,
 		},
 		{ nodePath: "4.4", priority: 4, title: "ITEM_5", dropDisabled: true },
 		{
@@ -36,7 +36,7 @@
 			priority: 10,
 			title: "ITEM_6",
 			isDraggable: false,
-			checkboxVisible: true,
+			checkbox: true,
 		},
 	];
 
@@ -53,7 +53,7 @@
 			title: "Lycan",
 			__selected: true,
 			test: "test223",
-			checkboxVisible: true,
+			checkbox: true,
 		},
 		{
 			nodePath: "3.2.4",

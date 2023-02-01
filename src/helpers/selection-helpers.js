@@ -33,8 +33,8 @@ export class SelectionHelper {
 		return tree.map((x) => {
 			let t = x;
 			if (this.path(x) == nodePath) {
-				t[this.props.selectedProperty] = !x[this.props.selectedProperty];
-				//t.__visual_state = !x[this.props.selectedProperty];
+				t[this.props.selected] = !x[this.props.selected];
+				//t.__visual_state = !x[this.props.selected];
 			}
 			return t;
 		});
@@ -79,10 +79,10 @@ export class SelectionHelper {
 		return tree;
 	}
 
-	//changes selectedproperty or visual state depending on
+	//changes selected or visual state depending on
 	changeSelectedIfNParent(node, changeTo) {
-		if (!node[this.props.hasChildrenProperty]) {
-			node[this.props.selectedProperty] = changeTo;
+		if (!node[this.props.hasChildren]) {
+			node[this.props.selected] = changeTo;
 		} else {
 			node.__visual_state = changeTo.toString();
 		}
@@ -102,7 +102,7 @@ export class SelectionHelper {
 		if (
 			children.every((x) => {
 				return (
-					x[this.props.selectedProperty] === true || x.__visual_state === "true"
+					x[this.props.selected] === true || x.__visual_state === "true"
 				);
 			})
 		) {
@@ -112,7 +112,7 @@ export class SelectionHelper {
 		else if (
 			children.some((x) => {
 				return (
-					x[this.props.selectedProperty] === true ||
+					x[this.props.selected] === true ||
 					x.__visual_state === "indeterminate" ||
 					x.__visual_state === "true"
 				);
@@ -161,7 +161,7 @@ export class SelectionHelper {
 	) {
 		let rootELements = this.helper.getParentChildrenTree(tree, null);
 		rootELements.forEach((x) => {
-			if (x[this.props.hasChildrenProperty] == true) {
+			if (x[this.props.hasChildren] == true) {
 				tree = this.computeChildrenVisualStates(
 					tree,
 					x,
@@ -183,7 +183,7 @@ export class SelectionHelper {
 		let children = this.helper.getParentChildrenTree(tree, this.path(node));
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
-			if (x[this.props.hasChildrenProperty] == true) {
+			if (x[this.props.hasChildren] == true) {
 				tree = this.computeChildrenVisualStates(tree, x, filteredTree);
 				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
@@ -194,7 +194,7 @@ export class SelectionHelper {
 	deleteSelected(tree) {
 		return tree.map((t) => {
 			let x = t;
-			x[this.props.selectedProperty] = false;
+			x[this.props.selected] = false;
 			x.__visual_state = undefined;
 			return x;
 		});

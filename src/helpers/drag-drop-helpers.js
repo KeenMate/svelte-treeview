@@ -61,8 +61,8 @@ export class DragAndDropHelper {
 		tree = tree.map((node) => {
 			//make sure that parent's haschild is set to true, so that children
 			if (this.path(node) == parentNodePath) {
-				node[this.props.hasChildrenProperty] = true;
-				node[this.props.expandedProperty] = true;
+				node[this.props.hasChildren] = true;
+				node[this.props.expanded] = true;
 			}
 
 			//move moved nodes to new location ( if location is being changed)
@@ -70,22 +70,22 @@ export class DragAndDropHelper {
 				//replace old parent with new
 				let newPath = this.path(node).replace(movedNodePath, newParentNodePath);
 				//console.log(this.path(node) + " -> " + newPath);
-				node[this.props.nodePathProperty] = newPath;
+				node[this.props.nodePath] = newPath;
 			}
 
 			//if it is moved node
 			if (this.path(node) == newParentNodePath) {
 				movedNode = node;
 
-				if (nest || targetNode[this.props.priorityProperty] != null) {
+				if (nest || targetNode[this.props.priority] != null) {
 					let newpriority = 0;
 					if (!nest) {
 						//calculate next
-						newpriority = targetNode[this.props.priorityProperty] ?? 0;
+						newpriority = targetNode[this.props.priority] ?? 0;
 						if (insType == -1) {
 							newpriority += 1;
 						} else {
-							//targetNode[this.props.priorityProperty] -= 1;
+							//targetNode[this.props.priority] -= 1;
 						}
 					}
 
@@ -98,10 +98,10 @@ export class DragAndDropHelper {
 						newpriority
 					);
 
-					node[this.props.priorityProperty] = newpriority;
+					node[this.props.priority] = newpriority;
 				} else {
 					//so old priority doesnt mess up orderring
-					movedNode[this.props.priorityProperty] = undefined;
+					movedNode[this.props.priority] = undefined;
 				}
 			}
 			return node;
@@ -132,7 +132,7 @@ export class DragAndDropHelper {
 			oldParent &&
 			!this.helper.allCHildren(tree, this.path(oldParent)).length
 		) {
-			oldParent[this.props.hasChildrenProperty] = false;
+			oldParent[this.props.hasChildren] = false;
 		}
 
 		return tree;
@@ -146,10 +146,10 @@ export class DragAndDropHelper {
 		this.OrderByPriority(this.helper.allCHildren(tree, parentNode)).forEach(
 			(n) => {
 				if (
-					n[this.props.priorityProperty] >= insertedPriority &&
+					n[this.props.priority] >= insertedPriority &&
 					this.path(n) != movedNodePath
 				) {
-					n[this.props.priorityProperty] = nextPriority++;
+					n[this.props.priority] = nextPriority++;
 				}
 			}
 		);
@@ -194,7 +194,7 @@ export class DragAndDropHelper {
 	 */
 	OrderByPriority(tree) {
 		tree.sort((a, b) => {
-			if (b[this.props.priorityProperty] > a[this.props.priorityProperty])
+			if (b[this.props.priority] > a[this.props.priority])
 				return -1;
 			return 1;
 		});
