@@ -1,14 +1,14 @@
 <script>
-	import Menu from './Menu.svelte';
+	import Menu from "./Menu.svelte";
 
 	let pos = { x: 0, y: 0 };
 	let showMenu = false;
-	let node = null
+	let node = null;
 
-	export async function onRightClick(e,n) {
+	export async function onRightClick(e, n) {
 		if (showMenu) {
 			showMenu = false;
-			await new Promise(res => setTimeout(res, 100));
+			await new Promise((res) => setTimeout(res, 100));
 		}
 		node = n;
 		pos = { x: e.clientX, y: e.clientY };
