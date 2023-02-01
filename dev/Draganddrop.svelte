@@ -1,8 +1,10 @@
 <script>
-	import { TreeView, createTreeHelper } from "../index.js";
-
-	import MenuDivider from "../src/MenuDivider.svelte";
-	import MenuOption from "../src/MenuOption.svelte";
+	import {
+		TreeView,
+		createTreeHelper,
+		MenuDivider,
+		MenuOption,
+	} from "../index.js";
 
 	let tree = [
 		{

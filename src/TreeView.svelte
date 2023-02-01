@@ -1,5 +1,5 @@
 <script>
-	import ContextMenu from "./ContextMenu.svelte";
+	import ContextMenu from "./menu/ContextMenu.svelte";
 	import { createEventDispatcher } from "svelte";
 	import createTreeHelper from "./helpers/tree-helper";
 	import {
