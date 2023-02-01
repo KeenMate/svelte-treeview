@@ -111,7 +111,7 @@
 	}
 
 	function dragCallback(movedNode, oldParent, targetNode) {
-		if (targetNode.nodePath.includes("1")) return false;
+		// if (targetNode.nodePath.includes("1")) return false;
 	}
 
 	function addTo() {
@@ -136,10 +136,8 @@ enableVerticalLines<input
 expandedLevel<input type="number" bind:value={expandedLevel} /><br />
 
 recursive:<input type="checkbox" bind:checked={recursive} /> <br />
-onlyLeafCheckboxes:<input
-	type="checkbox"
-	bind:checked={onlyLeafCheckboxes}
-/> <br />
+onlyLeafCheckboxes:<input type="checkbox" bind:checked={onlyLeafCheckboxes} />
+<br />
 checkboxesDisabled:<input
 	type="checkbox"
 	bind:checked={checkboxesDisabled}
@@ -158,6 +156,8 @@ tree class<input type="text" bind:value={treeClass} />
 <button on:click={thisTree.changeAllExpansion(undefined)}>
 	delete all expansion</button
 >
+<br />
+<b>DROP TO NODES WITH PATH THAT INCLUDES 1 IS DISABLED BY CALLBACK</b>
 
 <TreeView
 	bind:this={thisTree}
