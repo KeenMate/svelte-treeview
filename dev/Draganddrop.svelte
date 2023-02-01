@@ -120,7 +120,7 @@
 	}
 
 	let recursive = true,
-		leafNodeCheckboxesOnly = false,
+		onlyLeafCheckboxes = false,
 		checkboxesDisabled = false,
 		checkboxes = "all";
 </script>
@@ -136,9 +136,9 @@ enableVerticalLines<input
 expandedLevel<input type="number" bind:value={expandedLevel} /><br />
 
 recursive:<input type="checkbox" bind:checked={recursive} /> <br />
-leafNodeCheckboxesOnly:<input
+onlyLeafCheckboxes:<input
 	type="checkbox"
-	bind:checked={leafNodeCheckboxesOnly}
+	bind:checked={onlyLeafCheckboxes}
 /> <br />
 checkboxesDisabled:<input
 	type="checkbox"
@@ -177,7 +177,7 @@ tree class<input type="text" bind:value={treeClass} />
 	{enableVerticalLines}
 	bind:expandedLevel
 	{recursive}
-	{leafNodeCheckboxesOnly}
+	{onlyLeafCheckboxes}
 	{checkboxesDisabled}
 	{checkboxes}
 	{treeClass}

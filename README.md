@@ -32,10 +32,10 @@ Table of Contents
 - ***filteredTree*** (array of nodes, default: *null*)
    searched tree
 - ***checkboxes*** (string "none"|"perNode"|"All", default: *false*)  
-   When all checkboxes will be shown if **checkboxVisible** isnt false,whe perNode only nodes with **checkboxVisible** set to true will be shown. None will override **checkboxVisible** .When click on checkbox it will toggle selected on clicked node. You can specify this behavior with **recursive**, **leafNodeCheckboxesOnly** and **checkboxesDisabled**.
+   When all checkboxes will be shown if **checkboxVisible** isnt false,whe perNode only nodes with **checkboxVisible** set to true will be shown. None will override **checkboxVisible** .When click on checkbox it will toggle selected on clicked node. You can specify this behavior with **recursive**, **onlyLeafCheckboxes** and **checkboxesDisabled**.
 - ***recursive*** (bool, default: *false*)  
    When true, you can only select "leaf nodes" (nodes when **hasChildren** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selected**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
-- ***leafNodeCheckboxesOnly*** ( bool, default: *false*)  
+- ***onlyLeafCheckboxes*** ( bool, default: *false*)  
    you wont be able to click on any other checkboxes that on leaf nodes.
 - ***checkboxesDisabled*** (bool, default: *false*)  
    will only disable checkboxes, instead of not showing them.
