@@ -120,8 +120,8 @@
 	}
 
 	let recursive = true,
-		leafNodeCheckboxesOnly = true,
-		checkboxesDisabled = true,
+		leafNodeCheckboxesOnly = false,
+		checkboxesDisabled = false,
 		checkboxes = "all";
 </script>
 

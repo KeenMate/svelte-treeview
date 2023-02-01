@@ -8,13 +8,13 @@ export class SelectionHelper {
 		return this.helper.path(node);
 	}
 
-	ChangeSelection(
-		recursiveely,
-		tree,
-		nodePath,
+	getChildrenWithCheckboxes(tree, parentNodePath) {
+		return this.helper
+			.getDirectChildren(tree, parentNodePath)
+			.filter((node) => this.isSelectable(node, "all"));
+	}
 
-		filteredTree
-	) {
+	ChangeSelection(recursiveely, tree, nodePath, filteredTree) {
 		tree = this.addOrRemoveSelection(tree, nodePath);
 
 		if (recursiveely) {
@@ -48,39 +48,40 @@ export class SelectionHelper {
 
 		filteredTree
 	) {
-		tree = tree.map((x) => {
+		tree = tree.map((node) => {
+			console.log(node);
 			//changes itself
-			if (parentId == this.path(x)) {
-				x = this.changeSelectedIfNParent(x, changeTo);
+			if (parentId == this.path(node)) {
+				node = this.changeSelectedIfNParent(node, changeTo);
 			}
 
 			if (!parentId) {
 				//top level
-				if (!this.helper.nodePathIsChild(this.path(x))) {
-					x = this.changeSelectedIfNParent(x, changeTo);
+				if (!this.helper.nodePathIsChild(this.path(node))) {
+					node = this.changeSelectedIfNParent(node, changeTo);
 				}
 			} else {
 				//if parentId isnt root
 				if (
-					this.path(x).startsWith(parentId.toString()) &&
-					this.path(x) != parentId.toString()
+					this.path(node).startsWith(parentId.toString()) &&
+					this.path(node) != parentId.toString()
 				) {
-					x = this.changeSelectedIfNParent(x, changeTo);
+					node = this.changeSelectedIfNParent(node, changeTo);
 				}
 			}
-			return x;
+			return node;
 		});
-		tree = this.recomputeAllParentVisualState(
-			tree,
-			parentId,
-
-			filteredTree
-		);
+		tree = this.recomputeAllParentVisualState(tree, parentId, filteredTree);
 		return tree;
 	}
 
 	//changes selected or visual state depending on
 	changeSelectedIfNParent(node, changeTo) {
+		//dont change if not selectable
+		if (!this.isSelectable(node, "all")) {
+			return node;
+		}
+
 		if (!node[this.props.hasChildren]) {
 			node[this.props.selected] = changeTo;
 		} else {
@@ -91,7 +92,7 @@ export class SelectionHelper {
 
 	/**Calculates visual state based on children  */
 	getVisualState(filteredTree, node) {
-		let children = this.helper.getParentChildrenTree(
+		let children = this.getChildrenWithCheckboxes(
 			filteredTree,
 			this.path(node)
 		);
@@ -101,9 +102,7 @@ export class SelectionHelper {
 		//if every child is selected or vs=true return true
 		if (
 			children.every((x) => {
-				return (
-					x[this.props.selected] === true || x.__visual_state === "true"
-				);
+				return x[this.props.selected] === true || x.__visual_state === "true";
 			})
 		) {
 			return "true";
@@ -125,12 +124,7 @@ export class SelectionHelper {
 	}
 
 	/** recursibly recomputes parent visual state until root */
-	recomputeAllParentVisualState(
-		tree,
-		nodePath,
-
-		filteredTree
-	) {
+	recomputeAllParentVisualState(tree, nodePath, filteredTree) {
 		console.log(nodePath);
 		let parent = this.helper.getParentNodePath(nodePath);
 
@@ -143,12 +137,7 @@ export class SelectionHelper {
 			}
 		});
 		if (this.helper.getParentNodePath(parent) != "") {
-			tree = this.recomputeAllParentVisualState(
-				tree,
-				parent,
-
-				filteredTree
-			);
+			tree = this.recomputeAllParentVisualState(tree, parent, filteredTree);
 		}
 		return tree;
 	}
@@ -159,7 +148,7 @@ export class SelectionHelper {
 
 		filteredTree
 	) {
-		let rootELements = this.helper.getParentChildrenTree(tree, null);
+		let rootELements = this.getChildrenWithCheckboxes(tree, null);
 		rootELements.forEach((x) => {
 			if (x[this.props.hasChildren] == true) {
 				tree = this.computeChildrenVisualStates(
@@ -180,7 +169,7 @@ export class SelectionHelper {
 
 		filteredTree
 	) {
-		let children = this.helper.getParentChildrenTree(tree, this.path(node));
+		let children = this.getChildrenWithCheckboxes(tree, this.path(node));
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
 			if (x[this.props.hasChildren] == true) {
@@ -198,5 +187,17 @@ export class SelectionHelper {
 			x.__visual_state = undefined;
 			return x;
 		});
+	}
+
+	isSelectable(node, showCheckboxes) {
+		if (showCheckboxes == "all") {
+			return !(node[this.props.checkbox] === false);
+		}
+		//show only if pop is true
+		if (showCheckboxes == "perNode") {
+			return node[this.props.checkbox] === true;
+		}
+		//dont show at all
+		return false;
 	}
 }
