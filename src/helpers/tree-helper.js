@@ -31,7 +31,7 @@ export class TreeHelper {
 		return !nodePath || !!(nodePath.match(/\./g) || []).length;
 	}
 
-	getParentChildrenTree(tree, parentId) {
+	getDirectChildren(tree, parentId) {
 		return (tree || []).filter((x) =>
 			!parentId
 				? !this.nodePathIsChild(this.path(x))

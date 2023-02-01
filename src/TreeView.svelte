@@ -14,7 +14,6 @@
 	//! required
 	export let tree = null; //array of nodes with nodePath
 	export let treeId = null; //string
-
 	//!user set
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree = null; //array of nodes with nodePath
@@ -79,7 +78,7 @@
 	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
 
 	$: parentChildrenTree = helper.dragDrop.OrderByPriority(
-		helper.getParentChildrenTree(filteredTree ?? tree, parentId)
+		helper.getDirectChildren(filteredTree ?? tree, parentId)
 	);
 
 	//#region expansions
@@ -182,22 +181,10 @@
 		}
 	}
 
-	function showCheckboxes(node, checkboxes) {
-		//show if prop isnt false
-		if (checkboxes == "all") {
-			return !(node[propNames.checkbox] === false);
-		}
-		//show only if pop is true
-		if (checkboxes == "perNode") {
-			return node[propNames.checkbox] === true;
-		}
-		//dont show at all
-		return false;
-	}
-
 	//#endregion
 
 	//#region drag and drop
+
 	function handleDragStart(e, node) {
 		if (node[propNames.isDraggable] === false) {
 			e.preventDefault();
@@ -505,7 +492,7 @@
 					<span />
 				{/if}
 				{#if checkboxes == "perNode" || checkboxes == "all"}
-					{#if showCheckboxes(node, checkboxes)}
+					{#if helper.selection.isSelectable(node, checkboxes)}
 						{#if !recursive || (recursive && !node[propNames.hasChildren])}
 							<input
 								type="checkbox"
