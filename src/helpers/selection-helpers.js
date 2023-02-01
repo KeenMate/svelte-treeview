@@ -29,7 +29,6 @@ export class SelectionHelper {
 	}
 
 	addOrRemoveSelection(tree, nodePath) {
-		console.log(tree);
 		return tree.map((x) => {
 			let t = x;
 			if (this.path(x) == nodePath) {
@@ -49,7 +48,6 @@ export class SelectionHelper {
 		filteredTree
 	) {
 		tree = tree.map((node) => {
-			console.log(node);
 			//changes itself
 			if (parentId == this.path(node)) {
 				node = this.changeSelectedIfNParent(node, changeTo);
