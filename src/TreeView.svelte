@@ -9,6 +9,7 @@
 		defaultPropNames,
 		defaultTreeClass,
 	} from "./consts";
+	import Checkbox from "./Checkbox.svelte";
 	const dispatch = createEventDispatcher();
 
 	//! required
@@ -20,7 +21,7 @@
 	export let recursive = false; //bool
 	export let checkboxes = "none"; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
-	export let leafNodeCheckboxesOnly = false; //bool
+	export let onlyLeafCheckboxes = false; //bool
 	//true = disabel hide = false
 	export let checkboxesDisabled = false; //bool
 	//will allow you to move nodes between nodes and reorder them
@@ -154,12 +155,12 @@
 	}
 
 	//fired when in recursive mode you click on Leaf node
-	function selectChildren(node, e) {
+	function selectChildren(node, checked) {
 		tree = helper.selection.ChangeSelectForAllChildren(
 			tree,
 			helper.path(node),
 
-			e.target.checked,
+			!checked,
 
 			filteredTree ?? tree
 		);
@@ -490,45 +491,19 @@
 				{:else}
 					<span />
 				{/if}
-				{#if checkboxes == "perNode" || checkboxes == "all"}
-					{#if helper.selection.isSelectable(node, checkboxes)}
-						{#if !recursive || (recursive && !node[propNames.hasChildren])}
-							<input
-								type="checkbox"
-								id={getNodeId(node)}
-								on:change={() => selectionChanged(node)}
-								checked={node[propNames.selected] ? "false" : ""}
-							/>
-						{:else if !leafNodeCheckboxesOnly}
-							<input
-								type="checkbox"
-								id={getNodeId(node) + "__checkbox"}
-								on:click={(e) => {
-									e.preventDefault;
-									selectChildren(node, e);
-								}}
-								checked={node.__visual_state == "true" ? "false" : ""}
-								indeterminate={node.__visual_state == "indeterminate"}
-							/>
-						{:else}
-							<input
-								type="checkbox"
-								id={getNodeId(node)}
-								onclick="return false;"
-								disabled={true}
-								class:invisible={!checkboxesDisabled}
-							/>
-						{/if}
-					{:else}
-						<input
-							type="checkbox"
-							id={getNodeId(node)}
-							onclick="return false;"
-							disabled={true}
-							class:invisible={!checkboxesDisabled}
-						/>
-					{/if}
-				{/if}
+
+				<Checkbox
+					{checkboxes}
+					{helper}
+					{recursive}
+					{node}
+					{onlyLeafCheckboxes}
+					{checkboxesDisabled}
+					on:select-children={({ detail: { node, checked } }) =>
+						selectChildren(node, checked)}
+					on:select={({ detail: node }) => selectionChanged(node)}
+				/>
+
 				<slot {node} />
 			</div>
 
@@ -550,7 +525,7 @@
 					childDepth={childDepth + 1}
 					parentId={helper.path(node)}
 					let:node={nodeNested}
-					{leafNodeCheckboxesOnly}
+					{onlyLeafCheckboxes}
 					{checkboxesDisabled}
 					{expandedLevel}
 					bind:draggedPath
