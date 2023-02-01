@@ -3,6 +3,7 @@
 	import { createEventDispatcher } from "svelte";
 	import createTreeHelper from "./helpers/tree-helper";
 	import {
+		checkboxesType,
 		defaultCurrentlyDraggedClass,
 		defaultExpandClass,
 		defaultPixelTreshold,
@@ -19,7 +20,7 @@
 	//tree that will be rendered(will be same as tree if null)
 	export let filteredTree = null; //array of nodes with nodePath
 	export let recursive = false; //bool
-	export let checkboxes = "none"; //bool on of [all,perNode]
+	export let checkboxes = checkboxesType.none; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
 	export let onlyLeafCheckboxes = false; //bool
 	//true = disabel hide = false
@@ -29,13 +30,14 @@
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
-	export let expandCallback = null;
 	export let showContexMenu = false;
-	export let beforeMovedCallback = null;
 	export let enableVerticalLines = false;
 	export let recalculateNodePath = true;
 	export let expandedLevel = 0;
+
 	export let dragEnterCallback = null;
+	export let beforeMovedCallback = null;
+	export let expandCallback = null;
 
 	//* classes for customization of tree
 	export let treeClass = defaultTreeClass;

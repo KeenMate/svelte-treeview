@@ -1,3 +1,5 @@
+import { checkboxesType } from "../consts";
+
 export class SelectionHelper {
 	constructor(treeHelper) {
 		this.helper = treeHelper;
@@ -39,14 +41,7 @@ export class SelectionHelper {
 		});
 	}
 
-	ChangeSelectForAllChildren(
-		tree,
-		parentId,
-
-		changeTo,
-
-		filteredTree
-	) {
+	ChangeSelectForAllChildren(tree, parentId, changeTo, filteredTree) {
 		tree = tree.map((node) => {
 			//changes itself
 			if (parentId == this.path(node)) {
@@ -64,6 +59,7 @@ export class SelectionHelper {
 					this.path(node).startsWith(parentId.toString()) &&
 					this.path(node) != parentId.toString()
 				) {
+					console.log("child node", node);
 					node = this.changeSelectedIfNParent(node, changeTo);
 				}
 			}
@@ -188,11 +184,11 @@ export class SelectionHelper {
 	}
 
 	isSelectable(node, showCheckboxes) {
-		if (showCheckboxes == "all") {
+		if (showCheckboxes == checkboxesType.all) {
 			return !(node[this.props.checkbox] === false);
 		}
 		//show only if pop is true
-		if (showCheckboxes == "perNode") {
+		if (showCheckboxes == checkboxesType.perNode) {
 			return node[this.props.checkbox] === true;
 		}
 		//dont show at all
