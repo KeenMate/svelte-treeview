@@ -10,7 +10,7 @@ export class TreeHelper {
 	}
 
 	path(node) {
-		return node?.[this.props.nodePathProperty];
+		return node?.[this.props.nodePath];
 	}
 
 	//#region basic helpres
@@ -58,8 +58,8 @@ export class TreeHelper {
 	getAllLeafNodes(tree) {
 		return tree.filter((x) => {
 			return (
-				x[this.props.hasChildrenProperty] == undefined ||
-				x[this.props.hasChildrenProperty] == false
+				x[this.props.hasChildren] == undefined ||
+				x[this.props.hasChildren] == false
 			);
 		});
 	}
@@ -70,8 +70,8 @@ export class TreeHelper {
 		);
 	}
 
-	mergeTrees(oldTree, addedTree, nodePathProperty = "nodePath") {
-		return orderBy(addedTree, oldTree, nodePathProperty);
+	mergeTrees(oldTree, addedTree, nodePath = "nodePath") {
+		return orderBy(addedTree, oldTree, nodePath);
 	}
 
 	/** toggles expansion on
@@ -80,7 +80,7 @@ export class TreeHelper {
 		return tree.map((x) => {
 			let t = x;
 			if (this.path(x) == this.path(node)) {
-				t[this.props.expandedProperty] = changeTo;
+				t[this.props.expanded] = changeTo;
 			}
 			return t;
 		});
@@ -90,8 +90,8 @@ export class TreeHelper {
 	 */
 	changeEveryExpansion(tree, changeTo) {
 		return tree.map((node) => {
-			if (node[this.props.hasChildrenProperty] == true)
-				node[this.props.expandedProperty] = changeTo;
+			if (node[this.props.hasChildren] == true)
+				node[this.props.expanded] = changeTo;
 			return node;
 		});
 	}
@@ -101,12 +101,12 @@ export class TreeHelper {
 	expandToLevel(tree, level) {
 		return tree.map((n) => {
 			if (
-				n[this.props.expandedProperty] == undefined &&
-				n[this.props.expandedProperty] == null &&
-				n[this.props.useCallbackProperty] != true &&
+				n[this.props.expanded] == undefined &&
+				n[this.props.expanded] == null &&
+				n[this.props.useCallback] != true &&
 				this.getDepthLevel(this.path(n)) <= level
 			) {
-				n[this.props.expandedProperty] = true;
+				n[this.props.expanded] = true;
 			}
 			return n;
 		});

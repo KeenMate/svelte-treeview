@@ -70,10 +70,10 @@
 	let insPos;
 	//if insert is disabled => nest right away and never nest if its disabled
 	$: canNest =
-		(highlightedNode?.[propNames.insertDisabledProperty] ||
+		(highlightedNode?.[propNames.insertDisabled] ||
 			canNestPos ||
 			canNestTime) &&
-		highlightedNode?.[propNames.nestDisabledProperty] !== true;
+		highlightedNode?.[propNames.nestDisabled] !== true;
 	//
 	let ctxMenu;
 	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
@@ -87,19 +87,15 @@
 	function toggleExpansion(node, expanded) {
 		tree = helper.changeExpansion(tree, node, !expanded);
 
-		let val = node[propNames.expandedProperty];
+		let val = node[propNames.expanded];
 
-		//trigger callback if it is present and node has useCallbackProperty
-		if (
-			val &&
-			expandCallback != null &&
-			node[propNames.useCallbackProperty] == true
-		) {
+		//trigger callback if it is present and node has useCallback
+		if (val && expandCallback != null && node[propNames.useCallback] == true) {
 			//console.log("calling callback");
 			expandCallback(node)
 				.then((val) => {
 					tree = tree.concat(val);
-					node[propNames.useCallbackProperty] = false;
+					node[propNames.useCallback] = false;
 				})
 				.catch((reason) => {
 					console.log("ERROR IN CALLBACK!!");
@@ -173,7 +169,7 @@
 	}
 
 	function selectionEvents(node) {
-		let val = node[propNames.selectedProperty];
+		let val = node[propNames.selected];
 		dispatch("selection", {
 			node: node,
 			value: val,
@@ -189,11 +185,11 @@
 	function showCheckboxes(node, checkboxes) {
 		//show if prop isnt false
 		if (checkboxes == "all") {
-			return !(node[propNames.checkboxVisibleProperty] == false);
+			return !(node[propNames.checkbox] === false);
 		}
 		//show only if pop is true
 		if (checkboxes == "perNode") {
-			return node[propNames.checkboxVisibleProperty] == true;
+			return node[propNames.checkbox] === true;
 		}
 		//dont show at all
 		return false;
@@ -203,7 +199,7 @@
 
 	//#region drag and drop
 	function handleDragStart(e, node) {
-		if (node[propNames.isDraggableProperty] === false) {
+		if (node[propNames.isDraggable] === false) {
 			e.preventDefault();
 			return;
 		}
@@ -241,10 +237,10 @@
 		let insType = canNest ? 0 : helper.dragDrop.getInsertionPosition(e, el);
 
 		//cancel move if its not valid
-		if (insType == 0 && node[propNames.nestDisabledProperty] === true) return;
+		if (insType == 0 && node[propNames.nestDisabled] === true) return;
 		else if (
 			(insType == -1 || insType == 1) &&
-			node[propNames.insertDisabledProperty] === true
+			node[propNames.insertDisabled] === true
 		)
 			return;
 
@@ -328,8 +324,8 @@
 			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
 			if (
 				helper.path(node).startsWith(draggedPath) ||
-				(node[propNames.insertDisabledProperty] === true &&
-					node[propNames.nestDisabledProperty] === true)
+				(node[propNames.insertDisabled] === true &&
+					node[propNames.nestDisabled] === true)
 			) {
 				validTarget = false;
 			}
@@ -380,7 +376,7 @@
 		return (
 			canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
-			node[propNames.nestDisabledProperty] !== true
+			node[propNames.nestDisabled] !== true
 		);
 	}
 	/**
@@ -394,7 +390,7 @@
 		return (
 			!canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
-			node[propNames.insertDisabledProperty] !== true
+			node[propNames.insertDisabled] !== true
 		);
 	}
 
@@ -429,7 +425,7 @@
 	{#each parentChildrenTree as node (getNodeId(node))}
 		<li
 			class:is-child={helper.nodePathIsChild(helper.path(node))}
-			class:has-children={node[propNames.hasChildrenProperty]}
+			class:has-children={node[propNames.hasChildren]}
 			on:contextmenu|stopPropagation={(e) => {
 				childDepth == 0
 					? openContextMenu(e, node)
@@ -462,47 +458,47 @@
 				helper.path(node)?.startsWith(draggedPath)
 					? currentlyDraggedClass
 					: ''}"
-				class:div-has-children={node[propNames.hasChildrenProperty]}
+				class:div-has-children={node[propNames.hasChildren]}
 				class:hover={highlightInsert(
 					node,
 					highlightedNode,
 					validTarget,
 					canNest
 				) || highlightNesting(node, highlightedNode, validTarget, canNest)}
-				draggable={dragAndDrop && node[propNames.isDraggableProperty] !== false}
+				draggable={dragAndDrop && node[propNames.isDraggable] !== false}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
-				{#if node[propNames.hasChildrenProperty]}
+				{#if node[propNames.hasChildren]}
 					<span
 						on:click={() =>
 							toggleExpansion(
 								node,
 								shouldExpand(
-									node[propNames.expandedProperty],
+									node[propNames.expanded],
 									childDepth,
 									expandedLevel
-								) && !node[propNames.useCallbackProperty]
+								) && !node[propNames.useCallback]
 							)}
 					>
 						<i
 							class="far {shouldExpand(
-								node[propNames.expandedProperty],
+								node[propNames.expanded],
 								childDepth,
 								expandedLevel
 							)
 								? expandedToggleClass
 								: collapsedToggleClass}"
 							class:fa-minus-square={shouldExpand(
-								node[propNames.expandedProperty],
+								node[propNames.expanded],
 								childDepth,
 								expandedLevel
 							)}
 							class:fa-plus-square={!shouldExpand(
-								node[propNames.expandedProperty],
+								node[propNames.expanded],
 								childDepth,
 								expandedLevel
-							) || node[propNames.useCallbackProperty]}
+							) || node[propNames.useCallback]}
 						/>
 					</span>
 				{:else}
@@ -510,12 +506,12 @@
 				{/if}
 				{#if checkboxes == "perNode" || checkboxes == "all"}
 					{#if showCheckboxes(node, checkboxes)}
-						{#if !recursive || (recursive && !node[propNames.hasChildrenProperty])}
+						{#if !recursive || (recursive && !node[propNames.hasChildren])}
 							<input
 								type="checkbox"
 								id={getNodeId(node)}
 								on:change={() => selectionChanged(node)}
-								checked={node[propNames.selectedProperty] ? "false" : ""}
+								checked={node[propNames.selected] ? "false" : ""}
 							/>
 						{:else if !leafNodeCheckboxesOnly}
 							<input
@@ -557,7 +553,7 @@
 					/>
 				</div>
 			{/if}
-			{#if shouldExpand(node[propNames.expandedProperty], childDepth, expandedLevel) && node[propNames.hasChildrenProperty]}
+			{#if shouldExpand(node[propNames.expanded], childDepth, expandedLevel) && node[propNames.hasChildren]}
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
@@ -596,7 +592,7 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if !shouldExpand(node[propNames.expandedProperty], childDepth, expandedLevel) && node[propNames.hasChildrenProperty]}
+			{#if !shouldExpand(node[propNames.expanded], childDepth, expandedLevel) && node[propNames.hasChildren]}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
