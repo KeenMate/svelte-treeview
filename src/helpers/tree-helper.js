@@ -119,55 +119,47 @@ export class TreeHelper {
 
 	//#endregion
 
-	//return filtered tree
-	searchTree(tree, filter, recursive) {
-		let result = [],
-			matchingNodes = [];
-		if (recursive) {
-			matchingNodes = this.getAllLeafNodes(tree).filter(filter);
+	searchTree(tree, filter, leafesOnly) {
+		let filteredNodes;
+		if (leafesOnly) {
+			filteredNodes = this.getAllLeafNodes(tree).filter(filter);
 		} else {
-			matchingNodes = tree.filter(filter);
+			console.log(tree);
+			filteredNodes = tree.filter(filter);
 		}
-		//console.log("matching nodes length:" + matchingNodes.length)
-		matchingNodes.forEach((node) => {
-			result.push(node);
-			result = this.addParents(tree, result, node);
+
+		const resultNodes = [];
+
+		//console.log("matching nodes length:" + matchingPathes.length)
+		filteredNodes.forEach((node) => {
+			resultNodes.push(node);
+
+			const parentNodes = this.getParents(tree, node);
+			resultNodes.push(...parentNodes);
 		});
-		//console.log(result)
-		return result;
+
+		const uniqueNodes = unique(resultNodes, (node) => this.path(node));
+
+		return uniqueNodes;
 	}
 
-	addParents(tree, result, node) {
-		let parentsIds = [],
-			parentNodes = [];
-		if (result === undefined) result = [];
+	getParents(tree, node) {
+		const parentsPaths = [];
+
 		let nodePath = this.path(node);
+
+		// get all parents
 		while (nodePath.length > 0) {
 			nodePath = this.getParentNodePath(nodePath);
-			parentsIds.push(nodePath);
+			parentsPaths.push(nodePath);
 		}
 
-		//finds nodes for ids
-		tree.forEach((n) => {
-			if (
-				parentsIds.some((parentId) => {
-					return this.path(n) === parentId;
-				})
-			) {
-				parentNodes.push(n);
-			}
-		});
-		//removes duplicate nodePaths
-		parentNodes.forEach((n) => {
-			if (
-				result.findIndex((x) => {
-					return this.path(n) === this.path(x);
-				}) < 0
-			)
-				result.push(n);
-		});
+		//find nodes for given ids
+		const parentNodes = tree.filter((n) =>
+			parentsPaths.some((parentId) => this.path(n) === parentId)
+		);
 
-		return result;
+		return parentNodes;
 	}
 }
 

@@ -50,8 +50,9 @@
 	export let currentlyDraggedClass = defaultCurrentlyDraggedClass;
 
 	//* properties
-	export let propNames = defaultPropNames;
+	export let props = {};
 
+	$: propNames = { defaultPropNames, ...props };
 	const helper = createTreeHelper(propNames);
 
 	//! DONT SET ONLY USED INTERNALLY
