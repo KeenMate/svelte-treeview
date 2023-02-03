@@ -51,8 +51,8 @@
 
 	//* properties
 	export let props = {};
-
-	$: propNames = { defaultPropNames, ...props };
+	let propNames = { ...defaultPropNames, ...props };
+	$: propNames = { ...defaultPropNames, ...props };
 	const helper = createTreeHelper(propNames);
 
 	//! DONT SET ONLY USED INTERNALLY
