@@ -78,8 +78,13 @@
 		expandedLevel,
 		treeClass;
 
+	async function wait(time) {
+		return new Promise((resolve) => setTimeout(resolve, time));
+	}
+
 	async function callback(n) {
 		console.log("callback from " + n.nodePath);
+		await wait(200);
 		let data = await [
 			{
 				nodePath: n.nodePath + "." + ++num,

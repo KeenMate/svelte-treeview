@@ -1,7 +1,5 @@
-
 <script>
-	import Draganddrop from "./Draganddrop.svelte"
+	import Draganddrop from "./Draganddrop.svelte";
 </script>
 
-<Draganddrop/>
-
+<Draganddrop />

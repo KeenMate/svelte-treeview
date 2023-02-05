@@ -1,4 +1,4 @@
-import { checkboxesType } from "../consts";
+import { checkboxesType, visualStateType } from "../consts";
 
 export class SelectionHelper {
 	constructor(treeHelper) {
@@ -9,125 +9,123 @@ export class SelectionHelper {
 	path(node) {
 		return this.helper.path(node);
 	}
+	selected(node) {
+		return node[this.props.selected];
+	}
 
 	getChildrenWithCheckboxes(tree, parentNodePath) {
 		return this.helper
 			.getDirectChildren(tree, parentNodePath)
-			.filter((node) => this.isSelectable(node, "all"));
+			.filter((node) => this.isSelectable(node, checkboxesType.all));
 	}
 
-	ChangeSelection(recursiveely, tree, nodePath, filteredTree) {
-		tree = this.addOrRemoveSelection(tree, nodePath);
+	changeSelection(recursively, tree, nodePath, filteredTree) {
+		this.toggleSelected(tree, nodePath);
 
-		if (recursiveely) {
-			tree = this.recomputeAllParentVisualState(
-				tree,
-				nodePath,
-
-				filteredTree
-			);
+		if (recursively) {
+			tree = this.recomputeAllParentVisualState(tree, nodePath, filteredTree);
 		}
+
 		return tree;
 	}
 
-	addOrRemoveSelection(tree, nodePath) {
-		return tree.map((x) => {
-			let t = x;
-			if (this.path(x) == nodePath) {
-				t[this.props.selected] = !x[this.props.selected];
-				//t.__visual_state = !x[this.props.selected];
-			}
-			return t;
-		});
+	toggleSelected(tree, nodePath) {
+		const node = this.helper.findNode(tree, nodePath);
+
+		node[this.props.selected] = !node[this.props.selected];
 	}
 
-	ChangeSelectForAllChildren(tree, parentId, changeTo, filteredTree) {
+	changeSelectedForChildren(tree, parentNodePath, changeTo, filteredTree) {
+		console.log(parentNodePath);
 		tree = tree.map((node) => {
 			//changes itself
-			if (parentId == this.path(node)) {
-				node = this.changeSelectedIfNParent(node, changeTo);
+			if (parentNodePath == this.path(node)) {
+				this.updateLeafNodeSelection(node, changeTo);
 			}
 
-			if (!parentId) {
+			if (!parentNodePath) {
+				// TODO i think this isnt working
+				// this only updates
+
 				//top level
-				if (!this.helper.nodePathIsChild(this.path(node))) {
-					node = this.changeSelectedIfNParent(node, changeTo);
-				}
+				this.updateLeafNodeSelection(node, changeTo);
 			} else {
-				//if parentId isnt root
+				//if parentNodePath isnt root
 				if (
-					this.path(node).startsWith(parentId.toString()) &&
-					this.path(node) != parentId.toString()
+					this.path(node).startsWith(parentNodePath.toString()) &&
+					this.path(node) != parentNodePath.toString()
 				) {
-					console.log("child node", node);
-					node = this.changeSelectedIfNParent(node, changeTo);
+					this.updateLeafNodeSelection(node, changeTo);
 				}
 			}
 			return node;
 		});
-		tree = this.recomputeAllParentVisualState(tree, parentId, filteredTree);
+
+		tree = this.recomputeAllParentVisualState(
+			tree,
+			parentNodePath,
+			filteredTree
+		);
 		return tree;
 	}
 
 	//changes selected or visual state depending on
-	changeSelectedIfNParent(node, changeTo) {
+	updateLeafNodeSelection(node, changeTo) {
 		//dont change if not selectable
-		if (!this.isSelectable(node, "all")) {
-			return node;
+		if (!this.isSelectable(node, checkboxesType.all)) {
+			return;
 		}
-
 		if (!node[this.props.hasChildren]) {
 			node[this.props.selected] = changeTo;
 		} else {
 			node.__visual_state = changeTo.toString();
 		}
-		return node;
 	}
 
 	/**Calculates visual state based on children  */
 	getVisualState(filteredTree, node) {
-		let children = this.getChildrenWithCheckboxes(
+		const children = this.getChildrenWithCheckboxes(
 			filteredTree,
 			this.path(node)
 		);
 
-		if (!children || children?.length == 0) return "false";
+		if (!children || children?.length == 0) return visualStateType.notSelected;
 
 		//if every child is selected or vs=true return true
 		if (
-			children.every((x) => {
-				return x[this.props.selected] === true || x.__visual_state === "true";
-			})
+			children.every(
+				(x) =>
+					x[this.props.selected] === true ||
+					x.__visual_state === visualStateType.selected
+			)
 		) {
-			return "true";
+			return visualStateType.selected;
 		}
-		//not every child but at least one return indeterminate
+		//at least sone child is selected or indeterminate
 		else if (
 			children.some((x) => {
 				return (
 					x[this.props.selected] === true ||
-					x.__visual_state === "indeterminate" ||
-					x.__visual_state === "true"
+					x.__visual_state === visualStateType.indeterminate ||
+					x.__visual_state === visualStateType.selected
 				);
 			})
 		) {
-			return "indeterminate";
+			return visualStateType.indeterminate;
 		} else {
-			return "false";
+			return visualStateType.notSelected;
 		}
 	}
 
 	/** recursibly recomputes parent visual state until root */
 	recomputeAllParentVisualState(tree, nodePath, filteredTree) {
-		console.log(nodePath);
-		let parent = this.helper.getParentNodePath(nodePath);
+		const parent = this.helper.getParentNodePath(nodePath);
 
 		let newstate;
 		filteredTree.forEach((x) => {
 			if (this.path(x) == parent) {
 				newstate = this.getVisualState(filteredTree, x);
 				x.__visual_state = newstate;
-				//console.log("recomputing" + parent + " ->" + newstate);
 			}
 		});
 		if (this.helper.getParentNodePath(parent) != "") {
@@ -137,11 +135,7 @@ export class SelectionHelper {
 	}
 
 	/** Computes visual states for all nodes. Used for computing initial visual states when tree changes  */
-	computeInitialVisualStates(
-		tree,
-
-		filteredTree
-	) {
+	computeInitialVisualStates(tree, filteredTree) {
 		let rootELements = this.getChildrenWithCheckboxes(tree, null);
 		rootELements.forEach((x) => {
 			if (x[this.props.hasChildren] == true) {
@@ -157,12 +151,7 @@ export class SelectionHelper {
 		return tree;
 	}
 	/** Recursivly computes visual state for children  */
-	computeChildrenVisualStates(
-		tree,
-		node,
-
-		filteredTree
-	) {
+	computeChildrenVisualStates(tree, node, filteredTree) {
 		let children = this.getChildrenWithCheckboxes(tree, this.path(node));
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
@@ -175,17 +164,16 @@ export class SelectionHelper {
 	}
 
 	deleteSelected(tree) {
-		return tree.map((t) => {
-			let x = t;
-			x[this.props.selected] = false;
-			x.__visual_state = undefined;
-			return x;
+		return tree.map((node) => {
+			node[this.props.selected] = false;
+			node.__visual_state = undefined;
+			return node;
 		});
 	}
 
 	isSelectable(node, showCheckboxes) {
 		if (showCheckboxes == checkboxesType.all) {
-			return !(node[this.props.checkbox] === false);
+			return node[this.props.checkbox] !== false;
 		}
 		//show only if pop is true
 		if (showCheckboxes == checkboxesType.perNode) {

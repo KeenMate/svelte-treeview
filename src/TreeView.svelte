@@ -10,7 +10,9 @@
 		defaultPropNames,
 		defaultTreeClass,
 	} from "./consts";
+
 	import Checkbox from "./Checkbox.svelte";
+
 	const dispatch = createEventDispatcher();
 
 	//! required
@@ -22,6 +24,7 @@
 	export let recursive = false; //bool
 	export let checkboxes = checkboxesType.none; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
+	//TODO make batter name
 	export let onlyLeafCheckboxes = false; //bool
 	//true = disabel hide = false
 	export let checkboxesDisabled = false; //bool
@@ -30,11 +33,15 @@
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
+
 	export let showContexMenu = false;
 	export let enableVerticalLines = false;
+
+	//change to false when last segment of nodePath is Guaranteed to be unqiue
 	export let recalculateNodePath = true;
 	export let expandedLevel = 0;
 
+	//callback for dynamically disabling drop on specific node
 	export let dragEnterCallback = null;
 	export let beforeMovedCallback = null;
 	export let expandCallback = null;
@@ -53,18 +60,18 @@
 	export let props = {};
 	let propNames = { ...defaultPropNames, ...props };
 	$: propNames = { ...defaultPropNames, ...props };
-	const helper = createTreeHelper(propNames);
 
 	//! DONT SET ONLY USED INTERNALLY
+	//TODO use context instead
 	//path of currently dragged node
 	export let draggedPath = null;
 	export let highlightedNode = null;
 	export let childDepth = 0; //number
-	export let parentId = null; //string
 	// svelte-ignore unused-export-let
 	export let branchRootNode = {};
 
 	let dragenterTimestamp;
+	//
 	let canNestPos = false;
 	let canNestTime = false;
 	let canNest;
@@ -79,26 +86,40 @@
 		highlightedNode?.[propNames.nestDisabled] !== true;
 	//
 	let ctxMenu;
+
 	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
 
-	$: parentChildrenTree = helper.dragDrop.OrderByPriority(
-		helper.getDirectChildren(filteredTree ?? tree, parentId)
-	);
+	let helper = createTreeHelper(propNames);
+	// get new helper when propNames change
+	$: helper = createTreeHelper(propNames);
+
+	// get children nodes
+	function getChildren() {
+		return helper.dragDrop.OrderByPriority(
+			helper.getDirectChildren(
+				filteredTree ?? tree,
+				helper.path(branchRootNode)
+			)
+		);
+	}
 
 	//#region expansions
 
 	function toggleExpansion(node, expanded) {
-		tree = helper.changeExpansion(tree, node, !expanded);
+		helper.changeExpansion(tree, node, !expanded);
+
+		//update expansion
+		tree = tree;
 
 		let val = node[propNames.expanded];
 
 		//trigger callback if it is present and node has useCallback
 		if (val && expandCallback != null && node[propNames.useCallback] == true) {
 			//console.log("calling callback");
+			node[propNames.useCallback] = false;
 			expandCallback(node)
 				.then((val) => {
 					tree = tree.concat(val);
-					node[propNames.useCallback] = false;
 				})
 				.catch((reason) => {
 					console.log("ERROR IN CALLBACK!!");
@@ -123,10 +144,14 @@
 		tree = helper.changeEveryExpansion(tree, changeTo);
 	}
 
-	function shouldExpand(expandProp, depth, expandTo) {
-		//expanded prop has priority over expanded Level
-		if (expandProp != undefined || expandProp != null) {
-			return expandProp;
+	function isExpanded(node, depth, expandTo) {
+		const nodeExpanded = node[propNames.expanded];
+
+		//if expanded prop is defined it has priority over expand to
+		if (nodeExpanded !== undefined && nodeExpanded !== null) {
+			if (nodeExpanded) {
+			}
+			return nodeExpanded;
 		}
 		return depth <= expandTo;
 	}
@@ -135,11 +160,11 @@
 
 	//#region checkboxes
 
+	// TODO maybe optimize and only compute visual tree for changed branches
 	$: ComputeVisualTree(filteredTree);
 	function ComputeVisualTree(filteredTree) {
 		tree = helper.selection.computeInitialVisualStates(
 			tree,
-
 			filteredTree ?? tree
 		);
 	}
@@ -147,7 +172,7 @@
 	//checkboxes
 	function selectionChanged(node) {
 		//console.log(nodePath);
-		tree = helper.selection.ChangeSelection(
+		tree = helper.selection.changeSelection(
 			recursive,
 			tree,
 			helper.path(node),
@@ -158,7 +183,7 @@
 
 	//fired when in recursive mode you click on Leaf node
 	function selectChildren(node, checked) {
-		tree = helper.selection.ChangeSelectForAllChildren(
+		tree = helper.selection.changeSelectedForChildren(
 			tree,
 			helper.path(node),
 			!checked,
@@ -186,6 +211,7 @@
 	//#region drag and drop
 
 	function handleDragStart(e, node) {
+		// dont allos drag if is draggable is false
 		if (node[propNames.isDraggable] === false) {
 			e.preventDefault();
 			return;
@@ -409,10 +435,24 @@
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? treeClass : ""}
 >
-	{#each parentChildrenTree as node (getNodeId(node))}
+	{#each getChildren(tree, filteredTree) as node (getNodeId(node))}
+		{@const nesthighlighed = highlightNesting(
+			node,
+			highlightedNode,
+			validTarget,
+			canNest
+		)}
+		{@const insertHighlighted = highlightInsert(
+			node,
+			highlightedNode,
+			validTarget,
+			canNest
+		)}
+		{@const expanded = isExpanded(node, childDepth, expandedLevel)}
+		{@const hasChildren = node[propNames.hasChildren]}
 		<li
 			class:is-child={helper.nodePathIsChild(helper.path(node))}
-			class:has-children={node[propNames.hasChildren]}
+			class:has-children={hasChildren}
 			on:contextmenu|stopPropagation={(e) => {
 				childDepth == 0
 					? openContextMenu(e, node)
@@ -428,9 +468,7 @@
 				handleDragleave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 		>
-			<!-- place here if insering above  -->
-
-			{#if insPos == 1 && highlightInsert(node, highlightedNode, validTarget, canNest)}
+			{#if insPos == 1 && insertHighlighted}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>
@@ -438,54 +476,29 @@
 
 			<div
 				class="tree-item
-				{highlightNesting(node, highlightedNode, validTarget, canNest)
-					? expandClass
-					: ''}
+				{nesthighlighed ? expandClass : ''}
 				{nodeClass} {draggedPath == helper.path(node) ||
 				helper.path(node)?.startsWith(draggedPath)
 					? currentlyDraggedClass
 					: ''}"
-				class:div-has-children={node[propNames.hasChildren]}
-				class:hover={highlightInsert(
-					node,
-					highlightedNode,
-					validTarget,
-					canNest
-				) || highlightNesting(node, highlightedNode, validTarget, canNest)}
+				class:div-has-children={hasChildren}
+				class:hover={insertHighlighted || nesthighlighed}
 				draggable={dragAndDrop && node[propNames.isDraggable] !== false}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
-				{#if node[propNames.hasChildren]}
+				{#if hasChildren}
 					<span
 						on:click={() =>
-							toggleExpansion(
-								node,
-								shouldExpand(
-									node[propNames.expanded],
-									childDepth,
-									expandedLevel
-								) && !node[propNames.useCallback]
-							)}
+							toggleExpansion(node, expanded && !node[propNames.useCallback])}
 					>
+						<!-- use callback overrides expanded  -->
 						<i
-							class="far {shouldExpand(
-								node[propNames.expanded],
-								childDepth,
-								expandedLevel
-							)
+							class="far {expanded
 								? expandedToggleClass
 								: collapsedToggleClass}"
-							class:fa-minus-square={shouldExpand(
-								node[propNames.expanded],
-								childDepth,
-								expandedLevel
-							)}
-							class:fa-plus-square={!shouldExpand(
-								node[propNames.expanded],
-								childDepth,
-								expandedLevel
-							) || node[propNames.useCallback]}
+							class:fa-minus-square={expanded}
+							class:fa-plus-square={!expanded || node[propNames.useCallback]}
 						/>
 					</span>
 				{:else}
@@ -507,14 +520,14 @@
 				<slot {node} />
 			</div>
 
-			{#if highlightNesting(node, highlightedNode, validTarget, canNest)}
+			{#if nesthighlighed}
 				<div class="insert-line-wrapper">
 					<div
 						class="insert-line insert-line-child {inserLineClass} {inserLineNestClass}"
 					/>
 				</div>
 			{/if}
-			{#if shouldExpand(node[propNames.expanded], childDepth, expandedLevel) && node[propNames.hasChildren]}
+			{#if expanded && hasChildren}
 				<svelte:self
 					branchRootNode={node}
 					{treeId}
@@ -523,7 +536,6 @@
 					bind:filteredTree
 					{recursive}
 					childDepth={childDepth + 1}
-					parentId={helper.path(node)}
 					let:node={nodeNested}
 					{onlyLeafCheckboxes}
 					{checkboxesDisabled}
@@ -553,11 +565,11 @@
 					<slot node={nodeNested} />
 				</svelte:self>
 			{/if}
-			{#if !shouldExpand(node[propNames.expanded], childDepth, expandedLevel) && node[propNames.hasChildren]}
+			{#if !expanded && hasChildren}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && highlightInsert(node, highlightedNode, validTarget, canNest)}
+			{#if insPos == -1 && insertHighlighted}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {inserLineClass}" />
 				</div>

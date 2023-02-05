@@ -77,13 +77,10 @@ export class TreeHelper {
 	/** toggles expansion on
 	 */
 	changeExpansion(tree, node, changeTo) {
-		return tree.map((x) => {
-			let t = x;
-			if (this.path(x) == this.path(node)) {
-				t[this.props.expanded] = changeTo;
-			}
-			return t;
-		});
+		console.log(changeTo);
+		let foundNode = this.findNode(tree, this.path(node));
+
+		foundNode[this.props.expanded] = changeTo;
 	}
 
 	/** changes expansion of every node that has this.hasChildren set to true
