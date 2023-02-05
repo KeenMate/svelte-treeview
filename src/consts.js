@@ -22,3 +22,9 @@ export const checkboxesType = {
 	perNode: "perNode",
 	none: "none",
 };
+
+export const visualStateType = {
+	indeterminate: "indeterminate",
+	selected: "true",
+	notSelected: "false",
+};
