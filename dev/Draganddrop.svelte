@@ -127,7 +127,8 @@
 	let recursive = true,
 		onlyLeafCheckboxes = false,
 		checkboxesDisabled = false,
-		checkboxes = "all";
+		checkboxes = "all",
+		readonly = false;
 </script>
 
 <h1>Page for testing</h1>
@@ -147,6 +148,7 @@ checkboxesDisabled:<input
 	type="checkbox"
 	bind:checked={checkboxesDisabled}
 /><br />
+readonly:<input type="checkbox" bind:checked={readonly} /><br />
 checkboxes:<select bind:value={checkboxes}>
 	<option value="all" selected>all</option>
 	<option value="perNode">perNode</option>
@@ -186,6 +188,7 @@ tree class<input type="text" bind:value={treeClass} />
 	{checkboxesDisabled}
 	{checkboxes}
 	{treeClass}
+	{readonly}
 >
 	{JSON.stringify(node)}
 

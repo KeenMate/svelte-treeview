@@ -8,6 +8,7 @@
 	export let node;
 	export let onlyLeafCheckboxes;
 	export let checkboxesDisabled;
+	export let readonly = false;
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -20,6 +21,7 @@
 				type="checkbox"
 				on:change={() => dispatch("select", node)}
 				checked={node[helper.props.selected] ? "false" : ""}
+				disabled={readonly}
 			/>
 			<!-- select children-->
 		{:else if !onlyLeafCheckboxes}
@@ -33,6 +35,7 @@
 				}}
 				checked={node.__visual_state == "true" ? "false" : ""}
 				indeterminate={node.__visual_state == "indeterminate"}
+				disabled={readonly}
 			/>
 		{:else}
 			<input

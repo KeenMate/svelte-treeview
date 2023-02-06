@@ -21,6 +21,7 @@ export const checkboxesType = {
 	all: "all",
 	perNode: "perNode",
 	none: "none",
+	readonly: "readonly"
 };
 
 export const visualStateType = {
