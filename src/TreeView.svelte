@@ -558,6 +558,7 @@
 					on:expanded
 					on:closed
 					{propNames}
+					{recalculateNodePath}
 					bind:highlightedNode
 					bind:timeToNest
 					bind:pixelNestTreshold
