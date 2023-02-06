@@ -114,7 +114,11 @@
 		let val = node[propNames.expanded];
 
 		//trigger callback if it is present and node has useCallback
-		if (val && expandCallback != null && node[propNames.useCallback] == true) {
+		if (
+			val &&
+			expandCallback !== null &&
+			node[propNames.useCallback] === true
+		) {
 			//console.log("calling callback");
 			node[propNames.useCallback] = false;
 			expandCallback(node)
@@ -273,7 +277,6 @@
 			tree,
 			draggedPath,
 			helper.path(node),
-
 			insType,
 			recalculateNodePath
 		);
@@ -516,8 +519,12 @@
 						selectChildren(node, checked)}
 					on:select={({ detail: node }) => selectionChanged(node)}
 				/>
-
-				<slot {node} />
+				<span
+					class:pointer-cursor={dragAndDrop &&
+						node[propNames.isDraggable] !== false}
+				>
+					<slot {node} />
+				</span>
 			</div>
 
 			{#if nesthighlighed}
@@ -699,5 +706,7 @@
 
 			.currently-dragged
 				color: LightGray
+			.pointer-cursor
+				cursor: grab
 
 </style>

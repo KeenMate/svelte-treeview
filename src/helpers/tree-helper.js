@@ -77,7 +77,6 @@ export class TreeHelper {
 	/** toggles expansion on
 	 */
 	changeExpansion(tree, node, changeTo) {
-		console.log(changeTo);
 		let foundNode = this.findNode(tree, this.path(node));
 
 		foundNode[this.props.expanded] = changeTo;
