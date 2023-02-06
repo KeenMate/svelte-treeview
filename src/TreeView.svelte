@@ -36,6 +36,7 @@
 
 	export let showContexMenu = false;
 	export let enableVerticalLines = false;
+	export let readonly = false;
 
 	//change to false when last segment of nodePath is Guaranteed to be unqiue
 	export let recalculateNodePath = true;
@@ -231,7 +232,7 @@
 	function handleDragDrop(e, node, el) {
 		//should be necesary but just in case
 		highlightedNode = null;
-		if (!dragAndDrop) return;
+		if (readonly || !dragAndDrop) return;
 
 		draggedPath = e.dataTransfer.getData("node_id");
 
@@ -453,6 +454,8 @@
 		)}
 		{@const expanded = isExpanded(node, childDepth, expandedLevel)}
 		{@const hasChildren = node[propNames.hasChildren]}
+		{@const draggable =
+			!readonly && dragAndDrop && node[propNames.isDraggable] !== false}
 		<li
 			class:is-child={helper.nodePathIsChild(helper.path(node))}
 			class:has-children={hasChildren}
@@ -486,11 +489,12 @@
 					: ''}"
 				class:div-has-children={hasChildren}
 				class:hover={insertHighlighted || nesthighlighed}
-				draggable={dragAndDrop && node[propNames.isDraggable] !== false}
+				{draggable}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
 				{#if hasChildren}
+					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<span
 						on:click={() =>
 							toggleExpansion(node, expanded && !node[propNames.useCallback])}
@@ -515,14 +519,12 @@
 					{node}
 					{onlyLeafCheckboxes}
 					{checkboxesDisabled}
+					{readonly}
 					on:select-children={({ detail: { node, checked } }) =>
 						selectChildren(node, checked)}
 					on:select={({ detail: node }) => selectionChanged(node)}
 				/>
-				<span
-					class:pointer-cursor={dragAndDrop &&
-						node[propNames.isDraggable] !== false}
-				>
+				<span class:pointer-cursor={draggable}>
 					<slot {node} />
 				</span>
 			</div>
@@ -568,6 +570,7 @@
 					on:moved
 					{beforeMovedCallback}
 					{dragEnterCallback}
+					{readonly}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>
