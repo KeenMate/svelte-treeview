@@ -33,11 +33,8 @@ export class TreeHelper {
 	nodePathIsChild(nodePath) {
 		const separator = this.config.separator ?? ".";
 
-		if (!nodePath) {
-			return true;
-		}
-
-		return nodePath.includes(separator);
+		const includesSeparator = nodePath?.includes(separator);
+		return includesSeparator;
 	}
 
 	getDirectChildren(tree, parentNodePath) {

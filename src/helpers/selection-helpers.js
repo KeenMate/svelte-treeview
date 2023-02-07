@@ -151,7 +151,7 @@ export class SelectionHelper {
 		let children = this.getChildrenWithCheckboxes(tree, this.path(node));
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
-			if (x[this.props.hasChildren] == true) {
+			if (x[this.props.hasChildren] === true) {
 				tree = this.computeChildrenVisualStates(tree, filteredTree, x);
 				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
