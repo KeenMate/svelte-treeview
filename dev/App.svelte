@@ -1,9 +1,10 @@
 <script>
 	import Draganddrop from "./Draganddrop.svelte";
 	import DragTester from "./DragTester.svelte";
+	import Files from "./Files.svelte";
 
-	const demos = { generic: "Generic", drag: "dragTester" };
-	let selectedDemo = demos.drag;
+	const demos = { generic: "Generic", drag: "dragTester", files: "Files" };
+	let selectedDemo = demos.files;
 	$: console.log(selectedDemo);
 </script>
 
@@ -19,6 +20,8 @@
 	<Draganddrop />
 {:else if selectedDemo == demos.drag}
 	<DragTester />
+{:else if selectedDemo == demos.files}
+	<Files />
 {:else}
 	NO/Wrong demo selected
 {/if}

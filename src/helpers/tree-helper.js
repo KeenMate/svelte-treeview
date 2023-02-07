@@ -3,8 +3,10 @@ import { SelectionHelper } from "./selection-helpers";
 import { DragAndDropHelper } from "./drag-drop-helpers";
 
 export class TreeHelper {
-	constructor(propNames) {
+	constructor(propNames, config) {
+		console.log("tree helper created", config);
 		this.props = propNames;
+		this.config = config;
 		this.selection = new SelectionHelper(this);
 		this.dragDrop = new DragAndDropHelper(this);
 	}
@@ -16,7 +18,9 @@ export class TreeHelper {
 	//#region basic helpres
 
 	getParentNodePath(nodePath) {
-		return nodePath?.substring(0, nodePath.lastIndexOf("."));
+		const separator = this.config.separator ?? ".";
+		const parentPath = nodePath?.substring(0, nodePath.lastIndexOf(separator));
+		return parentPath;
 	}
 
 	hasChildren(tree, nodePath) {
@@ -28,27 +32,37 @@ export class TreeHelper {
 	}
 
 	nodePathIsChild(nodePath) {
-		return !nodePath || !!(nodePath.match(/\./g) || []).length;
+		const separator = this.config.separator ?? ".";
+
+		if (!nodePath) {
+			return true;
+		}
+
+		return nodePath.includes(separator);
 	}
 
-	getDirectChildren(tree, parentId) {
-		return (tree || []).filter((x) =>
-			!parentId
+	getDirectChildren(tree, parentNodePath) {
+		const children = (tree || []).filter((x) =>
+			!parentNodePath
 				? !this.nodePathIsChild(this.path(x))
-				: this.getParentNodePath(this.path(x)) === parentId
+				: this.getParentNodePath(this.path(x)) === parentNodePath
 		);
+
+		console.log(parentNodePath, children);
+
+		return children;
 	}
 
-	allCHildren(tree, parentId) {
+	allCHildren(tree, parentNodePath) {
 		let children;
 		children = tree.filter((x) => {
-			if (!parentId) {
+			if (!parentNodePath) {
 				//top level
 				return !this.nodePathIsChild(this.path(x));
 			} else {
 				return (
-					this.path(x).startsWith(parentId.toString()) &&
-					this.path(x) != parentId
+					this.path(x).startsWith(parentNodePath.toString()) &&
+					this.path(x) != parentNodePath
 				);
 			}
 		});
@@ -110,7 +124,8 @@ export class TreeHelper {
 
 	//based on number of dots
 	getDepthLevel(nodePath) {
-		return nodePath.split(".").length - 1;
+		const separator = this.config.separator ?? ".";
+		return nodePath.split(separator).length - 1;
 	}
 
 	//#endregion
@@ -152,7 +167,7 @@ export class TreeHelper {
 
 		//find nodes for given ids
 		const parentNodes = tree.filter((n) =>
-			parentsPaths.some((parentId) => this.path(n) === parentId)
+			parentsPaths.some((parentNodePath) => this.path(n) === parentNodePath)
 		);
 
 		return parentNodes;

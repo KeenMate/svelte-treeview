@@ -2,6 +2,9 @@ export class DragAndDropHelper {
 	constructor(treeHelper) {
 		this.helper = treeHelper;
 		this.props = treeHelper.props;
+
+		this.separator = this.helper.config.separator ?? ".";
+		console.log(this.separator);
 	}
 
 	path(node) {
@@ -124,9 +127,9 @@ export class DragAndDropHelper {
 			nodeId = this.getNextNodeId(tree, parentNodePath);
 		} else {
 			//get last segment of path
-			nodeId = movedNodePath.split(".").slice(-1)[0];
+			nodeId = movedNodePath.split(this.separator).slice(-1)[0];
 		}
-		return (parentNodePath ? parentNodePath + "." : "") + nodeId;
+		return (parentNodePath ? parentNodePath + this.separator : "") + nodeId;
 	}
 
 	updatePriority(tree, node, parentNodePath, newNodePath, targetNode, insType) {

@@ -19,11 +19,13 @@ export class SelectionHelper {
 			.filter((node) => this.isSelectable(node, checkboxesType.all));
 	}
 
-	changeSelection(recursively, tree, nodePath, filteredTree) {
+	changeSelection(tree, nodePath, filteredTree) {
 		this.toggleSelected(tree, nodePath);
 
-		if (recursively) {
-			tree = this.recomputeAllParentVisualState(tree, nodePath, filteredTree);
+		const recursive = this.helper.config?.recursive ?? false;
+
+		if (recursive) {
+			tree = this.recomputeAllParentVisualState(tree, filteredTree, nodePath);
 		}
 
 		return tree;
@@ -63,8 +65,8 @@ export class SelectionHelper {
 
 		tree = this.recomputeAllParentVisualState(
 			tree,
-			parentNodePath,
-			filteredTree
+			filteredTree,
+			parentNodePath
 		);
 		return tree;
 	}
@@ -118,7 +120,7 @@ export class SelectionHelper {
 	}
 
 	/** recursibly recomputes parent visual state until root */
-	recomputeAllParentVisualState(tree, nodePath, filteredTree) {
+	recomputeAllParentVisualState(tree, filteredTree, nodePath) {
 		const parent = this.helper.getParentNodePath(nodePath);
 
 		let newstate;
@@ -129,7 +131,7 @@ export class SelectionHelper {
 			}
 		});
 		if (this.helper.getParentNodePath(parent) != "") {
-			tree = this.recomputeAllParentVisualState(tree, parent, filteredTree);
+			tree = this.recomputeAllParentVisualState(tree, filteredTree, parent);
 		}
 		return tree;
 	}
@@ -139,24 +141,19 @@ export class SelectionHelper {
 		let rootELements = this.getChildrenWithCheckboxes(tree, null);
 		rootELements.forEach((x) => {
 			if (x[this.props.hasChildren] == true) {
-				tree = this.computeChildrenVisualStates(
-					tree,
-					x,
-
-					filteredTree
-				);
+				tree = this.computeChildrenVisualStates(tree, filteredTree, x);
 				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
 		});
 		return tree;
 	}
 	/** Recursivly computes visual state for children  */
-	computeChildrenVisualStates(tree, node, filteredTree) {
+	computeChildrenVisualStates(tree, filteredTree, node) {
 		let children = this.getChildrenWithCheckboxes(tree, this.path(node));
 		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
 		children.forEach((x) => {
 			if (x[this.props.hasChildren] == true) {
-				tree = this.computeChildrenVisualStates(tree, x, filteredTree);
+				tree = this.computeChildrenVisualStates(tree, filteredTree, x);
 				x.__visual_state = this.getVisualState(filteredTree, x);
 			}
 		});

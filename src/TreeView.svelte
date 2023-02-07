@@ -1,6 +1,6 @@
 <script>
 	import ContextMenu from "./menu/ContextMenu.svelte";
-	import { createEventDispatcher } from "svelte";
+	import { createEventDispatcher, onMount } from "svelte";
 	import createTreeHelper from "./helpers/tree-helper";
 	import {
 		checkboxesType,
@@ -33,7 +33,7 @@
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
-
+	export let separator = ".";
 	export let showContexMenu = false;
 	export let enableVerticalLines = false;
 	export let readonly = false;
@@ -59,9 +59,7 @@
 
 	//* properties
 	export let props = {};
-	let propNames = { ...defaultPropNames, ...props };
 	$: propNames = { ...defaultPropNames, ...props };
-
 	//! DONT SET ONLY USED INTERNALLY
 	//TODO use context instead
 	//path of currently dragged node
@@ -90,9 +88,14 @@
 
 	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
 
-	let helper = createTreeHelper(propNames);
 	// get new helper when propNames change
-	$: helper = createTreeHelper(propNames);
+	$: config = {
+		recursive,
+		recalculateNodePath,
+		checkboxes,
+		separator,
+	};
+	$: helper = createTreeHelper(propNames, config);
 
 	// get children nodes
 	function getChildren() {
@@ -178,7 +181,6 @@
 	function selectionChanged(node) {
 		//console.log(nodePath);
 		tree = helper.selection.changeSelection(
-			recursive,
 			tree,
 			helper.path(node),
 			filteredTree ?? tree
@@ -423,11 +425,13 @@
 	//#endregion
 
 	//computes all visual states when component is first created
-	tree = helper.selection.computeInitialVisualStates(
-		tree,
 
-		filteredTree ?? tree
-	);
+	onMount(() => {
+		tree = helper.selection.computeInitialVisualStates(
+			tree,
+			filteredTree ?? tree
+		);
+	});
 
 	$: tree, tree == null || tree == undefined ? (tree = []) : "";
 
@@ -572,6 +576,7 @@
 					{beforeMovedCallback}
 					{dragEnterCallback}
 					{readonly}
+					{separator}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>
