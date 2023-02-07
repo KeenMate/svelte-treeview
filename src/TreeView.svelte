@@ -67,7 +67,7 @@
 	export let highlightedNode = null;
 	export let childDepth = 0; //number
 	// svelte-ignore unused-export-let
-	export let branchRootNode = {};
+	export let branchRootNode = undefined;
 
 	let dragenterTimestamp;
 	//
@@ -157,8 +157,6 @@
 
 		//if expanded prop is defined it has priority over expand to
 		if (nodeExpanded !== undefined && nodeExpanded !== null) {
-			if (nodeExpanded) {
-			}
 			return nodeExpanded;
 		}
 		return depth <= expandTo;
@@ -561,7 +559,7 @@
 					on:expansion
 					on:expanded
 					on:closed
-					{propNames}
+					{props}
 					{recalculateNodePath}
 					bind:highlightedNode
 					bind:timeToNest
