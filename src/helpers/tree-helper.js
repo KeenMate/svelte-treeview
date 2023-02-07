@@ -3,8 +3,7 @@ import { SelectionHelper } from "./selection-helpers";
 import { DragAndDropHelper } from "./drag-drop-helpers";
 
 export class TreeHelper {
-	constructor(propNames, config) {
-		console.log("tree helper created", config);
+	constructor(propNames, config = {}) {
 		this.props = propNames;
 		this.config = config;
 		this.selection = new SelectionHelper(this);
@@ -47,8 +46,6 @@ export class TreeHelper {
 				? !this.nodePathIsChild(this.path(x))
 				: this.getParentNodePath(this.path(x)) === parentNodePath
 		);
-
-		console.log(parentNodePath, children);
 
 		return children;
 	}

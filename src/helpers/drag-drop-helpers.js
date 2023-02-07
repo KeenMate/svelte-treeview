@@ -4,7 +4,6 @@ export class DragAndDropHelper {
 		this.props = treeHelper.props;
 
 		this.separator = this.helper.config.separator ?? ".";
-		console.log(this.separator);
 	}
 
 	path(node) {
@@ -92,8 +91,6 @@ export class DragAndDropHelper {
 		let index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
 
 		tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
-
-		console.log(tree);
 
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 

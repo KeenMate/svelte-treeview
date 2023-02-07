@@ -38,7 +38,6 @@ export class SelectionHelper {
 	}
 
 	changeSelectedForChildren(tree, parentNodePath, changeTo, filteredTree) {
-		console.log(parentNodePath);
 		tree = tree.map((node) => {
 			//changes itself
 			if (parentNodePath == this.path(node)) {
