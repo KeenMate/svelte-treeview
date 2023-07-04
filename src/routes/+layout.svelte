@@ -20,6 +20,9 @@
 			<li class="nav-item active">
 				<a class="nav-link" href="/files">Files</a>
 			</li>
+			<li class="nav-item active">
+				<a class="nav-link" href="/file-from-package">Files from npm package</a>
+			</li>
 		</ul>
 	</div>
 </nav>
