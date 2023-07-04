@@ -1,5 +1,6 @@
 // @ts-nocheck
 import orderBy from 'lodash.unionby'; // used by tree merge
+import unique from 'lodash.uniq'; // used by tree merge
 import { SelectionHelper } from './selection-helpers';
 import { DragAndDropHelper } from './drag-drop-helpers';
 import { defaultPropNames } from '$lib/consts.js';
