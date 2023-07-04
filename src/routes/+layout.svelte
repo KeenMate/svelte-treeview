@@ -23,6 +23,9 @@
 			<li class="nav-item active">
 				<a class="nav-link" href="/file-from-package">Files from npm package</a>
 			</li>
+			<li class="nav-item active">
+				<a class="nav-link" href="/dhl-demo">DHL demo</a>
+			</li>
 		</ul>
 	</div>
 </nav>
