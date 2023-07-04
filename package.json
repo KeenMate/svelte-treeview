@@ -1,5 +1,5 @@
 {
-	"name": "svelte-treeview",
+	"name": "@keenmate/svelte-treeview",
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "vite dev",
@@ -55,6 +55,7 @@
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"dependencies": {
+		"@keenmate/svelte-treeview": "^0.0.1",
 		"marked": "^5.1.0"
 	},
 	"publishConfig": {
