@@ -1,5 +1,10 @@
+<script>
+	// Global styles
+	import '../assets/main.scss';
+</script>
+
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-	<a class="navbar-brand" href="#">svelte-treeview</a>
+	<a class="navbar-brand" href="#">Navbar</a>
 	<button
 		class="navbar-toggler"
 		type="button"
@@ -15,7 +20,7 @@
 	<div class="collapse navbar-collapse" id="navbarSupportedContent">
 		<ul class="navbar-nav mr-auto">
 			<li class="nav-item active">
-				<a class="nav-link" href="/">Home</a>
+				<a class="nav-link" href="/about">Home</a>
 			</li>
 			<li class="nav-item active">
 				<a class="nav-link" href="/files">Files</a>
@@ -29,5 +34,4 @@
 		</ul>
 	</div>
 </nav>
-
 <slot />
