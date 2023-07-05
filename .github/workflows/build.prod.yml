@@ -1,0 +1,14 @@
+name: Production build
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    uses: KeenMate/gha-shared/.github/workflows/deploy-docker-image.yml@master
+    secrets: inherit
+    with:
+      image-name: svelte-treeview
+      image-tag: production
+      deployment-host: web-03.km8.vm
+      deployment-dir: error
