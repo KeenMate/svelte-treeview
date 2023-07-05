@@ -55,8 +55,10 @@
 	"types": "./dist/index.d.ts",
 	"type": "module",
 	"dependencies": {
+		"@keenmate/svelte-adminlte": "^0.3.20",
 		"@keenmate/svelte-treeview": "^0.0.1",
-		"marked": "^5.1.0"
+		"marked": "^5.1.0",
+		"svelte-multiselect": "github:KeenMate/svelte-multiselect"
 	},
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"

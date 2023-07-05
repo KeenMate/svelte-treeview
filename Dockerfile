@@ -1,6 +1,9 @@
+ARG NPM_SCRIPT
+
 FROM node:18-alpine AS builder
 WORKDIR /app
 COPY package*.json .
+COPY ./.npmrc-ci ./.npmrc
 RUN npm ci
 COPY . .
 RUN npm run build
