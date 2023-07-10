@@ -29,7 +29,7 @@ export default [
 
 		hasChildren: false,
 		members: [{ username: 'Standa Novak', email: 'standaniv@mail.com' }],
-		rules: [{ name: 'peoperty', value: 'Sorting facility A001' }]
+		rules: [{ name: 'property', value: 'Sorting facility A001' }]
 	},
 	{
 		nodePath: '1.3',
