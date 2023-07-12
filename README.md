@@ -1,12 +1,16 @@
 # Svelte Treeview
 
-The most elaborate treeview for svelte on earth (or even in our galaxy).  
+This package is undergoing rewrite so docs could be old.
 
+# API CHANGE IN DEV BRANCH, UDPATE README
+
+The most elaborate treeview for svelte on earth (or even in our galaxy).  
 [DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree)
 
-Table of Contents
+## Table of Contents
 
 - [Svelte Treeview](#svelte-treeview)
+- [API CHANGE IN DEV BRANCH, UDPATE README](#api-change-in-dev-branch-udpate-readme)
   - [Props](#props)
   - [Events](#events)
   - [function on component](#function-on-component)
@@ -18,6 +22,10 @@ Table of Contents
   - [drag and drop](#drag-and-drop)
   - [context menu](#context-menu)
 
+## Instalation
+
+Font awesome is required
+
 ## Props
 
 - ***tree*** (array of nodes, default: *null*)
@@ -28,10 +36,10 @@ Table of Contents
 - ***filteredTree*** (array of nodes, default: *null*)
    searched tree
 - ***checkboxes*** (string "none"|"perNode"|"All", default: *false*)  
-   When all checkboxes will be shown if **checkboxVisibleProperty** isnt false,whe perNode only nodes with **checkboxVisibleProperty** set to true will be shown. None will override **checkboxVisibleProperty** .When click on checkbox it will toggle selectedProperty on clicked node. You can specify this behavior with **recursive**, **leafNodeCheckboxesOnly** and **checkboxesDisabled**.
+   When all checkboxes will be shown if **checkboxVisible** isnt false,whe perNode only nodes with **checkboxVisible** set to true will be shown. None will override **checkboxVisible** .When click on checkbox it will toggle selected on clicked node. You can specify this behavior with **recursive**, **onlyLeafCheckboxes** and **checkboxesDisabled**.
 - ***recursive*** (bool, default: *false*)  
-   When true, you can only select "leaf nodes" (nodes when **hasChildrenProperty** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selectedProperty**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
-- ***leafNodeCheckboxesOnly*** ( bool, default: *false*)  
+   When true, you can only select "leaf nodes" (nodes when **hasChildren** isnt true). When clicking other nodes, it will tooggle all children. Non leaf children will have wont have **selected**, instead, __visual_state will be calculated automatically ( all true => true, at least one true => indeterminate, all false => false).
+- ***onlyLeafCheckboxes*** ( bool, default: *false*)  
    you wont be able to click on any other checkboxes that on leaf nodes.
 - ***checkboxesDisabled*** (bool, default: *false*)  
    will only disable checkboxes, instead of not showing them.
@@ -42,7 +50,7 @@ Table of Contents
 - ***pixelNestTreshold*** (number in px, default: *150*)  
    when you move cursor to then left by x pixels will nest
 - ***expandCallback*** (function that takes node as argument, default: *null*)  
-    called when node with **usecallbackProperty** set to true is expanded. Only called once.
+    called when node with **useCallback** set to true is expanded. Only called once.
 - ***showContexMenu*** (bool, default: false)  
    Will show context menu you defined in context-menu slot when you right click any node
 - ***beforeMovedCallback*** (function with params: (movedNode,oldParent,TargetNode,insType: ("before","inside","after")), default: null )  
@@ -54,20 +62,20 @@ Table of Contents
 - ***recalculateNodePath*** (bool,default: true)  
   If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
 - ***expandedLevel*** (number,default:0)  
-  will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expandedProperty** has priority over this. It wont modify **expandedProperty** on nodes so you can dynamicly change this and tree will rerender
-- ***nodePathProperty*** (string, default: *"nodePath"*)  
-- ***hasChildrenProperty*** (string, default: *"hasChildren"*)  
-- ***expandedProperty*** (string, default: *"__expanded"*)  
-- ***selectedProperty*** (string, default: *"__selected"*)  
-- ***usecallbackProperty*** (string, default: *"__useCallback"*)  
-- ***priorityProperty*** (string, default: *"__priority"*)  
-- ***isDraggableProperty*** (string, default: *"isDraggable"*)  
+  will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expanded** has priority over this. It wont modify **expanded** on nodes so you can dynamicly change this and tree will rerender
+- ***nodePath*** (string, default: *"nodePath"*)  
+- ***hasChildren*** (string, default: *"hasChildren"*)  
+- ***expanded*** (string, default: *"__expanded"*)  
+- ***selected*** (string, default: *"__selected"*)  
+- ***useCallback*** (string, default: *"__useCallback"*)  
+- ***priority*** (string, default: *"__priority"*)  
+- ***isDraggable*** (string, default: *"isDraggable"*)  
   when false, wont allow you to start dragging element
-- ***insertDisabledProperty*** (string, default: *"insertDisabled"*)  
+- ***insertDisabled*** (string, default: *"insertDisabled"*)  
   when true, you wont be able to drop element below are above nod. You still be able to nest it. When dragging over element it will always nest.
-- ***nestDisabledProperty*** (string, default: *"nestDisabled"*)  
+- ***nestDisabled*** (string, default: *"nestDisabled"*)  
   when true, wont be able to drop node inside (nest it)
-- ***checkboxVisibleProperty*** (string, default: *"checkboxVisible"*)  
+- ***checkboxVisible*** (string, default: *"checkboxVisible"*)  
   modifies visibility of checkbox. When checkboxes are "none" wont show them event if this is true
 - ***treeClass*** (string css class, default: *"treeview"*)  
   Setting this to anything else that default value will disable all styling so you can set everything yourself
@@ -118,7 +126,7 @@ bind:this={thisTree}
 ## Helper Functions
 
 - **searchTree(tree, filterFunction, recursive,propNames)**  = function that will filter tree using filterFunction and adds all parent so that it can render. If recursive is true, it will only search through "lef nodes" (nodes that dont have children)
-- **mergeTrees(oldTree,addedTree,nodePathProperty="nodePath")**  = will merge new tree into old one, so that expanded, etc. wont be reseted.
+- **mergeTrees(oldTree,addedTree,nodePath="nodePath")**  = will merge new tree into old one, so that expanded, etc. wont be reseted.
 
 usage:
 
@@ -132,7 +140,7 @@ filteredTree = searchTree(tree, filterFunction, recursive,propNames)
 
 ## Basic Usage
 
-You need to provide treeId and tree, that is array of node where every node has nodepath defined. Parent nodes have to have hasChildren set to true. Next you have to set a default slot with how you want you nodes to be rendered.You can add your own props to nodes and used them here in  events, contextmenus and callbacks. Treeview uses **expandedProperty** to determine expansion.
+You need to provide treeId and tree, that is array of node where every node has nodepath defined. Parent nodes have to have hasChildren set to true. Next you have to set a default slot with how you want you nodes to be rendered.You can add your own props to nodes and used them here in  events, contextmenus and callbacks. Treeview uses **expanded** to determine expansion.
 
 example:
 
@@ -164,7 +172,7 @@ let tree = [
 
 ## Callbacks
 
-To dynamicly load data, you have to have hasChildren(to show + icon) and **usecallbackProperty** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as parametr. Function should return Promise or array of nodes, that will be added to tree. **usecallbackProperty** will be then set to false, so that callback will only be called once.
+To dynamicly load data, you have to have hasChildren(to show + icon) and **useCallback** set to true on nodes you want to use callback on. Then expandCallback will be called with expanded node as parametr. Function should return Promise or array of nodes, that will be added to tree. **useCallback** will be then set to false, so that callback will only be called once.
 
 example:
 
@@ -206,13 +214,13 @@ let num =0
 
 ## Drag and Drop
 
-After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging.When **isDraggableProperty** on node is set to false you wont be able to grab it. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.
+After setting dragAndDrop to true, you will be able to change order of nodes and moving them between nodes by dragging.When **isDraggable** on node is set to false you wont be able to grab it. You can enable nesting by setting timeToNest of pixerNestTreshold. Node will be inserted as child of targeted note after *at least one* of tresholds is met. Before node will be moved, **beforeMovedCallback** fill be fired and if it returns false, move will be cancelled.
 New id will be computed as biggest id of childred in targeted node +1 and new priority as 0 when nest or if not as priority of target +1. Then it recomputes all priorities so there wont be conficts. After this **moved** event will be fired with old parent, old node (copy of dragged node before changes to id, priority, etc.),new node (dragged node after changes), and target node (node you drop it at).
 You can also customize line show when dragging by changing **inserLineNestClass** and **inserLineClass**
 
 **dragEnterCallback** is called when you enter new node while dragging. If it return false, node wont be valid node location
 
-TODO add note about insertDisabledProperty and nestDisabledProperty
+TODO add note about insertDisabled and nestDisabled
 
 ## Context menu
 
