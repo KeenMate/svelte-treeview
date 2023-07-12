@@ -1,36 +1,67 @@
 {
-  "name": "svelte-treeview",
-  "version": "0.0.1",
-  "license": "MIT",
-  "scripts": {
-    "build": "npx rollup -c",
-    "dev": "rollup -c dev.rollup.config.js -w",
-    "start": "sirv dev --no-clear"
-  },
-  "main": "index.js",
-  "svelte": "index.js",
-  "module": "dist/index.esm.js",
-  "files": [
-    "src",
-    "dist",
-    "index.js"
-  ],
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^17.0.0",
-    "@rollup/plugin-node-resolve": "^11.0.0",
-    "postcss": "^8.3.6",
-    "rollup": "^2.3.4",
-    "rollup-plugin-css-only": "^3.1.0",
-    "rollup-plugin-livereload": "^2.0.0",
-    "rollup-plugin-postcss": "^4.0.1",
-    "rollup-plugin-svelte": "^7.0.0",
-    "rollup-plugin-terser": "^7.0.0",
-    "sass": "^1.49.0",
-    "svelte": "^3.0.0",
-    "svelte-preprocess": "^4.6.9"
-  },
-  "dependencies": {
-    "lodash.unionby": "^4.8.0",
-    "sirv-cli": "^2.0.0"
-  }
+	"name": "@keenmate/svelte-treeview",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build && npm run package",
+		"preview": "vite preview",
+		"package": "svelte-kit sync && svelte-package && publint",
+		"prepublishOnly": "npm run package",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"lint": "prettier --plugin-search-dir . --check . && eslint .",
+		"format": "prettier --plugin-search-dir . --write ."
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"svelte": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist",
+		"!dist/**/*.test.*",
+		"!dist/**/*.spec.*"
+	],
+	"peerDependencies": {
+		"svelte": "^4.0.0"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^2.0.0",
+		"@sveltejs/kit": "^1.20.4",
+		"@sveltejs/package": "^2.0.0",
+		"@types/marked": "^5.0.0",
+		"@types/node": "^20.3.3",
+		"@typescript-eslint/eslint-plugin": "^5.45.0",
+		"@typescript-eslint/parser": "^5.45.0",
+		"eslint": "^8.28.0",
+		"eslint-config-prettier": "^8.5.0",
+		"eslint-plugin-svelte": "^2.30.0",
+		"lodash.unionby": "^4.8.0",
+		"lodash.uniq": "^4.5.0",
+		"prettier": "^2.8.0",
+		"prettier-plugin-svelte": "^2.10.1",
+		"publint": "^0.1.9",
+		"rollup-plugin-string": "^3.0.0",
+		"sass": "^1.49.0",
+		"svelte": "^4.0.0",
+		"svelte-check": "^3.4.3",
+		"svelte-preprocess": "^5.0.4",
+		"tslib": "^2.4.1",
+		"typescript": "^5.0.0",
+		"vite": "^4.3.6"
+	},
+	"svelte": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"type": "module",
+	"dependencies": {
+		"@keenmate/svelte-adminlte": "^0.3.20",
+		"@keenmate/svelte-treeview": "^0.0.1",
+		"marked": "^5.1.0",
+		"svelte-multiselect": "github:KeenMate/svelte-multiselect"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
+	"repository": "github:keenmate/svelte-treeview"
 }
