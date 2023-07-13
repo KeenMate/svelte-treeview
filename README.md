@@ -2,8 +2,6 @@
 
 This package is undergoing rewrite so docs could be old.
 
-# API CHANGE IN DEV BRANCH, UDPATE README
-
 The most elaborate treeview for svelte on earth (or even in our galaxy).  
 [DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree)
 
