@@ -63,5 +63,5 @@
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"
 	},
-	"repository": "https://github.com/KeenMate/pluto-language-js.git"
+	"repository": "github:keenmate/svelte-treeview"
 }
