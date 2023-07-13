@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run package",
@@ -63,5 +63,5 @@
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com"
 	},
-	"repository": "github:keenmate/svelte-treeview"
+	"repository": "https://github.com/KeenMate/pluto-language-js.git"
 }

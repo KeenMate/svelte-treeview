@@ -16,7 +16,7 @@
 <Card noPadding>
 	<TableCondensed class="center-align-cells">
 		<tr slot="headers">
-			<th class="actions auto-width"></th>
+			<th class="actions auto-width">Actions</th>
 			<th>Field</th>
 			<th>Value</th>
 		</tr>
