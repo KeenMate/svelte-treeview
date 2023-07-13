@@ -70,7 +70,7 @@ export class TreeHelper {
 	}
 
 	joinTrees(filteredTree, tree) {
-		return tree.map((tnode) => findNode(filteredTree, this.path(tnode)) || tnode);
+		return tree.map((tnode) => this.findNode(filteredTree, this.path(tnode)) || tnode);
 	}
 
 	mergeTrees(oldTree, addedTree, nodePath = 'nodePath') {
