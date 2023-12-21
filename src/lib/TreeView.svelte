@@ -1,6 +1,4 @@
 <script lang="ts">
-
-
 	// TODO this is just temporary untill i finish migrating
 	// @ts-nocheck
 
@@ -34,23 +32,24 @@
 	export let onlyLeafCheckboxes = false; //bool
 	//true = disabel hide = false
 	export let checkboxesDisabled = false; //bool
+
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
 	export let timeToNest = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
-	export let separator = '.';
-	export let showContexMenu = false;
-	export let enableVerticalLines = false;
-	export let readonly = false;
-
 	//change to false when last segment of nodePath is Guaranteed to be unqiue
 	export let recalculateNodePath = true;
-	export let expandedLevel = 0;
-
 	//callback for dynamically disabling drop on specific node
 	export let dragEnterCallback = null;
 	export let beforeMovedCallback = null;
+
+	export let showContexMenu = false;
+	export let enableVerticalLines = false;
+	export let readonly = false;
+	export let separator = '.';
+
+	export let expandedLevel = 0;
 	export let expandCallback = null;
 
 	//* classes for customization of tree
@@ -66,6 +65,7 @@
 	//* properties
 	export let props = {};
 	$: propNames = { ...defaultPropNames, ...props };
+
 	//! DONT SET ONLY USED INTERNALLY
 	//TODO use context instead
 	//path of currently dragged node
