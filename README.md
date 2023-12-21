@@ -1,16 +1,11 @@
 # Svelte Treeview
 
-This package is undergoing rewrite so docs could be old.
-
-# API CHANGE IN DEV BRANCH, UDPATE README
-
 The most elaborate treeview for svelte on earth (or even in our galaxy).  
 [DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree)
 
 ## Table of Contents
 
 - [Svelte Treeview](#svelte-treeview)
-- [API CHANGE IN DEV BRANCH, UDPATE README](#api-change-in-dev-branch-udpate-readme)
   - [Props](#props)
   - [Events](#events)
   - [function on component](#function-on-component)
@@ -70,7 +65,6 @@ Font awesome is required
 - ***separator***(string,default: ".")
   separator in nodePath
 
-  
 ```js
 const defaultProps = {
  nodePath: "nodePath",
