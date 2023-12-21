@@ -25,10 +25,12 @@
 			<li class="nav-item active">
 				<a class="nav-link" href="/files">Files</a>
 			</li>
-			<li class="nav-item active">
+			<!-- <li class="nav-item active">
 				<a class="nav-link" href="/dhl-demo">DHL demo</a>
-			</li>
+			</li> -->
 		</ul>
 	</div>
 </nav>
-<slot />
+<div class="container">
+	<slot />
+</div>
