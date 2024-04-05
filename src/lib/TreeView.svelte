@@ -1,32 +1,44 @@
 <script lang="ts">
-	// TODO this is just temporary untill i finish migrating
-	// @ts-nocheck
-
 	import ContextMenu from './menu/ContextMenu.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import createTreeHelper from './helpers/tree-helper';
 	import {
-		checkboxesType,
 		defaultCurrentlyDraggedClass,
 		defaultExpandClass,
 		defaultPixelTreshold,
 		defaultPropNames,
 		defaultTreeClass
-	} from './consts';
+	} from './constants.js';
 
 	import Checkbox from './Checkbox.svelte';
+	import {
+		checkboxesTypes,
+		type InsertionType,
+		type Node,
+		type Props,
+		type Tree
+	} from '$lib/types.js';
+	import { TreeHelper } from '$lib/index.js';
 
 	const dispatch = createEventDispatcher();
 
 	//! required
+	type node = any;
+	type dragEnterCallback = (draggendNode: node, oldParent: node, newParent: node) => boolean;
+	type beforeMovedCallback = (
+		draggendNode: node,
+		oldParent: node,
+		newParent: node,
+		insertionType: string
+	) => boolean;
+	type expandedCallback = (node: node) => Promise<node[]>;
 
-	export let tree: any[]; //array of nodes with nodePath
+	export let tree: node[]; //array of nodes with nodePath
 	export let treeId: string; //string
 	//!user set
 	//tree that will be rendered(will be same as tree if null)
-	export let filteredTree = null; //array of nodes with nodePath
+	export let filteredTree: Tree | null = null; //array of nodes with nodePath
 	export let recursive = false; //bool
-	export let checkboxes = checkboxesType.none; //bool on of [all,perNode]
+	export let checkboxes: checkboxesTypes = checkboxesTypes.none; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
 	//TODO make batter name
 	export let onlyLeafCheckboxes = false; //bool
@@ -36,13 +48,13 @@
 	//will allow you to move nodes between nodes and reorder them
 	export let dragAndDrop = false; //bool
 	//will nest of at least one of them is meet
-	export let timeToNest = null;
+	export let timeToNest: number | null = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
 	//change to false when last segment of nodePath is Guaranteed to be unqiue
 	export let recalculateNodePath = true;
 	//callback for dynamically disabling drop on specific node
-	export let dragEnterCallback = null;
-	export let beforeMovedCallback = null;
+	export let dragEnterCallback: dragEnterCallback | null = null;
+	export let beforeMovedCallback: beforeMovedCallback | null = null;
 
 	export let showContexMenu = false;
 	export let enableVerticalLines = false;
@@ -50,46 +62,42 @@
 	export let separator = '.';
 
 	export let expandedLevel = 0;
-	export let expandCallback = null;
+	export let expandCallback: expandedCallback | null = null;
 
 	//* classes for customization of tree
-	export let treeClass = defaultTreeClass;
-	export let nodeClass = null;
-	export let expandedToggleClass = null;
-	export let collapsedToggleClass = null;
-	export let expandClass = defaultExpandClass;
-	export let inserLineClass = null;
-	export let inserLineNestClass = null;
-	export let currentlyDraggedClass = defaultCurrentlyDraggedClass;
+	export let treeClass: string = defaultTreeClass;
+	export let nodeClass: string = '';
+	export let expandedToggleClass: string = '';
+	export let collapsedToggleClass: string = '';
+	export let expandClass: string = defaultExpandClass;
+	export let inserLineClass: string = '';
+	export let inserLineNestClass: string = '';
+	export let currentlyDraggedClass: string = defaultCurrentlyDraggedClass;
 
 	//* properties
-	export let props = {};
+	export let props: Partial<Props> = {};
 	$: propNames = { ...defaultPropNames, ...props };
 
 	//! DONT SET ONLY USED INTERNALLY
 	//TODO use context instead
 	//path of currently dragged node
-	export let draggedPath = null;
-	export let highlightedNode = null;
+	export let draggedPath: string | null = null;
+	export let highlightedNode: node = null;
 	export let childDepth = 0; //number
-	export let branchRootNode = undefined;
+	export let branchRootNode: node | null = null;
 
-	let dragenterTimestamp;
+	let dragenterTimestamp: Date | null = null;
 	//
 	let canNestPos = false;
 	let canNestTime = false;
-	let canNest;
-	let dragTimeout;
+	let canNest: boolean;
+	let dragTimeout: NodeJS.Timeout;
 	let validTarget = false;
-	let insPos;
-	//if insert is disabled => nest right away and never nest if its disabled
-	$: canNest =
-		(highlightedNode?.[propNames.insertDisabled] || canNestPos || canNestTime) &&
-		highlightedNode?.[propNames.nestDisabled] !== true;
-	//
-	let ctxMenu;
+	let insPos: InsertionType;
+	let ctxMenu: ContextMenu;
 
-	const getNodeId = (node) => `${treeId}-${helper.path(node)}`;
+	// ensure tree is never null
+	// $: tree, tree == null || tree == undefined ? (tree = []) : '';
 
 	// get new helper when propNames change
 	$: config = {
@@ -98,32 +106,48 @@
 		checkboxes,
 		separator
 	};
-	$: helper = createTreeHelper(propNames, config);
+	$: helper = new TreeHelper(propNames, config);
+
+	$: console.log('TreeView - tree', tree);
+	$: tree = computeVisualTree(tree, filteredTree);
+
+	//if insert is disabled => nest right away and never nest if its disabled
+
+	$: canNest =
+		(highlightedNode?.[propNames.insertDisabled] || canNestPos || canNestTime) &&
+		highlightedNode?.[propNames.nestDisabled] !== true;
+
+	const getNodeId = (node: node) => `${treeId}-${helper.path(node)}`;
 
 	// get children nodes
-	function getChildren() {
-		return helper.dragDrop.OrderByPriority(
-			helper.getDirectChildren(filteredTree ?? tree, helper.path(branchRootNode))
+	function getChildren(tree: Tree, filteredTree: Tree | null) {
+		const directChildren = helper.getDirectChildren(
+			filteredTree ?? tree,
+			helper.path(branchRootNode)
 		);
+
+		const orderedChildren = helper.dragDrop.OrderByPriority(directChildren);
+
+		return orderedChildren;
 	}
 
 	//#region expansions
 
-	function toggleExpansion(node, expanded) {
+	function toggleExpansion(node: node, expanded: boolean) {
 		helper.changeExpansion(tree, node, !expanded);
 
 		//update expansion
 		tree = tree;
 
-		let val = node[propNames.expanded];
+		let isAlreadyExpanded = node[propNames.expanded];
 
 		//trigger callback if it is present and node has useCallback
-		if (val && expandCallback !== null && node[propNames.useCallback] === true) {
+		if (isAlreadyExpanded && expandCallback !== null && node[propNames.useCallback] === true) {
 			//console.log("calling callback");
 			node[propNames.useCallback] = false;
 			expandCallback(node)
-				.then((val) => {
-					tree = tree.concat(val);
+				.then((newTreeNodes: node[]) => {
+					tree = tree.concat(newTreeNodes);
 				})
 				.catch((reason) => {
 					console.log('ERROR IN CALLBACK!!');
@@ -134,49 +158,52 @@
 		//expansion events
 		dispatch('expansion', {
 			node: node,
-			value: val
+			value: isAlreadyExpanded
 		});
 
-		if (val) {
+		if (isAlreadyExpanded) {
 			dispatch('expanded', node);
 		} else {
 			dispatch('closed', node);
 		}
 	}
 
-	export function changeAllExpansion(changeTo) {
+	export function changeAllExpansion(changeTo: boolean) {
 		tree = helper.changeEveryExpansion(tree, changeTo);
 	}
 
-	function isExpanded(node, depth, expandTo) {
+	function isExpanded(node: node, depth: number, expandToDepth: number) {
 		const nodeExpanded = node[propNames.expanded];
 
 		//if expanded prop is defined it has priority over expand to
 		if (nodeExpanded !== undefined && nodeExpanded !== null) {
 			return nodeExpanded;
 		}
-		return depth <= expandTo;
+		return depth <= expandToDepth;
 	}
 
-	//#endregion
+	function computeVisualTree(_tree: Tree, _filteredTree: Tree | null): Tree {
+		if (checkboxes === checkboxesTypes.none) {
+			// no point in computing something we wont show
+			return _tree;
+		}
 
-	//#region checkboxes
-
-	// TODO maybe optimize and only compute visual tree for changed branches
-	$: ComputeVisualTree(filteredTree);
-	function ComputeVisualTree(filteredTree) {
-		tree = helper.selection.computeInitialVisualStates(tree, filteredTree ?? tree);
+		console.log('computing visual tree ', branchRootNode?.[propNames.nodePath], {
+			_tree,
+			_filteredTree
+		});
+		return helper.selection.computeInitialVisualStates(_tree, _filteredTree ?? _tree);
 	}
 
 	//checkboxes
-	function selectionChanged(node) {
+	function selectionChanged(node: node) {
 		//console.log(nodePath);
 		tree = helper.selection.changeSelection(tree, helper.path(node), filteredTree ?? tree);
 		selectionEvents(node);
 	}
 
 	//fired when in recursive mode you click on Leaf node
-	function selectChildren(node, checked) {
+	function selectChildren(node: node, checked: boolean) {
 		tree = helper.selection.changeSelectedForChildren(
 			tree,
 			helper.path(node),
@@ -186,7 +213,7 @@
 		selectionEvents(node);
 	}
 
-	function selectionEvents(node) {
+	function selectionEvents(node: node) {
 		let val = node[propNames.selected];
 		dispatch('selection', {
 			node: node,
@@ -200,11 +227,7 @@
 		}
 	}
 
-	//#endregion
-
-	//#region drag and drop
-
-	function handleDragStart(e, node) {
+	function handleDragStart(e: DragEvent, node: node) {
 		// dont allos drag if is draggable is false
 		if (node[propNames.isDraggable] === false) {
 			e.preventDefault();
@@ -212,24 +235,29 @@
 		}
 
 		console.log('dragstart from: ' + helper.path(node));
-
+		//@ts-ignore
 		e.dataTransfer.dropEffect = 'move';
+		//@ts-ignore
 		e.dataTransfer.setData('node_id', helper.path(node));
 		draggedPath = helper.path(node);
 	}
 
-	function handleDragDrop(e, node, el) {
+	function handleDragDrop(e: DragEvent, node: node, el: HTMLElement) {
 		//should be necesary but just in case
 		highlightedNode = null;
 		if (readonly || !dragAndDrop) return;
 
+		//@ts-ignore
 		draggedPath = e.dataTransfer.getData('node_id');
 
 		console.log(draggedPath + ' dropped on: ' + helper.path(node));
 
 		//important to check if timetonest is set, otherwise you could spend 30 minutes fixing this shit :)
 		if (timeToNest) {
-			canNestTime = (dragenterTimestamp ? new Date() - dragenterTimestamp : 1) > timeToNest;
+			const nowTimestamp = new Date();
+			canNestTime =
+				(dragenterTimestamp ? nowTimestamp.getTime() - dragenterTimestamp.getTime() : 1) >
+				timeToNest;
 		}
 
 		let newNode = helper.findNode(tree, draggedPath);
@@ -276,12 +304,12 @@
 		highlightedNode = null;
 	}
 
-	function handleDragOver(e, node, el) {
+	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement) {
 		insPos = helper.dragDrop.getInsertionPosition(e, el);
 
 		//if you are further away from right then treshold allow nesting
-
-		let diff = e.x - e.target.getBoundingClientRect().x;
+		// @ts-ignore
+		let diff = e.x - e.target?.getBoundingClientRect()?.x;
 		if (pixelNestTreshold && diff > pixelNestTreshold) {
 			canNestPos = true;
 		} else {
@@ -292,7 +320,7 @@
 		if (validTarget) e.preventDefault();
 	}
 
-	function handleDragEnter(e, node, el) {
+	function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
 		setTimeout(() => {
 			insPos = helper.dragDrop.getInsertionPosition(e, el);
 
@@ -315,7 +343,7 @@
 
 			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
 			if (
-				helper.path(node).startsWith(draggedPath) ||
+				helper.path(node).startsWith(draggedPath ?? '') ||
 				(node[propNames.insertDisabled] === true && node[propNames.nestDisabled] === true)
 			) {
 				validTarget = false;
@@ -324,8 +352,8 @@
 			//if defined calling callback
 			if (dragEnterCallback) {
 				//get node for event
-				let draggedNode = helper.findNode(tree, draggedPath);
-				let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath));
+				let draggedNode = helper.findNode(tree, draggedPath ?? '');
+				let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath ?? ''));
 
 				//callback returning false means that it isnt valid target
 				if (dragEnterCallback(draggedNode, oldParent, node) === false) {
@@ -336,7 +364,7 @@
 		e.preventDefault();
 	}
 
-	function handleDragEnd(e, node) {
+	function handleDragEnd(e: DragEvent, node: Node) {
 		//reset prop on next tick
 		setTimeout(() => {
 			draggedPath = null;
@@ -344,13 +372,13 @@
 		}, 1);
 	}
 
-	function handleDragleave(e, node) {
+	function handleDragleave(e: DragEvent, node: Node, el: HTMLElement) {
 		// highlightedNode = null;
 	}
 	/**
 	 *check if this node is one being hovered over (highlited) and is valid target
 	 */
-	function highlighThisNode(node, highlitedNode, validTarget) {
+	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
 		return validTarget && helper.path(highlitedNode) == helper.path(node);
 	}
 	/**
@@ -360,7 +388,12 @@
 	 * @param validTarget valid target
 	 * @param canNest can nest
 	 */
-	function highlightNesting(node, highlitedNode, validTarget, canNest) {
+	function highlightNesting(
+		node: Node,
+		highlitedNode: Node,
+		validTarget: boolean,
+		canNest: boolean
+	) {
 		return (
 			canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
@@ -374,7 +407,12 @@
 	 * @param validTarget valid target
 	 * @param canNest can nest
 	 */
-	function highlightInsert(node, highlitedNode, validTarget, canNest) {
+	function highlightInsert(
+		node: Node,
+		highlitedNode: Node,
+		validTarget: boolean,
+		canNest: boolean
+	) {
 		return (
 			!canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
@@ -382,26 +420,19 @@
 		);
 	}
 
-	//#endregion
-
-	//#region context menu
-	function openContextMenu(e, node) {
+	function openContextMenu(e: MouseEvent, node: Node) {
 		if (!showContexMenu) return;
 		e.preventDefault();
 		ctxMenu.onRightClick(e, node);
 	}
 
-	//#endregion
-
 	//computes all visual states when component is first created
 
-	onMount(() => {
-		tree = helper.selection.computeInitialVisualStates(tree, filteredTree ?? tree);
-	});
+	// onMount(() => {
+	// 	tree = computeVisualTree(tree, filteredTree);
+	// });
 
-	$: tree, tree == null || tree == undefined ? (tree = []) : '';
-
-	let liElements = [];
+	let liElements: { [key: string]: HTMLLIElement } = {};
 </script>
 
 <ul
@@ -437,7 +468,8 @@
 			<div
 				class="tree-item
 				{nesthighlighed ? expandClass : ''}
-				{nodeClass} {draggedPath == helper.path(node) || helper.path(node)?.startsWith(draggedPath)
+				{nodeClass} {draggedPath == helper.path(node) ||
+				(draggedPath && helper.path(node)?.startsWith(draggedPath))
 					? currentlyDraggedClass
 					: ''}"
 				class:div-has-children={hasChildren}
