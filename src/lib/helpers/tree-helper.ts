@@ -1,46 +1,55 @@
-// @ts-nocheck
 import orderBy from 'lodash.unionby'; // used by tree merge
-import unique from 'lodash.uniq'; // used by tree merge
-import { SelectionHelper } from './selection-helpers';
-import { DragAndDropHelper } from './drag-drop-helpers';
-import { defaultPropNames } from '$lib/consts.js';
+import uniqueBy from 'lodash.uniqby'; // used by tree merge
+import { SelectionHelper } from './selection-helpers.js';
+import { DragAndDropHelper } from './drag-drop-helpers.js';
+import { defaultPropNames } from '$lib/constants.js';
+import type { Node, Props } from '$lib/types.js';
+export type HelperConfig = {
+	separator?: string;
+	recursive?: boolean;
+};
 
 export class TreeHelper {
-	constructor(propNames, config = {}) {
+	props: Props;
+	config: HelperConfig;
+	selection: SelectionHelper;
+	dragDrop: DragAndDropHelper;
+
+	constructor(propNames: Props, config = {}) {
 		this.props = { ...defaultPropNames, ...propNames };
 		this.config = config;
 		this.selection = new SelectionHelper(this);
 		this.dragDrop = new DragAndDropHelper(this);
 	}
 
-	path(node) {
+	path(node: Node | null): string {
 		return node?.[this.props.nodePath];
 	}
 
 	//#region basic helpres
 
-	getParentNodePath(nodePath) {
+	getParentNodePath(nodePath: string) {
 		const separator = this.config.separator ?? '.';
 		const parentPath = nodePath?.substring(0, nodePath.lastIndexOf(separator));
 		return parentPath;
 	}
 
-	hasChildren(tree, nodePath) {
+	hasChildren(tree: Node[], nodePath: string) {
 		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
 	}
 
-	findNode(tree, nodePath) {
+	findNode(tree: Node[], nodePath: string) {
 		return tree.find((node) => this.path(node) === nodePath);
 	}
 
-	nodePathIsChild(nodePath) {
+	nodePathIsChild(nodePath: string) {
 		const separator = this.config.separator ?? '.';
 
 		const includesSeparator = nodePath?.includes(separator);
 		return includesSeparator;
 	}
 
-	getDirectChildren(tree, parentNodePath) {
+	getDirectChildren(tree: Node[], parentNodePath: string | null) {
 		const children = (tree || []).filter((x) =>
 			!parentNodePath
 				? !this.nodePathIsChild(this.path(x))
@@ -50,9 +59,8 @@ export class TreeHelper {
 		return children;
 	}
 
-	allCHildren(tree, parentNodePath) {
-		let children;
-		children = tree.filter((x) => {
+	allCHildren(tree: Node[], parentNodePath: string) {
+		const children = tree.filter((x) => {
 			if (!parentNodePath) {
 				//top level
 				return !this.nodePathIsChild(this.path(x));
@@ -63,31 +71,31 @@ export class TreeHelper {
 		return children;
 	}
 
-	getAllLeafNodes(tree) {
+	getAllLeafNodes(tree: Node[]) {
 		return tree.filter((x) => {
 			return x[this.props.hasChildren] == undefined || x[this.props.hasChildren] == false;
 		});
 	}
 
-	joinTrees(filteredTree, tree) {
+	joinTrees(filteredTree: Node[], tree: Node[]) {
 		return tree.map((tnode) => this.findNode(filteredTree, this.path(tnode)) || tnode);
 	}
 
-	mergeTrees(oldTree, addedTree, nodePath = 'nodePath') {
+	mergeTrees(oldTree: Node[], addedTree: Node[], nodePath = 'nodePath') {
 		return orderBy(addedTree, oldTree, nodePath);
 	}
 
 	/** toggles expansion on
 	 */
-	changeExpansion(tree, node, changeTo) {
-		let foundNode = this.findNode(tree, this.path(node));
+	changeExpansion(tree: Node[], node: Node, changeTo: boolean) {
+		const foundNode = this.findNode(tree, this.path(node));
 
 		foundNode[this.props.expanded] = changeTo;
 	}
 
 	/** changes expansion of every node that has this.hasChildren set to true
 	 */
-	changeEveryExpansion(tree, changeTo) {
+	changeEveryExpansion(tree: Node[], changeTo: boolean) {
 		return tree.map((node) => {
 			if (node[this.props.hasChildren] == true) node[this.props.expanded] = changeTo;
 			return node;
@@ -96,7 +104,7 @@ export class TreeHelper {
 
 	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
 	 */
-	expandToLevel(tree, level) {
+	expandToLevel(tree: Node[], level: number) {
 		return tree.map((n) => {
 			if (
 				n[this.props.expanded] == undefined &&
@@ -111,14 +119,14 @@ export class TreeHelper {
 	}
 
 	//based on number of dots
-	getDepthLevel(nodePath) {
+	getDepthLevel(nodePath: string) {
 		const separator = this.config.separator ?? '.';
 		return nodePath.split(separator).length - 1;
 	}
 
 	//#endregion
 
-	searchTree(tree, filter, leafesOnly) {
+	searchTree(tree: Node[], filter: (node: Node) => boolean, leafesOnly: boolean) {
 		let filteredNodes;
 		if (leafesOnly) {
 			filteredNodes = this.getAllLeafNodes(tree).filter(filter);
@@ -127,7 +135,7 @@ export class TreeHelper {
 			filteredNodes = tree.filter(filter);
 		}
 
-		const resultNodes = [];
+		const resultNodes: Node[] = [];
 
 		//console.log("matching nodes length:" + matchingPathes.length)
 		filteredNodes.forEach((node) => {
@@ -137,13 +145,13 @@ export class TreeHelper {
 			resultNodes.push(...parentNodes);
 		});
 
-		const uniqueNodes = unique(resultNodes, (node) => this.path(node));
+		const uniqueNodes = uniqueBy(resultNodes, (node) => this.path(node));
 
 		return uniqueNodes;
 	}
 
-	getParents(tree, node) {
-		const parentsPaths = [];
+	getParents(tree: Node[], node: Node) {
+		const parentsPaths: string[] = [];
 
 		let nodePath = this.path(node);
 
@@ -161,9 +169,3 @@ export class TreeHelper {
 		return parentNodes;
 	}
 }
-
-export default (...args) => {
-	// TODO redundant now, maybe remove
-	let helper = new TreeHelper(...args);
-	return helper;
-};

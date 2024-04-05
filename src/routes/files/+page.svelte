@@ -6,6 +6,7 @@
 
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
+	import { checkboxesTypes } from '$lib/types.js';
 
 	let tree: file[] = [];
 
@@ -13,6 +14,7 @@
 		tree = Files.map((n) => {
 			return { ...n, path: n.path.replaceAll('\\', '/') };
 		});
+		console.log('MountedTree', tree);
 	});
 	let showObject: boolean;
 </script>
@@ -33,6 +35,8 @@
 				showContexMenu
 				recursive
 				expandedLevel={-1}
+				checkboxes={checkboxesTypes.all}
+				dragAndDrop
 			>
 				{#if showObject}
 					{JSON.stringify(node)}

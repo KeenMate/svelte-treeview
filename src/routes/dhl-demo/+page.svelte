@@ -1,6 +1,6 @@
 <script>
 	// @ts-nocheck
-	import { checkboxesType, defaultPropNames as props } from '$lib/consts.js';
+	import { checkboxesType, defaultPropNames as props } from '$lib/constants.js';
 
 	import { TreeHelper, TreeView } from '$lib/index.js';
 	import {
@@ -72,6 +72,9 @@
 				enableVerticalLines
 				checkboxes={checkboxesType.all}
 			>
+				<!-- svelte-ignore a11y-missing-attribute -->
+				<!-- svelte-ignore a11y-click-events-have-key-events -->
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<a class="link-primary" on:click={() => showDetail(node)}>{node.name}({node.users})</a>
 			</TreeView>
 		</Card>
@@ -84,7 +87,4 @@
 </div>
 
 <style lang="scss">
-	.card-header-title {
-		font-size: 1.5rem;
-	}
 </style>
