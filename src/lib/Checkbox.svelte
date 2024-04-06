@@ -13,7 +13,7 @@
 
 	let indeterminate: boolean;
 	$: {
-		if (node.__visual_state == 'indeterminate') {
+		if (helper.props.visualState(node) == 'indeterminate') {
 			indeterminate = true;
 		} else {
 			indeterminate = false;
@@ -26,11 +26,11 @@
 {#if checkboxes == checkboxesTypes.perNode || checkboxes == checkboxesTypes.all}
 	{#if helper.selection.isSelectable(node, checkboxes)}
 		<!-- select node -->
-		{#if !recursive || (recursive && !node[helper.props.hasChildren])}
+		{#if !recursive || (recursive && !helper.props.hasChildren(node))}
 			<input
 				type="checkbox"
 				on:change={() => dispatch('select', node)}
-				checked={node[helper.props.selected]}
+				checked={helper.props.selected(node)}
 				disabled={readonly}
 			/>
 			<!-- select children-->
@@ -41,10 +41,10 @@
 				on:click={() => {
 					dispatch('select-children', {
 						node,
-						checked: node.__visual_state == 'true'
+						checked: helper.props.visualState(node) == 'true'
 					});
 				}}
-				checked={node.__visual_state == 'true'}
+				checked={helper.props.visualState(node) == 'true'}
 				bind:indeterminate
 				disabled={readonly}
 			/>

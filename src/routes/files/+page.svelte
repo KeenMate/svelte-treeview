@@ -12,7 +12,7 @@
 
 	onMount(() => {
 		tree = Files.map((n) => {
-			return { ...n, path: n.path.replaceAll('\\', '/') };
+			return { ...n, path: n.path.replaceAll('\\', '/'), checkbox: !n.path.startsWith('.') };
 		});
 		console.log('MountedTree', tree);
 	});
@@ -37,6 +37,8 @@
 				expandedLevel={-1}
 				checkboxes={checkboxesTypes.all}
 				dragAndDrop
+				checkboxesDisabled
+				logger={(...data) => console.debug('treeview: ', ...data)}
 			>
 				{#if showObject}
 					{JSON.stringify(node)}
