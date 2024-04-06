@@ -9,6 +9,7 @@ export type Props = {
 	insertDisabled: string;
 	nestDisabled: string;
 	checkbox: string;
+	visualState: string;
 };
 
 export enum visualStates {
@@ -28,4 +29,15 @@ export type Node = any;
 
 export type Tree = Node[];
 export type InsertionType = -1 | 0 | 1;
+export type NodePath = string | null;
 
+export type CustomizableClasses = {
+	treeClass: string;
+	nodeClass: string;
+	expandedToggleClass: string;
+	collapsedToggleClass: string;
+	expandClass: string;
+	inserLineClass: string;
+	inserLineNestClass: string;
+	currentlyDraggedClass: string;
+};

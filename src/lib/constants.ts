@@ -10,7 +10,8 @@ export const defaultPropNames: Props = {
 	isDraggable: 'isDraggable',
 	insertDisabled: 'insertDisabled',
 	nestDisabled: 'nestDisabled',
-	checkbox: 'checkbox'
+	checkbox: 'checkbox',
+	visualState: '__visual_state'
 };
 
 export const defaultPixelTreshold = 50;
