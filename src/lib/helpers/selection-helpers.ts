@@ -39,14 +39,21 @@ export class SelectionHelper {
 	setSelection(tree: Tree, nodePath: NodePath, changeTo: boolean) {
 		const node = this.helper.findNode(tree, nodePath);
 
-		if (this.recursiveMode && this.props.hasChildren(node)) {
+		// allow selection of root node
+		if ((this.recursiveMode && this.props.hasChildren(node)) || nodePath === null) {
 			this.changeSelectedRecursively(tree, nodePath, changeTo);
 		} else {
+			if (!node) {
+				// throw new Error('Node not found ' + nodePath);
+				console.warn('Node %s doesnt exits', nodePath);
+				return;
+			}
+
 			this.props.setSelected(node, changeTo);
 		}
 	}
 
-	changeSelectedRecursively(tree: Tree, parentNodePath: NodePath, changeTo: boolean) {
+	private changeSelectedRecursively(tree: Tree, parentNodePath: NodePath, changeTo: boolean) {
 		tree.forEach((node) => {
 			// match itself and all children
 			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
