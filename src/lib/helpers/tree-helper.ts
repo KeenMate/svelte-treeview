@@ -15,10 +15,10 @@ export class TreeHelper {
 	selection: SelectionHelper;
 	dragDrop: DragAndDropHelper;
 
-	constructor(props: PropertyHelper, config = {}) {
+	constructor(props: PropertyHelper, config: HelperConfig = {}) {
 		this.props = props;
 		this.config = config;
-		this.selection = new SelectionHelper(this);
+		this.selection = new SelectionHelper(this, config?.recursive ?? false);
 		this.dragDrop = new DragAndDropHelper(this);
 	}
 
@@ -30,17 +30,27 @@ export class TreeHelper {
 	//#region basic helpres
 
 	getParentNodePath(nodePath: NodePath): NodePath {
+		if (nodePath == null) throw new Error('cannot get parent of root');
+
 		const separator = this.config.separator ?? '.';
 		const parentPath = nodePath?.substring(0, nodePath.lastIndexOf(separator));
+		if (parentPath === '') return null;
+
 		return parentPath ?? null;
+	}
+
+	isChildrenOf(parentNodePath: NodePath, childrenNodePath: NodePath) {
+		if (parentNodePath === childrenNodePath) return false;
+
+		return childrenNodePath?.startsWith(parentNodePath ?? '');
 	}
 
 	hasChildren(tree: Node[], nodePath: NodePath) {
 		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
 	}
 
-	findNode(tree: Node[], nodePath: NodePath) {
-		return tree.find((node) => this.path(node) === nodePath);
+	findNode(tree: Node[], nodePath: NodePath): Node {
+		return tree.find((node) => this.path(node) === nodePath) ?? null;
 	}
 
 	nodePathIsChild(nodePath: NodePath) {
@@ -61,16 +71,7 @@ export class TreeHelper {
 	}
 
 	allCHildren(tree: Node[], parentNodePath: NodePath) {
-		const children = tree.filter((x) => {
-			if (!parentNodePath) {
-				//top level
-				return !this.nodePathIsChild(this.path(x));
-			} else {
-				return (
-					this.path(x)?.startsWith(parentNodePath.toString()) && this.path(x) != parentNodePath
-				);
-			}
-		});
+		const children = tree.filter((x) => this.isChildrenOf(parentNodePath, this.path(x)));
 		return children;
 	}
 
@@ -138,7 +139,6 @@ export class TreeHelper {
 		if (leafesOnly) {
 			filteredNodes = this.getAllLeafNodes(tree).filter(filter);
 		} else {
-			console.log(tree);
 			filteredNodes = tree.filter(filter);
 		}
 

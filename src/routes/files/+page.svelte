@@ -1,22 +1,39 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { MenuDivider, MenuOption, TreeView } from '../../lib/index.js';
-
-	type file = { path: string; hasChildren: boolean; name: string };
-
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
 	import { checkboxesTypes } from '$lib/types.js';
 
+	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
+
 	let tree: file[] = [];
+	let showObject: boolean;
+	let lastSelectedNodePath: string;
 
 	onMount(() => {
 		tree = Files.map((n) => {
-			return { ...n, path: n.path.replaceAll('\\', '/'), checkbox: !n.path.startsWith('.') };
+			return {
+				...n,
+				path: n.path.replaceAll('\\', '/'),
+				checkbox: !n.path.startsWith('.'),
+				selected: false
+			};
 		});
 		console.log('MountedTree', tree);
 	});
-	let showObject: boolean;
+
+	function onSelectRandomNode() {
+		const idx = Math.floor(Math.random() * tree.length);
+		const node = tree[idx];
+
+		if (!node.hasChildren) {
+			node.selected = !node.selected;
+		}
+
+		lastSelectedNodePath = node.path;
+		tree = tree;
+	}
 </script>
 
 <div class="row mt-3">
@@ -30,7 +47,7 @@
 				on:expansion={(e) => console.log(e.detail)}
 				on:moved={(e) => console.log(e.detail)}
 				recalculateNodePath={false}
-				props={{ nodePath: 'path' }}
+				props={{ nodePath: 'path', selected: 'selected' }}
 				separator="/"
 				showContexMenu
 				recursive
@@ -78,9 +95,18 @@
 		<Card>
 			This demo shows how treeview can be used to browse files.
 			<br />
-			<label for="showObjects">Show node objects</label>
 
+			<label for="showObjects">Show node objects</label>
 			<input id="showObjects" type="checkbox" bind:checked={showObject} />
+
+			<br />
+
+			<button class="btn btn-primary" on:click={onSelectRandomNode}> Select random node </button>
+
+			{#if lastSelectedNodePath}
+				<br />
+				selected: {lastSelectedNodePath}
+			{/if}
 		</Card>
 	</div>
 </div>

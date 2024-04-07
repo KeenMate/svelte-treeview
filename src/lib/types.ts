@@ -25,7 +25,8 @@ export enum checkboxesTypes {
 	readonly = 'readonly'
 }
 
-export type Node = any;
+// this disallows direct access to the node object and forces usage of the helper
+export type Node = unknown;
 
 export type Tree = Node[];
 export type InsertionType = -1 | 0 | 1;

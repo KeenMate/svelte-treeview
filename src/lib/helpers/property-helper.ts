@@ -1,9 +1,17 @@
-import type { Node, NodePath, Props } from '$lib/types.js';
+import type { Node, NodePath, Props, visualStates } from '$lib/types.js';
 
 export class PropertyHelper {
 	props: Props;
 	constructor(props: Props) {
 		this.props = props;
+	}
+
+	private getVal<T>(node: Node, key: string): T {
+		return (node as any)?.[key] as T;
+	}
+
+	private setVal(node: Node, key: string, value: any) {
+		(node as any)[key] = value;
 	}
 
 	path(node: Node): NodePath {
@@ -12,90 +20,90 @@ export class PropertyHelper {
 			return null;
 		}
 
-		return node?.[this.props.nodePath];
+		return this.getVal(node, this.props.nodePath);
 	}
 
 	setPath(node: Node, path: NodePath) {
-		node[this.props.nodePath] = path;
+		this.setVal(node, this.props.nodePath, path);
 	}
 
-	hasChildren(node: Node) {
-		return node?.[this.props.hasChildren];
+	hasChildren(node: Node): boolean {
+		return this.getVal(node, this.props.hasChildren) ?? false;
 	}
 
 	setHasChildren(node: Node, hasChildren: boolean) {
-		node[this.props.hasChildren] = hasChildren;
+		this.setVal(node, this.props.hasChildren, hasChildren);
 	}
 
-	expanded(node: Node) {
-		return node?.[this.props.expanded];
+	expanded(node: Node): boolean {
+		return this.getVal(node, this.props.expanded) ?? false;
 	}
 
 	setExpanded(node: Node, expanded: boolean) {
-		node[this.props.expanded] = expanded;
+		this.setVal(node, this.props.expanded, expanded);
 	}
 
-	selected(node: Node) {
-		return node?.[this.props.selected];
+	selected(node: Node): boolean | null {
+		return this.getVal(node, this.props.selected);
 	}
 
-	setSelected(node: Node, selected: boolean) {
-		node[this.props.selected] = selected;
+	setSelected(node: Node, selected: boolean | null) {
+		this.setVal(node, this.props.selected, selected);
 	}
 
-	useCallback(node: Node) {
-		return node?.[this.props.useCallback];
+	useCallback(node: Node): boolean {
+		return this.getVal(node, this.props.useCallback) ?? false;
 	}
 
 	setUseCallback(node: Node, useCallback: boolean) {
-		node[this.props.useCallback] = useCallback;
+		this.setVal(node, this.props.useCallback, useCallback);
 	}
 
-	priority(node: Node) {
-		return node?.[this.props.priority];
+	priority(node: Node): number {
+		return this.getVal(node, this.props.priority) ?? 0;
 	}
 
 	setPriority(node: Node, priority: number | undefined) {
-		node[this.props.priority] = priority;
+		this.setVal(node, this.props.priority, priority);
 	}
 
-	isDraggable(node: Node) {
-		return node?.[this.props.isDraggable];
+	isDraggable(node: Node): boolean {
+		return this.getVal(node, this.props.isDraggable) ?? false;
 	}
 
 	setIsDraggable(node: Node, isDraggable: boolean) {
-		node[this.props.isDraggable] = isDraggable;
+		this.setVal(node, this.props.isDraggable, isDraggable);
 	}
 
-	insertDisabled(node: Node) {
-		return node?.[this.props.insertDisabled];
+	insertDisabled(node: Node): boolean {
+		return this.getVal(node, this.props.insertDisabled) ?? false;
 	}
 
 	setInsertDisabled(node: Node, insertDisabled: boolean) {
-		node[this.props.insertDisabled] = insertDisabled;
+		this.setVal(node, this.props.insertDisabled, insertDisabled);
 	}
 
-	nestDisabled(node: Node) {
-		return node?.[this.props.nestDisabled];
+	nestDisabled(node: Node): boolean {
+		return this.getVal(node, this.props.nestDisabled) ?? false;
 	}
 
 	setNestDisabled(node: Node, nestDisabled: boolean) {
-		node[this.props.nestDisabled] = nestDisabled;
+		this.setVal(node, this.props.nestDisabled, nestDisabled);
 	}
 
-	checkbox(node: Node) {
-		return node?.[this.props.checkbox];
+	checkbox(node: Node): boolean | null {
+		return this.getVal(node, this.props.checkbox) ?? null;
 	}
 
 	setCheckbox(node: Node, checkbox: boolean) {
-		node[this.props.checkbox] = checkbox;
+		this.setVal(node, this.props.checkbox, checkbox);
 	}
 
-	visualState(node: Node) {
-		return node?.[this.props.visualState];
+	visualState(node: Node): visualStates | null {
+		return this.getVal(node, this.props.visualState) ?? null;
 	}
 
-	setVisualState(node: Node, visualState: string) {
-		node[this.props.visualState] = visualState;
+	setVisualState(node: Node, visualState: visualStates | null) {
+		this.setVal(node, this.props.visualState, visualState);
 	}
 }

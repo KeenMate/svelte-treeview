@@ -1,173 +1,96 @@
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-import { checkboxesTypes, type Node, type NodePath, type Tree, visualStates } from '$lib/types.js';
+import {
+	checkboxesTypes,
+	type Node,
+	type NodePath,
+	type Tree,
+	visualStates,
+	visualStates as VisualStates
+} from '$lib/types.js';
 
 export class SelectionHelper {
 	helper: TreeHelper;
 	props: PropertyHelper;
+	recursiveMode: boolean;
 
-	constructor(treeHelper: TreeHelper) {
+	constructor(treeHelper: TreeHelper, recursive: boolean) {
 		this.helper = treeHelper;
 		this.props = treeHelper.props;
+		this.recursiveMode = recursive;
 	}
 
-	path(node: Node): NodePath {
+	private path(node: Node): NodePath {
 		return this.helper.path(node);
 	}
-	selected(node: Node) {
-		return this.props.selected(node);
+
+	isSelected(node: Node): boolean {
+		return (
+			this.props.selected(node) === true || this.props.visualState(node) === VisualStates.selected
+		);
 	}
 
-	getChildrenWithCheckboxes(tree: Tree, parentNodePath: string | null) {
+	getSelectableDirectChildren(tree: Tree, parentNodePath: string | null) {
 		return this.helper
 			.getDirectChildren(tree, parentNodePath)
 			.filter((node: Node) => this.isSelectable(node, checkboxesTypes.all));
 	}
 
-	changeSelection(tree: Tree, nodePath: NodePath, filteredTree: Tree) {
-		this.toggleSelected(tree, nodePath);
-
-		const recursive = this.helper.config?.recursive ?? false;
-
-		if (recursive) {
-			tree = this.recomputeAllParentvisualStates(tree, filteredTree, nodePath);
-		}
-
-		return tree;
-	}
-
-	toggleSelected(tree: Tree, nodePath: NodePath) {
+	setSelection(tree: Tree, nodePath: NodePath) {
 		const node = this.helper.findNode(tree, nodePath);
+		const changeTo = !this.isSelected(node);
 
-		this.props.setSelected(node, !this.selected(node));
+		this.props.setSelected(node, changeTo);
+
+		// this is pointless, because we are always recomputing whole tree now
+		// const recursive = this.helper.config?.recursive ?? false;
+
+		// if (recursive) {
+		// 	const parent = this.helper.getParentNodePath(nodePath);
+		// 	this.recomputeParentVisualState(tree, filteredTree, parent);
+		// }
 	}
 
-	changeSelectedForChildren(
-		tree: Tree,
-		parentNodePath: NodePath,
-		changeTo: boolean,
-		filteredTree: Tree
-	) {
-		tree = tree.map((node) => {
-			//changes itself
-			if (parentNodePath == this.path(node)) {
-				this.updateLeafNodeSelection(node, changeTo);
-			}
-
-			if (!parentNodePath) {
-				// TODO i think this isnt working
-				// this only updates
-
-				//top level
-				this.updateLeafNodeSelection(node, changeTo);
-			} else {
-				//if parentNodePath isnt root
-				if (
-					this.path(node)?.startsWith(parentNodePath.toString()) &&
-					this.path(node) != parentNodePath.toString()
-				) {
-					this.updateLeafNodeSelection(node, changeTo);
+	changeSelectedRecursively(tree: Tree, parentNodePath: NodePath, changeTo: boolean) {
+		tree.forEach((node) => {
+			// match itself and all children
+			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
+				//dont change if not selectable
+				if (!this.isSelectable(node, checkboxesTypes.all)) {
+					return;
 				}
-			}
-			return node;
-		});
 
-		tree = this.recomputeAllParentvisualStates(tree, filteredTree, parentNodePath);
-		return tree;
-	}
+				// in recursive mode only update leaf nodes
+				if (this.recursiveMode && this.props.hasChildren(node)) {
+					return;
+				}
 
-	//changes selected or visual state depending on
-	updateLeafNodeSelection(node: Node, changeTo: boolean) {
-		//dont change if not selectable
-		if (!this.isSelectable(node, checkboxesTypes.all)) {
-			return;
-		}
-		if (!this.props.hasChildren(node)) {
-			this.props.setSelected(node, changeTo);
-		} else {
-			node.__visual_state = changeTo.toString();
-		}
-	}
-
-	/**Calculates visual state based on children  */
-	getVisualStates(filteredTree: Tree, node: Node) {
-		const children = this.getChildrenWithCheckboxes(filteredTree, this.path(node));
-
-		if (!children || children?.length == 0) return visualStates.notSelected;
-
-		//if every child is selected or vs=true return true
-		if (
-			children.every(
-				(x: Node) =>
-					this.selected(x) === true || this.props.visualState(x) === visualStates.selected
-			)
-		) {
-			return visualStates.selected;
-		}
-		//at least sone child is selected or indeterminate
-		else if (
-			children.some((x: Node) => {
-				return (
-					this.selected(x) === true ||
-					x.__visual_state === visualStates.indeterminate ||
-					x.__visual_state === visualStates.selected
-				);
-			})
-		) {
-			return visualStates.indeterminate;
-		} else {
-			return visualStates.notSelected;
-		}
-	}
-
-	/** recursibly recomputes parent visual state until root */
-	recomputeAllParentvisualStates(tree: Tree, filteredTree: Tree, nodePath: NodePath) {
-		const parent = this.helper.getParentNodePath(nodePath);
-
-		let newstate;
-		filteredTree.forEach((x) => {
-			if (this.path(x) == parent) {
-				newstate = this.getVisualStates(filteredTree, x);
-				x.__visual_state = newstate;
+				this.props.setSelected(node, changeTo);
 			}
 		});
-		if (this.helper.getParentNodePath(parent) != '') {
-			tree = this.recomputeAllParentvisualStates(tree, filteredTree, parent);
-		}
-		return tree;
+
+		// this is pointless, because we are always recomputing whole tree now
+		// this.recomputeParentVisualState(tree, filteredTree, parentNodePath);
 	}
 
 	/** Computes visual states for all nodes. Used for computing initial visual states when tree changes  */
-	computeInitialVisualStates(tree: Tree, filteredTree: Tree) {
-		const rootELements = this.getChildrenWithCheckboxes(tree, null);
+	recomputeAllVisualStates(tree: Tree, filteredTree: Tree) {
+		// TODO is this really the case?
+		// if some node is not selectable, are all its children also not selectable?
+
+		const rootELements = this.getSelectableDirectChildren(tree, null);
 		rootELements.forEach((x: Node) => {
 			if (this.props.hasChildren(x) == true) {
-				tree = this.computeChildrenVisualStates(tree, filteredTree, x);
-				x.__visual_state = this.getVisualStates(filteredTree, x);
+				const result = this.computeVisualStateRecursively(tree, filteredTree, x);
+				this.props.setVisualState(x, result.state);
 			}
 		});
-		return tree;
-	}
-	/** Recursivly computes visual state for children  */
-	computeChildrenVisualStates(tree: Tree, filteredTree: Tree, node: Node) {
-		const directChildren = this.getChildrenWithCheckboxes(tree, this.path(node));
-
-		//foreaches all children if it has children, it calls itself, then it computes __vs => will compute from childern to parent
-
-		directChildren.forEach((child: Node) => {
-			if (this.props.hasChildren(child) === true) {
-				tree = this.computeChildrenVisualStates(tree, filteredTree, child);
-				child.__visual_state = this.getVisualStates(filteredTree, child);
-			}
-		});
-		return tree;
 	}
 
 	deleteSelected(tree: Tree) {
-		return tree.map((node: Node) => {
+		return tree.forEach((node: Node) => {
 			this.props.setSelected(node, false);
-			node.__visual_state = undefined;
-			return node;
+			this.props.setVisualState(node, null);
 		});
 	}
 
@@ -181,5 +104,101 @@ export class SelectionHelper {
 		}
 		//dont show at all
 		return false;
+	}
+
+	private computeVisualStates(directChildrenVisualStates: VisualStates[]) {
+		if (!directChildrenVisualStates || directChildrenVisualStates?.length == 0)
+			return VisualStates.selected;
+
+		//if every child is selected or vs=true return true
+		if (
+			directChildrenVisualStates.every((state: VisualStates) => state === VisualStates.selected)
+		) {
+			return VisualStates.selected;
+		}
+		//at least sone child is selected or indeterminate
+		else if (
+			directChildrenVisualStates.some(
+				(state: VisualStates) =>
+					state === VisualStates.selected || state === VisualStates.indeterminate
+			)
+		) {
+			return VisualStates.indeterminate;
+		} else {
+			return VisualStates.notSelected;
+		}
+	}
+
+	/** recursibly recomputes parent visual state until root */
+	private recomputeParentVisualState(tree: Tree, filteredTree: Tree, nodePath: NodePath) {
+		// no need to recompute state for root
+		if (nodePath === null) {
+			return;
+		}
+
+		// TODO maybe check that this node have children
+
+		const parentNode = this.helper.findNode(tree, nodePath);
+		const directChildren = this.helper.getDirectChildren(tree, nodePath);
+		const directChildrenVisualStates: VisualStates[] = directChildren.map((node: Node) =>
+			this.getVisualState(node)
+		);
+
+		const newState = this.computeVisualStates(directChildrenVisualStates);
+		this.props.setVisualState(parentNode, newState);
+
+		// use recursion, because we need to traverse from node to root
+		const ParentPath = this.helper.getParentNodePath(nodePath);
+
+		this.recomputeParentVisualState(tree, filteredTree, ParentPath);
+	}
+
+	/**
+	 * Computes visual state from leaf to node
+	 * @param tree
+	 * @param filteredTree
+	 * @param node
+	 * @returns New visual state for node
+	 */
+	private computeVisualStateRecursively(
+		tree: Tree,
+		filteredTree: Tree,
+		node: Node
+	): { state: VisualStates; ignore: boolean } {
+		const directChildren = this.getSelectableDirectChildren(tree, this.path(node));
+
+		const directChildrenStates: VisualStates[] = [];
+		// using recustion compute from leaft nodes to root
+		directChildren.forEach((child: Node) => {
+			if (!this.props.hasChildren(child)) {
+				const childState = this.isSelected(child)
+					? VisualStates.selected
+					: VisualStates.notSelected;
+
+				directChildrenStates.push(childState);
+
+				return;
+			}
+
+			const result = this.computeVisualStateRecursively(tree, filteredTree, child);
+			this.props.setVisualState(child, result.state);
+
+			if (!result.ignore) {
+				directChildrenStates.push(result.state);
+			}
+		});
+
+		// if no children, all are selected, but dont count it for recursive computationq
+		const ignore = directChildrenStates.length === 0;
+
+		return { ignore, state: this.computeVisualStates(directChildrenStates) };
+	}
+
+	private getVisualState(node: Node) {
+		if (this.props.hasChildren(node)) {
+			return this.props.visualState(node) ?? visualStates.notSelected;
+		}
+
+		return this.isSelected(node) ? VisualStates.selected : VisualStates.notSelected;
 	}
 }
