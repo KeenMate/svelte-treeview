@@ -37,7 +37,6 @@ export class DragAndDropHelper {
 		if (!movedNodePath) return tree;
 
 		const isNesting = insType == 0;
-		console.log({ tree, movedNodePath, targetNodePath, insType });
 		// if you are not isNestinging, you want to be on same level
 		//so you will have same parent as target node
 		const parentNodePath = isNesting

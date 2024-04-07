@@ -76,7 +76,7 @@
 	}
 
 	function isExpanded(node: Node, depth: number, expandToDepth: number) {
-		const nodeExpanded = node[propNames.expanded];
+		const nodeExpanded = helper.props.expanded(node);
 
 		//if expanded prop is defined it has priority over expand to
 		if (nodeExpanded !== undefined && nodeExpanded !== null) {
@@ -142,7 +142,7 @@
 		return (
 			canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
-			node[propNames.nestDisabled] !== true
+			helper.props.nestDisabled(node) !== true
 		);
 	}
 	/**
@@ -161,7 +161,7 @@
 		return (
 			!canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
-			node[propNames.insertDisabled] !== true
+			helper.props.nestDisabled(node) !== true
 		);
 	}
 
@@ -177,8 +177,8 @@
 		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
 		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
 		{@const expanded = isExpanded(node, childDepth, expandedLevel)}
-		{@const hasChildren = node[propNames.hasChildren]}
-		{@const draggable = !readonly && dragAndDrop && node[propNames.isDraggable] !== false}
+		{@const hasChildren = helper.props.hasChildren(node)}
+		{@const draggable = !readonly && dragAndDrop && helper.props.isDraggable(node)}
 		{@const isCurrentlyDragged =
 			draggedPath == helper.path(node) ||
 			(draggedPath && helper.path(node)?.startsWith(draggedPath))}
@@ -214,12 +214,12 @@
 			>
 				{#if hasChildren}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<span on:click={() => toggleExpansion(node, expanded && !node[propNames.useCallback])}>
+					<span on:click={() => toggleExpansion(node, expanded && !helper.props.useCallback(node))}>
 						<!-- use callback overrides expanded  -->
 						<i
 							class="far {expanded ? classes.expandedToggleClass : classes.collapsedToggleClass}"
 							class:fa-minus-square={expanded}
-							class:fa-plus-square={!expanded || node[propNames.useCallback]}
+							class:fa-plus-square={!expanded || helper.props.useCallback(node)}
 						/>
 					</span>
 				{:else}
@@ -235,7 +235,7 @@
 					{checkboxesDisabled}
 					{readonly}
 					on:select-children={({ detail: { node, checked } }) => selectChildren(node, checked)}
-					on:select={({ detail: Node }) => selectionChanged(node)}
+					on:select={({ detail: node }) => selectionChanged(node)}
 				/>
 				<span class:pointer-cursor={draggable}>
 					<slot {node} />

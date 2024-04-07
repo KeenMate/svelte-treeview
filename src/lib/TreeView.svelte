@@ -85,7 +85,6 @@
 	//path of currently dragged node
 	let draggedPath: string | null = null;
 	let highlightedNode: node = null;
-	let branchRootNode: node | null = null;
 
 	let dragenterTimestamp: Date | null = null;
 	//
@@ -98,7 +97,7 @@
 	let ctxMenu: ContextMenu;
 
 	// ensure tree is never null
-	// $: tree, tree == null || tree == undefined ? (tree = []) : '';
+	$: tree, tree == null || tree == undefined ? (tree = []) : '';
 
 	// get new helper when propNames change
 	$: config = {
@@ -107,9 +106,12 @@
 		checkboxes,
 		separator
 	};
+
 	$: propHelper = new PropertyHelper({ ...defaultPropNames, ...props });
 	$: helper = new TreeHelper(propHelper, config);
-	$: tree = computeVisualTree(tree, filteredTree);
+
+	// this is dirty fix for rerendering tree when tree is changed
+	$: computeVisualTree(tree, filteredTree), forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
 
@@ -134,7 +136,7 @@
 		helper.changeExpansion(tree, node, !expanded);
 
 		//update expansion
-		tree = tree;
+		forceUpdate();
 
 		let isExpanded = propHelper.expanded(node);
 
@@ -144,12 +146,12 @@
 			propHelper.setUseCallback(node, false);
 
 			expandCallback(node)
-				.then((newTreeNodes: node[]) => {
-					tree = tree.concat(newTreeNodes);
+				.then((newNodes: node[]) => {
+					tree = tree.concat(newNodes);
 				})
 				.catch((reason) => {
-					console.log('ERROR IN CALLBACK!!');
-					console.log(reason);
+					// TODO find better way to handle error
+					debugLog('ERROR IN CALLBACK!!', reason);
 				});
 		}
 
@@ -166,8 +168,9 @@
 		}
 	}
 
+	// TODO remove and expose function from package
 	export function changeAllExpansion(changeTo: boolean) {
-		log('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
+		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
 
 		tree = helper.changeEveryExpansion(tree, changeTo);
 	}
@@ -178,9 +181,9 @@
 			return _tree;
 		}
 
-		log('computing visual tree', { tree: _tree, filteredTree: _filteredTree });
+		debugLog('computing visual tree', { tree: _tree, filteredTree: _filteredTree });
 
-		return helper.selection.computeInitialVisualStates(_tree, _filteredTree ?? _tree);
+		return helper.selection.recomputeAllVisualStates(_tree, _filteredTree ?? _tree);
 	}
 
 	//checkboxes
@@ -191,20 +194,15 @@
 
 		if (recursive && helper.props.hasChildren(node)) {
 			const checked = propHelper.visualState(node) === 'true';
+			debugLog('changing selection of node ', node, ' and all children to ', !checked);
 
-			log('old vs ', propHelper.visualState(node));
-			log('changing selection of node ', node, ' and all children to ', !checked);
-
-			tree = helper.selection.changeSelectedForChildren(
-				tree,
-				nodePath,
-				!checked,
-				filteredTree ?? tree
-			);
+			helper.selection.changeSelectedRecursively(tree, nodePath, !checked);
 		} else {
-			log("changing selection of node '", nodePath, "' to ", !propHelper.selected(node));
-			tree = helper.selection.changeSelection(tree, nodePath, filteredTree ?? tree);
+			debugLog("changing selection of node '", nodePath, "' to ", !propHelper.selected(node));
+			helper.selection.setSelection(tree, nodePath);
 		}
+
+		forceUpdate();
 
 		// dispatch selection events
 
@@ -256,7 +254,7 @@
 
 		let newNode = helper.findNode(tree, draggedPath);
 
-		let oldNode = { ...newNode };
+		let oldNode = { ...(newNode as any) };
 		let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath));
 
 		let insType = canNest ? 0 : helper.dragDrop.getInsertionPosition(e, el);
@@ -422,10 +420,14 @@
 		ctxMenu.onRightClick(e, node);
 	}
 
-	function log(...data: any[]) {
+	function debugLog(...data: any[]) {
 		if (logger) {
 			logger(...data);
 		}
+	}
+
+	function forceUpdate() {
+		tree = tree;
 	}
 </script>
 
