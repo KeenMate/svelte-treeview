@@ -36,19 +36,14 @@ export class SelectionHelper {
 			.filter((node: Node) => this.isSelectable(node, checkboxesTypes.all));
 	}
 
-	setSelection(tree: Tree, nodePath: NodePath) {
+	setSelection(tree: Tree, nodePath: NodePath, changeTo: boolean) {
 		const node = this.helper.findNode(tree, nodePath);
-		const changeTo = !this.isSelected(node);
 
-		this.props.setSelected(node, changeTo);
-
-		// this is pointless, because we are always recomputing whole tree now
-		// const recursive = this.helper.config?.recursive ?? false;
-
-		// if (recursive) {
-		// 	const parent = this.helper.getParentNodePath(nodePath);
-		// 	this.recomputeParentVisualState(tree, filteredTree, parent);
-		// }
+		if (this.recursiveMode && this.props.hasChildren(node)) {
+			this.changeSelectedRecursively(tree, nodePath, changeTo);
+		} else {
+			this.props.setSelected(node, changeTo);
+		}
 	}
 
 	changeSelectedRecursively(tree: Tree, parentNodePath: NodePath, changeTo: boolean) {
@@ -68,20 +63,17 @@ export class SelectionHelper {
 				this.props.setSelected(node, changeTo);
 			}
 		});
-
-		// this is pointless, because we are always recomputing whole tree now
-		// this.recomputeParentVisualState(tree, filteredTree, parentNodePath);
 	}
 
 	/** Computes visual states for all nodes. Used for computing initial visual states when tree changes  */
-	recomputeAllVisualStates(tree: Tree, filteredTree: Tree) {
+	recomputeAllVisualStates(tree: Tree) {
 		// TODO is this really the case?
 		// if some node is not selectable, are all its children also not selectable?
 
 		const rootELements = this.getSelectableDirectChildren(tree, null);
 		rootELements.forEach((x: Node) => {
 			if (this.props.hasChildren(x) == true) {
-				const result = this.computeVisualStateRecursively(tree, filteredTree, x);
+				const result = this.computeVisualStateRecursively(tree, x);
 				this.props.setVisualState(x, result.state);
 			}
 		});
@@ -162,7 +154,6 @@ export class SelectionHelper {
 	 */
 	private computeVisualStateRecursively(
 		tree: Tree,
-		filteredTree: Tree,
 		node: Node
 	): { state: VisualStates; ignore: boolean } {
 		const directChildren = this.getSelectableDirectChildren(tree, this.path(node));
@@ -180,7 +171,7 @@ export class SelectionHelper {
 				return;
 			}
 
-			const result = this.computeVisualStateRecursively(tree, filteredTree, child);
+			const result = this.computeVisualStateRecursively(tree, child);
 			this.props.setVisualState(child, result.state);
 
 			if (!result.ignore) {
