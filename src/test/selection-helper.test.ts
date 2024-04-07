@@ -1,7 +1,6 @@
 import { PropertyHelper } from '$lib/helpers/property-helper.js';
-import { SelectionHelper } from '$lib/helpers/selection-helpers.js';
 import { TreeHelper } from '$lib/index.js';
-import { Props, Tree, visualStates } from '$lib/types.js';
+import { Props, visualStates } from '$lib/types.js';
 import { expect, test } from 'vitest';
 
 const testingProperties: Props = {
@@ -81,34 +80,34 @@ test('getChildrenWithCheckboxes parent is leaf node', () => {
 	expect(paths).toEqual([]);
 });
 
-test('changeSelection', () => {
-	const helper = getHelper(true);
+test('setSelection non-recursive', () => {
+	const helper = getHelper(false);
 	const tree = getTree(helper);
 
 	const nodePath = '1.7';
 
 	const node = helper.findNode(tree, nodePath);
 
-	helper.selection.setSelection(tree, nodePath);
+	helper.selection.setSelection(tree, nodePath, true);
 
 	expect(helper.selection.isSelected(node)).toBe(true);
 
-	helper.selection.setSelection(tree, nodePath);
+	helper.selection.setSelection(tree, nodePath, false);
 
 	expect(helper.selection.isSelected(node)).toBe(false);
 });
 
-test('changeSelectedRecursively all children are leaf', () => {
+test('setSelection recursive all children are leaf', () => {
 	const helper = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = '1.7';
 
 	//test it changes all selection not just toggles
-	helper.selection.setSelection(tree, '1.7.10');
+	helper.selection.setSelection(tree, '1.7.10', true);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, true);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, true);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	const children = helper.getDirectChildren(tree, parentNodePath);
 
@@ -118,26 +117,26 @@ test('changeSelectedRecursively all children are leaf', () => {
 	let newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
 	expect(newChildrenSelected).not.toContain(false);
 
-	helper.selection.setSelection(tree, '1.7.10');
+	helper.selection.setSelection(tree, '1.7.10', false);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, false);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, false);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
 	expect(newChildrenSelected).not.toContain(true);
 });
 
-test('changeSelectedRecursively all children are not leaf', () => {
+test('setSelection recursive all children are not leaf', () => {
 	const helper = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = '1';
 
 	//test it changes all selection not just toggles
-	helper.selection.setSelection(tree, '1.7.10');
+	helper.selection.setSelection(tree, '1.7.10', true);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, true);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, true);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	const children = helper.allCHildren(tree, parentNodePath);
 
@@ -148,26 +147,23 @@ test('changeSelectedRecursively all children are not leaf', () => {
 
 	expect(newChildrenSelected).not.toContain(false);
 
-	helper.selection.setSelection(tree, '1.7.10');
+	helper.selection.setSelection(tree, '1.7.10', false);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, false);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, false);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
 	expect(newChildrenSelected).not.toContain(true);
 });
 
-test('changeSelectedRecursively parent is root', () => {
+test('setSelection recursive parent is root', () => {
 	const helper = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = null;
 
-	//test it changes all selection not just toggles
-	helper.selection.setSelection(tree, '1.7.10');
-
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, true);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, true);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	const children = helper.allCHildren(tree, parentNodePath);
 
@@ -179,10 +175,8 @@ test('changeSelectedRecursively parent is root', () => {
 
 	expect(newChildrenSelected).not.toContain(false);
 
-	helper.selection.setSelection(tree, '1.7.10');
-
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, false);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, false);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	newChildrenSelected = children.map(
 		(node) =>
@@ -191,7 +185,7 @@ test('changeSelectedRecursively parent is root', () => {
 	expect(newChildrenSelected).not.toContain(true);
 });
 
-test('changeSelectedRecursively if one child has hasChildren set to true but no actual children', () => {
+test('setSelection recursive if one child has hasChildren set to true but no actual children', () => {
 	// expected behavior is that graphically it will be selected
 	// but logically it will be ignored
 
@@ -203,15 +197,15 @@ test('changeSelectedRecursively if one child has hasChildren set to true but no 
 	const children = helper.allCHildren(tree, parentNodePath);
 	expect(children.length).toBe(2);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, true);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, true);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	const selected = children.map((node) => helper.selection.isSelected(node));
 
 	expect(selected).not.toContain(false);
 
-	helper.selection.changeSelectedRecursively(tree, parentNodePath, false);
-	helper.selection.recomputeAllVisualStates(tree, tree);
+	helper.selection.setSelection(tree, parentNodePath, false);
+	helper.selection.recomputeAllVisualStates(tree);
 
 	// we can never unselect node that has hasChildren set to true but doesnt have any children
 	expect(helper.selection.isSelected(helper.findNode(tree, '2.12'))).toBe(true);
