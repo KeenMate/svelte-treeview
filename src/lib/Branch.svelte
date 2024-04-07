@@ -71,8 +71,8 @@
 		return orderedChildren;
 	}
 
-	function toggleExpansion(node: Node, expanded: boolean) {
-		dispatch('internal-expand', { node: node, expanded: expanded });
+	function toggleExpansion(node: Node) {
+		dispatch('internal-expand', { node: node });
 	}
 
 	function isExpanded(node: Node, depth: number, expandToDepth: number) {
@@ -214,7 +214,7 @@
 			>
 				{#if hasChildren}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<span on:click={() => toggleExpansion(node, expanded && !helper.props.useCallback(node))}>
+					<span on:click={() => toggleExpansion(node)}>
 						<!-- use callback overrides expanded  -->
 						<i
 							class="far {expanded ? classes.expandedToggleClass : classes.collapsedToggleClass}"

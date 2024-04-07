@@ -38,7 +38,6 @@
 	export let treeId: string; //string
 	//!user set
 	//tree that will be rendered(will be same as tree if null)
-	export let filteredTree: Tree | null = null; //array of nodes with nodePath
 	export let recursive = false; //bool
 	export let checkboxes: checkboxesTypes = checkboxesTypes.none; //bool on of [all,perNode]
 	//if true, will show checkboxes to elements with children
@@ -111,7 +110,7 @@
 	$: helper = new TreeHelper(propHelper, config);
 
 	// this is dirty fix for rerendering tree when tree is changed
-	$: computeVisualTree(tree, filteredTree), forceUpdate();
+	$: computeVisualTree(tree), forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
 
@@ -130,42 +129,78 @@
 		currentlyDraggedClass
 	} as CustomizableClasses;
 
-	function onExpand(event: CustomEvent<{ node: node; expanded: boolean }>) {
-		const { node, expanded } = event.detail;
+	function onExpand(event: CustomEvent<{ node: node }>) {
+		const { node } = event.detail;
 
-		helper.changeExpansion(tree, node, !expanded);
+		const changeTo = !propHelper.expanded(node);
 
-		//update expansion
+		helper.changeExpansion(tree, node, changeTo);
+
+		debugLog("changed expansion of node '", helper.path(node), "' to ", changeTo);
+
 		forceUpdate();
 
-		let isExpanded = propHelper.expanded(node);
-
-		//trigger callback if it is present and node has useCallback
-		if (isExpanded && expandCallback !== null && propHelper.useCallback(node) === true) {
-			// dont fetch same data twice
-			propHelper.setUseCallback(node, false);
-
-			expandCallback(node)
-				.then((newNodes: node[]) => {
-					tree = tree.concat(newNodes);
-				})
-				.catch((reason) => {
-					// TODO find better way to handle error
-					debugLog('ERROR IN CALLBACK!!', reason);
-				});
+		//trigger callback if it is present and node has useCallback property set to true
+		if (changeTo) {
+			handleCallback(node);
 		}
 
 		//expansion events
 		dispatch('expansion', {
 			node: node,
-			value: isExpanded
+			value: changeTo
 		});
 
-		if (isExpanded) {
+		if (changeTo) {
 			dispatch('expanded', node);
 		} else {
 			dispatch('closed', node);
 		}
+	}
+
+	function handleCallback(node: Node) {
+		if (propHelper.useCallback(node) !== true) {
+			return;
+		}
+
+		if (expandCallback == null) {
+			console.warn(
+				'expandCallback is not set, but useCallback is set to true on node with path',
+				helper.path(node)
+			);
+			return;
+		}
+
+		debugLog('calling callback for node', node);
+
+		expandCallback(node).then(handleCallbackSuccess(node)).catch(handleCallbackError(node));
+	}
+
+	function handleCallbackSuccess(node: Node) {
+		return (newNodes: node[]) => {
+			debugLog('callback returned ', newNodes.length, ' new nodes', newNodes);
+
+			tree = tree.concat(newNodes);
+			if (newNodes.length === 0) {
+				propHelper.setHasChildren(node, false);
+			}
+			// dont fetch same data twice
+			propHelper.setUseCallback(node, false);
+		};
+	}
+
+	function handleCallbackError(node: Node) {
+		return (reason: any) => {
+			console.warn(
+				'error in callback, if you dont want user to be able to retry, return empty array intead of error',
+				reason
+			);
+			// TODO find better way to handle error
+			debugLog('error in callback', reason);
+
+			// allow user to try again
+			propHelper.setExpanded(node, false);
+		};
 	}
 
 	// TODO remove and expose function from package
@@ -175,15 +210,14 @@
 		tree = helper.changeEveryExpansion(tree, changeTo);
 	}
 
-	function computeVisualTree(_tree: Tree, _filteredTree: Tree | null): Tree {
+	function computeVisualTree(_tree: Tree): void {
 		if (checkboxes === checkboxesTypes.none) {
 			// no point in computing something we wont show
-			return _tree;
+			return;
 		}
 
-		debugLog('computing visual tree', { tree: _tree, filteredTree: _filteredTree });
-
-		return helper.selection.recomputeAllVisualStates(_tree, _filteredTree ?? _tree);
+		debugLog('computing visual tree', { tree: _tree });
+		helper.selection.recomputeAllVisualStates(_tree);
 	}
 
 	//checkboxes
@@ -192,32 +226,45 @@
 
 		const nodePath = helper.path(node);
 
-		if (recursive && helper.props.hasChildren(node)) {
-			const checked = propHelper.visualState(node) === 'true';
-			debugLog('changing selection of node ', node, ' and all children to ', !checked);
+		const changeTo = !helper.selection.isSelected(node);
 
-			helper.selection.changeSelectedRecursively(tree, nodePath, !checked);
-		} else {
-			debugLog("changing selection of node '", nodePath, "' to ", !propHelper.selected(node));
-			helper.selection.setSelection(tree, nodePath);
-		}
+		helper.selection.setSelection(tree, nodePath, changeTo);
+
+		debugLog("changing selection of node '", nodePath, "' to ", !propHelper.selected(node));
 
 		forceUpdate();
 
-		// dispatch selection events
-
-		let val = propHelper.selected(node);
 		dispatch('selection', {
 			node: node,
-			value: val
+			value: changeTo
 		});
 
-		if (val) {
+		if (changeTo) {
 			dispatch('selected', node);
 		} else {
 			dispatch('unselected', node);
 		}
 	}
+
+	function openContextMenu(ce: CustomEvent<{ e: MouseEvent; node: Node }>) {
+		const { e, node } = ce.detail;
+
+		if (!showContexMenu) return;
+		e.preventDefault();
+		ctxMenu.onRightClick(e, node);
+	}
+
+	function debugLog(...data: any[]) {
+		if (logger) {
+			logger(...data);
+		}
+	}
+
+	function forceUpdate() {
+		tree = tree;
+	}
+
+	//#region drag and drop
 
 	function handleDragStart(e: DragEvent, node: node) {
 		// dont allos drag if is draggable is false
@@ -412,30 +459,14 @@
 		);
 	}
 
-	function openContextMenu(ce: CustomEvent<{ e: MouseEvent; node: Node }>) {
-		const { e, node } = ce.detail;
-
-		if (!showContexMenu) return;
-		e.preventDefault();
-		ctxMenu.onRightClick(e, node);
-	}
-
-	function debugLog(...data: any[]) {
-		if (logger) {
-			logger(...data);
-		}
-	}
-
-	function forceUpdate() {
-		tree = tree;
-	}
+	//#endregion
 </script>
 
 <Branch
 	branchRootNode={null}
 	{treeId}
 	{checkboxes}
-	tree={filteredTree ?? tree}
+	{tree}
 	{recursive}
 	{onlyLeafCheckboxes}
 	{checkboxesDisabled}
