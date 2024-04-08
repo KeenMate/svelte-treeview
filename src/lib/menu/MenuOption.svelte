@@ -20,7 +20,7 @@
 	};
 </script>
 
-<div class:disabled={isDisabled} on:click={handleClick}>
+<div class:disabled={isDisabled} on:click={handleClick} on:keydown={handleClick} role="button" tabindex="">
 	{#if text}
 		{text}
 	{:else}
