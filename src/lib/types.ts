@@ -25,6 +25,8 @@ export enum SelectionModes {
 }
 
 // this disallows direct access to the node object and forces usage of the helper
+// TODO maybe implement some generics for event handlers and such
+// keep this only for internal stuff
 export type Node = unknown;
 
 export type Tree = Node[];

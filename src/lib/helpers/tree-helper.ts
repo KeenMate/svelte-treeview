@@ -130,17 +130,13 @@ export class TreeHelper {
 
 	//#endregion
 
-	searchTree(tree: Node[], filter: (node: Node) => boolean, leafesOnly: boolean) {
-		let filteredNodes;
-		if (leafesOnly) {
-			filteredNodes = this.getAllLeafNodes(tree).filter(filter);
-		} else {
-			filteredNodes = tree.filter(filter);
-		}
+	searchTree(tree: Node[], filter: (node: unknown) => boolean) {
+		const filteredNodes = tree.filter(filter);
 
 		const resultNodes: Node[] = [];
 
-		//console.log("matching nodes length:" + matchingPathes.length)
+		// add all parents from each node
+		// needed so that tree can be rendered
 		filteredNodes.forEach((node) => {
 			resultNodes.push(node);
 

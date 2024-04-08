@@ -3,13 +3,16 @@
 	import { MenuDivider, MenuOption, TreeView } from '../../lib/index.js';
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
-	import { SelectionModes } from '$lib/types.js';
+	import { SelectionModes, type Node } from '$lib/types.js';
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
 	let tree: file[] = [];
 	let showObject: boolean;
 	let lastSelectedNodePath: string;
+	let searchText = '';
+
+	$: filterFunc = (node: any) => node.name.includes(searchText);
 
 	onMount(() => {
 		tree = Files.map((n) => {
@@ -56,6 +59,7 @@
 				dragAndDrop
 				verticalLines
 				logger={(...data) => console.debug('treeview: ', ...data)}
+				filter={filterFunc}
 			>
 				{#if showObject}
 					{JSON.stringify(node)}
@@ -98,6 +102,11 @@
 
 			<label for="showObjects">Show node objects</label>
 			<input id="showObjects" type="checkbox" bind:checked={showObject} />
+
+			<br />
+
+			<label for="showObjects">SerachTree</label>
+			<input bind:value={searchText} />
 
 			<br />
 
