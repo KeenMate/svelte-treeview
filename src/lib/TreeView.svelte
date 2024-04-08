@@ -133,8 +133,11 @@
 		separator
 	});
 
-	// this is dirty fix for rerendering tree when tree is changed
-	$: computeVisualTree(tree), forceUpdate();
+	// compute vissual tree still caleed twice, because if we force update changes tree
+	// which fires this event again
+	// TODO fix computeVisualTree beiing called twice
+	$: recursiveSelection && selectionMode !== selectionModes.none && computeVisualTree(tree),
+		forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
 	$: canNest =

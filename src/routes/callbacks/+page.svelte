@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Card } from '@keenmate/svelte-adminlte';
 	import TreeView from '$lib/TreeView.svelte';
+	import { selectionModes } from '$lib/types.js';
 
 	const MAX_NEW_CHILDREN = 7;
 	const initalTree = [{ nodePath: '0', name: 'Root', hasChildren: true, __useCallback: true }];
@@ -9,7 +10,7 @@
 	let showObject = false;
 
 	async function callback(node: any) {
-		const newChildrenCount = Math.floor(Math.random() * MAX_NEW_CHILDREN);
+		const newChildrenCount = Math.floor(Math.random() * (MAX_NEW_CHILDREN - 1)) + 1;
 
 		const newNodes = [];
 		for (let i = 0; i < newChildrenCount; i++) {
@@ -35,6 +36,7 @@
 				let:node
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				separator=","
+				selectionMode={selectionModes.all}
 			>
 				{#if showObject}
 					{JSON.stringify(node)}

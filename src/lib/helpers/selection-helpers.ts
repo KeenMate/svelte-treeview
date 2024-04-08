@@ -48,7 +48,6 @@ export class SelectionHelper {
 				console.warn('Node %s doesnt exits', nodePath);
 				return;
 			}
-
 			this.props.setSelected(node, changeTo);
 		}
 	}
