@@ -120,6 +120,8 @@
 	let insPos: InsertionType;
 	let ctxMenu: ContextMenu;
 
+	$: dragAndDrop && console.warn('Drag and drop is not supported in this version');
+
 	// ensure tree is never null
 	$: tree, tree == null || tree == undefined ? (tree = []) : '';
 
@@ -135,7 +137,6 @@
 	$: computeVisualTree(tree), forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
-
 	$: canNest =
 		(propHelper.insertDisabled(highlightedNode) || canNestPos || canNestTime) &&
 		propHelper.nestDisabled(highlightedNode) !== true;
