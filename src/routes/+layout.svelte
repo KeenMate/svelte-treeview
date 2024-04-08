@@ -4,7 +4,7 @@
 </script>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
-	<a class="navbar-brand" href="#">Navbar</a>
+	<a class="navbar-brand" href="/#">Navbar</a>
 	<button
 		class="navbar-toggler"
 		type="button"
@@ -26,12 +26,14 @@
 				<a class="nav-link" href="/files">Files</a>
 			</li>
 			<li class="nav-item active">
-				<a class="nav-link" href="/file-from-package">Files from npm package</a>
+				<a class="nav-link" href="/callbacks">Callbacks</a>
 			</li>
-			<li class="nav-item active">
+			<!-- <li class="nav-item active">
 				<a class="nav-link" href="/dhl-demo">DHL demo</a>
-			</li>
+			</li> -->
 		</ul>
 	</div>
 </nav>
-<slot />
+<div class="container">
+	<slot />
+</div>

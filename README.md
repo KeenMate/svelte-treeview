@@ -1,16 +1,11 @@
 # Svelte Treeview
 
-This package is undergoing rewrite so docs could be old.
-
-# API CHANGE IN DEV BRANCH, UDPATE README
-
 The most elaborate treeview for svelte on earth (or even in our galaxy).  
 [DEMO](https://dev.phoenix-svelte-adminlte.demo.keenmate.com/#/tree)
 
 ## Table of Contents
 
 - [Svelte Treeview](#svelte-treeview)
-- [API CHANGE IN DEV BRANCH, UDPATE README](#api-change-in-dev-branch-udpate-readme)
   - [Props](#props)
   - [Events](#events)
   - [function on component](#function-on-component)
@@ -34,7 +29,7 @@ Font awesome is required
   you HAVE to set this to unique string
 - ***maxExpandedDepth*** (number, default: *3*)
 - ***filteredTree*** (array of nodes, default: *null*)
-   searched tree
+   Nodes that should be rendered (same as tree if null)
 - ***checkboxes*** (string "none"|"perNode"|"All", default: *false*)  
    When all checkboxes will be shown if **checkboxVisible** isnt false,whe perNode only nodes with **checkboxVisible** set to true will be shown. None will override **checkboxVisible** .When click on checkbox it will toggle selected on clicked node. You can specify this behavior with **recursive**, **onlyLeafCheckboxes** and **checkboxesDisabled**.
 - ***recursive*** (bool, default: *false*)  
@@ -63,20 +58,28 @@ Font awesome is required
   If true, will not change last part of nodePath of moved node. Use this is=f last part of your nodePath is **unique!**.  
 - ***expandedLevel*** (number,default:0)  
   will expand all nodes until this specific level(starting from 0). Set it to -1 to disable it. **expanded** has priority over this. It wont modify **expanded** on nodes so you can dynamicly change this and tree will rerender
-- ***nodePath*** (string, default: *"nodePath"*)  
-- ***hasChildren*** (string, default: *"hasChildren"*)  
-- ***expanded*** (string, default: *"__expanded"*)  
-- ***selected*** (string, default: *"__selected"*)  
-- ***useCallback*** (string, default: *"__useCallback"*)  
-- ***priority*** (string, default: *"__priority"*)  
-- ***isDraggable*** (string, default: *"isDraggable"*)  
-  when false, wont allow you to start dragging element
-- ***insertDisabled*** (string, default: *"insertDisabled"*)  
-  when true, you wont be able to drop element below are above nod. You still be able to nest it. When dragging over element it will always nest.
-- ***nestDisabled*** (string, default: *"nestDisabled"*)  
-  when true, wont be able to drop node inside (nest it)
-- ***checkboxVisible*** (string, default: *"checkboxVisible"*)  
-  modifies visibility of checkbox. When checkboxes are "none" wont show them event if this is true
+- ***props***
+  property names used to store stuff in node objects
+- ***readonly***(bool,false)
+  when true it will disable all expansion
+- ***separator***(string,default: ".")
+  separator in nodePath
+
+```js
+const defaultProps = {
+ nodePath: "nodePath",
+ hasChildren: "hasChildren",
+ expanded: "__expanded",
+ selected: "__selected",
+ useCallback: "__useCallback",
+ priority: "priority",
+ isDraggable: "isDraggable",
+ insertDisabled: "insertDisabled",
+ nestDisabled: "nestDisabled",
+ checkbox: "checkbox",
+};
+```
+
 - ***treeClass*** (string css class, default: *"treeview"*)  
   Setting this to anything else that default value will disable all styling so you can set everything yourself
 - ***nodeClass*** (string css class, default: *""*)  
@@ -86,6 +89,7 @@ Font awesome is required
 - ***expandClass*** (string css class, default: *"inserting-highlighted"*)  
 - ***inserLineClass*** (string css class, default: *""*)  
 - ***inserLineNestClass*** (string css class, default: *""*)  
+- ***currentlyDraggedClass*** (string css class, default: *"currently-dragged"*)  
 
 ## Events
 

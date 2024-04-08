@@ -2,7 +2,7 @@ name: Production build
 on:
   push:
     branches:
-      - dev
+      - prod
 jobs:
   build:
     uses: KeenMate/gha-shared/.github/workflows/deploy-docker-image.yml@master
