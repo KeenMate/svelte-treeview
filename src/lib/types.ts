@@ -18,11 +18,10 @@ export enum visualStates {
 	notSelected = 'false'
 }
 
-export enum checkboxesTypes {
+export enum selectionModes {
 	all = 'all',
 	perNode = 'perNode',
-	none = 'none',
-	readonly = 'readonly'
+	none = 'none'
 }
 
 // this disallows direct access to the node object and forces usage of the helper
@@ -41,4 +40,19 @@ export type CustomizableClasses = {
 	inserLineClass: string;
 	inserLineNestClass: string;
 	currentlyDraggedClass: string;
+};
+
+export type DragEnterCallback = (draggendNode: Node, oldParent: Node, newParent: Node) => boolean;
+export type BeforeMovedCallback = (
+	draggendNode: Node,
+	oldParent: Node,
+	newParent: Node,
+	insertionType: string
+) => boolean;
+export type ExpandedCallback = (node: Node) => Promise<Node[]>;
+export type HelperConfig = {
+	separator?: string;
+	recursive?: boolean;
+	recalculateNodePath?: boolean;
+	checkboxes?: selectionModes;
 };

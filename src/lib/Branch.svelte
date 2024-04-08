@@ -1,64 +1,38 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
-	import {
-		defaultCurrentlyDraggedClass,
-		defaultExpandClass,
-		defaultPropNames,
-		defaultTreeClass
-	} from './constants.js';
+	import { createEventDispatcher } from 'svelte';
 
 	import Checkbox from './Checkbox.svelte';
 	import {
-		checkboxesTypes,
+		selectionModes,
 		type CustomizableClasses,
 		type InsertionType,
 		type Node,
-		type Props,
 		type Tree
 	} from '$lib/types.js';
 	import type { TreeHelper } from '$lib/index.js';
-	import type ContextMenu from '$lib/menu/ContextMenu.svelte';
 
 	const dispatch = createEventDispatcher();
 
+	export let tree: Node[];
+	export let treeId: string;
+	export let recursive = false;
+	export let checkboxes: selectionModes = selectionModes.none;
+	export let onlyLeafCheckboxes: boolean;
+	export let hideDisabledCheckboxes: boolean;
+	export let dragAndDrop: boolean;
+	export let verticalLines: boolean;
+	export let readonly: boolean;
+	export let expandTo: number;
+	export let classes: CustomizableClasses;
 	export let helper: TreeHelper;
 
-	export let tree: Node[]; //array of nodes with nodePath
-	export let treeId: string; //string
-	export let recursive = false; //bool
-	export let checkboxes: checkboxesTypes = checkboxesTypes.none; //bool on of [all,perNode]
-	//if true, will show checkboxes to elements with children
-	//TODO make batter name
-	export let onlyLeafCheckboxes = false; //bool
-	//true = disabel hide = false
-	export let checkboxesDisabled = false; //bool
-
-	//will allow you to move nodes between nodes and reorder them
-	export let dragAndDrop = false;
-
-	export let enableVerticalLines = false;
-	export let readonly = false;
-
-	export let expandedLevel = 0;
-
-	//* classes for customization of tree
-	export let classes: CustomizableClasses;
-
-	//* properties
-	export let props: Partial<Props> = {};
-	$: propNames = { ...defaultPropNames, ...props };
-
-	//! DONT SET ONLY USED INTERNALLY
-	//TODO use context instead
-	//path of currently dragged node
-	export let draggedPath: string | null = null;
-	export let highlightedNode: Node = null;
-	export let childDepth = 0; //number
-	export let branchRootNode: Node | null = null;
-
-	let canNest: boolean;
-	let validTarget = false;
-	let insPos: InsertionType;
+	export let draggedPath: string | null;
+	export let highlightedNode: Node;
+	export let childDepth: number;
+	export let branchRootNode: Node | null;
+	export let canNest: boolean;
+	export let validTarget: boolean;
+	export let insPos: InsertionType;
 
 	const getNodeId = (node: Node) => `${treeId}-${helper.path(node)}`;
 
@@ -79,10 +53,10 @@
 		const nodeExpanded = helper.props.expanded(node);
 
 		//if expanded prop is defined it has priority over expand to
-		if (nodeExpanded !== undefined && nodeExpanded !== null) {
-			return nodeExpanded;
+		if (nodeExpanded === null) {
+			return depth <= expandToDepth;
 		}
-		return depth <= expandToDepth;
+		return nodeExpanded;
 	}
 
 	//checkboxes
@@ -90,12 +64,7 @@
 		dispatch('internal-selectionChanged', { node: node });
 	}
 
-	//fired when in recursive mode you click on Leaf node
-	function selectChildren(node: Node, checked: boolean) {
-		// TODO unify with selectionChanged
-		selectionChanged(node);
-	}
-
+	// drag and drop
 	function handleDragStart(e: DragEvent, node: Node) {
 		dispatch('internal-handleDragStart', { node: node, e: e });
 	}
@@ -169,14 +138,14 @@
 </script>
 
 <ul
-	class:show-lines={childDepth === 0 && enableVerticalLines}
+	class:show-lines={childDepth === 0 && verticalLines}
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
 	{#each getChildren(tree) as node (getNodeId(node))}
 		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
 		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
-		{@const expanded = isExpanded(node, childDepth, expandedLevel)}
+		{@const expanded = isExpanded(node, childDepth, expandTo)}
 		{@const hasChildren = helper.props.hasChildren(node)}
 		{@const draggable = !readonly && dragAndDrop && helper.props.isDraggable(node)}
 		{@const isCurrentlyDragged =
@@ -232,10 +201,9 @@
 					{recursive}
 					{node}
 					{onlyLeafCheckboxes}
-					{checkboxesDisabled}
+					{hideDisabledCheckboxes}
 					{readonly}
-					on:select-children={({ detail: { node, checked } }) => selectChildren(node, checked)}
-					on:select={({ detail: node }) => selectionChanged(node)}
+					on:select={({ detail: { node } }) => selectionChanged(node)}
 				/>
 				<span class:pointer-cursor={draggable}>
 					<slot {node} />
@@ -252,24 +220,28 @@
 			{#if expanded && hasChildren}
 				<svelte:self
 					branchRootNode={node}
+					childDepth={childDepth + 1}
 					{treeId}
 					{checkboxes}
-					bind:tree
+					{tree}
 					{recursive}
-					childDepth={childDepth + 1}
-					let:node={nodeNested}
-					{onlyLeafCheckboxes}
-					{checkboxesDisabled}
-					{expandedLevel}
-					bind:draggedPath
-					bind:dragAndDrop
-					{props}
-					bind:highlightedNode
-					on:open-ctxmenu
 					{helper}
 					{classes}
+					{readonly}
+					{onlyLeafCheckboxes}
+					{hideDisabledCheckboxes}
+					{expandTo}
+					{draggedPath}
+					{dragAndDrop}
+					{verticalLines}
+					{canNest}
+					{insPos}
+					{validTarget}
+					{highlightedNode}
+					on:open-ctxmenu
 					on:internal-expand
 					on:internal-selectionChanged
+					let:node={nodeNested}
 				>
 					<slot node={nodeNested} />
 				</svelte:self>

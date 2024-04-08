@@ -35,8 +35,8 @@ export class PropertyHelper {
 		this.setVal(node, this.props.hasChildren, hasChildren);
 	}
 
-	expanded(node: Node): boolean {
-		return this.getVal(node, this.props.expanded) ?? false;
+	expanded(node: Node): boolean | null {
+		return this.getVal(node, this.props.expanded) ?? null;
 	}
 
 	setExpanded(node: Node, expanded: boolean) {

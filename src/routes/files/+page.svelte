@@ -3,7 +3,7 @@
 	import { MenuDivider, MenuOption, TreeView } from '../../lib/index.js';
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
-	import { checkboxesTypes } from '$lib/types.js';
+	import { selectionModes } from '$lib/types.js';
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
@@ -50,11 +50,11 @@
 				props={{ nodePath: 'path', selected: 'selected' }}
 				separator="/"
 				showContexMenu
-				recursive
-				expandedLevel={-1}
-				checkboxes={checkboxesTypes.all}
+				recursiveSelection
+				expandTo={-1}
+				selectionMode={selectionModes.all}
 				dragAndDrop
-				checkboxesDisabled
+				verticalLines
 				logger={(...data) => console.debug('treeview: ', ...data)}
 			>
 				{#if showObject}

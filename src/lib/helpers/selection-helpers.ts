@@ -1,7 +1,7 @@
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import {
-	checkboxesTypes,
+	selectionModes,
 	type Node,
 	type NodePath,
 	type Tree,
@@ -33,7 +33,7 @@ export class SelectionHelper {
 	getSelectableDirectChildren(tree: Tree, parentNodePath: string | null) {
 		return this.helper
 			.getDirectChildren(tree, parentNodePath)
-			.filter((node: Node) => this.isSelectable(node, checkboxesTypes.all));
+			.filter((node: Node) => this.isSelectable(node, selectionModes.all));
 	}
 
 	setSelection(tree: Tree, nodePath: NodePath, changeTo: boolean) {
@@ -58,7 +58,7 @@ export class SelectionHelper {
 			// match itself and all children
 			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
 				//dont change if not selectable
-				if (!this.isSelectable(node, checkboxesTypes.all)) {
+				if (!this.isSelectable(node, selectionModes.all)) {
 					return;
 				}
 
@@ -93,12 +93,12 @@ export class SelectionHelper {
 		});
 	}
 
-	isSelectable(node: Node, showCheckboxes: checkboxesTypes) {
-		if (showCheckboxes === checkboxesTypes.all) {
+	isSelectable(node: Node, showCheckboxes: selectionModes) {
+		if (showCheckboxes === selectionModes.all) {
 			return this.props.checkbox(node) !== false;
 		}
 		//show only if pop is true
-		if (showCheckboxes === checkboxesTypes.perNode) {
+		if (showCheckboxes === selectionModes.perNode) {
 			return this.props.checkbox(node) === true;
 		}
 		//dont show at all
