@@ -54,7 +54,7 @@
 				separator="/"
 				showContexMenu
 				recursiveSelection
-				expandTo={-1}
+				expandTo={1}
 				selectionMode={SelectionModes.all}
 				dragAndDrop
 				verticalLines
