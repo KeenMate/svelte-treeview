@@ -18,6 +18,7 @@
 	import Branch from './Branch.svelte';
 	import { PropertyHelper } from '$lib/helpers/property-helper.js';
 
+
 	const dispatch = createEventDispatcher();
 
 	export let treeId: string;
@@ -90,6 +91,16 @@
 	 */
 	export let customClasses: CustomizableClasses = defaultClasses;
 
+	// use any so use doesnt have to cast from unknown
+	/**
+	 * Function used to filter what nodes should be shown.
+	 * Tree automatically adds all parents for nodes.
+	 * User Higher order functions for reactive search.
+	 * If you want to only search leaf nodes,
+	 * its your responsibility to check if its hasChildren property is false
+	 */
+	export let filter: (node: any) => boolean = (_) => true;
+
 	/**
 	 * Log function that will be called when something happens in tree.
 	 * Used mostly for debugging
@@ -133,10 +144,12 @@
 		separator
 	});
 
+	$: filteredTree = helper.searchTree(tree, filter);
+
 	// compute vissual tree still caleed twice, because if we force update changes tree
 	// which fires this event again
 	// TODO fix computeVisualTree beiing called twice
-	$: recursiveSelection && selectionMode !== SelectionModes.none && computeVisualTree(tree),
+	$: recursiveSelection && selectionMode !== SelectionModes.none && computeVisualTree(filteredTree),
 		forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
@@ -480,7 +493,7 @@
 	branchRootNode={null}
 	{treeId}
 	checkboxes={selectionMode}
-	{tree}
+	tree={filteredTree}
 	recursive={recursiveSelection}
 	{onlyLeafCheckboxes}
 	{hideDisabledCheckboxes}
