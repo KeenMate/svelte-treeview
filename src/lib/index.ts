@@ -1,4 +1,4 @@
-export * as Contants from '$lib/constants.js';
+export * as Constants from '$lib/constants.js';
 export { TreeHelper } from '$lib/helpers/tree-helper.js';
 export { default as TreeView } from './TreeView.svelte';
 export { default as MenuDivider } from './menu/MenuDivider.svelte';
