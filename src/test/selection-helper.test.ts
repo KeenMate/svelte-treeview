@@ -1,6 +1,6 @@
 import { PropertyHelper } from '$lib/helpers/property-helper.js';
 import { TreeHelper } from '$lib/index.js';
-import { Props, visualStates } from '$lib/types.js';
+import { type Props, VisualStates } from '$lib/types.js';
 import { expect, test } from 'vitest';
 
 const testingProperties: Props = {
@@ -180,7 +180,7 @@ test('setSelection recursive parent is root', () => {
 
 	newChildrenSelected = children.map(
 		(node) =>
-			helper.selection.isSelected(node) || helper.props.visualState(node) === visualStates.selected
+			helper.selection.isSelected(node) || helper.props.visualState(node) === VisualStates.selected
 	);
 	expect(newChildrenSelected).not.toContain(true);
 });

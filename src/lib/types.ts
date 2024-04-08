@@ -12,13 +12,13 @@ export type Props = {
 	visualState: string;
 };
 
-export enum visualStates {
+export enum VisualStates {
 	indeterminate = 'indeterminate',
 	selected = 'true',
 	notSelected = 'false'
 }
 
-export enum selectionModes {
+export enum SelectionModes {
 	all = 'all',
 	perNode = 'perNode',
 	none = 'none'
@@ -54,5 +54,5 @@ export type HelperConfig = {
 	separator?: string;
 	recursive?: boolean;
 	recalculateNodePath?: boolean;
-	checkboxes?: selectionModes;
+	checkboxes?: SelectionModes;
 };

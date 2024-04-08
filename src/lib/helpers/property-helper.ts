@@ -1,4 +1,4 @@
-import type { Node, NodePath, Props, visualStates } from '$lib/types.js';
+import type { Node, NodePath, Props, VisualStates } from '$lib/types.js';
 
 export class PropertyHelper {
 	props: Props;
@@ -99,11 +99,11 @@ export class PropertyHelper {
 		this.setVal(node, this.props.checkbox, checkbox);
 	}
 
-	visualState(node: Node): visualStates | null {
+	visualState(node: Node): VisualStates | null {
 		return this.getVal(node, this.props.visualState) ?? null;
 	}
 
-	setVisualState(node: Node, visualState: visualStates | null) {
+	setVisualState(node: Node, visualState: VisualStates | null) {
 		this.setVal(node, this.props.visualState, visualState);
 	}
 }

@@ -3,7 +3,7 @@
 	import { MenuDivider, MenuOption, TreeView } from '../../lib/index.js';
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
-	import { selectionModes } from '$lib/types.js';
+	import { SelectionModes } from '$lib/types.js';
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
@@ -52,7 +52,7 @@
 				showContexMenu
 				recursiveSelection
 				expandTo={-1}
-				selectionMode={selectionModes.all}
+				selectionMode={SelectionModes.all}
 				dragAndDrop
 				verticalLines
 				logger={(...data) => console.debug('treeview: ', ...data)}

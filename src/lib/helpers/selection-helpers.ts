@@ -1,13 +1,6 @@
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-import {
-	selectionModes,
-	type Node,
-	type NodePath,
-	type Tree,
-	visualStates,
-	visualStates as VisualStates
-} from '$lib/types.js';
+import { SelectionModes, type Node, type NodePath, type Tree, VisualStates } from '$lib/types.js';
 
 export class SelectionHelper {
 	helper: TreeHelper;
@@ -33,7 +26,7 @@ export class SelectionHelper {
 	getSelectableDirectChildren(tree: Tree, parentNodePath: string | null) {
 		return this.helper
 			.getDirectChildren(tree, parentNodePath)
-			.filter((node: Node) => this.isSelectable(node, selectionModes.all));
+			.filter((node: Node) => this.isSelectable(node, SelectionModes.all));
 	}
 
 	setSelection(tree: Tree, nodePath: NodePath, changeTo: boolean) {
@@ -57,7 +50,7 @@ export class SelectionHelper {
 			// match itself and all children
 			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
 				//dont change if not selectable
-				if (!this.isSelectable(node, selectionModes.all)) {
+				if (!this.isSelectable(node, SelectionModes.all)) {
 					return;
 				}
 
@@ -92,12 +85,12 @@ export class SelectionHelper {
 		});
 	}
 
-	isSelectable(node: Node, showCheckboxes: selectionModes) {
-		if (showCheckboxes === selectionModes.all) {
+	isSelectable(node: Node, showCheckboxes: SelectionModes) {
+		if (showCheckboxes === SelectionModes.all) {
 			return this.props.checkbox(node) !== false;
 		}
 		//show only if pop is true
-		if (showCheckboxes === selectionModes.perNode) {
+		if (showCheckboxes === SelectionModes.perNode) {
 			return this.props.checkbox(node) === true;
 		}
 		//dont show at all
@@ -193,7 +186,7 @@ export class SelectionHelper {
 
 	private getVisualState(node: Node) {
 		if (this.props.hasChildren(node)) {
-			return this.props.visualState(node) ?? visualStates.notSelected;
+			return this.props.visualState(node) ?? VisualStates.notSelected;
 		}
 
 		return this.isSelected(node) ? VisualStates.selected : VisualStates.notSelected;

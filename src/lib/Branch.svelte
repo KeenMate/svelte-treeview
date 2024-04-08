@@ -1,22 +1,15 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-
 	import Checkbox from './Checkbox.svelte';
-	import {
-		selectionModes,
-		type CustomizableClasses,
-		type InsertionType,
-		type Node,
-		type Tree
-	} from '$lib/types.js';
-	import type { TreeHelper } from '$lib/index.js';
+	import { SelectionModes, type InsertionType, type Node, type Tree } from '$lib/types.js';
+	import type { CustomizableClasses, TreeHelper } from '$lib/index.js';
 
 	const dispatch = createEventDispatcher();
 
 	export let tree: Node[];
 	export let treeId: string;
 	export let recursive = false;
-	export let checkboxes: selectionModes = selectionModes.none;
+	export let checkboxes: SelectionModes = SelectionModes.none;
 	export let onlyLeafCheckboxes: boolean;
 	export let hideDisabledCheckboxes: boolean;
 	export let dragAndDrop: boolean;

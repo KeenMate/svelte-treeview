@@ -4,7 +4,7 @@
 	import { defaultClasses, defaultPixelTreshold, defaultPropNames } from './constants.js';
 
 	import {
-		selectionModes as selectionModes,
+		SelectionModes as SelectionModes,
 		type InsertionType,
 		type Node,
 		type Props,
@@ -55,7 +55,7 @@
 	 * TODO write about all the different modes
 	 * TODO find better name
 	 */
-	export let selectionMode: selectionModes = selectionModes.none;
+	export let selectionMode: SelectionModes = SelectionModes.none;
 	/**
 	 * By default, in recursive mode, non-leaf checkboxes will select/deselct all its children
 	 * If you set this to true, this begaviour will be disabled and only leaf nodes will be selectable
@@ -136,7 +136,7 @@
 	// compute vissual tree still caleed twice, because if we force update changes tree
 	// which fires this event again
 	// TODO fix computeVisualTree beiing called twice
-	$: recursiveSelection && selectionMode !== selectionModes.none && computeVisualTree(tree),
+	$: recursiveSelection && selectionMode !== SelectionModes.none && computeVisualTree(tree),
 		forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
@@ -226,7 +226,7 @@
 	}
 
 	function computeVisualTree(_tree: Tree): void {
-		if (selectionMode === selectionModes.none) {
+		if (selectionMode === SelectionModes.none) {
 			// no point in computing something we wont show
 			return;
 		}
