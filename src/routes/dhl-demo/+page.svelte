@@ -69,8 +69,8 @@
 				treeId="tree"
 				let:node
 				showContexMenu
-				enableVerticalLines
-				checkboxes={checkboxesType.all}
+				verticalLines
+				selectionMode={checkboxesType.all}
 			>
 				<!-- svelte-ignore a11y-missing-attribute -->
 				<!-- svelte-ignore a11y-click-events-have-key-events -->

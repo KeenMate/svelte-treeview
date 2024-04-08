@@ -2,12 +2,8 @@ import orderBy from 'lodash.unionby'; // used by tree merge
 import uniqueBy from 'lodash.uniqby'; // used by tree merge
 import { SelectionHelper } from './selection-helpers.js';
 import { DragAndDropHelper } from './drag-drop-helpers.js';
-import type { Node, NodePath } from '$lib/types.js';
+import type { Node, NodePath, HelperConfig } from '$lib/types.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
-export type HelperConfig = {
-	separator?: string;
-	recursive?: boolean;
-};
 
 export class TreeHelper {
 	props: PropertyHelper;

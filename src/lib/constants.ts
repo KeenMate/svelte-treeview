@@ -1,4 +1,4 @@
-import type { Props } from '$lib/types.js';
+import type { CustomizableClasses, Props } from '$lib/types.js';
 
 export const defaultPropNames: Props = {
 	nodePath: 'nodePath',
@@ -16,6 +16,13 @@ export const defaultPropNames: Props = {
 
 export const defaultPixelTreshold = 50;
 
-export const defaultTreeClass = 'treeview';
-export const defaultExpandClass = 'inserting-highlighted';
-export const defaultCurrentlyDraggedClass = 'currently-dragged';
+export const defaultClasses: CustomizableClasses = {
+	treeClass: 'treeview',
+	expandClass: 'inserting-highlighted',
+	currentlyDraggedClass: 'currently-dragged',
+	nodeClass: '',
+	expandedToggleClass: '',
+	collapsedToggleClass: '',
+	inserLineClass: '',
+	inserLineNestClass: ''
+};

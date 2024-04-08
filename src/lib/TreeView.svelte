@@ -1,21 +1,18 @@
 <script lang="ts">
 	import ContextMenu from './menu/ContextMenu.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import {
-		defaultCurrentlyDraggedClass,
-		defaultExpandClass,
-		defaultPixelTreshold,
-		defaultPropNames,
-		defaultTreeClass
-	} from './constants.js';
+	import { defaultClasses, defaultPixelTreshold, defaultPropNames } from './constants.js';
 
 	import {
-		checkboxesTypes,
+		selectionModes as selectionModes,
 		type InsertionType,
 		type Node,
 		type Props,
 		type Tree,
-		type CustomizableClasses
+		type CustomizableClasses,
+		type DragEnterCallback,
+		type BeforeMovedCallback,
+		type ExpandedCallback
 	} from '$lib/types.js';
 	import { TreeHelper } from '$lib/index.js';
 	import Branch from './Branch.svelte';
@@ -23,67 +20,95 @@
 
 	const dispatch = createEventDispatcher();
 
-	//! required
-	type node = any;
-	type dragEnterCallback = (draggendNode: node, oldParent: node, newParent: node) => boolean;
-	type beforeMovedCallback = (
-		draggendNode: node,
-		oldParent: node,
-		newParent: node,
-		insertionType: string
-	) => boolean;
-	type expandedCallback = (node: node) => Promise<node[]>;
-
-	export let tree: node[]; //array of nodes with nodePath
-	export let treeId: string; //string
-	//!user set
-	//tree that will be rendered(will be same as tree if null)
-	export let recursive = false; //bool
-	export let checkboxes: checkboxesTypes = checkboxesTypes.none; //bool on of [all,perNode]
-	//if true, will show checkboxes to elements with children
-	//TODO make batter name
+	export let treeId: string;
+	/**
+	 * Array of nodes that represent tree structure.
+	 * Each node should have unique path
+	 * All tree modifications are node by modyfing this array, so you need to bind it to parent component
+	 */
+	export let tree: Node[];
+	/**
+	 * Object properties where information about node is stored
+	 */
+	export let props: Partial<Props> = {};
+	/**
+	 * Show vertical lines as visual guide
+	 */
+	export let verticalLines = false;
+	/**
+	 * Disables drag and drop and selection, expansion is still allowed
+	 */
+	export let readonly = false;
+	/**
+	 * Separater used to parse paths. It is used for getting node depth and getting parent node.
+	 * Default is '.'.
+	 */
+	export let separator = '.';
+	/**
+	 * only leaf nodes can be selected, non-leaf nodes only select/deselect its children.
+	 * Their visual state is calculated based on their children
+	 * If you set selected on non-leaf node, it will be ignored and may be deleted
+	 */
+	export let recursiveSelection = false;
+	/**
+	 * Controls if checkboxes are shown and how they behave. Default is none
+	 * TODO write about all the different modes
+	 * TODO find better name
+	 */
+	export let selectionMode: selectionModes = selectionModes.none;
+	/**
+	 * By default, in recursive mode, non-leaf checkboxes will select/deselct all its children
+	 * If you set this to true, this begaviour will be disabled and only leaf nodes will be selectable
+	 */
 	export let onlyLeafCheckboxes = false; //bool
-	//true = disabel hide = false
-	export let checkboxesDisabled = false; //bool
+	/**
+	 * Instead of showing disabled checkboxes, show blank space
+	 */
+	export let hideDisabledCheckboxes = false; //bool
+	/**
+	 * Function that will be caled when node is expanded and useCallback is set to true
+	 * It should return array of nodes that will be added to tree
+	 * If it throws error, node will be collapsed,
+	 * but user will be able to open it again and callback will be called
+	 */
+	export let expandCallback: ExpandedCallback | null = null;
+	/**
+	 * Show context menu on right click.
+	 * Its defined in slot context-menu
+	 */
+	export let showContexMenu = false;
 
-	//will allow you to move nodes between nodes and reorder them
+	/**
+	 * Automaticaly expand nodes to this level,
+	 * any user made expansion will override this.
+	 */
+	export let expandTo = 0;
+
+	/**
+	 * Classes used in tree. You can override default classes with this prop.
+	 * It is recommended to use default classes and add aditinal styles in your css
+	 */
+	export let customClasses: CustomizableClasses = defaultClasses;
+
+	/**
+	 * Log function that will be called when something happens in tree.
+	 * Used mostly for debugging
+	 */
+	export let logger: ((...data: any[]) => void) | null = null;
+
+	// props for drag and drop
 	export let dragAndDrop = false; //bool
-	//will nest of at least one of them is meet
 	export let timeToNest: number | null = null;
 	export let pixelNestTreshold = defaultPixelTreshold;
-	//change to false when last segment of nodePath is Guaranteed to be unqiue
 	export let recalculateNodePath = true;
-	//callback for dynamically disabling drop on specific node
-	export let dragEnterCallback: dragEnterCallback | null = null;
-	export let beforeMovedCallback: beforeMovedCallback | null = null;
-
-	export let showContexMenu = false;
-	export let enableVerticalLines = false;
-	export let readonly = false;
-	export let separator = '.';
-
-	export let expandedLevel = 0;
-	export let expandCallback: expandedCallback | null = null;
-
-	//* classes for customization of tree
-	export let treeClass: string = defaultTreeClass;
-	export let nodeClass: string = '';
-	export let expandedToggleClass: string = '';
-	export let collapsedToggleClass: string = '';
-	export let expandClass: string = defaultExpandClass;
-	export let inserLineClass: string = '';
-	export let inserLineNestClass: string = '';
-	export let currentlyDraggedClass: string = defaultCurrentlyDraggedClass;
-
-	export let logger: ((...data: any[]) => void) | null = null;
-	//* properties
-	export let props: Partial<Props> = {};
+	export let dragEnterCallback: DragEnterCallback | null = null;
+	export let beforeMovedCallback: BeforeMovedCallback | null = null;
 
 	//! DONT SET ONLY USED INTERNALLY
 	//TODO use context instead
 	//path of currently dragged node
 	let draggedPath: string | null = null;
-	let highlightedNode: node = null;
+	let highlightedNode: Node = null;
 
 	let dragenterTimestamp: Date | null = null;
 	//
@@ -98,16 +123,13 @@
 	// ensure tree is never null
 	$: tree, tree == null || tree == undefined ? (tree = []) : '';
 
-	// get new helper when propNames change
-	$: config = {
-		recursive,
-		recalculateNodePath,
-		checkboxes,
-		separator
-	};
-
 	$: propHelper = new PropertyHelper({ ...defaultPropNames, ...props });
-	$: helper = new TreeHelper(propHelper, config);
+	$: helper = new TreeHelper(propHelper, {
+		recursive: recursiveSelection,
+		recalculateNodePath,
+		checkboxes: selectionMode,
+		separator
+	});
 
 	// this is dirty fix for rerendering tree when tree is changed
 	$: computeVisualTree(tree), forceUpdate();
@@ -118,18 +140,7 @@
 		(propHelper.insertDisabled(highlightedNode) || canNestPos || canNestTime) &&
 		propHelper.nestDisabled(highlightedNode) !== true;
 
-	$: customClasses = {
-		treeClass,
-		nodeClass,
-		expandedToggleClass,
-		collapsedToggleClass,
-		expandClass,
-		inserLineClass,
-		inserLineNestClass,
-		currentlyDraggedClass
-	} as CustomizableClasses;
-
-	function onExpand(event: CustomEvent<{ node: node }>) {
+	function onExpand(event: CustomEvent<{ node: Node }>) {
 		const { node } = event.detail;
 
 		const changeTo = !propHelper.expanded(node);
@@ -177,7 +188,7 @@
 	}
 
 	function handleCallbackSuccess(node: Node) {
-		return (newNodes: node[]) => {
+		return (newNodes: Node[]) => {
 			debugLog('callback returned ', newNodes.length, ' new nodes', newNodes);
 
 			tree = tree.concat(newNodes);
@@ -211,7 +222,7 @@
 	}
 
 	function computeVisualTree(_tree: Tree): void {
-		if (checkboxes === checkboxesTypes.none) {
+		if (selectionMode === selectionModes.none) {
 			// no point in computing something we wont show
 			return;
 		}
@@ -220,8 +231,7 @@
 		helper.selection.recomputeAllVisualStates(_tree);
 	}
 
-	//checkboxes
-	function onSelectionChanged(event: CustomEvent<{ node: node }>) {
+	function onSelectionChanged(event: CustomEvent<{ node: Node }>) {
 		const { node } = event.detail;
 
 		const nodePath = helper.path(node);
@@ -266,7 +276,7 @@
 
 	//#region drag and drop
 
-	function handleDragStart(e: DragEvent, node: node) {
+	function handleDragStart(e: DragEvent, node: Node) {
 		// dont allos drag if is draggable is false
 		if (propHelper.isDraggable(node) === false) {
 			e.preventDefault();
@@ -281,7 +291,7 @@
 		draggedPath = helper.path(node);
 	}
 
-	function handleDragDrop(e: DragEvent, node: node, el: HTMLElement) {
+	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
 		//should be necesary but just in case
 		highlightedNode = null;
 		if (readonly || !dragAndDrop) return;
@@ -465,24 +475,27 @@
 <Branch
 	branchRootNode={null}
 	{treeId}
-	{checkboxes}
+	checkboxes={selectionMode}
 	{tree}
-	{recursive}
+	recursive={recursiveSelection}
 	{onlyLeafCheckboxes}
-	{checkboxesDisabled}
-	{expandedLevel}
-	bind:draggedPath
-	bind:dragAndDrop
-	{props}
-	bind:highlightedNode
-	on:open-ctxmenu={openContextMenu}
+	{hideDisabledCheckboxes}
+	{expandTo}
+	{draggedPath}
+	{dragAndDrop}
+	{highlightedNode}
 	{readonly}
 	{helper}
-	let:node={nodeInSlot}
 	classes={customClasses}
-	{enableVerticalLines}
+	{verticalLines}
+	on:open-ctxmenu={openContextMenu}
 	on:internal-expand={onExpand}
 	on:internal-selectionChanged={onSelectionChanged}
+	let:node={nodeInSlot}
+	childDepth={0}
+	{canNest}
+	{validTarget}
+	{insPos}
 >
 	<slot node={nodeInSlot} />
 </Branch>
