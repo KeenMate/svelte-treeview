@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { Card } from '@keenmate/svelte-adminlte';
 	import TreeView from '$lib/TreeView.svelte';
-	import { selectionModes } from '$lib/types.js';
-
+	import { SelectionModes } from '$lib/types.js';
 	const MAX_NEW_CHILDREN = 7;
 	const initalTree = [{ nodePath: '0', name: 'Root', hasChildren: true, __useCallback: true }];
 
@@ -36,7 +35,7 @@
 				let:node
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				separator=","
-				selectionMode={selectionModes.all}
+				selectionMode={SelectionModes.all}
 			>
 				{#if showObject}
 					{JSON.stringify(node)}

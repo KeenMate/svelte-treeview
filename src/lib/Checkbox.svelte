@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { selectionModes, type Node } from './types.js';
+	import { SelectionModes, type Node } from './types.js';
 	import type { TreeHelper } from '$lib/index.js';
 
-	export let checkboxes: selectionModes;
+	export let checkboxes: SelectionModes;
 	export let helper: TreeHelper;
 	export let recursive: boolean;
 	export let node: Node;
@@ -27,7 +27,7 @@
 	}
 </script>
 
-{#if checkboxes == selectionModes.perNode || checkboxes == selectionModes.all}
+{#if checkboxes == SelectionModes.perNode || checkboxes == SelectionModes.all}
 	{#if helper.selection.isSelectable(node, checkboxes)}
 		<!-- select node -->
 		{#if !recursive || (recursive && !helper.props.hasChildren(node))}
