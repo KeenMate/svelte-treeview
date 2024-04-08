@@ -18,7 +18,6 @@
 	import Branch from './Branch.svelte';
 	import { PropertyHelper } from '$lib/helpers/property-helper.js';
 
-
 	const dispatch = createEventDispatcher();
 
 	export let treeId: string;
@@ -157,10 +156,8 @@
 		(propHelper.insertDisabled(highlightedNode) || canNestPos || canNestTime) &&
 		propHelper.nestDisabled(highlightedNode) !== true;
 
-	function onExpand(event: CustomEvent<{ node: Node }>) {
-		const { node } = event.detail;
-
-		const changeTo = !propHelper.expanded(node);
+	function onExpand(event: CustomEvent<{ node: Node; changeTo: boolean }>) {
+		const { node, changeTo } = event.detail;
 
 		helper.changeExpansion(tree, node, changeTo);
 
