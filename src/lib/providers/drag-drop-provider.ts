@@ -1,8 +1,8 @@
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-import type { InsertionType, Node, NodePath, Tree } from '$lib/types.js';
+import { InsertionType, type Node, type NodePath, type Tree } from '$lib/types.js';
 
-export class DragAndDropProvider {
+export class DragDropProvider {
 	helper: TreeHelper;
 	props: PropertyHelper;
 	separator: string;
@@ -30,13 +30,13 @@ export class DragAndDropProvider {
 		tree: Node[],
 		movedNodePath: NodePath,
 		targetNodePath: NodePath,
-		insType: -1 | 0 | 1,
+		insType: InsertionType,
 		recalculateNodePath: boolean
 	): Node[] {
 		// cannot move root node
 		if (!movedNodePath) return tree;
 
-		const isNesting = insType == 0;
+		const isNesting = insType === InsertionType.nest;
 		// if you are not isNestinging, you want to be on same level
 		//so you will have same parent as target node
 		const parentNodePath = isNesting
@@ -100,7 +100,7 @@ export class DragAndDropProvider {
 
 		const index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
 
-		tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
+		tree.splice(index + (insType == InsertionType.above ? 0 : 1), 0, movedNode);
 
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 
@@ -124,13 +124,17 @@ export class DragAndDropProvider {
 	) {
 		//node id is last part of nodePath
 		let nodeId;
+
 		if (recalculateNodePath) {
 			nodeId = this.getNextNodeId(tree, parentNodePath);
 		} else {
 			//get last segment of path
-			nodeId = movedNodePath?.split(this.separator).slice(-1)[0];
+			nodeId = this.helper.getNodeId(movedNodePath);
 		}
-		return (parentNodePath ? parentNodePath + this.separator : '') + nodeId;
+
+		if (parentNodePath === null) return nodeId as string;
+
+		return `${parentNodePath}${this.separator}${nodeId}`;
 	}
 
 	updatePriority(
@@ -141,14 +145,14 @@ export class DragAndDropProvider {
 		targetNode: Node,
 		insType: InsertionType
 	) {
-		const isNesting = insType == 0;
+		const isNesting = insType == InsertionType.nest;
 
 		if (isNesting || this.props.priority(targetNode) != null) {
 			let newpriority = 0;
 			if (!isNesting) {
 				//calculate next
 				newpriority = this.props.priority(targetNode) ?? 0;
-				if (insType == -1) {
+				if (insType == InsertionType.below) {
 					newpriority += 1;
 				} else {
 					//targetNode[this.props.priority] -= 1;
@@ -192,7 +196,8 @@ export class DragAndDropProvider {
 				max = Math.max(max, num);
 			}
 		});
-		return max + 1;
+
+		return (max + 1).toString();
 	}
 
 	getInsertionPosition(e: DragEvent, element: HTMLElement): InsertionType {
@@ -200,19 +205,8 @@ export class DragAndDropProvider {
 		const half = targetCords.bottom - targetCords.height / 2;
 
 		if (e.y < half) {
-			return 1;
+			return InsertionType.below;
 		}
-		return -1;
-	}
-
-	huminifyInsType(insType: InsertionType): string {
-		switch (insType) {
-			case 1:
-				return 'before';
-			case 0:
-				return 'inside';
-			case -1:
-				return 'after';
-		}
+		return InsertionType.above;
 	}
 }

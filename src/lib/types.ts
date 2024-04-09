@@ -30,7 +30,11 @@ export enum SelectionModes {
 export type Node = unknown;
 
 export type Tree = Node[];
-export type InsertionType = -1 | 0 | 1;
+export enum InsertionType {
+	above = 'above',
+	below = 'below',
+	nest = 'nest'
+}
 export type NodePath = string | null;
 
 export type CustomizableClasses = {
@@ -45,15 +49,18 @@ export type CustomizableClasses = {
 };
 
 export type DragEnterCallback = (draggendNode: Node, oldParent: Node, newParent: Node) => boolean;
+
 export type BeforeMovedCallback = (
 	draggendNode: Node,
 	oldParent: Node,
 	newParent: Node,
 	insertionType: string
 ) => boolean;
+
 export type ExpandedCallback = (node: Node) => Promise<Node[]>;
+
 export type HelperConfig = {
-	separator?: string;
+	separator: string;
 	recursive?: boolean;
 	recalculateNodePath?: boolean;
 	checkboxes?: SelectionModes;

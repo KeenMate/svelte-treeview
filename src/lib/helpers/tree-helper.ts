@@ -2,12 +2,13 @@ import orderBy from 'lodash.unionby'; // used by tree merge
 import uniqueBy from 'lodash.uniqby'; // used by tree merge
 import type { Node, NodePath, HelperConfig, Tree } from '$lib/types.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
+import { defaultConfig } from '$lib/constants.js';
 
 export class TreeHelper {
 	props: PropertyHelper;
 	config: HelperConfig;
 
-	constructor(props: PropertyHelper, config: HelperConfig = {}) {
+	constructor(props: PropertyHelper, config: HelperConfig = defaultConfig) {
 		this.props = props;
 		this.config = config;
 	}
@@ -170,5 +171,14 @@ export class TreeHelper {
 			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
 		);
 		return tree;
+	}
+
+	getNodeId(nodePath: NodePath) {
+		if (nodePath == null) {
+			console.warn('getting node id of null node path');
+			return null;
+		}
+
+		return nodePath?.split(this.config.separator).slice(-1)[0];
 	}
 }
