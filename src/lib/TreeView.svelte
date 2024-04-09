@@ -17,6 +17,7 @@
 	import { TreeHelper } from '$lib/index.js';
 	import Branch from './Branch.svelte';
 	import { PropertyHelper } from '$lib/helpers/property-helper.js';
+	import { TreeStore } from '$lib/tree.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -134,21 +135,30 @@
 
 	// ensure tree is never null
 	$: tree, tree == null || tree == undefined ? (tree = []) : '';
-
 	$: propHelper = new PropertyHelper({ ...defaultPropNames, ...props });
-	$: helper = new TreeHelper(propHelper, {
+	$: treeStore = new TreeStore(propHelper, {
 		recursive: recursiveSelection,
-		recalculateNodePath,
 		checkboxes: selectionMode,
 		separator
 	});
 
-	$: filteredTree = helper.searchTree(tree, filter);
+	$: treeStore.tree.set(tree);
+	$: treeStore.tree.subscribe((updatedTree) => (tree = updatedTree));
+
+	$: filteredTree = treeStore.filteredTree(filter);
+
+	$: helper = new TreeHelper(propHelper, {
+		recursive: recursiveSelection,
+		checkboxes: selectionMode,
+		separator
+	});
 
 	// compute vissual tree still caleed twice, because if we force update changes tree
 	// which fires this event again
 	// TODO fix computeVisualTree beiing called twice
-	$: recursiveSelection && selectionMode !== SelectionModes.none && computeVisualTree(filteredTree),
+	$: recursiveSelection &&
+		selectionMode !== SelectionModes.none &&
+		computeVisualTree($filteredTree),
 		forceUpdate();
 
 	//if insert is disabled => nest right away and never nest if its disabled
@@ -159,11 +169,9 @@
 	function onExpand(event: CustomEvent<{ node: Node; changeTo: boolean }>) {
 		const { node, changeTo } = event.detail;
 
-		helper.changeExpansion(tree, node, changeTo);
+		treeStore.changeExpansion(node, changeTo);
 
-		debugLog("changed expansion of node '", helper.path(node), "' to ", changeTo);
-
-		forceUpdate();
+		debugLog("changed expansion of node '", propHelper.path(node), "' to ", changeTo);
 
 		//trigger callback if it is present and node has useCallback property set to true
 		if (changeTo) {
@@ -191,7 +199,7 @@
 		if (expandCallback == null) {
 			console.warn(
 				'expandCallback is not set, but useCallback is set to true on node with path',
-				helper.path(node)
+				propHelper.path(node)
 			);
 			return;
 		}
@@ -228,13 +236,6 @@
 		};
 	}
 
-	// TODO remove and expose function from package
-	export function changeAllExpansion(changeTo: boolean) {
-		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
-
-		tree = helper.changeEveryExpansion(tree, changeTo);
-	}
-
 	function computeVisualTree(_tree: Tree): void {
 		if (selectionMode === SelectionModes.none) {
 			// no point in computing something we wont show
@@ -248,7 +249,7 @@
 	function onSelectionChanged(event: CustomEvent<{ node: Node }>) {
 		const { node } = event.detail;
 
-		const nodePath = helper.path(node);
+		const nodePath = propHelper.path(node);
 
 		const changeTo = !helper.selection.isSelected(node);
 
@@ -289,199 +290,199 @@
 	}
 
 	//#region drag and drop
+	// function handleDragStart(e: DragEvent, node: Node) {
+	// 	// dont allos drag if is draggable is false
+	// 	if (propHelper.isDraggable(node) === false) {
+	// 		e.preventDefault();
+	// 		return;
+	// 	}
 
-	function handleDragStart(e: DragEvent, node: Node) {
-		// dont allos drag if is draggable is false
-		if (propHelper.isDraggable(node) === false) {
-			e.preventDefault();
-			return;
-		}
+	// 	console.log('dragstart from: ' + propHelper.path(node));
+	// 	//@ts-ignore
+	// 	e.dataTransfer.dropEffect = 'move';
+	// 	//@ts-ignore
+	// 	e.dataTransfer.setData('node_id', propHelper.path(node));
+	// 	draggedPath = propHelper.path(node);
+	// }
 
-		console.log('dragstart from: ' + helper.path(node));
-		//@ts-ignore
-		e.dataTransfer.dropEffect = 'move';
-		//@ts-ignore
-		e.dataTransfer.setData('node_id', helper.path(node));
-		draggedPath = helper.path(node);
-	}
+	// function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
+	// 	//should be necesary but just in case
+	// 	highlightedNode = null;
+	// 	if (readonly || !dragAndDrop) return;
 
-	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
-		//should be necesary but just in case
-		highlightedNode = null;
-		if (readonly || !dragAndDrop) return;
+	// 	//@ts-ignore
+	// 	draggedPath = e.dataTransfer.getData('node_id');
 
-		//@ts-ignore
-		draggedPath = e.dataTransfer.getData('node_id');
+	// 	console.log(draggedPath + ' dropped on: ' + propHelper.path(node));
 
-		console.log(draggedPath + ' dropped on: ' + helper.path(node));
+	// 	//important to check if timetonest is set, otherwise you could spend 30 minutes fixing this shit :)
+	// 	if (timeToNest) {
+	// 		const nowTimestamp = new Date();
+	// 		canNestTime =
+	// 			(dragenterTimestamp ? nowTimestamp.getTime() - dragenterTimestamp.getTime() : 1) >
+	// 			timeToNest;
+	// 	}
 
-		//important to check if timetonest is set, otherwise you could spend 30 minutes fixing this shit :)
-		if (timeToNest) {
-			const nowTimestamp = new Date();
-			canNestTime =
-				(dragenterTimestamp ? nowTimestamp.getTime() - dragenterTimestamp.getTime() : 1) >
-				timeToNest;
-		}
+	// 	let newNode = helper.findNode(tree, draggedPath);
 
-		let newNode = helper.findNode(tree, draggedPath);
+	// 	let oldNode = { ...(newNode as any) };
+	// 	let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath));
 
-		let oldNode = { ...(newNode as any) };
-		let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath));
+	// 	let insType = canNest ? 0 : helper.dragDrop.getInsertionPosition(e, el);
 
-		let insType = canNest ? 0 : helper.dragDrop.getInsertionPosition(e, el);
+	// 	//cancel move if its not valid
+	// 	if (insType == 0 && propHelper.nestDisabled(node) === true) return;
+	// 	else if ((insType == -1 || insType == 1) && propHelper.insertDisabled(node) === true) return;
 
-		//cancel move if its not valid
-		if (insType == 0 && propHelper.nestDisabled(node) === true) return;
-		else if ((insType == -1 || insType == 1) && propHelper.insertDisabled(node) === true) return;
+	// 	//callback can cancell move
+	// 	if (
+	// 		beforeMovedCallback &&
+	// 		beforeMovedCallback(oldNode, oldParent, node, helper.dragDrop.huminifyInsType(insType)) ===
+	// 			false
+	// 	)
+	// 		return;
 
-		//callback can cancell move
-		if (
-			beforeMovedCallback &&
-			beforeMovedCallback(oldNode, oldParent, node, helper.dragDrop.huminifyInsType(insType)) ===
-				false
-		)
-			return;
+	// 	tree = helper.dragDrop.moveNode(
+	// 		tree,
+	// 		draggedPath,
+	// 		propHelper.path(node),
+	// 		insType,
+	// 		recalculateNodePath
+	// 	);
 
-		tree = helper.dragDrop.moveNode(
-			tree,
-			draggedPath,
-			helper.path(node),
-			insType,
-			recalculateNodePath
-		);
+	// 	let newParent =
+	// 		helper.findNode(tree, helper.getParentNodePath(propHelper.path(newNode))) ?? null;
 
-		let newParent = helper.findNode(tree, helper.getParentNodePath(helper.path(newNode))) ?? null;
+	// 	dispatch('moved', {
+	// 		oldParent: oldParent,
+	// 		newParent: newParent,
+	// 		oldNode: oldNode,
+	// 		newNode: newNode,
+	// 		targetNode: node,
+	// 		insType: helper.dragDrop.huminifyInsType(insType)
+	// 	});
 
-		dispatch('moved', {
-			oldParent: oldParent,
-			newParent: newParent,
-			oldNode: oldNode,
-			newNode: newNode,
-			targetNode: node,
-			insType: helper.dragDrop.huminifyInsType(insType)
-		});
+	// 	//reset props
+	// 	dragenterTimestamp = null;
+	// 	draggedPath = null;
+	// 	highlightedNode = null;
+	// }
 
-		//reset props
-		dragenterTimestamp = null;
-		draggedPath = null;
-		highlightedNode = null;
-	}
+	// function handleDragOver(e: DragEvent, node: Node, el: HTMLElement) {
+	// 	insPos = helper.dragDrop.getInsertionPosition(e, el);
 
-	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement) {
-		insPos = helper.dragDrop.getInsertionPosition(e, el);
+	// 	//if you are further away from right then treshold allow nesting
+	// 	// @ts-ignore
+	// 	let diff = e.x - e.target?.getBoundingClientRect()?.x;
+	// 	if (pixelNestTreshold && diff > pixelNestTreshold) {
+	// 		canNestPos = true;
+	// 	} else {
+	// 		canNestPos = false;
+	// 	}
 
-		//if you are further away from right then treshold allow nesting
-		// @ts-ignore
-		let diff = e.x - e.target?.getBoundingClientRect()?.x;
-		if (pixelNestTreshold && diff > pixelNestTreshold) {
-			canNestPos = true;
-		} else {
-			canNestPos = false;
-		}
+	// 	//allow drop if valid target
+	// 	if (validTarget) e.preventDefault();
+	// }
 
-		//allow drop if valid target
-		if (validTarget) e.preventDefault();
-	}
+	// function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
+	// 	setTimeout(() => {
+	// 		insPos = helper.dragDrop.getInsertionPosition(e, el);
 
-	function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
-		setTimeout(() => {
-			insPos = helper.dragDrop.getInsertionPosition(e, el);
+	// 		validTarget = true;
+	// 		dragenterTimestamp = new Date();
+	// 		// will cause flashing when moving wrom node to node while be able to nest
+	// 		//* have to be here if you only use time
+	// 		highlightedNode = node;
 
-			validTarget = true;
-			dragenterTimestamp = new Date();
-			// will cause flashing when moving wrom node to node while be able to nest
-			//* have to be here if you only use time
-			highlightedNode = node;
+	// 		if (timeToNest) {
+	// 			canNestTime = false;
 
-			if (timeToNest) {
-				canNestTime = false;
+	// 			//this is so that only one timeout is ticking at one time
+	// 			clearTimeout(dragTimeout);
 
-				//this is so that only one timeout is ticking at one time
-				clearTimeout(dragTimeout);
+	// 			dragTimeout = setTimeout(() => {
+	// 				canNestTime = true;
+	// 			}, timeToNest);
+	// 		}
 
-				dragTimeout = setTimeout(() => {
-					canNestTime = true;
-				}, timeToNest);
-			}
+	// 		//dont allow drop on child element and if both insertDisabled and nestDisabled to true
+	// 		if (
+	// 			propHelper.path(node)?.startsWith(draggedPath ?? '') ||
+	// 			(propHelper.insertDisabled(node) === true && propHelper.nestDisabled(node) === true)
+	// 		) {
+	// 			validTarget = false;
+	// 		}
 
-			//dont allow drop on child element and if both insertDisabled and nestDisabled to true
-			if (
-				helper.path(node)?.startsWith(draggedPath ?? '') ||
-				(propHelper.insertDisabled(node) === true && propHelper.nestDisabled(node) === true)
-			) {
-				validTarget = false;
-			}
+	// 		//if defined calling callback
+	// 		if (dragEnterCallback) {
+	// 			//get node for event
+	// 			let draggedNode = helper.findNode(tree, draggedPath ?? '');
+	// 			let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath ?? ''));
 
-			//if defined calling callback
-			if (dragEnterCallback) {
-				//get node for event
-				let draggedNode = helper.findNode(tree, draggedPath ?? '');
-				let oldParent = helper.findNode(tree, helper.getParentNodePath(draggedPath ?? ''));
+	// 			//callback returning false means that it isnt valid target
+	// 			if (dragEnterCallback(draggedNode, oldParent, node) === false) {
+	// 				validTarget = false;
+	// 			}
+	// 		}
+	// 	}, 1);
+	// 	e.preventDefault();
+	// }
 
-				//callback returning false means that it isnt valid target
-				if (dragEnterCallback(draggedNode, oldParent, node) === false) {
-					validTarget = false;
-				}
-			}
-		}, 1);
-		e.preventDefault();
-	}
+	// function handleDragEnd(e: DragEvent, node: Node) {
+	// 	//reset prop on next tick
+	// 	setTimeout(() => {
+	// 		draggedPath = null;
+	// 		highlightedNode = null;
+	// 	}, 1);
+	// }
 
-	function handleDragEnd(e: DragEvent, node: Node) {
-		//reset prop on next tick
-		setTimeout(() => {
-			draggedPath = null;
-			highlightedNode = null;
-		}, 1);
-	}
-
-	function handleDragleave(e: DragEvent, node: Node, el: HTMLElement) {
-		// highlightedNode = null;
-	}
-	/**
-	 *check if this node is one being hovered over (highlited) and is valid target
-	 */
-	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
-		return validTarget && helper.path(highlitedNode) == helper.path(node);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightNesting(
-		node: Node,
-		highlitedNode: Node,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		return (
-			canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			propHelper.nestDisabled(node) !== true
-		);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightInsert(
-		node: Node,
-		highlitedNode: Node,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		return (
-			!canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			propHelper.insertDisabled(node) !== true
-		);
-	}
+	// function handleDragleave(e: DragEvent, node: Node, el: HTMLElement) {
+	// 	// highlightedNode = null;
+	// }
+	// /**
+	//  *check if this node is one being hovered over (highlited) and is valid target
+	//  */
+	// function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
+	// 	return validTarget && propHelper.path(highlitedNode) == propHelper.path(node);
+	// }
+	// /**
+	//  * returns true, it should highlight nesting on this node
+	//  * @param node node
+	//  * @param highlitedNode highlited node
+	//  * @param validTarget valid target
+	//  * @param canNest can nest
+	//  */
+	// function highlightNesting(
+	// 	node: Node,
+	// 	highlitedNode: Node,
+	// 	validTarget: boolean,
+	// 	canNest: boolean
+	// ) {
+	// 	return (
+	// 		canNest &&
+	// 		highlighThisNode(node, highlitedNode, validTarget) &&
+	// 		propHelper.nestDisabled(node) !== true
+	// 	);
+	// }
+	// /**
+	//  * returns true, it should highlight nesting on this node
+	//  * @param node node
+	//  * @param highlitedNode highlited node
+	//  * @param validTarget valid target
+	//  * @param canNest can nest
+	//  */
+	// function highlightInsert(
+	// 	node: Node,
+	// 	highlitedNode: Node,
+	// 	validTarget: boolean,
+	// 	canNest: boolean
+	// ) {
+	// 	return (
+	// 		!canNest &&
+	// 		highlighThisNode(node, highlitedNode, validTarget) &&
+	// 		propHelper.insertDisabled(node) !== true
+	// 	);
+	// }
 
 	//#endregion
 </script>
@@ -490,7 +491,7 @@
 	branchRootNode={null}
 	{treeId}
 	checkboxes={selectionMode}
-	tree={filteredTree}
+	tree={$filteredTree}
 	recursive={recursiveSelection}
 	{onlyLeafCheckboxes}
 	{hideDisabledCheckboxes}

@@ -56,7 +56,7 @@ test('getChildrenWithCheckboxes test root', () => {
 	// from root
 	const children = helper.selection.getSelectableDirectChildren(tree, null);
 
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 	expect(paths).toEqual(['0', '1', '2', '3']);
 });
 
@@ -66,7 +66,7 @@ test('getChildrenWithCheckboxes parent is normal node', () => {
 
 	// from root
 	const children = helper.selection.getSelectableDirectChildren(tree, '1');
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 	expect(paths).toEqual(['1.4', '1.6', '1.7', '1.8', '1.9']);
 });
 
@@ -76,7 +76,7 @@ test('getChildrenWithCheckboxes parent is leaf node', () => {
 
 	// from root
 	const children = helper.selection.getSelectableDirectChildren(tree, '1.4');
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 	expect(paths).toEqual([]);
 });
 
@@ -111,7 +111,7 @@ test('setSelection recursive all children are leaf', () => {
 
 	const children = helper.getDirectChildren(tree, parentNodePath);
 
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 	expect(paths).toEqual(['1.7.10', '1.7.11']);
 
 	let newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
@@ -140,7 +140,7 @@ test('setSelection recursive all children are not leaf', () => {
 
 	const children = helper.allCHildren(tree, parentNodePath);
 
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 	expect(paths).toEqual(['1.4', '1.6', '1.7', '1.7.10', '1.7.11', '1.8', '1.9']);
 
 	let newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
@@ -167,9 +167,9 @@ test('setSelection recursive parent is root', () => {
 
 	const children = helper.allCHildren(tree, parentNodePath);
 
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => helper.props.path(node));
 
-	expect(paths).toEqual(helper.allCHildren(tree, null).map((node) => helper.path(node)));
+	expect(paths).toEqual(helper.allCHildren(tree, null).map((node) => helper.props.path(node)));
 
 	let newChildrenSelected = children.map((node) => helper.selection.isSelected(node));
 

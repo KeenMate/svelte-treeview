@@ -1,3 +1,4 @@
+import { getParentNodePath } from '$lib/helpers/nodepath-helpers.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import type { InsertionType, Node, NodePath, Tree } from '$lib/types.js';
@@ -12,10 +13,6 @@ export class DragAndDropHelper {
 		this.props = treeHelper.props;
 
 		this.separator = this.helper.config.separator ?? '.';
-	}
-
-	path(node: Node) {
-		return this.helper.path(node);
 	}
 
 	/**
@@ -41,14 +38,14 @@ export class DragAndDropHelper {
 		//so you will have same parent as target node
 		const parentNodePath = isNesting
 			? targetNodePath
-			: this.helper.getParentNodePath(targetNodePath);
+			: getParentNodePath(targetNodePath, this.separator);
 
 		//trying to move parent to child
 		if (parentNodePath?.startsWith(movedNodePath)) {
 			return tree;
 		}
 
-		const changedParent = this.helper.getParentNodePath(movedNodePath) !== parentNodePath;
+		const changedParent = getParentNodePath(targetNodePath, this.separator) !== parentNodePath;
 
 		let newNodePath = movedNodePath;
 
@@ -71,20 +68,20 @@ export class DragAndDropHelper {
 		//move nodes
 		tree = tree.map((node) => {
 			//make sure that parent's haschild is set to true, so that children are visible
-			if (this.path(node) == parentNodePath) {
+			if (this.props.path(node) == parentNodePath) {
 				this.props.setHasChildren(node, true);
 				this.props.setExpanded(node, true);
 			}
 
 			//move moved nodes to new location ( if location is being changed)
-			if (changedParent && this.path(node)?.startsWith(movedNodePath)) {
+			if (changedParent && this.props.path(node)?.startsWith(movedNodePath)) {
 				//replace old parent with new one
-				const newPath = this.path(node)?.replace(movedNodePath, newNodePath) ?? null;
+				const newPath = this.props.path(node)?.replace(movedNodePath, newNodePath) ?? null;
 				this.props.setPath(node, newPath);
 			}
 
 			//if it is moved node
-			if (this.path(node) === newNodePath) {
+			if (this.props.path(node) === newNodePath) {
 				movedNode = node;
 
 				//? not sure if this is best
@@ -95,20 +92,20 @@ export class DragAndDropHelper {
 
 		//* insert node at right possition of array
 
-		const oldIndex = tree.findIndex((x) => this.path(x) == newNodePath);
+		const oldIndex = tree.findIndex((x) => this.props.path(x) == newNodePath);
 		tree.splice(oldIndex, 1);
 
-		const index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
+		const index = tree.findIndex((x) => this.props.path(x) == this.props.path(targetNode));
 
 		tree.splice(index + (insType == 1 ? 0 : 1), 0, movedNode);
 
 		//TODO maybe add option to setting this.hasChildren to false when moved last children
 
 		//hide plus icon if parent of moved node doesnt have any more children
-		const oldParent = this.helper.findNode(tree, this.helper.getParentNodePath(movedNodePath));
+		const oldParent = this.helper.findNode(tree, getParentNodePath(movedNodePath, this.separator));
 
 		//moved last node
-		const oldParentHasChildren = this.helper.allCHildren(tree, this.path(oldParent)).length;
+		const oldParentHasChildren = this.helper.allCHildren(tree, this.props.path(oldParent)).length;
 		if (oldParent && !oldParentHasChildren) {
 			this.props.setHasChildren(oldParent, false);
 		}
@@ -173,8 +170,8 @@ export class DragAndDropHelper {
 		insertedPriority = -1
 	) {
 		let nextPriority = insertedPriority + 1;
-		this.OrderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
-			if (this.props.priority(node) >= insertedPriority && this.path(node) != movedNodePath) {
+		this.helper.orderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
+			if (this.props.priority(node) >= insertedPriority && this.props.path(node) != movedNodePath) {
 				this.props.setPriority(node, nextPriority++);
 			}
 		});
@@ -185,10 +182,12 @@ export class DragAndDropHelper {
 		let max = 0;
 		//findes biggest nodeNumber for
 		this.helper.allCHildren(tree, parentPath).forEach((node) => {
-			const parent = this.helper.getParentNodePath(this.path(node));
+			const parent = getParentNodePath(this.props.path(node), this.helper.config.separator);
 
 			if (parent === parentPath) {
-				const num = parseInt(this.path(node)?.substring(parent ? parent.length + 1 : 0) ?? '0');
+				const num = parseInt(
+					this.props.path(node)?.substring(parent ? parent.length + 1 : 0) ?? '0'
+				);
 				max = Math.max(max, num);
 			}
 		});
@@ -214,15 +213,5 @@ export class DragAndDropHelper {
 			case -1:
 				return 'after';
 		}
-	}
-
-	/** orders nodes by priorityProp
-	 */
-	OrderByPriority(tree: Tree) {
-		// TODO investigata that it really works
-		tree.sort((a: Node, b: Node) =>
-			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
-		);
-		return tree;
 	}
 }

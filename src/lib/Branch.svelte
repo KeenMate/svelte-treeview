@@ -3,6 +3,7 @@
 	import Checkbox from './Checkbox.svelte';
 	import { SelectionModes, type InsertionType, type Node, type Tree } from '$lib/types.js';
 	import type { CustomizableClasses, TreeHelper } from '$lib/index.js';
+	import { nodePathIsChild } from '$lib/helpers/nodepath-helpers.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -27,11 +28,11 @@
 	export let validTarget: boolean;
 	export let insPos: InsertionType;
 
-	const getNodeId = (node: Node) => `${treeId}-${helper.path(node)}`;
+	const getNodeId = (node: Node) => `${treeId}-${helper.props.path(node)}`;
 
 	// get children nodes
 	function getChildren(tree: Tree) {
-		const directChildren = helper.getDirectChildren(tree, helper.path(branchRootNode));
+		const directChildren = helper.getDirectChildren(tree, helper.props.path(branchRootNode));
 
 		const orderedChildren = helper.dragDrop.OrderByPriority(directChildren);
 
@@ -86,7 +87,7 @@
 	 *check if this node is one being hovered over (highlited) and is valid target
 	 */
 	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
-		return validTarget && helper.path(highlitedNode) == helper.path(node);
+		return validTarget && helper.props.path(highlitedNode) == helper.props.path(node);
 	}
 	/**
 	 * returns true, it should highlight nesting on this node
@@ -142,11 +143,11 @@
 		{@const hasChildren = helper.props.hasChildren(node)}
 		{@const draggable = !readonly && dragAndDrop && helper.props.isDraggable(node)}
 		{@const isCurrentlyDragged =
-			draggedPath == helper.path(node) ||
-			(draggedPath && helper.path(node)?.startsWith(draggedPath))}
+			draggedPath == helper.props.path(node) ||
+			(draggedPath && helper.props.path(node)?.startsWith(draggedPath))}
 
 		<li
-			class:is-child={helper.nodePathIsChild(helper.path(node))}
+			class:is-child={nodePathIsChild(helper.props.path(node), helper.config.separator)}
 			class:has-children={hasChildren}
 			on:contextmenu|stopPropagation={(e) => {
 				dispatch('open-ctxmenu', { e: e, node: Node });

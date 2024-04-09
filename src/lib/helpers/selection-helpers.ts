@@ -1,3 +1,4 @@
+import { getParentNodePath } from '$lib/helpers/nodepath-helpers.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import { SelectionModes, type Node, type NodePath, type Tree, VisualStates } from '$lib/types.js';
@@ -11,10 +12,6 @@ export class SelectionHelper {
 		this.helper = treeHelper;
 		this.props = treeHelper.props;
 		this.recursiveMode = recursive;
-	}
-
-	private path(node: Node): NodePath {
-		return this.helper.path(node);
 	}
 
 	isSelected(node: Node): boolean {
@@ -48,7 +45,7 @@ export class SelectionHelper {
 	private changeSelectedRecursively(tree: Tree, parentNodePath: NodePath, changeTo: boolean) {
 		tree.forEach((node) => {
 			// match itself and all children
-			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
+			if (this.props.path(node)?.startsWith(parentNodePath ?? '')) {
 				//dont change if not selectable
 				if (!this.isSelectable(node, SelectionModes.all)) {
 					return;
@@ -139,7 +136,7 @@ export class SelectionHelper {
 		this.props.setVisualState(parentNode, newState);
 
 		// use recursion, because we need to traverse from node to root
-		const ParentPath = this.helper.getParentNodePath(nodePath);
+		const ParentPath = getParentNodePath(nodePath, this.helper.config.separator);
 
 		this.recomputeParentVisualState(tree, filteredTree, ParentPath);
 	}
@@ -155,7 +152,7 @@ export class SelectionHelper {
 		tree: Tree,
 		node: Node
 	): { state: VisualStates; ignore: boolean } {
-		const directChildren = this.getSelectableDirectChildren(tree, this.path(node));
+		const directChildren = this.getSelectableDirectChildren(tree, this.props.path(node));
 
 		const directChildrenStates: VisualStates[] = [];
 		// using recustion compute from leaft nodes to root

@@ -53,8 +53,7 @@ export type BeforeMovedCallback = (
 ) => boolean;
 export type ExpandedCallback = (node: Node) => Promise<Node[]>;
 export type HelperConfig = {
-	separator?: string;
+	separator: string;
 	recursive?: boolean;
-	recalculateNodePath?: boolean;
 	checkboxes?: SelectionModes;
 };
