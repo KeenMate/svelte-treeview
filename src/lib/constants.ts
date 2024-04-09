@@ -1,4 +1,9 @@
-import type { CustomizableClasses, Props } from '$lib/types.js';
+import {
+	type HelperConfig,
+	SelectionModes,
+	type CustomizableClasses,
+	type Props
+} from '$lib/types.js';
 
 export const defaultPropNames: Props = {
 	nodePath: 'nodePath',
@@ -25,4 +30,9 @@ export const defaultClasses: CustomizableClasses = {
 	collapsedToggleClass: '',
 	inserLineClass: '',
 	inserLineNestClass: ''
+};
+
+export const defaultConfig: HelperConfig = {
+	separator: '.',
+	checkboxes: SelectionModes.none
 };

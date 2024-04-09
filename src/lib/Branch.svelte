@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Checkbox from './Checkbox.svelte';
-	import { SelectionModes, type InsertionType, type Node, type Tree } from '$lib/types.js';
+	import { SelectionModes, InsertionType, type Node, type Tree } from '$lib/types.js';
 	import type { CustomizableClasses, TreeHelper } from '$lib/index.js';
 
 	const dispatch = createEventDispatcher();
@@ -148,7 +148,7 @@
 			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 		>
-			{#if insPos == 1 && insertHighlighted}
+			{#if insPos == InsertionType.above && insertHighlighted}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {classes.inserLineClass}" />
 				</div>
@@ -234,7 +234,7 @@
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos == -1 && insertHighlighted}
+			{#if insPos === InsertionType.below && insertHighlighted}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {classes.inserLineClass}" />
 				</div>
