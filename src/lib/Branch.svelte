@@ -29,15 +29,6 @@
 
 	const getNodeId = (node: Node) => `${treeId}-${helper.path(node)}`;
 
-	// get children nodes
-	function getChildren(tree: Tree) {
-		const directChildren = helper.getDirectChildren(tree, helper.path(branchRootNode));
-
-		const orderedChildren = helper.dragDrop.OrderByPriority(directChildren);
-
-		return orderedChildren;
-	}
-
 	function setExpansion(node: Node, changeTo: boolean) {
 		dispatch('internal-expand', { node: node, changeTo });
 	}
@@ -135,7 +126,7 @@
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
-	{#each getChildren(tree) as node (getNodeId(node))}
+	{#each helper.getDirectChildren(tree, helper.path(branchRootNode)) as node (getNodeId(node))}
 		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
 		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}

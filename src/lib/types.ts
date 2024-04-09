@@ -58,3 +58,10 @@ export type HelperConfig = {
 	recalculateNodePath?: boolean;
 	checkboxes?: SelectionModes;
 };
+
+export enum HighlighType {
+	nest = 'nest',
+	insertAbove = 'insert-above',
+	insertBelow = 'insert-below',
+	none = 'none'
+}
