@@ -1,21 +1,15 @@
 import orderBy from 'lodash.unionby'; // used by tree merge
 import uniqueBy from 'lodash.uniqby'; // used by tree merge
-import { SelectionHelper } from './selection-helpers.js';
-import { DragAndDropHelper } from './drag-drop-helpers.js';
-import type { Node, NodePath, HelperConfig } from '$lib/types.js';
+import type { Node, NodePath, HelperConfig, Tree } from '$lib/types.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 
 export class TreeHelper {
 	props: PropertyHelper;
 	config: HelperConfig;
-	selection: SelectionHelper;
-	dragDrop: DragAndDropHelper;
 
 	constructor(props: PropertyHelper, config: HelperConfig = {}) {
 		this.props = props;
 		this.config = config;
-		this.selection = new SelectionHelper(this, config?.recursive ?? false);
-		this.dragDrop = new DragAndDropHelper(this);
 	}
 
 	// replace with this.props.path
@@ -41,11 +35,11 @@ export class TreeHelper {
 		return childrenNodePath?.startsWith(parentNodePath ?? '');
 	}
 
-	hasChildren(tree: Node[], nodePath: NodePath) {
+	hasChildren(tree: Tree, nodePath: NodePath) {
 		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
 	}
 
-	findNode(tree: Node[], nodePath: NodePath): Node {
+	findNode(tree: Tree, nodePath: NodePath): Node {
 		return tree.find((node) => this.path(node) === nodePath) ?? null;
 	}
 
@@ -56,38 +50,38 @@ export class TreeHelper {
 		return includesSeparator;
 	}
 
-	getDirectChildren(tree: Node[], parentNodePath: NodePath) {
+	getDirectChildren(tree: Tree, parentNodePath: NodePath) {
 		const children = (tree || []).filter((x) =>
 			!parentNodePath
 				? !this.nodePathIsChild(this.path(x))
 				: this.getParentNodePath(this.path(x)) === parentNodePath
 		);
-
-		return children;
+		const ordered = this.orderByPriority(children);
+		return ordered;
 	}
 
-	allCHildren(tree: Node[], parentNodePath: NodePath) {
+	allCHildren(tree: Tree, parentNodePath: NodePath) {
 		const children = tree.filter((x) => this.isChildrenOf(parentNodePath, this.path(x)));
 		return children;
 	}
 
-	getAllLeafNodes(tree: Node[]) {
+	getAllLeafNodes(tree: Tree) {
 		return tree.filter((x) => {
 			return this.props.hasChildren(x) == undefined || this.props.hasChildren(x) == false;
 		});
 	}
 
-	joinTrees(filteredTree: Node[], tree: Node[]) {
+	joinTrees(filteredTree: Tree, tree: Tree) {
 		return tree.map((tnode) => this.findNode(filteredTree, this.path(tnode)) || tnode);
 	}
 
-	mergeTrees(oldTree: Node[], addedTree: Node[], nodePath = 'nodePath') {
+	mergeTrees(oldTree: Tree, addedTree: Tree, nodePath = 'nodePath') {
 		return orderBy(addedTree, oldTree, nodePath);
 	}
 
 	/** toggles expansion on
 	 */
-	changeExpansion(tree: Node[], node: Node, changeTo: boolean) {
+	changeExpansion(tree: Tree, node: Node, changeTo: boolean) {
 		const foundNode = this.findNode(tree, this.path(node));
 
 		this.props.setExpanded(foundNode, changeTo);
@@ -95,7 +89,7 @@ export class TreeHelper {
 
 	/** changes expansion of every node that has this.hasChildren set to true
 	 */
-	changeEveryExpansion(tree: Node[], changeTo: boolean) {
+	changeEveryExpansion(tree: Tree, changeTo: boolean) {
 		return tree.map((node) => {
 			if (this.props.hasChildren(node) == true) {
 				this.props.setExpanded(node, changeTo);
@@ -106,7 +100,7 @@ export class TreeHelper {
 
 	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
 	 */
-	expandToLevel(tree: Node[], level: number) {
+	expandToLevel(tree: Tree, level: number) {
 		return tree.map((n) => {
 			if (
 				this.props.expanded(n) == undefined &&
@@ -130,10 +124,10 @@ export class TreeHelper {
 
 	//#endregion
 
-	searchTree(tree: Node[], filter: (node: unknown) => boolean) {
+	searchTree(tree: Tree, filter: (node: unknown) => boolean) {
 		const filteredNodes = tree.filter(filter);
 
-		const resultNodes: Node[] = [];
+		const resultNodes: Tree = [];
 
 		// add all parents from each node
 		// needed so that tree can be rendered
@@ -149,7 +143,7 @@ export class TreeHelper {
 		return uniqueNodes;
 	}
 
-	getParents(tree: Node[], node: Node) {
+	getParents(tree: Tree, node: Node) {
 		const parentsPaths: NodePath[] = [];
 
 		let nodePath = this.path(node);
@@ -166,5 +160,15 @@ export class TreeHelper {
 		);
 
 		return parentNodes;
+	}
+
+	/** orders nodes by priorityProp
+	 */
+	orderByPriority(tree: Tree) {
+		// TODO investigata that it really works
+		tree.sort((a: Node, b: Node) =>
+			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
+		);
+		return tree;
 	}
 }

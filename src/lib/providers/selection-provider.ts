@@ -2,7 +2,7 @@ import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import { SelectionModes, type Node, type NodePath, type Tree, VisualStates } from '$lib/types.js';
 
-export class SelectionHelper {
+export class SelectionProvider {
 	helper: TreeHelper;
 	props: PropertyHelper;
 	recursiveMode: boolean;

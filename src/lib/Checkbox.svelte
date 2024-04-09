@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { SelectionModes, type Node } from './types.js';
 	import type { TreeHelper } from '$lib/index.js';
+	import { SelectionProvider } from '$lib/providers/selection-provider.js';
 
 	export let checkboxes: SelectionModes;
 	export let helper: TreeHelper;
@@ -12,6 +13,7 @@
 	export let readonly = false;
 
 	let indeterminate: boolean;
+
 	$: {
 		if (helper.props.visualState(node) == 'indeterminate') {
 			indeterminate = true;
@@ -19,6 +21,8 @@
 			indeterminate = false;
 		}
 	}
+	// TODO pass from root
+	$: selectionProvider = new SelectionProvider(helper, recursive);
 
 	const dispatch = createEventDispatcher();
 
@@ -28,7 +32,7 @@
 </script>
 
 {#if checkboxes == SelectionModes.perNode || checkboxes == SelectionModes.all}
-	{#if helper.selection.isSelectable(node, checkboxes)}
+	{#if selectionProvider.isSelectable(node, checkboxes)}
 		<!-- select node -->
 		{#if !recursive || (recursive && !helper.props.hasChildren(node))}
 			<input

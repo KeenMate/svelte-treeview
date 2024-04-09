@@ -2,7 +2,7 @@ import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import type { InsertionType, Node, NodePath, Tree } from '$lib/types.js';
 
-export class DragAndDropHelper {
+export class DragAndDropProvider {
 	helper: TreeHelper;
 	props: PropertyHelper;
 	separator: string;
@@ -173,7 +173,7 @@ export class DragAndDropHelper {
 		insertedPriority = -1
 	) {
 		let nextPriority = insertedPriority + 1;
-		this.OrderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
+		this.helper.orderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
 			if (this.props.priority(node) >= insertedPriority && this.path(node) != movedNodePath) {
 				this.props.setPriority(node, nextPriority++);
 			}
@@ -214,15 +214,5 @@ export class DragAndDropHelper {
 			case -1:
 				return 'after';
 		}
-	}
-
-	/** orders nodes by priorityProp
-	 */
-	OrderByPriority(tree: Tree) {
-		// TODO investigata that it really works
-		tree.sort((a: Node, b: Node) =>
-			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
-		);
-		return tree;
 	}
 }
