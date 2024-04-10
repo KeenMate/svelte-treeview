@@ -53,7 +53,7 @@
 		"svelte-multiselect": "github:KeenMate/svelte-multiselect",
 		"svelte-preprocess": "^5.0.4",
 		"tslib": "^2.4.1",
-		"typescript": "^5.0.0",
+		"typescript": "^5.4.4",
 		"vite": "^4.3.6",
 		"vitest": "^1.4.0"
 	},
