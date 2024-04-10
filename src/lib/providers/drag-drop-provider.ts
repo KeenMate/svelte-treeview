@@ -14,8 +14,14 @@ export class DragDropProvider {
 		this.separator = this.helper.config.separator ?? '.';
 	}
 
-	path(node: Node) {
-		return this.helper.path(node);
+	getInsertionPosition(e: DragEvent, element: HTMLElement): InsertionType {
+		const targetCords = element.getBoundingClientRect();
+		const half = targetCords.bottom - targetCords.height / 2;
+
+		if (e.y < half) {
+			return InsertionType.below;
+		}
+		return InsertionType.above;
 	}
 
 	/**
@@ -26,7 +32,7 @@ export class DragDropProvider {
 	 * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
 	 * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
 	 */
-	moveNode(
+	private moveNode(
 		tree: Node[],
 		movedNodePath: NodePath,
 		targetNodePath: NodePath,
@@ -116,7 +122,7 @@ export class DragDropProvider {
 		return tree;
 	}
 
-	calculateNewNodePath(
+	private calculateNewNodePath(
 		tree: Tree,
 		parentNodePath: NodePath,
 		movedNodePath: NodePath,
@@ -137,7 +143,7 @@ export class DragDropProvider {
 		return `${parentNodePath}${this.separator}${nodeId}`;
 	}
 
-	updatePriority(
+	private updatePriority(
 		tree: Tree,
 		node: Node,
 		parentNodePath: NodePath,
@@ -170,7 +176,7 @@ export class DragDropProvider {
 	 * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
 	 */
 	//? maybe it will recalculate properly if dont set insertedPriority
-	recalculatesPriorities(
+	private recalculatesPriorities(
 		tree: Tree,
 		parentNode: NodePath,
 		movedNodePath: NodePath,
@@ -185,7 +191,7 @@ export class DragDropProvider {
 	}
 
 	/** return biggest value of nodepath number that children are using +1 */
-	getNextNodeId(tree: Tree, parentPath: NodePath) {
+	private getNextNodeId(tree: Tree, parentPath: NodePath) {
 		let max = 0;
 		//findes biggest nodeNumber for
 		this.helper.allCHildren(tree, parentPath).forEach((node) => {
@@ -200,13 +206,7 @@ export class DragDropProvider {
 		return (max + 1).toString();
 	}
 
-	getInsertionPosition(e: DragEvent, element: HTMLElement): InsertionType {
-		const targetCords = element.getBoundingClientRect();
-		const half = targetCords.bottom - targetCords.height / 2;
-
-		if (e.y < half) {
-			return InsertionType.below;
-		}
-		return InsertionType.above;
+	private path(node: Node) {
+		return this.helper.path(node);
 	}
 }

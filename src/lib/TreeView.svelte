@@ -18,6 +18,7 @@
 	import Branch from './Branch.svelte';
 	import { PropertyHelper } from '$lib/helpers/property-helper.js';
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
+	import { startDrag, type DragInfo } from '$lib/stores/drag-and-drop-store.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -130,6 +131,8 @@
 	let validTarget = false;
 	let insPos: InsertionType;
 	let ctxMenu: ContextMenu;
+
+	let drag: DragInfo;
 
 	$: dragAndDrop && console.warn('Drag and drop is not supported in this version');
 
@@ -292,20 +295,27 @@
 
 	// //#region drag and drop
 
-	// function handleDragStart(e: DragEvent, node: Node) {
-	// 	// dont allos drag if is draggable is false
-	// 	if (propHelper.isDraggable(node) === false) {
-	// 		e.preventDefault();
-	// 		return;
-	// 	}
+	function onDragStart(ce: CustomEvent<{ event: DragEvent; node: Node }>) {
+		const { event, node } = ce.detail;
 
-	// 	console.log('dragstart from: ' + helper.path(node));
-	// 	//@ts-ignore
-	// 	e.dataTransfer.dropEffect = 'move';
-	// 	//@ts-ignore
-	// 	e.dataTransfer.setData('node_id', helper.path(node));
-	// 	draggedPath = helper.path(node);
-	// }
+		if (!dragAndDrop || propHelper.isDraggable(node) === false) {
+			event.preventDefault();
+			return;
+		}
+
+		drag = startDrag(node, helper, {
+			beforeMovedCallback,
+			dragEnterCallback,
+			pixelNestTreshold,
+			timeToNest
+		});
+	}
+
+	function onDragDrop(ce: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+		const { node, event, element } = ce.detail;
+
+		console.log('dropped on: ' + helper.path(node));
+	}
 
 	// function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
 	// 	//should be necesary but just in case
@@ -507,6 +517,8 @@
 	on:open-ctxmenu={openContextMenu}
 	on:internal-expand={onExpand}
 	on:internal-selectionChanged={onSelectionChanged}
+	on:internal-handleDragStart={onDragStart}
+	on:internal-handleDragDrop={onDragDrop}
 	let:node={nodeInSlot}
 	childDepth={0}
 	{canNest}

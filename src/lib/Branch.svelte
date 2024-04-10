@@ -2,7 +2,9 @@
 	import { createEventDispatcher } from 'svelte';
 	import Checkbox from './Checkbox.svelte';
 	import { SelectionModes, InsertionType, type Node, type Tree } from '$lib/types.js';
-	import type { CustomizableClasses, TreeHelper } from '$lib/index.js';
+	import { HighlighType, type CustomizableClasses, type TreeHelper } from '$lib/index.js';
+	import type { DragInfo } from '$lib/stores/drag-and-drop-store.js';
+	import { readable } from 'svelte/store';
 
 	const dispatch = createEventDispatcher();
 
@@ -18,14 +20,9 @@
 	export let expandTo: number;
 	export let classes: CustomizableClasses;
 	export let helper: TreeHelper;
-
-	export let draggedPath: string | null;
-	export let highlightedNode: Node;
 	export let childDepth: number;
 	export let branchRootNode: Node | null;
-	export let canNest: boolean;
-	export let validTarget: boolean;
-	export let insPos: InsertionType;
+	export let drag: DragInfo | null;
 
 	const getNodeId = (node: Node) => `${treeId}-${helper.path(node)}`;
 
@@ -54,7 +51,7 @@
 	}
 
 	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragStart', { node: node, event: e, element: el });
+		dispatch('internal-handleDragDrop', { node: node, event: e, element: el });
 	}
 
 	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement) {
@@ -73,51 +70,6 @@
 		dispatch('internal-handleDragLeave', { node: node, event: e, element: el });
 	}
 
-	/**
-	 *check if this node is one being hovered over (highlited) and is valid target
-	 */
-	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
-		return validTarget && helper.path(highlitedNode) == helper.path(node);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightNesting(
-		node: Node,
-		highlitedNode: Node,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		return (
-			canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			helper.props.nestDisabled(node) !== true
-		);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightInsert(
-		node: Node,
-		highlitedNode: Node,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		return (
-			!canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			helper.props.nestDisabled(node) !== true
-		);
-	}
-
 	let liElements: { [key: string]: HTMLLIElement } = {};
 </script>
 
@@ -127,14 +79,10 @@
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
 	{#each helper.getDirectChildren(tree, helper.path(branchRootNode)) as node (getNodeId(node))}
-		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
-		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
 		{@const hasChildren = helper.props.hasChildren(node)}
 		{@const draggable = !readonly && dragAndDrop && helper.props.isDraggable(node)}
-		{@const isCurrentlyDragged =
-			draggedPath == helper.path(node) ||
-			(draggedPath && helper.path(node)?.startsWith(draggedPath))}
+		{@const highligh = drag ? drag.highligh(node) : readable(HighlighType.none)}
 
 		<li
 			class:is-child={helper.nodePathIsChild(helper.path(node))}
@@ -148,7 +96,7 @@
 			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 		>
-			{#if insPos == InsertionType.above && insertHighlighted}
+			{#if $highligh === HighlighType.insertAbove}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {classes.inserLineClass}" />
 				</div>
@@ -225,6 +173,12 @@
 					on:open-ctxmenu
 					on:internal-expand
 					on:internal-selectionChanged
+					on:internal-handleDragStart
+					on:internal-handleDragDrop
+					on:internal-handleDragOver
+					on:internal-handleDragEnter
+					on:internal-handleDragEnd
+					on:internal-handleDragLeave
 					let:node={nodeNested}
 				>
 					<slot node={nodeNested} />

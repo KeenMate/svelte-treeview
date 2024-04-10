@@ -20,6 +20,11 @@ export class TreeHelper {
 
 	//#region basic helpres
 
+	getParent(tree: Tree, node: Node): Node {
+		const parentPath = this.getParentNodePath(this.path(node));
+		return this.findNode(tree, parentPath);
+	}
+
 	getParentNodePath(nodePath: NodePath): NodePath {
 		if (nodePath == null) throw new Error('cannot get parent of root');
 
