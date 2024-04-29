@@ -25,7 +25,7 @@
 	/**
 	 * Array of nodes that represent tree structure.
 	 * Each node should have unique path
-	 * All tree modifications are node by modyfing this array, so you need to bind it to parent component
+	 * All tree modifications are made by modifying this array, so you need to bind it to parent component
 	 */
 	export let tree: Node[];
 	/**
