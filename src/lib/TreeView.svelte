@@ -41,7 +41,7 @@
 	 */
 	export let readonly = false;
 	/**
-	 * Separater used to parse paths. It is used for getting node depth and getting parent node.
+	 * Separator used to parse paths. It is used for getting node depth and getting parent node.
 	 * Default is '.'.
 	 */
 	export let separator = '.';
