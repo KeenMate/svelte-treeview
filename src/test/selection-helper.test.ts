@@ -1,11 +1,13 @@
 import { PropertyHelper } from '$lib/helpers/property-helper.js';
-import { TreeHelper } from '$lib/index.js';
+import { TreeHelper, VisualState } from '$lib/index.js';
 import { SelectionProvider } from '$lib/providers/selection-provider.js';
-import { type Props, VisualStates } from '$lib/types.js';
+import type { NodeId, Props } from '$lib/types.js';
 import { expect, test } from 'vitest';
+import { expectArrayEqual } from './helpers.js';
 
 const testingProperties: Props = {
 	nodePath: 'nodePath2',
+	nodeId: 'nodePath2',
 	hasChildren: 'hasChildren2',
 	expanded: '__expanded2',
 	selected: '__selected2',
@@ -84,114 +86,111 @@ test('getChildrenWithCheckboxes parent is leaf node', () => {
 });
 
 test('setSelection non-recursive', () => {
-	const { helper, selection } = getHelper(false);
+	const { helper, selection: selectionProvider } = getHelper(false);
 	const tree = getTree(helper);
 
 	const nodePath = '1.7';
+	const nodeId = nodePath;
 
-	const node = helper.findNode(tree, nodePath);
+	let selection: NodeId[] = ['2.5'];
 
-	selection.setSelection(tree, nodePath, true);
+	selection = selectionProvider.setSelection(tree, nodePath, true, selection);
 
-	expect(selection.isSelected(node)).toBe(true);
+	expectArrayEqual(selection, [nodeId, '2.5']);
 
-	selection.setSelection(tree, nodePath, false);
+	selection = selectionProvider.setSelection(tree, nodePath, false, selection);
 
-	expect(selection.isSelected(node)).toBe(false);
+	expectArrayEqual(selection, ['2.5']);
 });
 
 test('setSelection recursive all children are leaf', () => {
-	const { helper, selection } = getHelper(true);
+	const { helper, selection: selectionProvider } = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = '1.7';
-
 	//test it changes all selection not just toggles
-	selection.setSelection(tree, '1.7.10', true);
+	let selection: NodeId[] = ['1.7.10'];
 
-	selection.setSelection(tree, parentNodePath, true);
-	selection.recomputeAllVisualStates(tree);
+	selection = selectionProvider.setSelection(tree, parentNodePath, true, selection);
+	let visualStates = selectionProvider.computeVisualStates(tree, selection);
+
+	// check that intermidiate is calcullated correcly
+	expect(visualStates['1']).toBe(VisualState.indeterminate);
 
 	const children = helper.getDirectChildren(tree, parentNodePath);
 
-	const paths = children.map((node) => helper.path(node));
-	expect(paths).toEqual(['1.7.10', '1.7.11']);
+	const childrenIds = children.map((node) => helper.props.id(node));
+	expectArrayEqual(childrenIds, ['1.7.10', '1.7.11']);
 
-	let newChildrenSelected = children.map((node) => selection.isSelected(node));
-	expect(newChildrenSelected).not.toContain(false);
+	// all children should be selected
+	expectArrayEqual(selection, childrenIds);
 
-	selection.setSelection(tree, '1.7.10', false);
+	// remove one children
+	selection = selection.filter((x) => x !== '1.7.10');
 
-	selection.setSelection(tree, parentNodePath, false);
-	selection.recomputeAllVisualStates(tree);
+	selection = selectionProvider.setSelection(tree, parentNodePath, false, selection);
+	visualStates = selectionProvider.computeVisualStates(tree, selection);
 
-	newChildrenSelected = children.map((node) => selection.isSelected(node));
-	expect(newChildrenSelected).not.toContain(true);
+	expect(visualStates['1']).toBe(VisualState.notSelected);
+	expect(visualStates['1.7']).toBe(VisualState.notSelected);
+
+	expect(selection).toEqual([]);
 });
 
 test('setSelection recursive all children are not leaf', () => {
-	const { helper, selection } = getHelper(true);
+	const { helper, selection: selectionProvider } = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = '1';
+	let selection: NodeId[] = ['1.7.10'];
 
-	//test it changes all selection not just toggles
-	selection.setSelection(tree, '1.7.10', true);
+	selection = selectionProvider.setSelection(tree, parentNodePath, true, selection);
+	let visualStates = selectionProvider.computeVisualStates(tree, selection);
 
-	selection.setSelection(tree, parentNodePath, true);
-	selection.recomputeAllVisualStates(tree);
+	expect(visualStates['1']).toBe(VisualState.selected);
 
-	const children = helper.allCHildren(tree, parentNodePath);
+	const leafChildrenIds = helper
+		.allCHildren(tree, parentNodePath)
+		.filter((node) => !helper.props.hasChildren(node))
+		.map((node) => helper.props.id(node));
 
-	const paths = children.map((node) => helper.path(node));
-	expect(paths).toEqual(['1.4', '1.6', '1.7', '1.7.10', '1.7.11', '1.8', '1.9']);
+	expectArrayEqual(selection, leafChildrenIds);
 
-	let newChildrenSelected = children.map((node) => selection.isSelected(node));
+	selection = selectionProvider.setSelection(tree, '1.7.10', false, selection);
+	selection = selectionProvider.setSelection(tree, parentNodePath, false, selection);
+	visualStates = selectionProvider.computeVisualStates(tree, selection);
 
-	expect(newChildrenSelected).not.toContain(false);
-
-	selection.setSelection(tree, '1.7.10', false);
-
-	selection.setSelection(tree, parentNodePath, false);
-	selection.recomputeAllVisualStates(tree);
-
-	newChildrenSelected = children.map((node) => selection.isSelected(node));
-	expect(newChildrenSelected).not.toContain(true);
+	expect(visualStates['1']).toBe(VisualState.notSelected);
+	expect(selection).toEqual([]);
 });
 
 test('setSelection recursive parent is root', () => {
-	const { helper, selection } = getHelper(true);
+	const { helper, selection: selectionProvider } = getHelper(true);
 	const tree = getTree(helper);
 
 	const parentNodePath = null;
 
-	selection.setSelection(tree, parentNodePath, true);
-	selection.recomputeAllVisualStates(tree);
+	let selection: NodeId[] = [];
 
-	const children = helper.allCHildren(tree, parentNodePath);
+	selection = selectionProvider.setSelection(tree, parentNodePath, true, selection);
 
-	const paths = children.map((node) => helper.path(node));
+	const allChildrenIds = helper
+		.allCHildren(tree, parentNodePath)
+		.filter((node) => !helper.props.hasChildren(node))
+		.map((node) => helper.props.id(node));
 
-	expect(paths).toEqual(helper.allCHildren(tree, null).map((node) => helper.path(node)));
+	expectArrayEqual(allChildrenIds, selection);
 
-	let newChildrenSelected = children.map((node) => selection.isSelected(node));
+	selection = selectionProvider.setSelection(tree, parentNodePath, false, selection);
 
-	expect(newChildrenSelected).not.toContain(false);
-
-	selection.setSelection(tree, parentNodePath, false);
-	selection.recomputeAllVisualStates(tree);
-
-	newChildrenSelected = children.map(
-		(node) => selection.isSelected(node) || helper.props.visualState(node) === VisualStates.selected
-	);
-	expect(newChildrenSelected).not.toContain(true);
+	expect(selection).toEqual([]);
 });
 
 test('setSelection recursive if one child has hasChildren set to true but no actual children', () => {
 	// expected behavior is that graphically it will be selected
 	// but logically it will be ignored
 
-	const { helper, selection } = getHelper(true);
+	const { helper, selection: selectionProvider } = getHelper(true);
 	const tree = getTree(helper, [{ nodePath: '2.12', hasChildren: true }]);
 
 	const parentNodePath = '2';
@@ -199,18 +198,19 @@ test('setSelection recursive if one child has hasChildren set to true but no act
 	const children = helper.allCHildren(tree, parentNodePath);
 	expect(children.length).toBe(2);
 
-	selection.setSelection(tree, parentNodePath, true);
-	selection.recomputeAllVisualStates(tree);
+	let selected: NodeId[] = [];
 
-	const selected = children.map((node) => selection.isSelected(node));
+	selected = selectionProvider.setSelection(tree, parentNodePath, true, selected);
+	let visualStates = selectionProvider.computeVisualStates(tree, selected);
 
-	expect(selected).not.toContain(false);
+	expectArrayEqual(selected, ['2.5']);
 
-	selection.setSelection(tree, parentNodePath, false);
-	selection.recomputeAllVisualStates(tree);
+	selected = selectionProvider.setSelection(tree, parentNodePath, false, selected);
+
+	visualStates = selectionProvider.computeVisualStates(tree, selected);
 
 	// we can never unselect node that has hasChildren set to true but doesnt have any children
-	expect(selection.isSelected(helper.findNode(tree, '2.12'))).toBe(true);
-	expect(selection.isSelected(helper.findNode(tree, '2.5'))).toBe(false);
-	expect(selection.isSelected(helper.findNode(tree, '2'))).toBe(false);
+	expect(selectionProvider.isSelected('2.12', visualStates, selected)).toBe(true);
+	expect(selectionProvider.isSelected('2.5', visualStates, selected)).toBe(false);
+	expect(selectionProvider.isSelected('2', visualStates, selected)).toBe(false);
 });

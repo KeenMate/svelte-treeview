@@ -7,6 +7,7 @@ import {
 
 export const defaultPropNames: Props = {
 	nodePath: 'nodePath',
+	nodeId: 'nodePath',
 	hasChildren: 'hasChildren',
 	expanded: '__expanded',
 	selected: '__selected',

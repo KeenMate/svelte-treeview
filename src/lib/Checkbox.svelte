@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { SelectionModes, type Node } from './types.js';
+	import { SelectionModes, VisualState, type Node } from './types.js';
 	import type { TreeHelper } from '$lib/index.js';
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
 
@@ -47,14 +47,14 @@
 			<input
 				type="checkbox"
 				on:click={() => onSelect(node)}
-				checked={helper.props.visualState(node) == 'true'}
-				bind:indeterminate
+				checked={helper.props.visualState(node) === VisualState.selected}
+				{indeterminate}
 				disabled={readonly}
 			/>
 		{:else}
 			<input
 				type="checkbox"
-				on:click|preventDefault={null}
+				on:click={null}
 				disabled={true}
 				class:invisible={hideDisabledCheckboxes}
 			/>

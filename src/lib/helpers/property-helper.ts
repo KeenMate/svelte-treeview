@@ -1,4 +1,4 @@
-import type { Node, NodePath, Props, VisualStates } from '$lib/types.js';
+import type { Node, NodePath, Props, VisualState } from '$lib/types.js';
 
 export class PropertyHelper {
 	props: Props;
@@ -14,8 +14,16 @@ export class PropertyHelper {
 		(node as any)[key] = value;
 	}
 
-	path(node: Node): NodePath {
-		// root node
+	id(node: Node): string {
+		return this.getVal(node, this.props.nodeId);
+	}
+
+	setId(node: Node, id: string) {
+		this.setVal(node, this.props.nodeId, id);
+	}
+
+	path(node: Node | null): NodePath {
+		// root nodeF
 		if (node === null) {
 			return null;
 		}
@@ -75,7 +83,10 @@ export class PropertyHelper {
 		this.setVal(node, this.props.isDraggable, isDraggable);
 	}
 
-	insertDisabled(node: Node): boolean {
+	insertDisabled(node: Node | null): boolean {
+		if (node === null) {
+			return false;
+		}
 		return this.getVal(node, this.props.insertDisabled) ?? false;
 	}
 
@@ -83,7 +94,10 @@ export class PropertyHelper {
 		this.setVal(node, this.props.insertDisabled, insertDisabled);
 	}
 
-	nestDisabled(node: Node): boolean {
+	nestDisabled(node: Node | null): boolean {
+		if (node === null) {
+			return false;
+		}
 		return this.getVal(node, this.props.nestDisabled) ?? false;
 	}
 
@@ -99,11 +113,11 @@ export class PropertyHelper {
 		this.setVal(node, this.props.checkbox, checkbox);
 	}
 
-	visualState(node: Node): VisualStates | null {
+	visualState(node: Node): VisualState | null {
 		return this.getVal(node, this.props.visualState) ?? null;
 	}
 
-	setVisualState(node: Node, visualState: VisualStates | null) {
+	setVisualState(node: Node, visualState: VisualState | null) {
 		this.setVal(node, this.props.visualState, visualState);
 	}
 }
