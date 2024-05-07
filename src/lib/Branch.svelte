@@ -20,7 +20,7 @@
 	export let helper: TreeHelper;
 
 	export let draggedPath: string | null;
-	export let highlightedNode: Node;
+	export let highlightedNode: Node | null;
 	export let childDepth: number;
 	export let branchRootNode: Node | null;
 	export let canNest: boolean;
@@ -88,10 +88,12 @@
 	 */
 	function highlightNesting(
 		node: Node,
-		highlitedNode: Node,
+		highlitedNode: Node | null,
 		validTarget: boolean,
 		canNest: boolean
 	) {
+		if (!highlitedNode) return false;
+
 		return (
 			canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&
@@ -107,10 +109,12 @@
 	 */
 	function highlightInsert(
 		node: Node,
-		highlitedNode: Node,
+		highlitedNode: Node | null,
 		validTarget: boolean,
 		canNest: boolean
 	) {
+		if (!highlitedNode) return false;
+
 		return (
 			!canNest &&
 			highlighThisNode(node, highlitedNode, validTarget) &&

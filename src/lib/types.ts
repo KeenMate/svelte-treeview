@@ -1,4 +1,5 @@
 export type Props = {
+	nodeId: string;
 	nodePath: string;
 	hasChildren: string;
 	expanded: string;
@@ -12,7 +13,7 @@ export type Props = {
 	visualState: string;
 };
 
-export enum VisualStates {
+export enum VisualState {
 	indeterminate = 'indeterminate',
 	selected = 'true',
 	notSelected = 'false'
@@ -27,7 +28,7 @@ export enum SelectionModes {
 // this disallows direct access to the node object and forces usage of the helper
 // TODO maybe implement some generics for event handlers and such
 // keep this only for internal stuff
-export type Node = unknown;
+export type Node = object;
 
 export type Tree = Node[];
 export enum InsertionType {
@@ -36,7 +37,7 @@ export enum InsertionType {
 	nest = 'nest'
 }
 export type NodePath = string | null;
-
+export type NodeId = string | number;
 export type CustomizableClasses = {
 	treeClass: string;
 	nodeClass: string;
@@ -72,3 +73,7 @@ export enum HighlighType {
 	insertBelow = 'insert-below',
 	none = 'none'
 }
+
+export type TreeVisualStates = {
+	[nodePath: string]: VisualState;
+};

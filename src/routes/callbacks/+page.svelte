@@ -31,7 +31,7 @@
 			<TreeView
 				bind:tree
 				treeId="tree"
-				expandCallback={callback}
+				loadChildrenAsync={callback}
 				let:node
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				separator=","

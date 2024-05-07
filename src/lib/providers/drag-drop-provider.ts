@@ -65,6 +65,7 @@ export class DragDropProvider {
 		//* find target node
 
 		const targetNode = this.helper.findNode(tree, targetNodePath);
+		if (!targetNode) return tree;
 
 		let movedNode;
 
@@ -93,6 +94,8 @@ export class DragDropProvider {
 			return node;
 		});
 
+		if (!movedNode) return tree;
+
 		//* insert node at right possition of array
 
 		const oldIndex = tree.findIndex((x) => this.path(x) == newNodePath);
@@ -106,7 +109,7 @@ export class DragDropProvider {
 
 		//hide plus icon if parent of moved node doesnt have any more children
 		const oldParent = this.helper.findNode(tree, this.helper.getParentNodePath(movedNodePath));
-
+		if (!oldParent) return tree;
 		//moved last node
 		const oldParentHasChildren = this.helper.allCHildren(tree, this.path(oldParent)).length;
 		if (oldParent && !oldParentHasChildren) {
@@ -129,7 +132,7 @@ export class DragDropProvider {
 			nodeId = this.getNextNodeId(tree, parentNodePath);
 		} else {
 			//get last segment of path
-			nodeId = this.helper.getNodeId(movedNodePath);
+			// nodeId = this.helper.getNodeIdFromPath(movedNodePath);
 		}
 
 		if (parentNodePath === null) return nodeId as string;
@@ -208,5 +211,13 @@ export class DragDropProvider {
 			return InsertionType.below;
 		}
 		return InsertionType.above;
+	}
+	getNodeIdFromPath(nodePath: NodePath) {
+		if (nodePath == null) {
+			console.warn('getting node id of null node path');
+			return null;
+		}
+
+		return nodePath?.split(this.helper.config.separator).slice(-1)[0];
 	}
 }

@@ -1,6 +1,13 @@
 import orderBy from 'lodash.unionby'; // used by tree merge
 import uniqueBy from 'lodash.uniqby'; // used by tree merge
-import type { Node, NodePath, HelperConfig, Tree } from '$lib/types.js';
+import {
+	type Node,
+	type NodePath,
+	type HelperConfig,
+	type Tree,
+	VisualState,
+	type NodeId
+} from '$lib/types.js';
 import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import { defaultConfig } from '$lib/constants.js';
 
@@ -18,6 +25,30 @@ export class TreeHelper {
 		return this.props.path(node);
 	}
 
+	computeTree(
+		tree: Tree,
+		filter: (node: any) => boolean,
+		expandedNodeIds: NodeId[],
+		selectedNodeIds: NodeId[],
+		visualStates: { [nodePath: string]: VisualState }
+	): Tree {
+		{
+			return this.searchTree(tree, filter).map((node: any) => {
+				const clonedNode = { ...node };
+				const nodeId = this.props.id(clonedNode) ?? '';
+				const expanded = expandedNodeIds.includes(nodeId);
+				const selected = selectedNodeIds.includes(nodeId);
+
+				const visualState: VisualState = visualStates[nodeId] ?? VisualState.notSelected;
+
+				this.props.setExpanded(clonedNode, expanded);
+				this.props.setSelected(clonedNode, selected);
+				this.props.setVisualState(clonedNode, visualState);
+
+				return clonedNode;
+			});
+		}
+	}
 	//#region basic helpres
 
 	getParentNodePath(nodePath: NodePath): NodePath {
@@ -40,7 +71,7 @@ export class TreeHelper {
 		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
 	}
 
-	findNode(tree: Tree, nodePath: NodePath): Node {
+	findNode(tree: Tree, nodePath: NodePath): Node | null {
 		return tree.find((node) => this.path(node) === nodePath) ?? null;
 	}
 
@@ -82,10 +113,14 @@ export class TreeHelper {
 
 	/** toggles expansion on
 	 */
-	changeExpansion(tree: Tree, node: Node, changeTo: boolean) {
-		const foundNode = this.findNode(tree, this.path(node));
+	changeExpansion(node: Node, changeTo: boolean, oldExpandedNodeIds: NodeId[]) {
+		const nodeId = this.props.id(node) ?? '';
 
-		this.props.setExpanded(foundNode, changeTo);
+		if (changeTo === true) {
+			return [...oldExpandedNodeIds, nodeId];
+		}
+
+		return oldExpandedNodeIds.filter((x) => x !== nodeId);
 	}
 
 	/** changes expansion of every node that has this.hasChildren set to true
@@ -139,7 +174,7 @@ export class TreeHelper {
 			resultNodes.push(...parentNodes);
 		});
 
-		const uniqueNodes = uniqueBy(resultNodes, (node) => this.path(node));
+		const uniqueNodes = uniqueBy(resultNodes, (node: Node) => this.path(node));
 
 		return uniqueNodes;
 	}
@@ -171,14 +206,5 @@ export class TreeHelper {
 			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
 		);
 		return tree;
-	}
-
-	getNodeId(nodePath: NodePath) {
-		if (nodePath == null) {
-			console.warn('getting node id of null node path');
-			return null;
-		}
-
-		return nodePath?.split(this.config.separator).slice(-1)[0];
 	}
 }

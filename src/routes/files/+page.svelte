@@ -11,6 +11,7 @@
 	let showObject: boolean;
 	let lastSelectedNodePath: string;
 	let searchText = '';
+	let selectedNodes: string[] = [];
 
 	$: filterFunc = (node: any) => node.name.includes(searchText);
 
@@ -30,12 +31,13 @@
 		const idx = Math.floor(Math.random() * tree.length);
 		const node = tree[idx];
 
-		if (!node.hasChildren) {
-			node.selected = !node.selected;
-		}
-
+		selectedNodes = [...selectedNodes, node.path];
 		lastSelectedNodePath = node.path;
-		tree = tree;
+	}
+
+	function onSelection(e: CustomEvent<{ node: Node; value: string[] }>) {
+		console.log('selection event detail', e.detail);
+		selectedNodes = e.detail.value;
 	}
 </script>
 
@@ -43,14 +45,15 @@
 	<div class="col-lg-8 col-12">
 		<Card>
 			<TreeView
-				bind:tree
+				{tree}
 				treeId="tree"
 				let:node
-				on:selection={(e) => console.log(e.detail)}
+				value={selectedNodes}
+				on:selection={onSelection}
 				on:expansion={(e) => console.log(e.detail)}
 				on:moved={(e) => console.log(e.detail)}
 				recalculateNodePath={false}
-				props={{ nodePath: 'path', selected: 'selected' }}
+				props={{ nodePath: 'path', selected: 'selected', nodeId: 'path' }}
 				separator="/"
 				showContexMenu
 				recursiveSelection
@@ -116,6 +119,13 @@
 				<br />
 				selected: {lastSelectedNodePath}
 			{/if}
+
+			<br />
+			<ul>
+				{#each selectedNodes as nodePath}
+					<li>{nodePath}</li>
+				{/each}
+			</ul>
 		</Card>
 	</div>
 </div>

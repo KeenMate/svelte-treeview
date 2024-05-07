@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest';
 import { PropertyHelper } from '$lib/helpers/property-helper.js';
-import { type Props, VisualStates } from '$lib/types.js';
+import { type Props, VisualState } from '$lib/types.js';
 
 const testingProperties: Props = {
 	nodePath: 'nodePath2',
+	nodeId: 'nodePath2',
 	hasChildren: 'hasChildren2',
 	expanded: '__expanded2',
 	selected: '__selected2',
@@ -95,7 +96,7 @@ test('get and set checkbox', () => {
 test('get and set visualState', () => {
 	const helper = getPropertyHelper();
 	const obj = {};
-	const setTo = VisualStates.selected;
+	const setTo = VisualState.selected;
 	helper.setVisualState(obj, setTo);
 	expect(helper.visualState(obj)).toBe(setTo);
 });
