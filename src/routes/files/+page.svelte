@@ -121,6 +121,7 @@
 			{/if}
 
 			<br />
+			selected nodes:
 			<ul>
 				{#each selectedNodes as nodePath}
 					<li>{nodePath}</li>

@@ -12,8 +12,10 @@
 
 	const dispatch = createEventDispatcher();
 
-	function onSelect(node: Node) {
+	function onSelect(e: Event, node: Node) {
+		e.preventDefault();
 		dispatch('select', { node });
+		return false;
 	}
 </script>
 
@@ -22,7 +24,7 @@
 		{#if !recursive || (recursive && !node.hasChildren) || !onlyLeafCheckboxes}
 			<input
 				type="checkbox"
-				on:change={() => onSelect(node)}
+				on:click={(e) => onSelect(e, node)}
 				checked={node.visualState === VisualState.selected}
 				indeterminate={node.visualState === VisualState.indeterminate}
 				disabled={readonly}
