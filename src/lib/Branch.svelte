@@ -27,14 +27,14 @@
 	export let validTarget: boolean;
 	export let insPos: InsertionType;
 
-	const getNodeId = (node: Node) => `${treeId}-${helper.path(node)}`;
+	const getNodeId = (node: Node) => `${treeId}-${node.path}`;
 
 	function setExpansion(node: Node, changeTo: boolean) {
 		dispatch('internal-expand', { node: node, changeTo });
 	}
 
 	function isExpanded(node: Node, depth: number, expandToDepth: number) {
-		const nodeExpanded = helper.props.expanded(node);
+		const nodeExpanded = node.expanded;
 
 		//if expanded prop is defined it has priority over expand to
 		if (nodeExpanded === null) {
@@ -77,7 +77,7 @@
 	 *check if this node is one being hovered over (highlited) and is valid target
 	 */
 	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
-		return validTarget && helper.path(highlitedNode) == helper.path(node);
+		return validTarget && highlitedNode.path == node.path;
 	}
 	/**
 	 * returns true, it should highlight nesting on this node
@@ -95,9 +95,7 @@
 		if (!highlitedNode) return false;
 
 		return (
-			canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			helper.props.nestDisabled(node) !== true
+			canNest && highlighThisNode(node, highlitedNode, validTarget) && node.nestDisabled !== true
 		);
 	}
 	/**
@@ -116,9 +114,7 @@
 		if (!highlitedNode) return false;
 
 		return (
-			!canNest &&
-			highlighThisNode(node, highlitedNode, validTarget) &&
-			helper.props.nestDisabled(node) !== true
+			!canNest && highlighThisNode(node, highlitedNode, validTarget) && node.nestDisabled !== true
 		);
 	}
 
@@ -130,18 +126,17 @@
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
-	{#each helper.getDirectChildren(tree, helper.path(branchRootNode)) as node (getNodeId(node))}
+	{#each helper.getDirectChildren(tree, branchRootNode?.path ?? null) as node (getNodeId(node))}
 		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
 		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
-		{@const hasChildren = helper.props.hasChildren(node)}
-		{@const draggable = !readonly && dragAndDrop && helper.props.isDraggable(node)}
+		{@const hasChildren = node.hasChildren}
+		{@const draggable = !readonly && dragAndDrop && node.isDraggable}
 		{@const isCurrentlyDragged =
-			draggedPath == helper.path(node) ||
-			(draggedPath && helper.path(node)?.startsWith(draggedPath))}
+			draggedPath == node.path || (draggedPath && node.path?.startsWith(draggedPath))}
 
 		<li
-			class:is-child={helper.nodePathIsChild(helper.path(node))}
+			class:is-child={helper.nodePathIsChild(node.path)}
 			class:has-children={hasChildren}
 			on:contextmenu|stopPropagation={(e) => {
 				dispatch('open-ctxmenu', { e: e, node: Node });
@@ -176,7 +171,7 @@
 						<i
 							class="far {expanded ? classes.expandedToggleClass : classes.collapsedToggleClass}"
 							class:fa-minus-square={expanded}
-							class:fa-plus-square={!expanded || helper.props.useCallback(node)}
+							class:fa-plus-square={!expanded || node.useCallback}
 						/>
 					</span>
 				{:else}
@@ -194,7 +189,7 @@
 					on:select={({ detail: { node } }) => selectionChanged(node)}
 				/>
 				<span class:pointer-cursor={draggable}>
-					<slot {node} />
+					<slot node={node.originalNode} />
 				</span>
 			</div>
 

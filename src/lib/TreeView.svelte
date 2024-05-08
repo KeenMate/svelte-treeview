@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="T">
 	import ContextMenu from './menu/ContextMenu.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { defaultClasses, defaultPixelTreshold, defaultPropNames } from './constants.js';
@@ -14,11 +14,12 @@
 		type BeforeMovedCallback,
 		type ExpandedCallback,
 		VisualState,
-		type NodeId
+		type NodeId,
+		type ProvidedTree,
+		type FilterFunction
 	} from '$lib/types.js';
 	import { TreeHelper } from '$lib/index.js';
 	import Branch from './Branch.svelte';
-	import { PropertyHelper } from '$lib/helpers/property-helper.js';
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
 
 	const dispatch = createEventDispatcher();
@@ -29,7 +30,7 @@
 	 * Each node should have unique path
 	 * All tree modifications are made by modifying this array, so you need to bind it to parent component
 	 */
-	export let tree: Node[];
+	export let tree: ProvidedTree;
 
 	/**
 	 * Node paths of selected nodes
@@ -106,7 +107,7 @@
 	 * If you want to only search leaf nodes,
 	 * its your responsibility to check if its hasChildren property is false
 	 */
-	export let filter: (node: any) => boolean = (_) => true;
+	export let filter: FilterFunction | null = null;
 
 	/**
 	 * Log function that will be called when something happens in tree.
@@ -129,48 +130,59 @@
 	// OLD variables, will be removed/changed in future
 	let draggedPath: string | null = null;
 	let highlightedNode: Node | null = null;
-	let dragenterTimestamp: Date | null = null;
-	let canNestPos = false;
-	let canNestTime = false;
-	let canNest: boolean;
-	let dragTimeout: NodeJS.Timeout;
+	let canNest: boolean = false;
 	let validTarget = false;
 	let insPos: InsertionType;
 
 	$: dragAndDrop && console.warn('Drag and drop is not supported in this version');
 
-	// ensure tree is never null
-	$: tree, tree == null || tree == undefined ? (tree = []) : '';
-
-	$: propHelper = new PropertyHelper({ ...defaultPropNames, ...props });
-	$: helper = new TreeHelper(propHelper, {
+	$: helper = new TreeHelper({
 		recursive: recursiveSelection,
 		recalculateNodePath,
 		checkboxes: selectionMode,
 		separator
 	});
 	$: selectionProvider = new SelectionProvider(helper, recursiveSelection);
+	$: computedTree = computeTree(helper, selectionProvider, tree, filter, props, expandedIds, value);
+	$: debugLog('computedTree', computedTree);
 
-	$: computedTree = helper.computeTree(
-		tree,
-		filter,
-		expandedIds,
-		value,
-		selectionProvider.computeVisualStates(tree, value)
-	);
-	$: console.log('computedTree', computedTree);
+	export function changeAllExpansion(changeTo: boolean) {
+		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
 
-	//if insert is disabled => nest right away and never nest if its disabled
-	$: canNest =
-		(propHelper.insertDisabled(highlightedNode) || canNestPos || canNestTime) &&
-		propHelper.nestDisabled(highlightedNode) !== true;
+		expandedIds = computedTree.map((node) => node.id);
+	}
+
+	function computeTree(
+		helper: TreeHelper,
+		selectionProvider: SelectionProvider,
+		userProvidedTree: any[],
+		filter: FilterFunction | null,
+		props: Partial<Props>,
+		expandedIds: NodeId[],
+		value: NodeId[]
+	): Tree {
+		if (!Array.isArray(userProvidedTree) || !Array.isArray(value)) {
+			console.error('value and tree must be arrays!!');
+			return [];
+		}
+
+		let mappedTree = helper.mapTree(userProvidedTree, filter, { ...defaultPropNames, ...props });
+
+		helper.markExpanded(mappedTree, expandedIds);
+
+		// TODO here we could save last value and only recompute visual state if value changed
+		// or use diff to only update affected nodes
+		selectionProvider.markSelected(mappedTree, value);
+
+		return mappedTree;
+	}
 
 	function onExpand(event: CustomEvent<{ node: Node; changeTo: boolean }>) {
 		const { node, changeTo } = event.detail;
 
 		expandedIds = helper.changeExpansion(node, changeTo, expandedIds);
 
-		debugLog("changed expansion of node '", helper.path(node), "' to ", changeTo);
+		debugLog("changed expansion of node '", node.id, "' to ", changeTo);
 
 		//trigger callback if it is present and node has useCallback property set to true
 		if (changeTo) {
@@ -192,14 +204,14 @@
 
 	function handleCallback(node: Node) {
 		// only call on nodes with children
-		if (propHelper.hasChildren(node) !== true) {
+		if (node.hasChildren !== true) {
 			return;
 		}
 
 		if (loadChildrenAsync == null) {
 			console.warn(
 				'loadChildrenAsync is not set, but useCallback is set to true on node with path',
-				helper.path(node)
+				node.path
 			);
 			return;
 		}
@@ -210,27 +222,20 @@
 		loadChildrenAsync(node);
 	}
 
-	// TODO remove and expose function from package
-	export function changeAllExpansion(changeTo: boolean) {
-		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
-
-		tree = helper.changeEveryExpansion(tree, changeTo);
-	}
-
 	function onSelectionChanged(event: CustomEvent<{ node: Node }>) {
 		const { node } = event.detail;
 
-		const nodePath = helper.path(node);
+		const nodePath = node.path;
 
 		const changeTo = !selectionProvider.isNodeSelected(node);
 
-		const newValue = selectionProvider.setSelection(tree, nodePath, changeTo, value);
+		const newValue = selectionProvider.setSelection(computedTree, nodePath, changeTo, value);
 
 		debugLog(
 			"changing selection of node '",
 			nodePath,
 			"' to ",
-			!propHelper.selected(node),
+			changeTo,
 			' returing value ',
 			newValue
 		);

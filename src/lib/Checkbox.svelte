@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, hasContext } from 'svelte';
 	import { SelectionModes, VisualState, type Node } from './types.js';
 	import type { TreeHelper } from '$lib/index.js';
-	import { SelectionProvider } from '$lib/providers/selection-provider.js';
+	import { SelectionProvider, isSelectable } from '$lib/providers/selection-provider.js';
 
 	export let checkboxes: SelectionModes;
 	export let helper: TreeHelper;
@@ -12,18 +12,6 @@
 	export let hideDisabledCheckboxes: boolean;
 	export let readonly = false;
 
-	let indeterminate: boolean;
-
-	$: {
-		if (helper.props.visualState(node) == 'indeterminate') {
-			indeterminate = true;
-		} else {
-			indeterminate = false;
-		}
-	}
-	// TODO pass from root
-	$: selectionProvider = new SelectionProvider(helper, recursive);
-
 	const dispatch = createEventDispatcher();
 
 	function onSelect(node: Node) {
@@ -32,23 +20,13 @@
 </script>
 
 {#if checkboxes == SelectionModes.perNode || checkboxes == SelectionModes.all}
-	{#if selectionProvider.isSelectable(node, checkboxes)}
-		<!-- select node -->
-		{#if !recursive || (recursive && !helper.props.hasChildren(node))}
+	{#if isSelectable(node, checkboxes)}
+		{#if !recursive || (recursive && !node.hasChildren) || !onlyLeafCheckboxes}
 			<input
 				type="checkbox"
 				on:change={() => onSelect(node)}
-				checked={helper.props.selected(node)}
-				disabled={readonly}
-			/>
-			<!-- select children-->
-		{:else if !onlyLeafCheckboxes}
-			<!-- @ts-ingore -->
-			<input
-				type="checkbox"
-				on:click={() => onSelect(node)}
-				checked={helper.props.visualState(node) === VisualState.selected}
-				{indeterminate}
+				checked={node.visualState === VisualState.selected}
+				indeterminate={node.visualState === VisualState.indeterminate}
 				disabled={readonly}
 			/>
 		{:else}

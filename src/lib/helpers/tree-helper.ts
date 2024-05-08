@@ -6,49 +6,51 @@ import {
 	type HelperConfig,
 	type Tree,
 	VisualState,
-	type NodeId
+	type NodeId,
+	type Props,
+	type FilterFunction
 } from '$lib/types.js';
-import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import { defaultConfig } from '$lib/constants.js';
 
 export class TreeHelper {
-	props: PropertyHelper;
 	config: HelperConfig;
 
-	constructor(props: PropertyHelper, config: HelperConfig = defaultConfig) {
-		this.props = props;
+	constructor(config: HelperConfig = defaultConfig) {
 		this.config = config;
 	}
 
-	// replace with this.props.path
-	path(node: Node | null): NodePath {
-		return this.props.path(node);
-	}
-
-	computeTree(
-		tree: Tree,
-		filter: (node: any) => boolean,
-		expandedNodeIds: NodeId[],
-		selectedNodeIds: NodeId[],
-		visualStates: { [nodePath: string]: VisualState }
-	): Tree {
+	mapTree(tree: Tree, filter: FilterFunction | null, properties: Props): Node[] {
 		{
 			return this.searchTree(tree, filter).map((node: any) => {
-				const clonedNode = { ...node };
-				const nodeId = this.props.id(clonedNode) ?? '';
-				const expanded = expandedNodeIds.includes(nodeId);
-				const selected = selectedNodeIds.includes(nodeId);
-
-				const visualState: VisualState = visualStates[nodeId] ?? VisualState.notSelected;
-
-				this.props.setExpanded(clonedNode, expanded);
-				this.props.setSelected(clonedNode, selected);
-				this.props.setVisualState(clonedNode, visualState);
-
-				return clonedNode;
+				// TODO maybe create class for nodes
+				const mappedNode: Node = {
+					originalNode: node,
+					id: node[properties.nodeId],
+					path: node[properties.nodePath],
+					hasChildren: node[properties.hasChildren],
+					useCallback: node[properties.useCallback],
+					priority: node[properties.priority],
+					isDraggable: node[properties.isDraggable],
+					insertDisabled: node[properties.insertDisabled],
+					nestDisabled: node[properties.nestDisabled],
+					checkbox: node[properties.checkbox],
+					expanded: false,
+					selected: false,
+					visualState: VisualState.notSelected
+				};
+				return mappedNode;
 			});
 		}
 	}
+
+	markExpanded(tree: Tree, expandedNodeIds: NodeId[]) {
+		{
+			tree.forEach((node: any) => {
+				node.expanded = expandedNodeIds.includes(node.id ?? '');
+			});
+		}
+	}
+
 	//#region basic helpres
 
 	getParentNodePath(nodePath: NodePath): NodePath {
@@ -68,11 +70,11 @@ export class TreeHelper {
 	}
 
 	hasChildren(tree: Tree, nodePath: NodePath) {
-		return tree?.find((x) => this.getParentNodePath(this.path(x)) === nodePath);
+		return tree?.find((x) => this.getParentNodePath(x.path) === nodePath);
 	}
 
 	findNode(tree: Tree, nodePath: NodePath): Node | null {
-		return tree.find((node) => this.path(node) === nodePath) ?? null;
+		return tree.find((node) => node.path === nodePath) ?? null;
 	}
 
 	nodePathIsChild(nodePath: NodePath) {
@@ -83,28 +85,28 @@ export class TreeHelper {
 	}
 
 	getDirectChildren(tree: Tree, parentNodePath: NodePath) {
-		const children = (tree || []).filter((x) =>
+		const children = tree.filter((node) =>
 			!parentNodePath
-				? !this.nodePathIsChild(this.path(x))
-				: this.getParentNodePath(this.path(x)) === parentNodePath
+				? !this.nodePathIsChild(node.path)
+				: this.getParentNodePath(node.path) === parentNodePath
 		);
 		const ordered = this.orderByPriority(children);
 		return ordered;
 	}
 
 	allCHildren(tree: Tree, parentNodePath: NodePath) {
-		const children = tree.filter((x) => this.isChildrenOf(parentNodePath, this.path(x)));
+		const children = tree.filter((node) => this.isChildrenOf(parentNodePath, node.path));
 		return children;
 	}
 
 	getAllLeafNodes(tree: Tree) {
-		return tree.filter((x) => {
-			return this.props.hasChildren(x) == undefined || this.props.hasChildren(x) == false;
+		return tree.filter((node) => {
+			return node.hasChildren !== true;
 		});
 	}
 
 	joinTrees(filteredTree: Tree, tree: Tree) {
-		return tree.map((tnode) => this.findNode(filteredTree, this.path(tnode)) || tnode);
+		return tree.map((node) => this.findNode(filteredTree, node.path) || node);
 	}
 
 	mergeTrees(oldTree: Tree, addedTree: Tree, nodePath = 'nodePath') {
@@ -114,7 +116,7 @@ export class TreeHelper {
 	/** toggles expansion on
 	 */
 	changeExpansion(node: Node, changeTo: boolean, oldExpandedNodeIds: NodeId[]) {
-		const nodeId = this.props.id(node) ?? '';
+		const nodeId = node.id ?? '';
 
 		if (changeTo === true) {
 			return [...oldExpandedNodeIds, nodeId];
@@ -123,31 +125,18 @@ export class TreeHelper {
 		return oldExpandedNodeIds.filter((x) => x !== nodeId);
 	}
 
-	/** changes expansion of every node that has this.hasChildren set to true
-	 */
-	changeEveryExpansion(tree: Tree, changeTo: boolean) {
-		return tree.map((node) => {
-			if (this.props.hasChildren(node) == true) {
-				this.props.setExpanded(node, changeTo);
-			}
-			return node;
-		});
-	}
-
 	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
 	 */
-	expandToLevel(tree: Tree, level: number) {
-		return tree.map((n) => {
-			if (
-				this.props.expanded(n) == undefined &&
-				this.props.expanded(n) == null &&
-				this.props.useCallback(n) != true &&
-				this.getDepthLevel(this.path(n)) <= level
-			) {
-				this.props.setExpanded(n, true);
-			}
-			return n;
-		});
+	expandToLevel(tree: Tree, level: number): NodeId[] {
+		return tree
+			.filter(
+				(node) =>
+					node.expanded == undefined &&
+					node.expanded == null &&
+					node.useCallback != true &&
+					this.getDepthLevel(node.path) <= level
+			)
+			.map((node) => node.id ?? '');
 	}
 
 	//based on number of dots
@@ -160,7 +149,8 @@ export class TreeHelper {
 
 	//#endregion
 
-	searchTree(tree: Tree, filter: (node: unknown) => boolean) {
+	searchTree(tree: Tree, filter: FilterFunction | null) {
+		if (!filter) return tree;
 		const filteredNodes = tree.filter(filter);
 
 		const resultNodes: Tree = [];
@@ -174,15 +164,15 @@ export class TreeHelper {
 			resultNodes.push(...parentNodes);
 		});
 
-		const uniqueNodes = uniqueBy(resultNodes, (node: Node) => this.path(node));
+		const uniqueNodes = uniqueBy(resultNodes, (node: Node) => node.path);
 
 		return uniqueNodes;
 	}
 
-	getParents(tree: Tree, node: Node) {
+	getParents(tree: Tree, targetNode: Node) {
 		const parentsPaths: NodePath[] = [];
 
-		let nodePath = this.path(node);
+		let nodePath = targetNode.path;
 
 		// get all parents
 		while (nodePath && nodePath.length > 0) {
@@ -191,8 +181,8 @@ export class TreeHelper {
 		}
 
 		//find nodes for given ids
-		const parentNodes = tree.filter((n) =>
-			parentsPaths.some((parentNodePath) => this.path(n) === parentNodePath)
+		const parentNodes = tree.filter((node) =>
+			parentsPaths.some((parentNodePath) => node.path === parentNodePath)
 		);
 
 		return parentNodes;
@@ -202,9 +192,7 @@ export class TreeHelper {
 	 */
 	orderByPriority(tree: Tree) {
 		// TODO investigata that it really works
-		tree.sort((a: Node, b: Node) =>
-			this.props.priority(b) ? this.props.priority(a) - this.props.priority(b) : 1
-		);
+		tree.sort((a: Node, b: Node) => (b.priority ? a.priority - b.priority : 1));
 		return tree;
 	}
 }

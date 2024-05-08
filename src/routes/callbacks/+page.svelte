@@ -20,8 +20,7 @@
 				__useCallback: true
 			});
 		}
-
-		return newNodes;
+		tree = [...tree, ...newNodes];
 	}
 </script>
 
