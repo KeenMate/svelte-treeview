@@ -1,33 +1,32 @@
-<script>
-	// @ts-nocheck
-
+<script lang="ts">
+	import type { Node } from '$lib/types.js';
 	import Menu from './Menu.svelte';
 
 	let pos = { x: 0, y: 0 };
 	let showMenu = false;
-	let node = null;
+	let clickedNode: Node | null = null;
 
-	export async function onRightClick(e, n) {
+	export async function onRightClick(event: MouseEvent, node: Node) {
 		if (showMenu) {
 			showMenu = false;
 			await new Promise((res) => setTimeout(res, 100));
 		}
-		node = n;
-		pos = { x: e.clientX, y: e.clientY };
+		clickedNode = node;
+		pos = { x: event.clientX, y: event.clientY };
 		showMenu = true;
 	}
 
 	function closeMenu() {
 		showMenu = false;
-		node = null;
+		clickedNode = null;
 	}
 </script>
 
 <svelte:window on:click={closeMenu} />
 {#if showMenu}
 	<Menu {...pos} on:click={closeMenu} on:clickoutside={closeMenu}>
-		<slot {node}>
-			<b> context menu openned from: {node?.nodePath}</b>
+		<slot node={clickedNode}>
+			<b> context menu openned from: {clickedNode?.path}</b>
 		</slot>
 	</Menu>
 {/if}

@@ -24,7 +24,7 @@ function getTree(treeHelper: TreeHelper, testSpecifcNodes: any[] = []): Tree {
 }
 
 function getHelper(recursive: boolean): { helper: TreeHelper; selection: SelectionProvider } {
-	const helper = new TreeHelper({ recursive, separator: '.' });
+	const helper = new TreeHelper({ separator: '.' });
 	const selection = new SelectionProvider(helper, recursive);
 	return { helper, selection };
 }

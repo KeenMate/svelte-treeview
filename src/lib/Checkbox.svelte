@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { createEventDispatcher, hasContext } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { SelectionModes, VisualState, type Node } from './types.js';
-	import type { TreeHelper } from '$lib/index.js';
-	import { SelectionProvider, isSelectable } from '$lib/providers/selection-provider.js';
+	import { isSelectable } from '$lib/providers/selection-provider.js';
 
 	export let checkboxes: SelectionModes;
-	export let helper: TreeHelper;
 	export let recursive: boolean;
 	export let node: Node;
 	export let onlyLeafCheckboxes: boolean;

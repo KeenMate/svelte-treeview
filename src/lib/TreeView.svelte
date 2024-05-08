@@ -137,9 +137,6 @@
 	$: dragAndDrop && console.warn('Drag and drop is not supported in this version');
 
 	$: helper = new TreeHelper({
-		recursive: recursiveSelection,
-		recalculateNodePath,
-		checkboxes: selectionMode,
 		separator
 	});
 	$: selectionProvider = new SelectionProvider(helper, recursiveSelection);
