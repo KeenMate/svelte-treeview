@@ -22,13 +22,13 @@ function getTree(testSpecifcNodes: any[] = []) {
 	return [...testingTree, ...testSpecifcNodes].map((node) => ({ ...node, id: node.path } as Node));
 }
 
-function getHelper(recursive: boolean): { helper: TreeHelper } {
-	const helper = new TreeHelper({ recursive, separator: '.' });
+function getHelper(): { helper: TreeHelper } {
+	const helper = new TreeHelper({ separator: '.' });
 	return { helper };
 }
 
 test('get all children of root', () => {
-	const { helper } = getHelper(true);
+	const { helper } = getHelper();
 	const tree = getTree();
 
 	const parentNodePath = null;

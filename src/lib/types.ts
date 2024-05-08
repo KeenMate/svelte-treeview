@@ -83,9 +83,6 @@ export type ExpandedCallback = (node: Node) => Promise<void>;
 
 export type HelperConfig = {
 	separator: string;
-	recursive?: boolean;
-	recalculateNodePath?: boolean;
-	checkboxes?: SelectionModes;
 };
 
 export enum HighlighType {

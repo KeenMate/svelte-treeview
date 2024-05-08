@@ -31,6 +31,5 @@ export const defaultClasses: CustomizableClasses = {
 };
 
 export const defaultConfig: HelperConfig = {
-	separator: '.',
-	checkboxes: SelectionModes.none
+	separator: '.'
 };

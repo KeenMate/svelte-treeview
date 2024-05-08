@@ -180,7 +180,6 @@
 
 				<Checkbox
 					{checkboxes}
-					{helper}
 					{recursive}
 					{node}
 					{onlyLeafCheckboxes}

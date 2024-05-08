@@ -56,7 +56,7 @@ export class TreeHelper {
 	getParentNodePath(nodePath: NodePath): NodePath {
 		if (nodePath == null) throw new Error('cannot get parent of root');
 
-		const separator = this.config.separator ?? '.';
+		const separator = this.config.separator;
 		const parentPath = nodePath?.substring(0, nodePath.lastIndexOf(separator));
 		if (parentPath === '') return null;
 
@@ -78,7 +78,7 @@ export class TreeHelper {
 	}
 
 	nodePathIsChild(nodePath: NodePath) {
-		const separator = this.config.separator ?? '.';
+		const separator = this.config.separator;
 
 		const includesSeparator = nodePath?.includes(separator);
 		return includesSeparator;
@@ -143,7 +143,7 @@ export class TreeHelper {
 	getDepthLevel(nodePath: NodePath) {
 		if (nodePath == null) return 0;
 
-		const separator = this.config.separator ?? '.';
+		const separator = this.config.separator;
 		return nodePath.split(separator).length - 1;
 	}
 
