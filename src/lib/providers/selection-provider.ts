@@ -1,34 +1,45 @@
-import type { PropertyHelper } from '$lib/helpers/property-helper.js';
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import {
 	SelectionModes,
-	type Node,
 	type NodePath,
 	type Tree,
 	VisualState,
 	type TreeVisualStates,
+	type Node,
 	type NodeId
 } from '$lib/types.js';
 
 export class SelectionProvider {
 	helper: TreeHelper;
-	props: PropertyHelper;
 	recursiveMode: boolean;
 
 	constructor(treeHelper: TreeHelper, recursive: boolean) {
 		this.helper = treeHelper;
-		this.props = treeHelper.props;
 		this.recursiveMode = recursive;
 	}
 
-	private path(node: Node): NodePath {
-		return this.helper.path(node);
+	markSelected(tree: Tree, selectedNodeIds: NodeId[]) {
+		const visualStates = this.computeVisualStates(tree, selectedNodeIds);
+
+		tree.forEach((node: Node) => {
+			if (selectedNodeIds.includes(node.id ?? '')) {
+				node.selected = true;
+				node.visualState = VisualState.selected;
+				return;
+			}
+
+			node.selected = false;
+
+			const visualState = visualStates[node.id ?? ''];
+			if (!visualState) {
+				node.visualState = VisualState.notSelected;
+			}
+			node.visualState = visualState;
+		});
 	}
 
 	isNodeSelected(node: Node): boolean {
-		return (
-			this.props.selected(node) === true || this.props.visualState(node) === VisualState.selected
-		);
+		return node.selected === true || node.visualState === VisualState.selected;
 	}
 
 	isSelected(nodeId: string, visualStates: TreeVisualStates, selectedNodeIds: NodeId[]): boolean {
@@ -42,7 +53,7 @@ export class SelectionProvider {
 	getSelectableDirectChildren(tree: Tree, parentNodePath: string | null) {
 		return this.helper
 			.getDirectChildren(tree, parentNodePath)
-			.filter((node: Node) => this.isSelectable(node, SelectionModes.all));
+			.filter((node: Node) => isSelectable(node, SelectionModes.all));
 	}
 
 	setSelection(
@@ -52,7 +63,8 @@ export class SelectionProvider {
 		oldSelection: NodeId[]
 	): NodeId[] {
 		const node = this.helper.findNode(tree, nodePath);
-		const nodeHasChildren = node ? this.props.hasChildren(node) : false;
+		const nodeHasChildren = node ? node.hasChildren : false;
+
 		// allow selection of root node
 		if (nodePath === null || (this.recursiveMode && nodeHasChildren)) {
 			return this.changeSelectedRecursively(tree, nodePath, changeTo, oldSelection);
@@ -63,14 +75,15 @@ export class SelectionProvider {
 				return oldSelection;
 			}
 
-			// prevent double selection
-			const filteredSelection = oldSelection.filter((x) => x !== this.props.id(node));
+			const nodeId = node.id ?? '';
 
+			// prevent double selection
+			const filteredSelection = oldSelection.filter((x) => x !== nodeId);
 			if (changeTo === false) {
 				return filteredSelection;
 			}
 
-			return [...filteredSelection, this.props.id(node) ?? ''];
+			return [...filteredSelection, nodeId];
 		}
 	}
 
@@ -83,30 +96,18 @@ export class SelectionProvider {
 
 		const rootELements = this.getSelectableDirectChildren(tree, null);
 		rootELements.forEach((node: Node) => {
-			if (this.props.hasChildren(node) == true) {
+			if (node.hasChildren == true) {
 				const result = this.computeVisualStateRecursively(
 					tree,
 					node,
 					selectedNodeIds,
 					visualStates
 				);
-				visualStates[this.props.id(node) ?? ''] = result.state;
+				visualStates[node.id ?? ''] = result.state;
 			}
 		});
 
 		return visualStates;
-	}
-
-	isSelectable(node: Node, showCheckboxes: SelectionModes) {
-		if (showCheckboxes === SelectionModes.all) {
-			return this.props.checkbox(node) !== false;
-		}
-		//show only if pop is true
-		if (showCheckboxes === SelectionModes.perNode) {
-			return this.props.checkbox(node) === true;
-		}
-		//dont show at all
-		return false;
 	}
 
 	private computeVisualState(directChildrenVisualStates: VisualState[]) {
@@ -143,13 +144,13 @@ export class SelectionProvider {
 		selectedNodeIds: (string | number)[],
 		visualStates: TreeVisualStates
 	): { state: VisualState; ignore: boolean } {
-		const directChildren = this.getSelectableDirectChildren(tree, this.path(node));
+		const directChildren = this.getSelectableDirectChildren(tree, node.path);
 
 		const directChildrenStates: VisualState[] = [];
 		// using recustion compute from leaft nodes to root
 		directChildren.forEach((child: Node) => {
-			if (!this.props.hasChildren(child)) {
-				const childState = selectedNodeIds.includes(this.props.id(child) ?? '')
+			if (!child.hasChildren) {
+				const childState = selectedNodeIds.includes(child.id ?? '')
 					? VisualState.selected
 					: VisualState.notSelected;
 
@@ -159,7 +160,7 @@ export class SelectionProvider {
 			}
 
 			const result = this.computeVisualStateRecursively(tree, child, selectedNodeIds, visualStates);
-			visualStates[this.props.id(child) ?? ''] = result.state;
+			visualStates[child.id ?? ''] = result.state;
 
 			if (!result.ignore) {
 				directChildrenStates.push(result.state);
@@ -182,26 +183,38 @@ export class SelectionProvider {
 
 		tree.forEach((node) => {
 			// match itself and all children
-			if (this.path(node)?.startsWith(parentNodePath ?? '')) {
+			if (node.path?.startsWith(parentNodePath ?? '')) {
 				//dont change if not selectable
-				if (!this.isSelectable(node, SelectionModes.all)) {
+				if (!isSelectable(node, SelectionModes.all)) {
 					return;
 				}
 
 				// in recursive mode only update leaf nodes
-				if (this.recursiveMode && this.props.hasChildren(node)) {
+				if (this.recursiveMode && node.hasChildren) {
 					return;
 				}
 
 				// prevent double selection
-				newSelection = newSelection.filter((x) => x !== this.props.id(node) ?? '');
+				newSelection = newSelection.filter((x) => x !== node.id ?? '');
 
 				if (changeTo === true) {
-					newSelection.push(this.props.id(node) ?? '');
+					newSelection.push(node.id ?? '');
 				}
 			}
 		});
 
 		return newSelection;
 	}
+}
+
+export function isSelectable(node: Node, showCheckboxes: SelectionModes) {
+	if (showCheckboxes === SelectionModes.all) {
+		return node.checkbox !== false;
+	}
+	//show only if pop is true
+	if (showCheckboxes === SelectionModes.perNode) {
+		return node.checkbox === true;
+	}
+	//dont show at all
+	return false;
 }

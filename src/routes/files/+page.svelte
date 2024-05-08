@@ -35,9 +35,9 @@
 		lastSelectedNodePath = node.path;
 	}
 
-	function onSelection(e: CustomEvent<{ node: Node; value: string[] }>) {
-		console.log('selection event detail', e.detail);
-		selectedNodes = e.detail.value;
+	function onChange(e: CustomEvent<string[]>) {
+		console.log('selection changed ', e.detail);
+		selectedNodes = e.detail;
 	}
 </script>
 
@@ -49,11 +49,11 @@
 				treeId="tree"
 				let:node
 				value={selectedNodes}
-				on:selection={onSelection}
+				on:change={onChange}
 				on:expansion={(e) => console.log(e.detail)}
 				on:moved={(e) => console.log(e.detail)}
 				recalculateNodePath={false}
-				props={{ nodePath: 'path', selected: 'selected', nodeId: 'path' }}
+				props={{ nodePath: 'path', nodeId: 'path' }}
 				separator="/"
 				showContexMenu
 				recursiveSelection

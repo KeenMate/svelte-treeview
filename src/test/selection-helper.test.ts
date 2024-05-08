@@ -1,55 +1,30 @@
-import { PropertyHelper } from '$lib/helpers/property-helper.js';
 import { TreeHelper, VisualState } from '$lib/index.js';
 import { SelectionProvider } from '$lib/providers/selection-provider.js';
-import type { NodeId, Props } from '$lib/types.js';
+import type { Node, NodeId, Tree } from '$lib/types.js';
 import { expect, test } from 'vitest';
 import { expectArrayEqual } from './helpers.js';
 
-const testingProperties: Props = {
-	nodePath: 'nodePath2',
-	nodeId: 'nodePath2',
-	hasChildren: 'hasChildren2',
-	expanded: '__expanded2',
-	selected: '__selected2',
-	useCallback: '__useCallback2',
-	priority: 'priority2',
-	isDraggable: 'isDraggable2',
-	insertDisabled: 'insertDisabled2',
-	nestDisabled: 'nestDisabled2',
-	checkbox: 'checkbox2',
-	visualState: '__visual_state2'
-};
-
 const testingTree: any[] = [
-	{ nodePath: '0' },
-	{ nodePath: '1', hasChildren: true },
-	{ nodePath: '1.4' },
-	{ nodePath: '1.6' },
-	{ nodePath: '1.7', hasChildren: true },
-	{ nodePath: '1.7.10' },
-	{ nodePath: '1.7.11' },
-	{ nodePath: '1.8' },
-	{ nodePath: '1.9' },
-	{ nodePath: '2', hasChildren: true },
-	{ nodePath: '2.5' },
-	{ nodePath: '3' }
+	{ path: '0' },
+	{ path: '1', hasChildren: true },
+	{ path: '1.4' },
+	{ path: '1.6' },
+	{ path: '1.7', hasChildren: true },
+	{ path: '1.7.10' },
+	{ path: '1.7.11' },
+	{ path: '1.8' },
+	{ path: '1.9' },
+	{ path: '2', hasChildren: true },
+	{ path: '2.5' },
+	{ path: '3' }
 ];
 
-function getTree(treeHelper: TreeHelper, testSpecifcNodes: any[] = []) {
-	const unmappedTree = [...testingTree, ...testSpecifcNodes];
-
-	return unmappedTree.map((node) => {
-		const newNode = {};
-		treeHelper.props.setPath(newNode, node.nodePath);
-
-		treeHelper.props.setHasChildren(newNode, node.hasChildren);
-		return newNode;
-	});
+function getTree(treeHelper: TreeHelper, testSpecifcNodes: any[] = []): Tree {
+	return [...testingTree, ...testSpecifcNodes].map((node) => ({ ...node, id: node.path } as Node));
 }
 
 function getHelper(recursive: boolean): { helper: TreeHelper; selection: SelectionProvider } {
-	const propertyHelper = new PropertyHelper(testingProperties);
-	const helper = new TreeHelper(propertyHelper, { recursive, separator: '.' });
+	const helper = new TreeHelper({ recursive, separator: '.' });
 	const selection = new SelectionProvider(helper, recursive);
 	return { helper, selection };
 }
@@ -61,7 +36,7 @@ test('getChildrenWithCheckboxes test root', () => {
 	// from root
 	const children = selection.getSelectableDirectChildren(tree, null);
 
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => node.path);
 	expect(paths).toEqual(['0', '1', '2', '3']);
 });
 
@@ -71,7 +46,7 @@ test('getChildrenWithCheckboxes parent is normal node', () => {
 
 	// from root
 	const children = selection.getSelectableDirectChildren(tree, '1');
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => node.path);
 	expect(paths).toEqual(['1.4', '1.6', '1.7', '1.8', '1.9']);
 });
 
@@ -81,7 +56,7 @@ test('getChildrenWithCheckboxes parent is leaf node', () => {
 
 	// from root
 	const children = selection.getSelectableDirectChildren(tree, '1.4');
-	const paths = children.map((node) => helper.path(node));
+	const paths = children.map((node) => node.path);
 	expect(paths).toEqual([]);
 });
 
@@ -95,7 +70,6 @@ test('setSelection non-recursive', () => {
 	let selection: NodeId[] = ['2.5'];
 
 	selection = selectionProvider.setSelection(tree, nodePath, true, selection);
-
 	expectArrayEqual(selection, [nodeId, '2.5']);
 
 	selection = selectionProvider.setSelection(tree, nodePath, false, selection);
@@ -119,7 +93,7 @@ test('setSelection recursive all children are leaf', () => {
 
 	const children = helper.getDirectChildren(tree, parentNodePath);
 
-	const childrenIds = children.map((node) => helper.props.id(node));
+	const childrenIds = children.map((node) => node.id);
 	expectArrayEqual(childrenIds, ['1.7.10', '1.7.11']);
 
 	// all children should be selected
@@ -151,8 +125,8 @@ test('setSelection recursive all children are not leaf', () => {
 
 	const leafChildrenIds = helper
 		.allCHildren(tree, parentNodePath)
-		.filter((node) => !helper.props.hasChildren(node))
-		.map((node) => helper.props.id(node));
+		.filter((node) => !node.hasChildren)
+		.map((node) => node.id);
 
 	expectArrayEqual(selection, leafChildrenIds);
 
@@ -176,8 +150,8 @@ test('setSelection recursive parent is root', () => {
 
 	const allChildrenIds = helper
 		.allCHildren(tree, parentNodePath)
-		.filter((node) => !helper.props.hasChildren(node))
-		.map((node) => helper.props.id(node));
+		.filter((node) => !node.hasChildren)
+		.map((node) => node.id);
 
 	expectArrayEqual(allChildrenIds, selection);
 
@@ -191,7 +165,7 @@ test('setSelection recursive if one child has hasChildren set to true but no act
 	// but logically it will be ignored
 
 	const { helper, selection: selectionProvider } = getHelper(true);
-	const tree = getTree(helper, [{ nodePath: '2.12', hasChildren: true }]);
+	const tree = getTree(helper, [{ path: '2.12', hasChildren: true }]);
 
 	const parentNodePath = '2';
 

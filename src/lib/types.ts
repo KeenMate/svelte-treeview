@@ -2,15 +2,40 @@ export type Props = {
 	nodeId: string;
 	nodePath: string;
 	hasChildren: string;
-	expanded: string;
-	selected: string;
 	useCallback: string;
 	priority: string;
 	isDraggable: string;
 	insertDisabled: string;
 	nestDisabled: string;
 	checkbox: string;
-	visualState: string;
+};
+
+export type MappedNode = {
+	id: NodeId;
+	path: NodePath;
+	hasChildren: boolean;
+	useCallback: boolean;
+	priority: number;
+	isDraggable: boolean;
+	insertDisabled: boolean;
+	nestDisabled: boolean;
+	checkbox: boolean;
+};
+
+export type Node = {
+	originalNode: any;
+	id: NodeId;
+	path: NodePath;
+	hasChildren: boolean;
+	useCallback: boolean;
+	priority: number;
+	isDraggable: boolean;
+	insertDisabled: boolean;
+	nestDisabled: boolean;
+	checkbox: boolean;
+	visualState: VisualState;
+	expanded: boolean;
+	selected: boolean;
 };
 
 export enum VisualState {
@@ -25,11 +50,6 @@ export enum SelectionModes {
 	none = 'none'
 }
 
-// this disallows direct access to the node object and forces usage of the helper
-// TODO maybe implement some generics for event handlers and such
-// keep this only for internal stuff
-export type Node = object;
-
 export type Tree = Node[];
 export enum InsertionType {
 	above = 'above',
@@ -38,6 +58,7 @@ export enum InsertionType {
 }
 export type NodePath = string | null;
 export type NodeId = string | number;
+
 export type CustomizableClasses = {
 	treeClass: string;
 	nodeClass: string;
@@ -58,7 +79,7 @@ export type BeforeMovedCallback = (
 	insertionType: string
 ) => boolean;
 
-export type ExpandedCallback = (node: Node) => Promise<Node[]>;
+export type ExpandedCallback = (node: Node) => Promise<void>;
 
 export type HelperConfig = {
 	separator: string;
@@ -77,3 +98,8 @@ export enum HighlighType {
 export type TreeVisualStates = {
 	[nodePath: string]: VisualState;
 };
+
+// unmapped values provided by the user
+export type ProvidedTree = any[];
+
+export type FilterFunction = (node: Node) => boolean;
