@@ -13,7 +13,7 @@
 	const dispatch = createEventDispatcher();
 
 	function onSelect(e: Event, node: Node) {
-		e.preventDefault();
+		// e.preventDefault();
 		dispatch('select', { node });
 		return false;
 	}
@@ -25,6 +25,7 @@
 			<input
 				type="checkbox"
 				on:click={(e) => onSelect(e, node)}
+				on:keypress={(e) => e.key === 'Enter' && onSelect(e, node)}
 				checked={node.visualState === VisualState.selected}
 				indeterminate={node.visualState === VisualState.indeterminate}
 				disabled={readonly}
