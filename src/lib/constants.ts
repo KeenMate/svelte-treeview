@@ -1,9 +1,4 @@
-import {
-	type HelperConfig,
-	SelectionModes,
-	type CustomizableClasses,
-	type Props
-} from '$lib/types.js';
+import { type HelperConfig, type CustomizableClasses, type Props } from '$lib/types.js';
 
 export const defaultPropNames: Props = {
 	nodePath: 'nodePath',
