@@ -118,6 +118,7 @@
 		);
 	}
 
+	// TODO maybe this can be removed?
 	let liElements: { [key: string]: HTMLLIElement } = {};
 </script>
 
@@ -165,15 +166,11 @@
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
 				{#if hasChildren}
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<span on:click={() => setExpansion(node, !expanded)}>
-						<!-- use callback overrides expanded  -->
+					<button class="expansion-button" on:click={() => setExpansion(node, !expanded)}>
 						<i
 							class="far {expanded ? classes.expandedToggleClass : classes.collapsedToggleClass}"
-							class:fa-minus-square={expanded}
-							class:fa-plus-square={!expanded || node.useCallback}
 						/>
-					</span>
+					</button>
 				{:else}
 					<span />
 				{/if}

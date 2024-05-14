@@ -1,4 +1,4 @@
-<script lang="ts" generics="T">
+<script lang="ts">
 	import ContextMenu from './menu/ContextMenu.svelte';
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { defaultClasses, defaultPixelTreshold, defaultPropNames } from './constants.js';
