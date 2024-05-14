@@ -62,8 +62,8 @@ export type NodeId = string | number;
 export type CustomizableClasses = {
 	treeClass: string;
 	nodeClass: string;
-	expandedToggleClass: string;
-	collapsedToggleClass: string;
+	expandIcon: string;
+	collapseIcon: string;
 	expandClass: string;
 	inserLineClass: string;
 	inserLineNestClass: string;

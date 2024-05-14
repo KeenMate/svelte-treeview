@@ -97,7 +97,7 @@
 	 * Classes used in tree. You can override default classes with this prop.
 	 * It is recommended to use default classes and add aditinal styles in your css
 	 */
-	export let customClasses: CustomizableClasses = defaultClasses;
+	export let customClasses: Partial<CustomizableClasses> = {};
 
 	// use any so use doesnt have to cast from unknown
 	/**
@@ -134,6 +134,8 @@
 	let validTarget = false;
 	let insPos: InsertionType;
 
+	$: computedClasses = { ...defaultClasses, ...(customClasses ?? {}) };
+
 	$: dragAndDrop && console.warn('Drag and drop is not supported in this version');
 
 	$: helper = new TreeHelper({
@@ -145,8 +147,11 @@
 
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
-
-		expandedIds = computedTree.map((node) => node.id);
+		if (changeTo) {
+			expandedIds = computedTree.map((node) => node.id);
+		} else {
+			expandedIds = [];
+		}
 	}
 
 	function computeTree(
@@ -163,15 +168,16 @@
 			return [];
 		}
 
-		let mappedTree = helper.mapTree(userProvidedTree, filter, { ...defaultPropNames, ...props });
+		const mappedTree = helper.mapTree(userProvidedTree, { ...defaultPropNames, ...props });
+		const filteredTree = helper.searchTree(mappedTree, filter);
 
-		helper.markExpanded(mappedTree, expandedIds);
+		helper.markExpanded(filteredTree, expandedIds);
 
 		// TODO here we could save last value and only recompute visual state if value changed
 		// or use diff to only update affected nodes
-		selectionProvider.markSelected(mappedTree, value);
+		selectionProvider.markSelected(filteredTree, value);
 
-		return mappedTree;
+		return filteredTree;
 	}
 
 	function onExpand(event: CustomEvent<{ node: Node; changeTo: boolean }>) {
@@ -280,7 +286,7 @@
 	{highlightedNode}
 	{readonly}
 	{helper}
-	classes={customClasses}
+	classes={computedClasses}
 	{verticalLines}
 	on:open-ctxmenu={openContextMenu}
 	on:internal-expand={onExpand}
