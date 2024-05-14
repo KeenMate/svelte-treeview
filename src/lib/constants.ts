@@ -19,8 +19,8 @@ export const defaultClasses: CustomizableClasses = {
 	expandClass: 'inserting-highlighted',
 	currentlyDraggedClass: 'currently-dragged',
 	nodeClass: '',
-	expandedToggleClass: 'fa-plus-square',
-	collapsedToggleClass: 'fa-minus-square',
+	expandIcon: 'far fa-fw fa-plus-square',
+	collapseIcon: 'far fa-fw fa-minus-square',
 	inserLineClass: '',
 	inserLineNestClass: ''
 };

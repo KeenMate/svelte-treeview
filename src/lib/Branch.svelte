@@ -166,13 +166,15 @@
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
 				{#if hasChildren}
-					<button class="expansion-button" on:click={() => setExpansion(node, !expanded)}>
-						<i
-							class="far {expanded ? classes.expandedToggleClass : classes.collapsedToggleClass}"
-						/>
+					<button
+						class="expansion-button"
+						on:click={() => setExpansion(node, !expanded)}
+						type="button"
+					>
+						<i class="fa-fw {expanded ? classes.expandIcon : classes.collapseIcon}" />
 					</button>
 				{:else}
-					<span />
+					<span class="fa-fw" />
 				{/if}
 
 				<Checkbox

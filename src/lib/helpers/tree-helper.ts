@@ -19,9 +19,9 @@ export class TreeHelper {
 		this.config = config;
 	}
 
-	mapTree(tree: Tree, filter: FilterFunction | null, properties: Props): Node[] {
+	mapTree(tree: Tree, properties: Props): Node[] {
 		{
-			return this.searchTree(tree, filter).map((node: any) => {
+			return tree.map((node: any) => {
 				// TODO maybe create class for nodes
 				const mappedNode: Node = {
 					originalNode: node,
