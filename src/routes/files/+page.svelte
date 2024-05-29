@@ -13,7 +13,7 @@
 	let searchText = '';
 	let selectedNodes: string[] = [];
 
-	$: filterFunc = (node: any) => node.name.includes(searchText);
+	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText);
 
 	onMount(() => {
 		tree = Files.map((n) => {
@@ -21,7 +21,9 @@
 				...n,
 				path: n.path.replaceAll('\\', '/'),
 				checkbox: !n.path.startsWith('.'),
-				selected: false
+				dragDisabled: n.path.startsWith('.'),
+				selected: false,
+				nestAllowed: n.hasChildren
 			};
 		});
 		console.log('MountedTree', tree);
@@ -52,7 +54,6 @@
 				on:change={onChange}
 				on:expansion={(e) => console.log(e.detail)}
 				on:moved={(e) => console.log(e.detail)}
-				recalculateNodePath={false}
 				props={{ nodePath: 'path', nodeId: 'path' }}
 				separator="/"
 				showContexMenu
@@ -95,6 +96,7 @@
 						Open on github
 					</MenuOption>
 				</svelte:fragment>
+				<svelte:fragment slot="nest-highlight">Place into folder</svelte:fragment>
 			</TreeView>
 		</Card>
 	</div>

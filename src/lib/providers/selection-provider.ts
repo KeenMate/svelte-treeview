@@ -1,7 +1,6 @@
 import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import {
 	SelectionModes,
-	type NodePath,
 	type Tree,
 	VisualState,
 	type TreeVisualStates,
@@ -58,11 +57,11 @@ export class SelectionProvider {
 
 	setSelection(
 		tree: Tree,
-		nodePath: NodePath,
+		nodePath: string | null,
 		changeTo: boolean,
 		oldSelection: NodeId[]
 	): NodeId[] {
-		const node = this.helper.findNode(tree, nodePath);
+		const node = nodePath ? this.helper.findNode(tree, nodePath) : null;
 		const nodeHasChildren = node ? node.hasChildren : false;
 
 		// allow selection of root node
@@ -175,7 +174,7 @@ export class SelectionProvider {
 
 	private changeSelectedRecursively(
 		tree: Tree,
-		parentNodePath: NodePath,
+		parentNodePath: string | null,
 		changeTo: boolean,
 		oldSelection: NodeId[]
 	): NodeId[] {

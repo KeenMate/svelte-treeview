@@ -1,223 +1,250 @@
-// import type { PropertyHelper } from '$lib/helpers/property-helper.js';
-// import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-// import { InsertionType, type Node, type NodePath, type Tree } from '$lib/types.js';
+import type { TreeHelper } from '$lib/helpers/tree-helper.js';
+import { type Node, InsertionType } from '$lib/types.js';
 
-// export class DragDropProvider {
-// 	helper: TreeHelper;
-// 	props: PropertyHelper;
-// 	separator: string;
+export class DragDropProvider {
+	helper: TreeHelper;
+	constructor(treeHelper: TreeHelper) {
+		this.helper = treeHelper;
+	}
 
-// 	constructor(treeHelper: TreeHelper) {
-// 		this.helper = treeHelper;
-// 		this.props = treeHelper.props;
+	getInsertionPosition(
+		draggendNode: Node,
+		draggedOverNode: Node,
+		e: DragEvent,
+		element: HTMLElement,
+		nest: boolean
+	): InsertionType {
+		if (nest && draggedOverNode.nestAllowed) {
+			return InsertionType.nest;
+		}
 
-// 		this.separator = this.helper.config.separator ?? '.';
-// 	}
+		if (draggedOverNode.insertDisabled) {
+			return InsertionType.none;
+		}
 
-// 	path(node: Node) {
-// 		return this.helper.path(node);
-// 	}
+		return this.getRelativePosition(element, e);
+	}
 
-// 	/**
-// 	 * moves node from one parent to another
-// 	 * @param {Object[]} tree - tree
-// 	 * @param {nodePath} movedNodePath - nodepath of moved(dragged) node
-// 	 * @param {nodePath} targetNodePath - nodepath of node where it should be moved ( either bellow it in priority or as child)
-// 	 * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
-// 	 * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
-// 	 */
-// 	moveNode(
-// 		tree: Node[],
-// 		movedNodePath: NodePath,
-// 		targetNodePath: NodePath,
-// 		insType: InsertionType,
-// 		recalculateNodePath: boolean
-// 	): Node[] {
-// 		// cannot move root node
-// 		if (!movedNodePath) return tree;
+	getRelativePosition(element: Element, e: DragEvent): InsertionType {
+		const targetCords = element.getBoundingClientRect();
+		const half = targetCords.bottom - targetCords.height / 2;
 
-// 		const isNesting = insType === InsertionType.nest;
-// 		// if you are not isNestinging, you want to be on same level
-// 		//so you will have same parent as target node
-// 		const parentNodePath = isNesting
-// 			? targetNodePath
-// 			: this.helper.getParentNodePath(targetNodePath);
+		if (e.y < half) {
+			return InsertionType.insertAbove;
+		}
+		return InsertionType.insertBelow;
+	}
 
-// 		//trying to move parent to child
-// 		if (parentNodePath?.startsWith(movedNodePath)) {
-// 			return tree;
-// 		}
+	isDropAllowed(draggedNode: Node, targeNode: Node): boolean {
+		if (targeNode.dropDisabled) {
+			return false;
+		}
+		if (targeNode.path.startsWith(draggedNode.path + this.helper.config.separator)) {
+			return false;
+		}
+		return true;
+	}
 
-// 		const changedParent = this.helper.getParentNodePath(movedNodePath) !== parentNodePath;
+	// /**
+	//  * moves node from one parent to another
+	//  * @param {Object[]} tree - tree
+	//  * @param {nodePath} movedNodePath - nodepath of moved(dragged) node
+	//  * @param {nodePath} targetNodePath - nodepath of node where it should be moved ( either bellow it in priority or as child)
+	//  * @param {int} insType - if true, it will insert moved node as child of target node, if false, it will insert it bellow it in priority
+	//  * @param {boolean} recalculateNodePath - wont recalculare id of moved node, used when last part of nodePath is always unique
+	//  */
+	// moveNode(
+	// 	tree: Node[],
+	// 	movedNodePath: NodePath,
+	// 	targetNodePath: NodePath,
+	// 	insType: InsertionType,
+	// 	recalculateNodePath: boolean
+	// ): Node[] {
+	// 	// cannot move root node
+	// 	if (!movedNodePath) return tree;
 
-// 		let newNodePath = movedNodePath;
+	// 	const isNesting = insType === InsertionType.nest;
+	// 	// if you are not isNestinging, you want to be on same level
+	// 	//so you will have same parent as target node
+	// 	const parentNodePath = isNesting
+	// 		? targetNodePath
+	// 		: this.helper.getParentNodePath(targetNodePath);
 
-// 		//dont create new node if you only moved inside same parent
-// 		if (changedParent) {
-// 			newNodePath = this.calculateNewNodePath(
-// 				tree,
-// 				parentNodePath,
-// 				movedNodePath,
-// 				recalculateNodePath
-// 			);
-// 		}
+	// 	//trying to move parent to child
+	// 	if (parentNodePath?.startsWith(movedNodePath)) {
+	// 		return tree;
+	// 	}
 
-// 		//* find target node
+	// 	const changedParent = this.helper.getParentNodePath(movedNodePath) !== parentNodePath;
 
-// 		const targetNode = this.helper.findNode(tree, targetNodePath);
-// 		if (!targetNode) return tree;
+	// 	let newNodePath = movedNodePath;
 
-// 		let movedNode;
+	// 	//dont create new node if you only moved inside same parent
+	// 	if (changedParent) {
+	// 		newNodePath = this.calculateNewNodePath(
+	// 			tree,
+	// 			parentNodePath,
+	// 			movedNodePath,
+	// 			recalculateNodePath
+	// 		);
+	// 	}
 
-// 		//move nodes
-// 		tree = tree.map((node) => {
-// 			//make sure that parent's haschild is set to true, so that children are visible
-// 			if (this.path(node) == parentNodePath) {
-// 				this.props.setHasChildren(node, true);
-// 				this.props.setExpanded(node, true);
-// 			}
+	// 	//* find target node
 
-// 			//move moved nodes to new location ( if location is being changed)
-// 			if (changedParent && this.path(node)?.startsWith(movedNodePath)) {
-// 				//replace old parent with new one
-// 				const newPath = this.path(node)?.replace(movedNodePath, newNodePath) ?? null;
-// 				this.props.setPath(node, newPath);
-// 			}
+	// 	const targetNode = this.helper.findNode(tree, targetNodePath);
+	// 	if (!targetNode) return tree;
 
-// 			//if it is moved node
-// 			if (this.path(node) === newNodePath) {
-// 				movedNode = node;
+	// 	let movedNode;
 
-// 				//? not sure if this is best
-// 				this.updatePriority(tree, movedNode, parentNodePath, newNodePath, targetNode, insType);
-// 			}
-// 			return node;
-// 		});
+	// 	//move nodes
+	// 	tree = tree.map((node) => {
+	// 		//make sure that parent's haschild is set to true, so that children are visible
+	// 		if (this.path(node) == parentNodePath) {
+	// 			this.props.setHasChildren(node, true);
+	// 			this.props.setExpanded(node, true);
+	// 		}
 
-// 		if (!movedNode) return tree;
+	// 		//move moved nodes to new location ( if location is being changed)
+	// 		if (changedParent && this.path(node)?.startsWith(movedNodePath)) {
+	// 			//replace old parent with new one
+	// 			const newPath = this.path(node)?.replace(movedNodePath, newNodePath) ?? null;
+	// 			this.props.setPath(node, newPath);
+	// 		}
 
-// 		//* insert node at right possition of array
+	// 		//if it is moved node
+	// 		if (this.path(node) === newNodePath) {
+	// 			movedNode = node;
 
-// 		const oldIndex = tree.findIndex((x) => this.path(x) == newNodePath);
-// 		tree.splice(oldIndex, 1);
+	// 			//? not sure if this is best
+	// 			this.updatePriority(tree, movedNode, parentNodePath, newNodePath, targetNode, insType);
+	// 		}
+	// 		return node;
+	// 	});
 
-// 		const index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
+	// 	if (!movedNode) return tree;
 
-// 		tree.splice(index + (insType == InsertionType.above ? 0 : 1), 0, movedNode);
+	// 	//* insert node at right possition of array
 
-// 		//TODO maybe add option to setting this.hasChildren to false when moved last children
+	// 	const oldIndex = tree.findIndex((x) => this.path(x) == newNodePath);
+	// 	tree.splice(oldIndex, 1);
 
-// 		//hide plus icon if parent of moved node doesnt have any more children
-// 		const oldParent = this.helper.findNode(tree, this.helper.getParentNodePath(movedNodePath));
-// 		if (!oldParent) return tree;
-// 		//moved last node
-// 		const oldParentHasChildren = this.helper.allCHildren(tree, this.path(oldParent)).length;
-// 		if (oldParent && !oldParentHasChildren) {
-// 			this.props.setHasChildren(oldParent, false);
-// 		}
+	// 	const index = tree.findIndex((x) => this.path(x) == this.path(targetNode));
 
-// 		return tree;
-// 	}
+	// 	tree.splice(index + (insType == InsertionType.above ? 0 : 1), 0, movedNode);
 
-// 	calculateNewNodePath(
-// 		tree: Tree,
-// 		parentNodePath: NodePath,
-// 		movedNodePath: NodePath,
-// 		recalculateNodePath: boolean
-// 	) {
-// 		//node id is last part of nodePath
-// 		let nodeId;
+	// 	//TODO maybe add option to setting this.hasChildren to false when moved last children
 
-// 		if (recalculateNodePath) {
-// 			nodeId = this.getNextNodeId(tree, parentNodePath);
-// 		} else {
-// 			//get last segment of path
-// 			// nodeId = this.helper.getNodeIdFromPath(movedNodePath);
-// 		}
+	// 	//hide plus icon if parent of moved node doesnt have any more children
+	// 	const oldParent = this.helper.findNode(tree, this.helper.getParentNodePath(movedNodePath));
+	// 	if (!oldParent) return tree;
+	// 	//moved last node
+	// 	const oldParentHasChildren = this.helper.allCHildren(tree, this.path(oldParent)).length;
+	// 	if (oldParent && !oldParentHasChildren) {
+	// 		this.props.setHasChildren(oldParent, false);
+	// 	}
 
-// 		if (parentNodePath === null) return nodeId as string;
+	// 	return tree;
+	// }
 
-// 		return `${parentNodePath}${this.separator}${nodeId}`;
-// 	}
+	// calculateNewNodePath(
+	// 	tree: Tree,
+	// 	parentNodePath: NodePath,
+	// 	movedNodePath: NodePath,
+	// 	recalculateNodePath: boolean
+	// ) {
+	// 	//node id is last part of nodePath
+	// 	let nodeId;
 
-// 	updatePriority(
-// 		tree: Tree,
-// 		node: Node,
-// 		parentNodePath: NodePath,
-// 		newNodePath: NodePath,
-// 		targetNode: Node,
-// 		insType: InsertionType
-// 	) {
-// 		const isNesting = insType == InsertionType.nest;
+	// 	if (recalculateNodePath) {
+	// 		nodeId = this.getNextNodeId(tree, parentNodePath);
+	// 	} else {
+	// 		//get last segment of path
+	// 		// nodeId = this.helper.getNodeIdFromPath(movedNodePath);
+	// 	}
 
-// 		if (isNesting || this.props.priority(targetNode) != null) {
-// 			let newpriority = 0;
-// 			if (!isNesting) {
-// 				//calculate next
-// 				newpriority = this.props.priority(targetNode) ?? 0;
-// 				if (insType == InsertionType.below) {
-// 					newpriority += 1;
-// 				} else {
-// 					//targetNode[this.props.priority] -= 1;
-// 				}
-// 			}
-// 			this.recalculatesPriorities(tree, parentNodePath, newNodePath, newpriority);
-// 			this.props.setPriority(targetNode, newpriority);
-// 		} else {
-// 			//so old priority doesnt mess up orderring
-// 			this.props.setPriority(targetNode, undefined);
-// 		}
-// 	}
+	// 	if (parentNodePath === null) return nodeId as string;
 
-// 	/** recomputes all priorities after inserted priority.F
-// 	 * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
-// 	 */
-// 	//? maybe it will recalculate properly if dont set insertedPriority
-// 	recalculatesPriorities(
-// 		tree: Tree,
-// 		parentNode: NodePath,
-// 		movedNodePath: NodePath,
-// 		insertedPriority = -1
-// 	) {
-// 		let nextPriority = insertedPriority + 1;
-// 		this.helper.orderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
-// 			if (this.props.priority(node) >= insertedPriority && this.path(node) != movedNodePath) {
-// 				this.props.setPriority(node, nextPriority++);
-// 			}
-// 		});
-// 	}
+	// 	return `${parentNodePath}${this.separator}${nodeId}`;
+	// }
 
-// 	/** return biggest value of nodepath number that children are using +1 */
-// 	getNextNodeId(tree: Tree, parentPath: NodePath) {
-// 		let max = 0;
-// 		//findes biggest nodeNumber for
-// 		this.helper.allCHildren(tree, parentPath).forEach((node) => {
-// 			const parent = this.helper.getParentNodePath(this.path(node));
+	// updatePriority(
+	// 	tree: Tree,
+	// 	node: Node,
+	// 	parentNodePath: NodePath,
+	// 	newNodePath: NodePath,
+	// 	targetNode: Node,
+	// 	insType: InsertionType
+	// ) {
+	// 	const isNesting = insType == InsertionType.nest;
 
-// 			if (parent === parentPath) {
-// 				const num = parseInt(this.path(node)?.substring(parent ? parent.length + 1 : 0) ?? '0');
-// 				max = Math.max(max, num);
-// 			}
-// 		});
+	// 	if (isNesting || this.props.priority(targetNode) != null) {
+	// 		let newpriority = 0;
+	// 		if (!isNesting) {
+	// 			//calculate next
+	// 			newpriority = this.props.priority(targetNode) ?? 0;
+	// 			if (insType == InsertionType.below) {
+	// 				newpriority += 1;
+	// 			} else {
+	// 				//targetNode[this.props.priority] -= 1;
+	// 			}
+	// 		}
+	// 		this.recalculatesPriorities(tree, parentNodePath, newNodePath, newpriority);
+	// 		this.props.setPriority(targetNode, newpriority);
+	// 	} else {
+	// 		//so old priority doesnt mess up orderring
+	// 		this.props.setPriority(targetNode, undefined);
+	// 	}
+	// }
 
-// 		return (max + 1).toString();
-// 	}
+	// /** recomputes all priorities after inserted priority.F
+	//  * Also changes all priorities to be one apart (1,5,6 => 1,2,3)
+	//  */
+	// //? maybe it will recalculate properly if dont set insertedPriority
+	// recalculatesPriorities(
+	// 	tree: Tree,
+	// 	parentNode: NodePath,
+	// 	movedNodePath: NodePath,
+	// 	insertedPriority = -1
+	// ) {
+	// 	let nextPriority = insertedPriority + 1;
+	// 	this.helper.orderByPriority(this.helper.allCHildren(tree, parentNode)).forEach((node) => {
+	// 		if (this.props.priority(node) >= insertedPriority && this.path(node) != movedNodePath) {
+	// 			this.props.setPriority(node, nextPriority++);
+	// 		}
+	// 	});
+	// }
 
-// 	getInsertionPosition(e: DragEvent, element: HTMLElement): InsertionType {
-// 		const targetCords = element.getBoundingClientRect();
-// 		const half = targetCords.bottom - targetCords.height / 2;
+	// /** return biggest value of nodepath number that children are using +1 */
+	// getNextNodeId(tree: Tree, parentPath: NodePath) {
+	// 	let max = 0;
+	// 	//findes biggest nodeNumber for
+	// 	this.helper.allCHildren(tree, parentPath).forEach((node) => {
+	// 		const parent = this.helper.getParentNodePath(this.path(node));
 
-// 		if (e.y < half) {
-// 			return InsertionType.below;
-// 		}
-// 		return InsertionType.above;
-// 	}
-// 	getNodeIdFromPath(nodePath: NodePath) {
-// 		if (nodePath == null) {
-// 			console.warn('getting node id of null node path');
-// 			return null;
-// 		}
+	// 		if (parent === parentPath) {
+	// 			const num = parseInt(this.path(node)?.substring(parent ? parent.length + 1 : 0) ?? '0');
+	// 			max = Math.max(max, num);
+	// 		}
+	// 	});
 
-// 		return nodePath?.split(this.helper.config.separator).slice(-1)[0];
-// 	}
-// }
+	// 	return (max + 1).toString();
+	// }
+
+	// getInsertionPosition(e: DragEvent, element: HTMLElement): InsertionType {
+	// 	const targetCords = element.getBoundingClientRect();
+	// 	const half = targetCords.bottom - targetCords.height / 2;
+
+	// 	if (e.y < half) {
+	// 		return InsertionType.below;
+	// 	}
+	// 	return InsertionType.above;
+	// }
+	// getNodeIdFromPath(nodePath: NodePath) {
+	// 	if (nodePath == null) {
+	// 		console.warn('getting node id of null node path');
+	// 		return null;
+	// 	}
+
+	// 	return nodePath?.split(this.helper.config.separator).slice(-1)[0];
+	// }
+}
