@@ -4,15 +4,15 @@ export type Props = {
 	hasChildren: string;
 	useCallback: string;
 	priority: string;
-	isDraggable: string;
+	dragDisabled: string;
 	insertDisabled: string;
-	nestDisabled: string;
+	nestAllowed: string;
 	checkbox: string;
 };
 
 export type MappedNode = {
 	id: NodeId;
-	path: NodePath;
+	path: string;
 	hasChildren: boolean;
 	useCallback: boolean;
 	priority: number;
@@ -23,19 +23,21 @@ export type MappedNode = {
 };
 
 export type Node = {
+	// TODO matbe use generics
 	originalNode: any;
 	id: NodeId;
-	path: NodePath;
+	path: string;
 	hasChildren: boolean;
 	useCallback: boolean;
 	priority: number;
-	isDraggable: boolean;
+	dragDisabled: boolean;
 	insertDisabled: boolean;
-	nestDisabled: boolean;
+	nestAllowed: boolean;
 	checkbox: boolean;
 	visualState: VisualState;
 	expanded: boolean;
 	selected: boolean;
+	dropDisabled: boolean;
 };
 
 export enum VisualState {
@@ -51,12 +53,7 @@ export enum SelectionModes {
 }
 
 export type Tree = Node[];
-export enum InsertionType {
-	above = 'above',
-	below = 'below',
-	nest = 'nest'
-}
-export type NodePath = string | null;
+
 export type NodeId = string | number;
 
 export type CustomizableClasses = {
@@ -64,13 +61,13 @@ export type CustomizableClasses = {
 	nodeClass: string;
 	expandIcon: string;
 	collapseIcon: string;
+	nestIcon: string;
 	expandClass: string;
 	inserLineClass: string;
-	inserLineNestClass: string;
 	currentlyDraggedClass: string;
 };
 
-export type DragEnterCallback = (draggendNode: Node, oldParent: Node, newParent: Node) => boolean;
+export type DragEnterCallback = (draggendNode: Node, targetNode: Node) => Promise<boolean>;
 
 export type BeforeMovedCallback = (
 	draggendNode: Node,
@@ -85,7 +82,7 @@ export type HelperConfig = {
 	separator: string;
 };
 
-export enum HighlighType {
+export enum InsertionType {
 	nest = 'nest',
 	insertAbove = 'insert-above',
 	insertBelow = 'insert-below',

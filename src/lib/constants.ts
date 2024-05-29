@@ -1,4 +1,4 @@
-import { type HelperConfig, type CustomizableClasses, type Props } from '$lib/types.js';
+import type { HelperConfig, CustomizableClasses, Props } from '$lib/types.js';
 
 export const defaultPropNames: Props = {
 	nodePath: 'nodePath',
@@ -6,13 +6,11 @@ export const defaultPropNames: Props = {
 	hasChildren: 'hasChildren',
 	useCallback: '__useCallback',
 	priority: 'priority',
-	isDraggable: 'isDraggable',
+	dragDisabled: 'dragDisabled',
 	insertDisabled: 'insertDisabled',
-	nestDisabled: 'nestDisabled',
+	nestAllowed: 'nestAllowed',
 	checkbox: 'checkbox'
 };
-
-export const defaultPixelTreshold = 50;
 
 export const defaultClasses: CustomizableClasses = {
 	treeClass: 'treeview',
@@ -22,7 +20,7 @@ export const defaultClasses: CustomizableClasses = {
 	expandIcon: 'far fa-fw fa-plus-square',
 	collapseIcon: 'far fa-fw fa-minus-square',
 	inserLineClass: '',
-	inserLineNestClass: ''
+	nestIcon: 'fas fa-level-down-alt'
 };
 
 export const defaultConfig: HelperConfig = {

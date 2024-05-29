@@ -2,7 +2,6 @@ import orderBy from 'lodash.unionby'; // used by tree merge
 import uniqueBy from 'lodash.uniqby'; // used by tree merge
 import {
 	type Node,
-	type NodePath,
 	type HelperConfig,
 	type Tree,
 	VisualState,
@@ -27,17 +26,20 @@ export class TreeHelper {
 					originalNode: node,
 					id: node[properties.nodeId],
 					path: node[properties.nodePath],
-					hasChildren: node[properties.hasChildren],
-					useCallback: node[properties.useCallback],
+					hasChildren: node[properties.hasChildren] === true,
+					useCallback: node[properties.useCallback] === true,
 					priority: node[properties.priority],
-					isDraggable: node[properties.isDraggable],
-					insertDisabled: node[properties.insertDisabled],
-					nestDisabled: node[properties.nestDisabled],
-					checkbox: node[properties.checkbox],
+					dragDisabled: node[properties.dragDisabled] === true,
+					insertDisabled: node[properties.insertDisabled] === true,
+					nestAllowed: node[properties.nestAllowed] === true,
+					checkbox: node[properties.checkbox] === true,
 					expanded: false,
 					selected: false,
-					visualState: VisualState.notSelected
+					visualState: VisualState.notSelected,
+					dropDisabled: false
 				};
+
+				mappedNode.dropDisabled = mappedNode.insertDisabled && !mappedNode.nestAllowed;
 				return mappedNode;
 			});
 		}
@@ -53,7 +55,7 @@ export class TreeHelper {
 
 	//#region basic helpres
 
-	getParentNodePath(nodePath: NodePath): NodePath {
+	getParentNodePath(nodePath: string): string | null {
 		if (nodePath == null) throw new Error('cannot get parent of root');
 
 		const separator = this.config.separator;
@@ -63,28 +65,28 @@ export class TreeHelper {
 		return parentPath ?? null;
 	}
 
-	isChildrenOf(parentNodePath: NodePath, childrenNodePath: NodePath) {
+	isChildrenOf(parentNodePath: string | null, childrenNodePath: string) {
 		if (parentNodePath === childrenNodePath) return false;
 
 		return childrenNodePath?.startsWith(parentNodePath ?? '');
 	}
 
-	hasChildren(tree: Tree, nodePath: NodePath) {
+	hasChildren(tree: Tree, nodePath: string) {
 		return tree?.find((x) => this.getParentNodePath(x.path) === nodePath);
 	}
 
-	findNode(tree: Tree, nodePath: NodePath): Node | null {
+	findNode(tree: Tree, nodePath: string): Node | null {
 		return tree.find((node) => node.path === nodePath) ?? null;
 	}
 
-	nodePathIsChild(nodePath: NodePath) {
+	nodePathIsChild(nodePath: string) {
 		const separator = this.config.separator;
 
 		const includesSeparator = nodePath?.includes(separator);
 		return includesSeparator;
 	}
 
-	getDirectChildren(tree: Tree, parentNodePath: NodePath) {
+	getDirectChildren(tree: Tree, parentNodePath: string | null) {
 		const children = tree.filter((node) =>
 			!parentNodePath
 				? !this.nodePathIsChild(node.path)
@@ -94,7 +96,7 @@ export class TreeHelper {
 		return ordered;
 	}
 
-	allCHildren(tree: Tree, parentNodePath: NodePath) {
+	allCHildren(tree: Tree, parentNodePath: string | null) {
 		const children = tree.filter((node) => this.isChildrenOf(parentNodePath, node.path));
 		return children;
 	}
@@ -140,7 +142,7 @@ export class TreeHelper {
 	}
 
 	//based on number of dots
-	getDepthLevel(nodePath: NodePath) {
+	getDepthLevel(nodePath: string) {
 		if (nodePath == null) return 0;
 
 		const separator = this.config.separator;
@@ -169,14 +171,17 @@ export class TreeHelper {
 		return uniqueNodes;
 	}
 
-	getParents(tree: Tree, targetNode: Node) {
-		const parentsPaths: NodePath[] = [];
+	getParents(tree: Tree, targetNode: Node): Node[] {
+		const parentsPaths: string[] = [];
 
-		let nodePath = targetNode.path;
-
+		// TODO refactor
+		let nodePath: string | null = this.getParentNodePath(targetNode.path);
 		// get all parents
-		while (nodePath && nodePath.length > 0) {
-			nodePath = this.getParentNodePath(nodePath);
+		while (nodePath !== null && nodePath !== '') {
+			nodePath = this.getParentNodePath(nodePath as string);
+			if (nodePath === null) {
+				break;
+			}
 			parentsPaths.push(nodePath);
 		}
 

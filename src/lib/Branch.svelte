@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import Checkbox from './Checkbox.svelte';
-	import { SelectionModes, InsertionType, type Node, type Tree } from '$lib/types.js';
-	import type { CustomizableClasses, TreeHelper } from '$lib/index.js';
+	import {
+		SelectionModes,
+		InsertionType,
+		type Node,
+		type Tree,
+		type CustomizableClasses
+	} from '$lib/types.js';
+	import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -18,14 +24,12 @@
 	export let expandTo: number;
 	export let classes: CustomizableClasses;
 	export let helper: TreeHelper;
-
-	export let draggedPath: string | null;
-	export let highlightedNode: Node | null;
 	export let childDepth: number;
 	export let branchRootNode: Node | null;
-	export let canNest: boolean;
-	export let validTarget: boolean;
-	export let insPos: InsertionType;
+
+	export let draggedNode: Node | null;
+	export let highlightedNode: Node | null;
+	export let insertionType: InsertionType;
 
 	const getNodeId = (node: Node) => `${treeId}-${node.path}`;
 
@@ -54,11 +58,11 @@
 	}
 
 	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragStart', { node: node, event: e, element: el });
+		dispatch('internal-handleDragDrop', { node: node, event: e, element: el });
 	}
 
-	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragOver', { node: node, event: e, element: el });
+	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement, nest: boolean) {
+		dispatch('internal-handleDragOver', { node: node, event: e, element: el, nest });
 	}
 
 	function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
@@ -73,49 +77,15 @@
 		dispatch('internal-handleDragLeave', { node: node, event: e, element: el });
 	}
 
-	/**
-	 *check if this node is one being hovered over (highlited) and is valid target
-	 */
-	function highlighThisNode(node: Node, highlitedNode: Node, validTarget: boolean) {
-		return validTarget && highlitedNode.path == node.path;
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightNesting(
+	function getHighlighMode(
 		node: Node,
-		highlitedNode: Node | null,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		if (!highlitedNode) return false;
+		highlightedNode: Node | null,
+		insertionType: InsertionType
+	): InsertionType {
+		// return InsertionType.insertAbove;
 
-		return (
-			canNest && highlighThisNode(node, highlitedNode, validTarget) && node.nestDisabled !== true
-		);
-	}
-	/**
-	 * returns true, it should highlight nesting on this node
-	 * @param node node
-	 * @param highlitedNode highlited node
-	 * @param validTarget valid target
-	 * @param canNest can nest
-	 */
-	function highlightInsert(
-		node: Node,
-		highlitedNode: Node | null,
-		validTarget: boolean,
-		canNest: boolean
-	) {
-		if (!highlitedNode) return false;
-
-		return (
-			!canNest && highlighThisNode(node, highlitedNode, validTarget) && node.nestDisabled !== true
-		);
+		if (highlightedNode?.path !== node.path) return InsertionType.none;
+		return insertionType;
 	}
 
 	// TODO maybe this can be removed?
@@ -128,27 +98,24 @@
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
 	{#each helper.getDirectChildren(tree, branchRootNode?.path ?? null) as node (getNodeId(node))}
-		{@const nesthighlighed = highlightNesting(node, highlightedNode, validTarget, canNest)}
-		{@const insertHighlighted = highlightInsert(node, highlightedNode, validTarget, canNest)}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
-		{@const hasChildren = node.hasChildren}
-		{@const draggable = !readonly && dragAndDrop && node.isDraggable}
-		{@const isCurrentlyDragged =
-			draggedPath == node.path || (draggedPath && node.path?.startsWith(draggedPath))}
-
+		{@const draggable = !readonly && dragAndDrop && !node.dragDisabled}
+		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
+		{@const effectiveHighlight = getHighlighMode(node, highlightedNode, insertionType)}
 		<li
 			class:is-child={helper.nodePathIsChild(node.path)}
-			class:has-children={hasChildren}
+			class:has-children={node.hasChildren}
 			on:contextmenu|stopPropagation={(e) => {
 				dispatch('open-ctxmenu', { e: e, node: Node });
 			}}
 			on:drop|stopPropagation={(e) => handleDragDrop(e, node, liElements[getNodeId(node)])}
-			on:dragover|stopPropagation={(e) => handleDragOver(e, node, liElements[getNodeId(node)])}
+			on:dragover|stopPropagation={(e) =>
+				handleDragOver(e, node, liElements[getNodeId(node)], false)}
 			on:dragenter|stopPropagation={(e) => handleDragEnter(e, node, liElements[getNodeId(node)])}
 			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 		>
-			{#if insPos == InsertionType.above && insertHighlighted}
+			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {classes.inserLineClass}" />
 				</div>
@@ -157,21 +124,21 @@
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
 				class="tree-item
-				{nesthighlighed ? classes.expandClass : ''}
+				{effectiveHighlight === InsertionType.nest ? classes.expandClass : ''}
 				{classes.nodeClass} {isCurrentlyDragged ? classes.currentlyDraggedClass : ''}"
-				class:div-has-children={hasChildren}
-				class:hover={insertHighlighted || nesthighlighed}
+				class:div-has-children={node.hasChildren}
+				class:hover={effectiveHighlight !== InsertionType.none}
 				{draggable}
 				on:dragstart={(e) => handleDragStart(e, node)}
 				on:dragend={(e) => handleDragEnd(e, node)}
 			>
-				{#if hasChildren}
+				{#if node.hasChildren}
 					<button
 						class="expansion-button"
 						on:click={() => setExpansion(node, !expanded)}
 						type="button"
 					>
-						<i class="fa-fw {expanded ? classes.expandIcon : classes.collapseIcon}" />
+						<i class="fa-fw {expanded ? classes.collapseIcon : classes.expandIcon}" />
 					</button>
 				{:else}
 					<span class="fa-fw" />
@@ -189,16 +156,21 @@
 				<span class:pointer-cursor={draggable}>
 					<slot node={node.originalNode} />
 				</span>
-			</div>
 
-			{#if nesthighlighed}
-				<div class="insert-line-wrapper">
-					<div
-						class="insert-line insert-line-child {classes.inserLineClass} {classes.inserLineNestClass}"
-					/>
-				</div>
-			{/if}
-			{#if expanded && hasChildren}
+				{#if node.nestAllowed}
+					<span
+						on:dragover|stopPropagation={(e) =>
+							handleDragOver(e, node, liElements[getNodeId(node)], true)}
+					>
+						<i class="fa-fw {classes.nestIcon}" />
+
+						{#if effectiveHighlight === InsertionType.nest}
+							<slot name="nest-highlight" />
+						{/if}
+					</span>
+				{/if}
+			</div>
+			{#if expanded && node.hasChildren}
 				<svelte:self
 					branchRootNode={node}
 					childDepth={childDepth + 1}
@@ -212,26 +184,33 @@
 					{onlyLeafCheckboxes}
 					{hideDisabledCheckboxes}
 					{expandTo}
-					{draggedPath}
 					{dragAndDrop}
 					{verticalLines}
-					{canNest}
-					{insPos}
-					{validTarget}
+					{draggedNode}
 					{highlightedNode}
+					{insertionType}
 					on:open-ctxmenu
 					on:internal-expand
 					on:internal-selectionChanged
+					on:internal-handleDragStart
+					on:internal-handleDragDrop
+					on:internal-handleDragOver
+					on:internal-handleDragEnter
+					on:internal-handleDragEnd
+					on:internal-handleDragLeave
 					let:node={nodeNested}
 				>
 					<slot node={nodeNested} />
+					<svelte:fragment slot="nest-highlight">
+						<slot name="nest-highlight" />
+					</svelte:fragment>
 				</svelte:self>
 			{/if}
-			{#if !expanded && hasChildren}
+			{#if !expanded && node.hasChildren}
 				<ul class:child-menu={childDepth > 0} />
 			{/if}
 			<!-- Show line if insering -->
-			{#if insPos === InsertionType.below && insertHighlighted}
+			{#if effectiveHighlight === InsertionType.insertBelow}
 				<div class="insert-line-wrapper">
 					<div class="insert-line {classes.inserLineClass}" />
 				</div>

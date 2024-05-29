@@ -1,19 +1,16 @@
 <script lang="ts">
 	import ContextMenu from './menu/ContextMenu.svelte';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import { defaultClasses, defaultPixelTreshold, defaultPropNames } from './constants.js';
-
+	import { createEventDispatcher } from 'svelte';
+	import { defaultClasses, defaultPropNames } from './constants.js';
 	import {
 		SelectionModes as SelectionModes,
-		type InsertionType,
+		InsertionType,
 		type Node,
 		type Props,
 		type Tree,
 		type CustomizableClasses,
 		type DragEnterCallback,
-		type BeforeMovedCallback,
 		type ExpandedCallback,
-		VisualState,
 		type NodeId,
 		type ProvidedTree,
 		type FilterFunction
@@ -21,6 +18,7 @@
 	import { TreeHelper } from '$lib/index.js';
 	import Branch from './Branch.svelte';
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
+	import { DragDropProvider } from '$lib/providers/drag-drop-provider.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -99,7 +97,6 @@
 	 */
 	export let customClasses: Partial<CustomizableClasses> = {};
 
-	// use any so use doesnt have to cast from unknown
 	/**
 	 * Function used to filter what nodes should be shown.
 	 * Tree automatically adds all parents for nodes.
@@ -115,24 +112,25 @@
 	 */
 	export let logger: ((...data: any[]) => void) | null = null;
 
-	// props for drag and drop
+	// TODO rewrite documentation
+	/*
+	 * Drag and drop mode allows all nodes, that dont have dragDisabled property set to true
+	 * to be dragged and dropped. By default you can only insert at same level node you are dropping on,
+	 * but you can allow nesting by setting nestAllowed to true on node. If you want to disable insertion,
+	 * set dropDisabled to true on node. if both is disabled, you wont be able to drop on node.
+	 */
 	export let dragAndDrop = false; //bool
-	export let timeToNest: number | null = null;
-	export let pixelNestTreshold = defaultPixelTreshold;
-	export let recalculateNodePath = true;
-	export let dragEnterCallback: DragEnterCallback | null = null;
-	export let beforeMovedCallback: BeforeMovedCallback | null = null;
+	/**
+	 * Callback that will be called when user drags above node.
+	 * It should return true, if drop is disabled on that node.
+	 */
+	export let dropDisabledCallback: DragEnterCallback | null = null;
 
 	let ctxMenu: ContextMenu;
-
 	let expandedIds: NodeId[] = [];
-
-	// OLD variables, will be removed/changed in future
-	let draggedPath: string | null = null;
+	let draggedNode: Node | null = null;
 	let highlightedNode: Node | null = null;
-	let canNest: boolean = false;
-	let validTarget = false;
-	let insPos: InsertionType;
+	let insertionType: InsertionType = InsertionType.none;
 
 	$: computedClasses = { ...defaultClasses, ...(customClasses ?? {}) };
 
@@ -141,6 +139,7 @@
 	$: helper = new TreeHelper({
 		separator
 	});
+	$: dragAndDropProvider = new DragDropProvider(helper);
 	$: selectionProvider = new SelectionProvider(helper, recursiveSelection);
 	$: computedTree = computeTree(helper, selectionProvider, tree, filter, props, expandedIds, value);
 	$: debugLog('computedTree', computedTree);
@@ -222,6 +221,7 @@
 		debugLog('calling callback for node', node);
 
 		// TODO mark node as loaded and dont call callback again
+		// this is now responsibility of user
 		loadChildrenAsync(node);
 	}
 
@@ -265,6 +265,104 @@
 		ctxMenu.onRightClick(e, node);
 	}
 
+	function onDragStart(event: CustomEvent<{ node: Node; e: DragEvent }>) {
+		const { node, e } = event.detail;
+
+		draggedNode = null;
+
+		if (!dragAndDrop || node.dragDisabled) {
+			return;
+		}
+
+		draggedNode = node;
+	}
+
+	function onDragEnd({
+		detail: { node, event, element }
+	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+		// fires when you stop dragging element
+
+		draggedNode = null;
+		highlightedNode = null;
+	}
+
+	function onDragDrop({
+		detail: { node, event, element }
+	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+		// here we asume that highlightType is correctly calculated in handleDragOver
+		if (!dragAndDrop || draggedNode === null || insertionType === InsertionType.none) {
+			event.preventDefault();
+			return;
+		}
+
+		highlightedNode = null;
+
+		debugLog('DROPPED: ', draggedNode, 'on', node);
+
+		dispatch('moved', {
+			node: draggedNode,
+			target: node,
+			insertType: insertionType
+		});
+	}
+
+	// handle highlihting
+	function onDragEnter({
+		detail: { node, event, element }
+	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+		highlightedNode = null;
+
+		if (!draggedNode || !dragAndDrop) {
+			return;
+		}
+
+		// static rules
+		if (!dragAndDropProvider.isDropAllowed(draggedNode, node)) {
+			return;
+		}
+
+		if (typeof dropDisabledCallback === 'function') {
+			// possible bug, if the promise is resolved, when user is over another node
+			dropDisabledCallback(draggedNode, node).then((dropDisabled) => {
+				if (!dropDisabled) {
+					highlightedNode = node;
+				}
+			});
+		} else {
+			highlightedNode = node;
+		}
+	}
+
+	function onDragOver({
+		detail: { node, event, element, nest }
+	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement; nest: boolean }>) {
+		if (!dragAndDrop || draggedNode === null || node.dropDisabled) {
+			return;
+		}
+
+		const insertType = dragAndDropProvider.getInsertionPosition(
+			draggedNode,
+			node,
+			event,
+			element,
+			nest
+		);
+
+		if (insertType === InsertionType.none) {
+			return;
+		}
+
+		event.preventDefault();
+
+		insertionType = insertType;
+	}
+
+	function onDragLeave({
+		detail: { node, event, element }
+	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+		insertionType = InsertionType.none;
+	}
+
 	function debugLog(...data: any[]) {
 		if (logger) {
 			logger(...data);
@@ -281,9 +379,7 @@
 	{onlyLeafCheckboxes}
 	{hideDisabledCheckboxes}
 	{expandTo}
-	{draggedPath}
 	{dragAndDrop}
-	{highlightedNode}
 	{readonly}
 	{helper}
 	classes={computedClasses}
@@ -293,13 +389,21 @@
 	on:internal-selectionChanged={onSelectionChanged}
 	let:node={nodeInSlot}
 	childDepth={0}
-	{canNest}
-	{validTarget}
-	{insPos}
+	{insertionType}
+	{highlightedNode}
+	{draggedNode}
+	on:internal-handleDragStart={onDragStart}
+	on:internal-handleDragDrop={onDragDrop}
+	on:internal-handleDragOver={onDragOver}
+	on:internal-handleDragEnter={onDragEnter}
+	on:internal-handleDragEnd={onDragEnd}
+	on:internal-handleDragLeave={onDragLeave}
 >
 	<slot node={nodeInSlot} />
+	<svelte:fragment slot="nest-highlight">
+		<slot name="nest-highlight" />
+	</svelte:fragment>
 </Branch>
-
 <ContextMenu bind:this={ctxMenu}>
 	<svelte:fragment let:node>
 		<slot name="context-menu" {node} />
