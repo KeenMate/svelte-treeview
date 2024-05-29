@@ -4,6 +4,7 @@
 	import Files from '../../data/files.js';
 	import { Card } from '@keenmate/svelte-adminlte';
 	import { SelectionModes, type Node } from '$lib/types.js';
+	import GithubButton from '../../components/GithubButton.svelte';
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
@@ -60,7 +61,6 @@
 				recursiveSelection
 				expandTo={1}
 				selectionMode={SelectionModes.all}
-				dragAndDrop
 				verticalLines
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				filter={filterFunc}
@@ -102,7 +102,12 @@
 	</div>
 	<div class="col-lg-4 col-12">
 		<Card>
-			This demo shows how treeview can be used to browse files.
+			<svelte:fragment slot="tools">
+				<GithubButton relativePath="src/routes/files/+page.svelte" />
+			</svelte:fragment>
+			<svelte:fragment slot="header">Files demo</svelte:fragment>
+			<p>This demo shows how treeview can be used to browse files.</p>
+
 			<br />
 
 			<label for="showObjects">Show node objects</label>
@@ -116,11 +121,6 @@
 			<br />
 
 			<button class="btn btn-primary" on:click={onSelectRandomNode}> Select random node </button>
-
-			{#if lastSelectedNodePath}
-				<br />
-				selected: {lastSelectedNodePath}
-			{/if}
 
 			<br />
 			selected nodes:

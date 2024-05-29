@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { TreeView } from '$lib/index.js';
+	import { Card } from '@keenmate/svelte-adminlte';
 
 	let tree = [
 		{ nodePath: 'animals', title: 'Animals', hasChildren: true },
@@ -22,6 +23,17 @@
 	];
 </script>
 
-<TreeView {tree} treeId="my-tree" let:node>
-	{node.title}
-</TreeView>
+<div class="row mt-3">
+	<div class="col-lg-8 col-12">
+		<Card>
+			<TreeView {tree} treeId="my-tree" let:node>
+				{node.title}
+			</TreeView>
+		</Card>
+	</div>
+	<div class="col-lg-4 col-12">
+		<Card>
+			<p>This is minimal usage of treeview</p>
+		</Card>
+	</div>
+</div>

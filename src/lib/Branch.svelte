@@ -157,7 +157,7 @@
 					<slot node={node.originalNode} />
 				</span>
 
-				{#if node.nestAllowed}
+				{#if dragAndDrop && node.nestAllowed}
 					<span
 						on:dragover|stopPropagation={(e) =>
 							handleDragOver(e, node, liElements[getNodeId(node)], true)}
