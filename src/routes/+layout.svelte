@@ -25,9 +25,9 @@
 			<li class="nav-item active">
 				<a class="nav-link" href="/files">Files</a>
 			</li>
-			<li class="nav-item active">
+			<!-- <li class="nav-item active">
 				<a class="nav-link" href="/callbacks">Callbacks</a>
-			</li>
+			</li> -->
 			<li class="nav-item active">
 				<a class="nav-link" href="/minimal">Minimal</a>
 			</li>
