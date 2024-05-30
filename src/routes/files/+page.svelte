@@ -13,6 +13,7 @@
 	let lastSelectedNodePath: string;
 	let searchText = '';
 	let selectedNodes: string[] = [];
+	let expandToNode: (node: string) => void;
 
 	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText);
 
@@ -35,6 +36,8 @@
 
 		selectedNodes = [...selectedNodes, node.path];
 		lastSelectedNodePath = node.path;
+
+		expandToNode(node.path);
 	}
 
 	function onChange(e: CustomEvent<string[]>) {
@@ -47,6 +50,7 @@
 	<div class="col-lg-8 col-12">
 		<Card>
 			<TreeView
+				bind:expandToNode
 				{tree}
 				treeId="tree"
 				let:node
