@@ -68,7 +68,7 @@
 				{filteredTree}
 				treeId="tree"
 				let:node
-				showContexMenu
+				showContextMenu
 				verticalLines
 				selectionMode={checkboxesType.all}
 			>
