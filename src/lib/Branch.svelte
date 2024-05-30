@@ -106,7 +106,7 @@
 			class:is-child={helper.nodePathIsChild(node.path)}
 			class:has-children={node.hasChildren}
 			on:contextmenu|stopPropagation={(e) => {
-				dispatch('open-ctxmenu', { e: e, node: Node });
+				dispatch('open-ctxmenu', { e, node });
 			}}
 			on:drop|stopPropagation={(e) => handleDragDrop(e, node, liElements[getNodeId(node)])}
 			on:dragover|stopPropagation={(e) =>
