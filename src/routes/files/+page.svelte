@@ -63,6 +63,7 @@
 				showContextMenu
 				recursiveSelection
 				expandTo={1}
+				expansionTreshold={25}
 				selectionMode={SelectionModes.all}
 				verticalLines
 				logger={(...data) => console.debug('treeview: ', ...data)}
@@ -118,7 +119,7 @@
 
 			<br />
 
-			<label for="showObjects">SerachTree</label>
+			<label for="showObjects">Search tree</label>
 			<input bind:value={searchText} />
 
 			<br />

@@ -199,7 +199,12 @@
 		}
 
 		const mappedTree = helper.mapTree(userProvidedTree, { ...defaultPropNames, ...props });
-		const filteredTree = helper.searchTree(mappedTree, filter);
+		const { tree: filteredTree, count: filteredCount } = helper.searchTree(mappedTree, filter);
+
+		// treshold applies to nodes that match the filter, not all their parents
+		if (filteredCount <= expansionTreshold) {
+			expandedIds = uniq([...expandedIds, ...filteredTree.map((node) => node.id)]);
+		}
 
 		helper.markExpanded(filteredTree, expandedIds);
 
