@@ -175,7 +175,7 @@ export class TreeHelper {
 		const parentsPaths: string[] = [];
 
 		// TODO refactor
-		let nodePath: string | null = this.getParentNodePath(targetNode.path);
+		let nodePath: string | null = targetNode.path;
 		// get all parents
 		while (nodePath !== null && nodePath !== '') {
 			nodePath = this.getParentNodePath(nodePath as string);

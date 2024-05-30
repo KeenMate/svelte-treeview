@@ -19,6 +19,7 @@
 	import Branch from './Branch.svelte';
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
 	import { DragDropProvider } from '$lib/providers/drag-drop-provider.js';
+	import uniq from 'lodash.uniq';
 
 	const dispatch = createEventDispatcher();
 
@@ -92,6 +93,12 @@
 	export let expandTo = 0;
 
 	/**
+	 * Treshold for automatic expansion. If tree has less or equal nodes than this value,
+	 * all nodes will be expanded. Default is 0, which means no automatic expansion
+	 */
+	export let expansionTreshold = 0;
+
+	/**
 	 * Classes used in tree. You can override default classes with this prop.
 	 * It is recommended to use default classes and add aditinal styles in your css
 	 */
@@ -151,6 +158,30 @@
 		} else {
 			expandedIds = [];
 		}
+	}
+
+	export function expandToNode(nodePath: string) {
+		const targetNode = helper.findNode(computedTree, nodePath);
+
+		if (!targetNode) {
+			console.error('Node with path', nodePath, 'not found');
+			return;
+		}
+
+		const parents = helper.getParents(computedTree, targetNode);
+
+		debugLog("expanding to node '" + nodePath + "'" + ' parents', parents);
+		console.log('parents', parents);
+		expandedIds = uniq([...expandedIds, ...parents.map((node) => node.id)]);
+	}
+
+	export function setExpansions(expansions: NodeId[]) {
+		if (!Array.isArray(expansions)) {
+			console.error('expansions must be an array');
+			return;
+		}
+
+		expandedIds = expansions;
 	}
 
 	function computeTree(

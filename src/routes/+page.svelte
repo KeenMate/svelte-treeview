@@ -6,6 +6,8 @@
 <ul>
 	<li>
 		<a href="/minimal">Minimal usage</a>
+	</li>
+	<li>
 		<a href="/files">Files</a>
 	</li>
 </ul>
