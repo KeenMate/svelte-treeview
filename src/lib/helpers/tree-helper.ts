@@ -151,8 +151,8 @@ export class TreeHelper {
 
 	//#endregion
 
-	searchTree(tree: Tree, filter: FilterFunction | null) {
-		if (!filter) return tree;
+	searchTree(tree: Tree, filter: FilterFunction | null): { count: number; tree: Tree } {
+		if (!filter) return { count: tree.length, tree };
 		const filteredNodes = tree.filter(filter);
 
 		const resultNodes: Tree = [];
@@ -166,9 +166,9 @@ export class TreeHelper {
 			resultNodes.push(...parentNodes);
 		});
 
-		const uniqueNodes = uniqueBy(resultNodes, (node: Node) => node.path);
+		const uniqueNodes = uniqueBy(resultNodes, (node: Node) => node.path) as Tree;
 
-		return uniqueNodes;
+		return { count: filteredNodes.length, tree: uniqueNodes };
 	}
 
 	getParents(tree: Tree, targetNode: Node): Node[] {
