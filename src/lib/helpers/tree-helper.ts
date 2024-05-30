@@ -32,7 +32,7 @@ export class TreeHelper {
 					dragDisabled: node[properties.dragDisabled] === true,
 					insertDisabled: node[properties.insertDisabled] === true,
 					nestAllowed: node[properties.nestAllowed] === true,
-					checkbox: node[properties.checkbox] === true,
+					checkbox: node[properties.checkbox] ?? null,
 					expanded: false,
 					selected: false,
 					visualState: VisualState.notSelected,
