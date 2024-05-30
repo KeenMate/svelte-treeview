@@ -33,7 +33,7 @@ export type Node = {
 	dragDisabled: boolean;
 	insertDisabled: boolean;
 	nestAllowed: boolean;
-	checkbox: boolean;
+	checkbox: boolean | null;
 	visualState: VisualState;
 	expanded: boolean;
 	selected: boolean;

@@ -21,7 +21,6 @@
 			return {
 				...n,
 				path: n.path.replaceAll('\\', '/'),
-				checkbox: !n.path.startsWith('.'),
 				dragDisabled: n.path.startsWith('.'),
 				selected: false,
 				nestAllowed: n.hasChildren
