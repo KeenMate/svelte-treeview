@@ -57,7 +57,7 @@
 				on:moved={(e) => console.log(e.detail)}
 				props={{ nodePath: 'path', nodeId: 'path' }}
 				separator="/"
-				showContexMenu
+				showContextMenu
 				recursiveSelection
 				expandTo={1}
 				selectionMode={SelectionModes.all}

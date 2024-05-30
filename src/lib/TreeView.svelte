@@ -83,7 +83,7 @@
 	 * Show context menu on right click.
 	 * Its defined in slot context-menu
 	 */
-	export let showContexMenu = false;
+	export let showContextMenu = false;
 
 	/**
 	 * Automaticaly expand nodes to this level,
@@ -259,7 +259,7 @@
 
 	function openContextMenu(ce: CustomEvent<{ e: MouseEvent; node: Node }>) {
 		const { e, node } = ce.detail;
-		if (!showContexMenu) return;
+		if (!showContextMenu) return;
 		e.preventDefault();
 		ctxMenu.onRightClick(e, node);
 	}
