@@ -259,7 +259,6 @@
 
 	function openContextMenu(ce: CustomEvent<{ e: MouseEvent; node: Node }>) {
 		const { e, node } = ce.detail;
-
 		if (!showContexMenu) return;
 		e.preventDefault();
 		ctxMenu.onRightClick(e, node);
