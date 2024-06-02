@@ -86,6 +86,7 @@
 	 */
 	export let showContextMenu = false;
 
+	// TODO stopped working in new version
 	/**
 	 * Automaticaly expand nodes to this level,
 	 * any user made expansion will override this.
@@ -119,7 +120,6 @@
 	 */
 	export let logger: ((...data: any[]) => void) | null = null;
 
-	// TODO rewrite documentation
 	/*
 	 * Drag and drop mode allows all nodes, that dont have dragDisabled property set to true
 	 * to be dragged and dropped. By default you can only insert at same level node you are dropping on,

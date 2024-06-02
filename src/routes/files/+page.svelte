@@ -64,7 +64,7 @@
 				separator="/"
 				showContextMenu
 				recursiveSelection
-				expandTo={1}
+				expandTo={2}
 				expansionTreshold={25}
 				selectionMode={SelectionModes.all}
 				verticalLines

@@ -20,6 +20,10 @@ install the package `@keenmate/svelte-treeview` using your favourite package man
 
 ## Minimal usage
 
+Tree and treeId are only mandatory attributes.
+Tree has to be list of nodes. Only mandatory property of node is nodePath.
+You can specify which keys to use for what properties by setting **props**.
+
 ```svelte
 <script lang="ts">
  import { TreeView } from '$lib/index.js';
@@ -36,3 +40,41 @@ install the package `@keenmate/svelte-treeview` using your favourite package man
 </TreeView>
 
 ```
+
+## NodeId and NodePath
+
+By default, nodeId uses same property is nodePath.
+You can change this by setting nodoId in prosp.
+
+## Properties
+
+| Name                   | Type                                                               | Default | Description                                                                                           |
+| ---------------------- | ------------------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| treeId                 | string                                                             |         | value used to generate ids of nodes                                                                   |
+| tree                   | array of nodes                                                     |         | represents tree strucuture                                                                            |
+| value                  | array of selected nodeIds                                          | []      |                                                                                                       |
+| verticalLines          | bool                                                               | false   | show vertical guide lines                                                                             |
+| readonly               | bool                                                               | false   | dont allow selection and drag and drop                                                                |
+| separator              | string                                                             | "."     |                                                                                                       |
+| recursiveSelection     | bool                                                               | false   | changes behavior of selection, see   [Selection](#selection)                                          |
+| selectionMode          | SelectionModes                                                     | none    | changes selection mode, see   [Selection](#selection)                                                 |
+| onlyLeafCheckboxes     | bool                                                               | false   | hides non leaf checkboxed, see   [Selection](#selection)                                              |
+| hideDisabledCheckboxes | bool                                                               | false   | hides checkboxes instead of disabling, see   [Selection](#selection)                                  |
+| loadChildrenAsync      | ExpandedCallback                                                   | null    | function that is called when node is expanded, see   [Async loading](#async-loading)                  |
+| showContextMenu        | bool                                                               | false   | On right click dispaly context menu defined in `context-menu` slot, see [Context menu](#context-menu) |
+| expansionTreshold      | number                                                             | 0       | Expand all nodes when there is less than number provided                                              |
+| customClasses          | Partial<CustomizableClasses>                                       | {}      | changes classes used on same elements, see [Custom classes](#custom-classes)                          |
+| filter                 | (node: Node) => boolean or null                                    | null    | function that is used for fitlering. It is called on every node                                       |
+| dragAndDrop            | bool                                                               | false   | enables drag and drop, see [Drag and drop](#drag-and-drop)                                            |
+| dropDisabledCallback   | (draggendNode: Node, targetNode: Node) => Promise<boolean> or null | null    | function called when draging over new node, see [Drag and drop](#drag-and-drop)                       |
+| logger                 | ((...data: any[]) => void) or null                                 | null    | function that acts as logger for tree, mostly used for debugging                                      |
+
+## Selection
+
+## Async loading
+
+## Context menu
+
+## Custom classes
+
+## Drag and drop
