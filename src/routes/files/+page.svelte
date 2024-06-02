@@ -31,8 +31,10 @@
 	});
 
 	function onSelectRandomNode() {
-		const idx = Math.floor(Math.random() * tree.length);
-		const node = tree[idx];
+		const leafNodes = tree.filter((n) => !n.hasChildren);
+
+		const idx = Math.floor(Math.random() * leafNodes.length);
+		const node = leafNodes[idx];
 
 		selectedNodes = [...selectedNodes, node.path];
 		lastSelectedNodePath = node.path;

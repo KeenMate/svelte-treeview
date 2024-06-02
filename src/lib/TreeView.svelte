@@ -175,6 +175,17 @@
 		expandedIds = uniq([...expandedIds, ...parents.map((node) => node.id)]);
 	}
 
+	export function setNodeExpansion(nodePath: string, changeTo: boolean) {
+		const targetNode = helper.findNode(computedTree, nodePath);
+
+		if (!targetNode) {
+			console.error('Node with path', nodePath, 'not found');
+			return;
+		}
+
+		expandedIds = helper.changeExpansion(targetNode, changeTo, expandedIds);
+	}
+
 	export function setExpansions(expansions: NodeId[]) {
 		if (!Array.isArray(expansions)) {
 			console.error('expansions must be an array');
