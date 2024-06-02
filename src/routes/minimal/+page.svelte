@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TreeView } from '$lib/index.js';
 	import { Card } from '@keenmate/svelte-adminlte';
+	import { HighlightSvelte } from 'svelte-highlight';
 
 	let tree = [
 		{ nodePath: 'animals', title: 'Animals', hasChildren: true },

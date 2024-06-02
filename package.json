@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run package",
@@ -67,6 +67,7 @@
 		"@types/lodash.uniqby": "^4.7.9",
 		"lodash.unionby": "^4.8.0",
 		"lodash.uniq": "^4.5.0",
-		"lodash.uniqby": "^4.7.0"
+		"lodash.uniqby": "^4.7.0",
+		"svelte-highlight": "^7.6.1"
 	}
 }

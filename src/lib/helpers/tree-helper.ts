@@ -118,13 +118,16 @@ export class TreeHelper {
 	/** toggles expansion on
 	 */
 	changeExpansion(node: Node, changeTo: boolean, oldExpandedNodeIds: NodeId[]) {
-		const nodeId = node.id ?? '';
-
-		if (changeTo === true) {
-			return [...oldExpandedNodeIds, nodeId];
+		// const nodeId = node.id ?? '';
+		if (!node.id) {
+			return oldExpandedNodeIds;
 		}
 
-		return oldExpandedNodeIds.filter((x) => x !== nodeId);
+		if (changeTo === true) {
+			return [...oldExpandedNodeIds, node.id];
+		}
+
+		return oldExpandedNodeIds.filter((x) => x !== node.id);
 	}
 
 	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
