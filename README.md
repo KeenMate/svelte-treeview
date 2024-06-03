@@ -11,6 +11,7 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 - build-in support for search
 - drag and drop functionality controlable per node
 - context menu
+- keyboard navigation
 
 ## Instalation
 
@@ -40,6 +41,8 @@ You can specify which keys to use for what properties by setting **props**.
 </TreeView>
 
 ```
+
+For more examples see `src/routes/`
 
 ## NodeId and NodePath
 
@@ -78,3 +81,8 @@ You can change this by setting nodoId in prosp.
 ## Custom classes
 
 ## Drag and drop
+
+## Keyboard navigation
+
+Use arrows to navigata tree. First you need to focus some node,
+you can use `focusNode` to do that. Use Enter or Space to select checkbox.

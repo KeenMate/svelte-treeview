@@ -97,3 +97,10 @@ export type TreeVisualStates = {
 export type ProvidedTree = any[];
 
 export type FilterFunction = (node: Node) => boolean;
+
+export enum KeyboardMovement {
+	Up = 'ArrowUp',
+	Down = 'ArrowDown',
+	Left = 'ArrowLeft',
+	Right = 'ArrowRight'
+}

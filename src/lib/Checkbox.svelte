@@ -23,7 +23,9 @@
 	{#if isSelectable(node, checkboxes)}
 		{#if !recursive || (recursive && !node.hasChildren) || !onlyLeafCheckboxes}
 			<input
+				tabindex="-1"
 				type="checkbox"
+				class="arrow"
 				on:click={(e) => onSelect(e, node)}
 				on:keypress={(e) => e.key === 'Enter' && onSelect(e, node)}
 				checked={node.visualState === VisualState.selected}
@@ -32,6 +34,8 @@
 			/>
 		{:else}
 			<input
+				tabindex="-1"
+				class="arrow"
 				type="checkbox"
 				on:click={null}
 				disabled={true}
@@ -40,6 +44,8 @@
 		{/if}
 	{:else}
 		<input
+			tabindex="-1"
+			class="arrow"
 			type="checkbox"
 			on:click|preventDefault|stopPropagation
 			disabled={true}
