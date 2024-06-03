@@ -26,3 +26,5 @@ export const defaultClasses: CustomizableClasses = {
 export const defaultConfig: HelperConfig = {
 	separator: '.'
 };
+
+export const capturedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '];

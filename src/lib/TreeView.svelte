@@ -20,6 +20,10 @@
 	import { SelectionProvider } from '$lib/providers/selection-provider.js';
 	import { DragDropProvider } from '$lib/providers/drag-drop-provider.js';
 	import uniq from 'lodash.uniq';
+	import {
+		calculateNewFocusedNode,
+		parseMovementDirection
+	} from '$lib/providers/movement-provider.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -138,6 +142,7 @@
 	let draggedNode: Node | null = null;
 	let highlightedNode: Node | null = null;
 	let insertionType: InsertionType = InsertionType.none;
+	let focusedNode: Node | null = null;
 
 	$: computedClasses = { ...defaultClasses, ...(customClasses ?? {}) };
 
@@ -195,6 +200,16 @@
 		expandedIds = expansions;
 	}
 
+	export function focusNode(nodePath: string | null) {
+		if (nodePath === null) {
+			focusedNode = null;
+			return;
+		}
+
+		const node = helper.findNode(computedTree, nodePath);
+		focusedNode = node;
+	}
+
 	function computeTree(
 		helper: TreeHelper,
 		selectionProvider: SelectionProvider,
@@ -226,8 +241,8 @@
 		return filteredTree;
 	}
 
-	function onExpand(event: CustomEvent<{ node: Node; changeTo: boolean }>) {
-		const { node, changeTo } = event.detail;
+	function onExpand(detail: { node: Node; changeTo: boolean }) {
+		const { node, changeTo } = detail;
 
 		expandedIds = helper.changeExpansion(node, changeTo, expandedIds);
 
@@ -272,8 +287,8 @@
 		loadChildrenAsync(node);
 	}
 
-	function onSelectionChanged(event: CustomEvent<{ node: Node }>) {
-		const { node } = event.detail;
+	function onSelectionChanged(detail: { node: Node }) {
+		const { node } = detail;
 
 		const nodePath = node.path;
 
@@ -409,6 +424,29 @@
 		insertionType = InsertionType.none;
 	}
 
+	// TODO move to function
+	function onKeyPress(detail: { event: KeyboardEvent; node: Node }) {
+		const { event, node: targetNode } = detail;
+		const movement = parseMovementDirection(event.key);
+		if (movement) {
+			const { node, setExpansion } = calculateNewFocusedNode(
+				helper,
+				computedTree,
+				targetNode,
+				movement
+			);
+
+			focusedNode = node;
+			if (setExpansion !== null) {
+				onExpand({ node: node, changeTo: setExpansion });
+			}
+		}
+
+		if (event.key === 'Enter' || event.key === ' ') {
+			onSelectionChanged({ node: targetNode });
+		}
+	}
+
 	function debugLog(...data: any[]) {
 		if (logger) {
 			logger(...data);
@@ -430,20 +468,22 @@
 	{helper}
 	classes={computedClasses}
 	{verticalLines}
-	on:open-ctxmenu={openContextMenu}
-	on:internal-expand={onExpand}
-	on:internal-selectionChanged={onSelectionChanged}
 	let:node={nodeInSlot}
 	childDepth={0}
 	{insertionType}
 	{highlightedNode}
 	{draggedNode}
+	{focusedNode}
 	on:internal-handleDragStart={onDragStart}
 	on:internal-handleDragDrop={onDragDrop}
 	on:internal-handleDragOver={onDragOver}
 	on:internal-handleDragEnter={onDragEnter}
 	on:internal-handleDragEnd={onDragEnd}
 	on:internal-handleDragLeave={onDragLeave}
+	on:internal-keypress={(e) => onKeyPress(e.detail)}
+	on:open-ctxmenu={openContextMenu}
+	on:internal-expand={(e) => onExpand(e.detail)}
+	on:internal-selectionChanged={(e) => onSelectionChanged(e.detail)}
 >
 	<slot node={nodeInSlot} />
 	<svelte:fragment slot="nest-highlight">

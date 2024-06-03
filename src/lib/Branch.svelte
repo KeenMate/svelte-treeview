@@ -9,6 +9,7 @@
 		type CustomizableClasses
 	} from '$lib/types.js';
 	import type { TreeHelper } from '$lib/helpers/tree-helper.js';
+	import { capturedKeys } from '$lib/constants.js';
 
 	const dispatch = createEventDispatcher();
 
@@ -30,8 +31,16 @@
 	export let draggedNode: Node | null;
 	export let highlightedNode: Node | null;
 	export let insertionType: InsertionType;
+	export let focusedNode: Node | null;
+
+	let liElements: { [key: string]: HTMLLIElement } = {};
 
 	const getNodeId = (node: Node) => `${treeId}-${node.path}`;
+	$: directChildren = helper.getDirectChildren(tree, branchRootNode?.path ?? null);
+
+	$: if (focusedNode && liElements[getNodeId(focusedNode)]) {
+		liElements[getNodeId(focusedNode)].focus();
+	}
 
 	function setExpansion(node: Node, changeTo: boolean) {
 		dispatch('internal-expand', { node: node, changeTo });
@@ -77,6 +86,17 @@
 		dispatch('internal-handleDragLeave', { node: node, event: e, element: el });
 	}
 
+	function handleKeyPress(e: KeyboardEvent, node: Node) {
+		if (!capturedKeys.includes(e.key)) {
+			return;
+		}
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		dispatch('internal-keypress', { event: e, node });
+	}
+
 	function getHighlighMode(
 		node: Node,
 		highlightedNode: Node | null,
@@ -87,9 +107,6 @@
 		if (highlightedNode?.path !== node.path) return InsertionType.none;
 		return insertionType;
 	}
-
-	// TODO maybe this can be removed?
-	let liElements: { [key: string]: HTMLLIElement } = {};
 </script>
 
 <ul
@@ -97,7 +114,7 @@
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
-	{#each helper.getDirectChildren(tree, branchRootNode?.path ?? null) as node (getNodeId(node))}
+	{#each directChildren as node (getNodeId(node))}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
 		{@const draggable = !readonly && dragAndDrop && !node.dragDisabled}
 		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
@@ -114,6 +131,8 @@
 			on:dragenter|stopPropagation={(e) => handleDragEnter(e, node, liElements[getNodeId(node)])}
 			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
+			on:keydown={(e) => handleKeyPress(e, node)}
+			tabindex="1"
 		>
 			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
@@ -134,11 +153,12 @@
 			>
 				{#if node.hasChildren}
 					<button
-						class="expansion-button"
+						class="expansion-button arrow"
 						on:click={() => setExpansion(node, !expanded)}
 						type="button"
+						tabindex="-1"
 					>
-						<i class="fa-fw {expanded ? classes.collapseIcon : classes.expandIcon}" />
+						<i class="fa-fw arrow {expanded ? classes.collapseIcon : classes.expandIcon}" />
 					</button>
 				{:else}
 					<span class="fa-fw" />
@@ -189,6 +209,7 @@
 					{draggedNode}
 					{highlightedNode}
 					{insertionType}
+					{focusedNode}
 					on:open-ctxmenu
 					on:internal-expand
 					on:internal-selectionChanged
@@ -198,6 +219,7 @@
 					on:internal-handleDragEnter
 					on:internal-handleDragEnd
 					on:internal-handleDragLeave
+					on:internal-keypress
 					let:node={nodeNested}
 				>
 					<slot node={nodeNested} />
