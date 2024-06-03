@@ -182,7 +182,9 @@ export class SelectionProvider {
 
 		tree.forEach((node) => {
 			// match itself and all children
-			if (node.path?.startsWith(parentNodePath ?? '')) {
+			if (
+				node.path?.startsWith(parentNodePath ? parentNodePath + this.helper.config.separator : '')
+			) {
 				//dont change if not selectable
 				if (!isSelectable(node, SelectionModes.all)) {
 					return;
