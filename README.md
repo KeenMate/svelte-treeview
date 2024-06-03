@@ -70,6 +70,7 @@ You can change this by setting nodoId in prosp.
 | filter                 | (node: Node) => boolean or null                                    | null    | function that is used for fitlering. It is called on every node                                       |
 | dragAndDrop            | bool                                                               | false   | enables drag and drop, see [Drag and drop](#drag-and-drop)                                            |
 | dropDisabledCallback   | (draggendNode: Node, targetNode: Node) => Promise<boolean> or null | null    | function called when draging over new node, see [Drag and drop](#drag-and-drop)                       |
+| useKeyboardNavigation  | bool                                                               | false   | enables keyboard navigation , see [Keyboard navigation](#keyboard-navigation)                         |
 | logger                 | ((...data: any[]) => void) or null                                 | null    | function that acts as logger for tree, mostly used for debugging                                      |
 
 ## Selection
@@ -83,6 +84,8 @@ You can change this by setting nodoId in prosp.
 ## Drag and drop
 
 ## Keyboard navigation
+
+Enable keyboard navigation by setting `useKeyboardNavigation` to true.
 
 Use arrows to navigata tree. First you need to focus some node,
 you can use `focusNode` to do that. Use Enter or Space to select checkbox.

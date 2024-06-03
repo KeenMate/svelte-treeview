@@ -137,6 +137,11 @@
 	 */
 	export let dropDisabledCallback: DragEnterCallback | null = null;
 
+	/**
+	 * If true, keyboard navigation will be enabled. Use arrow keys to navigate and space to select node.
+	 */
+	export let useKeyboardNavigation = false;
+
 	let ctxMenu: ContextMenu;
 	let expandedIds: NodeId[] = [];
 	let draggedNode: Node | null = null;
@@ -424,9 +429,13 @@
 		insertionType = InsertionType.none;
 	}
 
-	// TODO move to function
 	function onKeyPress(detail: { event: KeyboardEvent; node: Node }) {
 		const { event, node: targetNode } = detail;
+
+		if (!useKeyboardNavigation) {
+			return;
+		}
+
 		const movement = parseMovementDirection(event.key);
 		if (movement) {
 			const { node, setExpansion } = calculateNewFocusedNode(
@@ -474,6 +483,7 @@
 	{highlightedNode}
 	{draggedNode}
 	{focusedNode}
+	{useKeyboardNavigation}
 	on:internal-handleDragStart={onDragStart}
 	on:internal-handleDragDrop={onDragDrop}
 	on:internal-handleDragOver={onDragOver}

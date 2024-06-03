@@ -70,6 +70,7 @@
 				expansionTreshold={25}
 				selectionMode={SelectionModes.all}
 				verticalLines
+				useKeyboardNavigation
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				filter={filterFunc}
 			>
