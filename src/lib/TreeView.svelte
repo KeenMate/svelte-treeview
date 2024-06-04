@@ -140,7 +140,7 @@
 	/**
 	 * If true, keyboard navigation will be enabled. Use arrow keys to navigate and space to select node.
 	 */
-	export let useKeyboardNavigation = false;
+	export let allowKeyboardNavigation = false;
 
 	let ctxMenu: ContextMenu;
 	let expandedIds: NodeId[] = [];
@@ -213,6 +213,17 @@
 
 		const node = helper.findNode(computedTree, nodePath);
 		focusedNode = node;
+	}
+
+	export function focusFirstNode() {
+		const rootChildren = helper.getDirectChildren(computedTree, null);
+
+		if (rootChildren.length === 0) {
+			focusedNode = null;
+			return;
+		}
+
+		focusedNode = rootChildren[0];
 	}
 
 	function computeTree(
@@ -432,7 +443,7 @@
 	function onKeyPress(detail: { event: KeyboardEvent; node: Node }) {
 		const { event, node: targetNode } = detail;
 
-		if (!useKeyboardNavigation) {
+		if (!allowKeyboardNavigation) {
 			return;
 		}
 
@@ -449,6 +460,8 @@
 			if (setExpansion !== null) {
 				onExpand({ node: node, changeTo: setExpansion });
 			}
+
+			dispatch('focus', node);
 		}
 
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -483,7 +496,7 @@
 	{highlightedNode}
 	{draggedNode}
 	{focusedNode}
-	{useKeyboardNavigation}
+	{allowKeyboardNavigation}
 	on:internal-handleDragStart={onDragStart}
 	on:internal-handleDragDrop={onDragDrop}
 	on:internal-handleDragOver={onDragOver}

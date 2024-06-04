@@ -14,7 +14,7 @@
 	let searchText = '';
 	let selectedNodes: string[] = [];
 	let expandToNode: (node: string) => void;
-	let focusNode: (node: string | null) => void;
+	let focusFirstNode: () => void;
 
 	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText);
 
@@ -54,7 +54,7 @@
 		<Card>
 			<TreeView
 				bind:expandToNode
-				bind:focusNode
+				bind:focusFirstNode
 				{tree}
 				treeId="tree"
 				let:node
@@ -70,7 +70,7 @@
 				expansionTreshold={25}
 				selectionMode={SelectionModes.all}
 				verticalLines
-				useKeyboardNavigation
+				allowKeyboardNavigation
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				filter={filterFunc}
 			>
@@ -123,9 +123,7 @@
 			<input id="showObjects" type="checkbox" bind:checked={showObject} />
 
 			<br />
-			<button class="btn btn-primary" on:click={() => focusNode(tree[0].path)}>
-				Focus first node
-			</button>
+			<button class="btn btn-primary" on:click={focusFirstNode}> Focus first node </button>
 			<br />
 
 			<label for="showObjects">Search tree</label>
