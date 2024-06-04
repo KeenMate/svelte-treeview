@@ -32,7 +32,7 @@
 	export let highlightedNode: Node | null;
 	export let insertionType: InsertionType;
 	export let focusedNode: Node | null;
-	export let useKeyboardNavigation: boolean;
+	export let allowKeyboardNavigation: boolean;
 
 	let liElements: { [key: string]: HTMLLIElement } = {};
 
@@ -133,7 +133,7 @@
 			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 			on:keydown={(e) => handleKeyPress(e, node)}
-			tabindex={useKeyboardNavigation ? 1 : -1}
+			tabindex={allowKeyboardNavigation ? 1 : -1}
 		>
 			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
@@ -211,7 +211,7 @@
 					{highlightedNode}
 					{insertionType}
 					{focusedNode}
-					{useKeyboardNavigation}
+					{allowKeyboardNavigation}
 					on:open-ctxmenu
 					on:internal-expand
 					on:internal-selectionChanged

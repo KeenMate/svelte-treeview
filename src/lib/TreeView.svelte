@@ -181,7 +181,6 @@
 		const parents = helper.getParents(computedTree, targetNode);
 
 		debugLog("expanding to node '" + nodePath + "'" + ' parents', parents);
-		console.log('parents', parents);
 		expandedIds = uniq([...expandedIds, ...parents.map((node) => node.id)]);
 	}
 
@@ -442,7 +441,6 @@
 
 	function onKeyPress(detail: { event: KeyboardEvent; node: Node }) {
 		const { event, node: targetNode } = detail;
-
 		if (!allowKeyboardNavigation) {
 			return;
 		}
@@ -462,10 +460,23 @@
 			}
 
 			dispatch('focus', node);
+			return;
 		}
 
 		if (event.key === 'Enter' || event.key === ' ') {
 			onSelectionChanged({ node: targetNode });
+			return;
+		}
+
+		if (event.key === 'Escape') {
+			focusedNode = null;
+			if (document.activeElement instanceof HTMLElement) {
+				document.activeElement.blur();
+			}
+
+			dispatch('focus-leave');
+
+			return;
 		}
 	}
 
