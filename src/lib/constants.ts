@@ -27,4 +27,12 @@ export const defaultConfig: HelperConfig = {
 	separator: '.'
 };
 
-export const capturedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '];
+export const capturedKeys = [
+	'ArrowUp',
+	'ArrowDown',
+	'ArrowLeft',
+	'ArrowRight',
+	'Enter',
+	' ',
+	'Escape'
+];

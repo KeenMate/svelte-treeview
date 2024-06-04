@@ -62,6 +62,7 @@
 				on:change={onChange}
 				on:expansion={(e) => console.log(e.detail)}
 				on:moved={(e) => console.log(e.detail)}
+				on:focus-leave={(e) => console.log('focus leave')}
 				props={{ nodePath: 'path', nodeId: 'path' }}
 				separator="/"
 				showContextMenu
