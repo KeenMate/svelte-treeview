@@ -4,9 +4,9 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 
 ## Features
 
-- load new nodes whne expanding
-- customization of all object properties
-- checkboxes enabled on whole tree or based on property
+- load new nodes when expanding
+- choose what object properties to use to get necessary information (id, path, ...)
+- enable checkboxes on whole tree or just per node
 - recursive seletion mode, where leafes can be selected
 - build-in support for search
 - drag and drop functionality controlable per node
@@ -17,7 +17,9 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 
 install the package `@keenmate/svelte-treeview` using your favourite package manager.
 
-**Font awesome is required for expand/collapse icons.**
+> [!warning]
+> **Font awesome is required for expand/collapse icons.**
+> If you wish to not use FA, you need to change all icons in classes properties 
 
 ## Minimal usage
 
@@ -82,6 +84,10 @@ You can change this by setting nodoId in prosp.
 ## Custom classes
 
 ## Drag and drop
+> [!NOTE]  
+> In memory drag and drop is not yet supported. Tree just dispatches `moved` event with dragged node(`node`), target node (`target`) and insertion type (`insertType`).
+> In future, this package will export function, that will allow you to easily compute new tree on frontend.
+
 
 ## Keyboard navigation
 
