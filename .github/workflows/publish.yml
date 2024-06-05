@@ -7,7 +7,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Write release version
+      - name: Get release version from tag
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           echo Version: $VERSION
@@ -19,7 +19,7 @@ jobs:
           node-version: '20.x'
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci
-      # this would 
+      # this would
       # - name: Ensure tag matches package.json version
       #   run: npm version ${VERSION}
       - run: npm publish --provenance --access public
