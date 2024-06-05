@@ -19,7 +19,7 @@ install the package `@keenmate/svelte-treeview` using your favourite package man
 
 > [!warning]
 > **Font awesome is required for expand/collapse icons.**
-> If you wish to not use FA, you need to change all icons in classes properties 
+> If you wish to not use FA, you need to change all icons in classes properties
 
 ## Minimal usage
 
@@ -46,10 +46,11 @@ You can specify which keys to use for what properties by setting **props**.
 
 For more examples see `src/routes/`
 
-## NodeId and NodePath
-
-By default, nodeId uses same property is nodePath.
-You can change this by setting nodoId in prosp.
+> [!note] id and path
+> Both id and path is required for tree to work.
+> By default tree uses nodePath property for both.
+> So if you change propery fro path, you need to also change id property.
+> You can change both using props attribute.
 
 ## Properties
 
