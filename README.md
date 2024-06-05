@@ -46,8 +46,8 @@ You can specify which keys to use for what properties by setting **props**.
 
 For more examples see `src/routes/`
 
-> [!note] id and path
-> Both id and path is required for tree to work.
+> [!note]
+> Both **id** and **path** is required for tree to work.
 > By default tree uses nodePath property for both.
 > So if you change propery fro path, you need to also change id property.
 > You can change both using props attribute.

@@ -1,3 +1,4 @@
+// TODO rename nodeId to id and nodePath to path
 export type Props = {
 	nodeId: string;
 	nodePath: string;
