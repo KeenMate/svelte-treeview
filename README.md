@@ -4,9 +4,9 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 
 ## Features
 
-- load new nodes whne expanding
-- customization of all object properties
-- checkboxes enabled on whole tree or based on property
+- load new nodes when expanding
+- choose what object properties to use to get necessary information (id, path, ...)
+- enable checkboxes on whole tree or just per node
 - recursive seletion mode, where leafes can be selected
 - build-in support for search
 - drag and drop functionality controlable per node
