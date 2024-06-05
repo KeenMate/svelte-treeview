@@ -159,10 +159,10 @@
 						type="button"
 						tabindex="-1"
 					>
-						<i class="fa-fw arrow {expanded ? classes.collapseIcon : classes.expandIcon}" />
+						<i class="fixed-icon arrow {expanded ? classes.collapseIcon : classes.expandIcon}" />
 					</button>
 				{:else}
-					<span class="fa-fw" />
+					<span class="fixed-icon" />
 				{/if}
 
 				<Checkbox
@@ -183,7 +183,7 @@
 						on:dragover|stopPropagation={(e) =>
 							handleDragOver(e, node, liElements[getNodeId(node)], true)}
 					>
-						<i class="fa-fw {classes.nestIcon}" />
+						<i class="fixed-icon {classes.nestIcon}" />
 
 						{#if effectiveHighlight === InsertionType.nest}
 							<slot name="nest-highlight" />
