@@ -214,15 +214,18 @@
 		focusedNode = node;
 	}
 
-	export function focusFirstNode() {
+	export function focusFirstNode(): Node | null {
 		const rootChildren = helper.getDirectChildren(computedTree, null);
 
 		if (rootChildren.length === 0) {
 			focusedNode = null;
-			return;
+			return null;
 		}
 
 		focusedNode = rootChildren[0];
+
+		dispatch('focus', focusedNode);
+		return focusedNode;
 	}
 
 	function computeTree(
