@@ -17,7 +17,9 @@ The most elaborate treeview for svelte on earth (or even in our galaxy).
 
 install the package `@keenmate/svelte-treeview` using your favourite package manager.
 
-**Font awesome is required for expand/collapse icons.**
+> [!warning]
+> **Font awesome is required for expand/collapse icons.**
+> If you wish to not use FA, you need to change all icons in classes properties 
 
 ## Minimal usage
 
