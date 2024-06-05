@@ -82,6 +82,10 @@ You can change this by setting nodoId in prosp.
 ## Custom classes
 
 ## Drag and drop
+> [!NOTE]  
+> In memory drag and drop is not yet supported. Tree just dispatches `moved` event with dragged node(`node`), target node (`target`) and insertion type (`insertType`).
+> In future, this package will export function, that will allow you to easily compute new tree on frontend.
+
 
 ## Keyboard navigation
 
