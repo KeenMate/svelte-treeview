@@ -4,8 +4,11 @@ on:
     tags:
       - 'v*.*.*'
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Get release version from tag
         run: |
