@@ -167,7 +167,6 @@
 		expandedPaths,
 		value
 	);
-	$: debugLog('computedTree', computedTree);
 
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog('changing expansion of every node to ', changeTo ? 'expanded' : 'collapsed');
@@ -247,28 +246,31 @@
 		userProvidedTree: any[],
 		filter: FilterFunction | null,
 		props: Partial<Props>,
-		expandedIds: NodeId[],
+		expandedPaths: string[],
 		value: NodeId[]
 	): Tree {
 		if (!Array.isArray(userProvidedTree) || !Array.isArray(value)) {
 			console.error('value and tree must be arrays!!');
 			return [];
 		}
+		const start = Date.now();
 
 		const mappedTree = helper.mapTree(userProvidedTree, { ...defaultPropNames, ...props });
 		const { tree: filteredTree, count: filteredCount } = helper.searchTree(mappedTree, filter);
 
-		// treshold applies to nodes that match the filter, not all their parents
+		// threshold applies to nodes that match the filter, not all their parents
 		if (filteredCount <= expansionThreshold) {
-			expandedIds = uniq([...expandedIds, ...filteredTree.map((node) => node.id)]);
+			expandedPaths = uniq([...expandedPaths, ...filteredTree.map((node) => node.path)]);
 		}
 
-		helper.markExpanded(filteredTree, expandedIds);
+		helper.markExpanded(filteredTree, expandedPaths);
 
 		// TODO here we could save last value and only recompute visual state if value changed
 		// or use diff to only update affected nodes
 		selectionProvider.markSelected(filteredTree, value);
 
+		const end = Date.now();
+		debugLog(`Tree computed in: ${end - start}`, computeTree);
 		return filteredTree;
 	}
 
