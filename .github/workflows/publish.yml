@@ -24,7 +24,7 @@ jobs:
       #   run: npm version ${VERSION}
       - run: npm publish --provenance --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.KEENMATE_NPM_TOKEN}}
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
