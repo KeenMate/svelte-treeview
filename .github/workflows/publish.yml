@@ -32,6 +32,4 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          body: |
-            Release: ${VERSION}
           draft: true
