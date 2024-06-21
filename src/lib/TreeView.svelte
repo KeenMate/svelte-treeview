@@ -191,9 +191,18 @@
 		expandedPaths = uniq([...expandedPaths, ...parentPaths]);
 	}
 
-	export function setNodeExpansion(nodePath: string, changeTo: boolean) {
+	/**
+	 *
+	 * @param changeTo if null, it will toggle expansion
+	 */
+	export function setNodeExpansion(nodePath: string, changeTo: boolean | null) {
 		if (!nodePath) {
 			console.warn('Cannot expand node with null path');
+			return;
+		}
+
+		if (changeTo === null) {
+			changeTo = !expandedPaths.includes(nodePath);
 			return;
 		}
 
