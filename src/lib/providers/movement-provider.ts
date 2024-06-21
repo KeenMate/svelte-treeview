@@ -92,7 +92,7 @@ export function calculateNewFocusedNode(
 
 			const parentNode = helper.findNode(tree, parentNodePath);
 
-			// asertion
+			// assertion
 			if (!parentNode) {
 				console.warn('Parent node not found, this should never happen');
 				return wrapReturn(targetNode);

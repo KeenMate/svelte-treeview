@@ -68,7 +68,7 @@
 				showContextMenu
 				recursiveSelection
 				expandTo={2}
-				expansionTreshold={25}
+				expansionThreshold={25}
 				selectionMode={SelectionModes.all}
 				verticalLines
 				allowKeyboardNavigation

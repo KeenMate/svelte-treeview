@@ -166,7 +166,7 @@ export class SelectionProvider {
 			}
 		});
 
-		// if no children, all are selected, but dont count it for recursive computationq
+		// if it doesn't have any children, mark it as selected but ignore it in upstream calculations
 		const ignore = directChildrenStates.length === 0;
 
 		return { ignore, state: this.computeVisualState(directChildrenStates) };
@@ -185,7 +185,7 @@ export class SelectionProvider {
 			if (
 				node.path?.startsWith(parentNodePath ? parentNodePath + this.helper.config.separator : '')
 			) {
-				//dont change if not selectable
+				//don't change if not selectable
 				if (!isSelectable(node, SelectionModes.all)) {
 					return;
 				}
@@ -216,6 +216,6 @@ export function isSelectable(node: Node, showCheckboxes: SelectionModes) {
 	if (showCheckboxes === SelectionModes.perNode) {
 		return node.checkbox === true;
 	}
-	//dont show at all
+	//don't show at all
 	return false;
 }

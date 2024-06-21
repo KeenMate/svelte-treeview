@@ -68,7 +68,7 @@ For more examples see `src/routes/`
 | hideDisabledCheckboxes | bool                                                               | false   | hides checkboxes instead of disabling, see   [Selection](#selection)                                  |
 | loadChildrenAsync      | ExpandedCallback                                                   | null    | function that is called when node is expanded, see   [Async loading](#async-loading)                  |
 | showContextMenu        | bool                                                               | false   | On right click dispaly context menu defined in `context-menu` slot, see [Context menu](#context-menu) |
-| expansionTreshold      | number                                                             | 0       | Expand all nodes when there is less than number provided                                              |
+| expansionThreshold      | number                                                             | 0       | Expand all nodes when there is less than number provided                                              |
 | customClasses          | Partial<CustomizableClasses>                                       | {}      | changes classes used on same elements, see [Custom classes](#custom-classes)                          |
 | filter                 | (node: Node) => boolean or null                                    | null    | function that is used for fitlering. It is called on every node                                       |
 | dragAndDrop            | bool                                                               | false   | enables drag and drop, see [Drag and drop](#drag-and-drop)                                            |

@@ -8,7 +8,7 @@ export class DragDropProvider {
 	}
 
 	getInsertionPosition(
-		draggendNode: Node,
+		draggedNode: Node,
 		draggedOverNode: Node,
 		e: DragEvent,
 		element: HTMLElement,

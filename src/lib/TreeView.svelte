@@ -69,8 +69,8 @@
 	 */
 	export let selectionMode: SelectionModes = SelectionModes.none;
 	/**
-	 * By default, in recursive mode, non-leaf checkboxes will select/deselct all its children
-	 * If you set this to true, this begaviour will be disabled and only leaf nodes will be selectable
+	 * By default, in recursive mode, non-leaf checkboxes will select/deselect all its children
+	 * If you set this to true, this behavior will be disabled and only leaf nodes will be selectable
 	 */
 	export let onlyLeafCheckboxes = false; //bool
 	/**
@@ -78,7 +78,7 @@
 	 */
 	export let hideDisabledCheckboxes = false; //bool
 	/**
-	 * Function that will be caled when node is expanded and useCallback is set to true
+	 * Function that will be caged when node is expanded and useCallback is set to true
 	 * It should return array of nodes that will be added to tree
 	 * If it throws error, node will be collapsed,
 	 * but user will be able to open it again and callback will be called
@@ -92,20 +92,20 @@
 
 	// TODO stopped working in new version
 	/**
-	 * Automaticaly expand nodes to this level,
+	 * Automatically expand nodes to this level,
 	 * any user made expansion will override this.
 	 */
 	export let expandTo = 0;
 
 	/**
-	 * Treshold for automatic expansion. If tree has less or equal nodes than this value,
+	 * Threshold for automatic expansion. If tree has less or equal nodes than this value,
 	 * all nodes will be expanded. Default is 0, which means no automatic expansion
 	 */
-	export let expansionTreshold = 0;
+	export let expansionThreshold = 0;
 
 	/**
 	 * Classes used in tree. You can override default classes with this prop.
-	 * It is recommended to use default classes and add aditinal styles in your css
+	 * It is recommended to use default classes and add additional styles in your css
 	 */
 	export let customClasses: Partial<CustomizableClasses> = {};
 
@@ -125,7 +125,7 @@
 	export let logger: ((...data: any[]) => void) | null = null;
 
 	/*
-	 * Drag and drop mode allows all nodes, that dont have dragDisabled property set to true
+	 * Drag and drop mode allows all nodes, that don't have dragDisabled property set to true
 	 * to be dragged and dropped. By default you can only insert at same level node you are dropping on,
 	 * but you can allow nesting by setting nestAllowed to true on node. If you want to disable insertion,
 	 * set dropDisabled to true on node. if both is disabled, you wont be able to drop on node.
@@ -162,7 +162,7 @@
 	$: debugLog('computedTree', computedTree);
 
 	export function changeAllExpansion(changeTo: boolean) {
-		debugLog('chaning expantion of every node to ', changeTo ? 'expanded' : 'collapsed');
+		debugLog('changing expansion of every node to ', changeTo ? 'expanded' : 'collapsed');
 		if (changeTo) {
 			expandedIds = computedTree.map((node) => node.id);
 		} else {
@@ -246,7 +246,7 @@
 		const { tree: filteredTree, count: filteredCount } = helper.searchTree(mappedTree, filter);
 
 		// treshold applies to nodes that match the filter, not all their parents
-		if (filteredCount <= expansionTreshold) {
+		if (filteredCount <= expansionThreshold) {
 			expandedIds = uniq([...expandedIds, ...filteredTree.map((node) => node.id)]);
 		}
 
@@ -300,7 +300,7 @@
 
 		debugLog('calling callback for node', node);
 
-		// TODO mark node as loaded and dont call callback again
+		// TODO mark node as loaded and don't call callback again
 		// this is now responsibility of user
 		loadChildrenAsync(node);
 	}
@@ -319,7 +319,7 @@
 			nodePath,
 			"' to ",
 			changeTo,
-			' returing value ',
+			' returning value ',
 			newValue
 		);
 
@@ -368,7 +368,7 @@
 	function onDragDrop({
 		detail: { node, event, element }
 	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
-		// here we asume that highlightType is correctly calculated in handleDragOver
+		// here we assume that highlightType is correctly calculated in handleDragOver
 		if (!dragAndDrop || draggedNode === null || insertionType === InsertionType.none) {
 			event.preventDefault();
 			return;
@@ -385,7 +385,7 @@
 		});
 	}
 
-	// handle highlihting
+	// handle highlighting
 	function onDragEnter({
 		detail: { node, event, element }
 	}: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {

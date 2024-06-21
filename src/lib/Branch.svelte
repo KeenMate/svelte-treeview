@@ -137,7 +137,7 @@
 		>
 			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.inserLineClass}" />
+					<div class="insert-line {classes.insertLineClass}" />
 				</div>
 			{/if}
 
@@ -236,7 +236,7 @@
 			<!-- Show line if insering -->
 			{#if effectiveHighlight === InsertionType.insertBelow}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.inserLineClass}" />
+					<div class="insert-line {classes.insertLineClass}" />
 				</div>
 			{/if}
 		</li>
