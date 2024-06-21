@@ -53,7 +53,7 @@ export class TreeHelper {
 		}
 	}
 
-	//#region basic helpres
+	//#region basic helpers
 
 	getParentNodePath(nodePath: string): string | null {
 		if (nodePath == null) throw new Error('cannot get parent of root');
@@ -117,31 +117,28 @@ export class TreeHelper {
 
 	/** toggles expansion on
 	 */
-	changeExpansion(node: Node, changeTo: boolean, oldExpandedNodeIds: NodeId[]) {
+	changeExpansion(
+		targetNodePath: string,
+		changeTo: boolean,
+		previousExpandedPaths: string[]
+	): string[] {
 		// const nodeId = node.id ?? '';
-		if (!node.id) {
-			return oldExpandedNodeIds;
+		if (!targetNodePath) {
+			return previousExpandedPaths;
 		}
 
 		if (changeTo === true) {
-			return [...oldExpandedNodeIds, node.id];
+			return [...previousExpandedPaths, targetNodePath];
 		}
 
-		return oldExpandedNodeIds.filter((x) => x !== node.id);
+		return previousExpandedPaths.filter((x) => x !== targetNodePath);
 	}
 
-	/** changes expansion of every node that has this.hasChildren set to true if they are abose set level and expansion property isnt set
+	/**
+	 * returns path of every node, that is at or above given depth level
 	 */
-	expandToLevel(tree: Tree, level: number): NodeId[] {
-		return tree
-			.filter(
-				(node) =>
-					node.expanded == undefined &&
-					node.expanded == null &&
-					node.useCallback != true &&
-					this.getDepthLevel(node.path) <= level
-			)
-			.map((node) => node.id ?? '');
+	getNodesAbove(tree: Tree, depth: number): Node[] {
+		return tree.filter((node) => this.getDepthLevel(node.path) <= depth);
 	}
 
 	//based on number of dots
@@ -174,11 +171,11 @@ export class TreeHelper {
 		return { count: filteredNodes.length, tree: uniqueNodes };
 	}
 
-	getParents(tree: Tree, targetNode: Node): Node[] {
+	getParentsPaths(targetNodePath: string): string[] {
 		const parentsPaths: string[] = [];
 
 		// TODO refactor
-		let nodePath: string | null = targetNode.path;
+		let nodePath: string | null = targetNodePath;
 		// get all parents
 		while (nodePath !== null && nodePath !== '') {
 			nodePath = this.getParentNodePath(nodePath as string);
@@ -187,6 +184,16 @@ export class TreeHelper {
 			}
 			parentsPaths.push(nodePath);
 		}
+
+		return parentsPaths;
+	}
+
+	getParents(tree: Tree, targetNode: Node): Node[] {
+		if (!targetNode) {
+			return [];
+		}
+
+		const parentsPaths = this.getParentsPaths(targetNode.path);
 
 		//find nodes for given ids
 		const parentNodes = tree.filter((node) =>
@@ -199,7 +206,7 @@ export class TreeHelper {
 	/** orders nodes by priorityProp
 	 */
 	orderByPriority(tree: Tree) {
-		// TODO investigata that it really works
+		// TODO investigate that it really works
 		tree.sort((a: Node, b: Node) => (b.priority ? a.priority - b.priority : 1));
 		return tree;
 	}

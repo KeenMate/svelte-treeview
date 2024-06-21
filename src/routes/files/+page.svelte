@@ -14,7 +14,7 @@
 	let searchText = '';
 	let selectedNodes: string[] = [];
 	let expandToNode: (node: string) => void;
-	let focusFirstNode: () => void;
+	let focusFirstNode: () => null | Node;
 
 	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText);
 
