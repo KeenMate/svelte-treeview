@@ -203,7 +203,6 @@
 
 		if (changeTo === null) {
 			changeTo = !expandedPaths.includes(nodePath);
-			return;
 		}
 
 		expandedPaths = helper.changeExpansion(nodePath, changeTo, expandedPaths);
