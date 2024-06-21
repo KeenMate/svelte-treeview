@@ -45,10 +45,10 @@ export class TreeHelper {
 		}
 	}
 
-	markExpanded(tree: Tree, expandedNodeIds: NodeId[]) {
+	markExpanded(tree: Tree, expandedPaths: string[]) {
 		{
-			tree.forEach((node: any) => {
-				node.expanded = expandedNodeIds.includes(node.id ?? '');
+			tree.forEach((node: Node) => {
+				node.expanded = expandedPaths.includes(node.path ?? '');
 			});
 		}
 	}
