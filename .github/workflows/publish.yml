@@ -2,7 +2,7 @@ name: Publish Package to npmjs
 on:
   push:
     tags:
-      - 'v*.*.**'
+      - 'v*.*.*'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,7 +22,7 @@ jobs:
       # this would
       # - name: Ensure tag matches package.json version
       #   run: npm version ${VERSION}
-      - run: npm publish --provenance --access public
+      - run: npm publish --provenance --access public --dry-run
         env:
           NODE_AUTH_TOKEN: ${{ secrets.KEENMATE_NPM_TOKEN}}
       - name: Create release
