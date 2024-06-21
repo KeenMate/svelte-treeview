@@ -3,7 +3,7 @@
 	"version": "1.2.4",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/keenmate/svelte-treeview.git"
+		"url": "https://github.com/keenmate/svelte-treeview.git"
 	},
 	"scripts": {
 		"dev": "vite dev",
