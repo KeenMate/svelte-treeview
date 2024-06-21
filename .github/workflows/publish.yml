@@ -3,6 +3,10 @@ on:
   push:
     tags:
       - 'v*.*.*'
+
+permissions:
+  contents: write
+  packages: write
 jobs:
   publish:
     runs-on: ubuntu-latest
