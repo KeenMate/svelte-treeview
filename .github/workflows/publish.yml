@@ -22,7 +22,7 @@ jobs:
       # this would
       # - name: Ensure tag matches package.json version
       #   run: npm version ${VERSION}
-      - run: npm publish --provenance --access public --dry-run
+      - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.KEENMATE_NPM_TOKEN}}
       - name: Create release
