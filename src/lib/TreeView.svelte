@@ -298,6 +298,10 @@
 	}
 
 	function handleCallback(node: Node) {
+		if (node.useCallback !== true) {
+			return;
+		}
+
 		// only call on nodes with children
 		if (node.hasChildren !== true) {
 			return;
