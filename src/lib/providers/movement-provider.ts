@@ -1,4 +1,4 @@
-import { TreeHelper } from '$lib/helpers/tree-helper.js';
+import type { TreeHelper } from '$lib/helpers/tree-helper.js';
 import { KeyboardMovement as MovementDirection, type Node } from '$lib/types.js';
 
 export function calculateNewFocusedNode(

@@ -143,7 +143,7 @@
 	export let allowKeyboardNavigation = false;
 
 	let ctxMenu: ContextMenu;
-	let expandedIds: NodeId[] = [];
+	let expandedPaths: string[] = [];
 	let draggedNode: Node | null = null;
 	let highlightedNode: Node | null = null;
 	let insertionType: InsertionType = InsertionType.none;
@@ -158,50 +158,55 @@
 	});
 	$: dragAndDropProvider = new DragDropProvider(helper);
 	$: selectionProvider = new SelectionProvider(helper, recursiveSelection);
-	$: computedTree = computeTree(helper, selectionProvider, tree, filter, props, expandedIds, value);
+	$: computedTree = computeTree(
+		helper,
+		selectionProvider,
+		tree,
+		filter,
+		props,
+		expandedPaths,
+		value
+	);
 	$: debugLog('computedTree', computedTree);
 
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog('changing expansion of every node to ', changeTo ? 'expanded' : 'collapsed');
 		if (changeTo) {
-			expandedIds = computedTree.map((node) => node.id);
+			expandedPaths = computedTree.map((node) => node.path);
 		} else {
-			expandedIds = [];
+			expandedPaths = [];
 		}
 	}
 
-	export function expandToNode(nodePath: string) {
-		const targetNode = helper.findNode(computedTree, nodePath);
-
-		if (!targetNode) {
-			console.error('Node with path', nodePath, 'not found');
+	export function expandToNode(targetNodePath: string) {
+		if (!targetNodePath) {
+			console.warn('Cannot expand to node with null path');
 			return;
 		}
 
-		const parents = helper.getParents(computedTree, targetNode);
+		const parentPaths = helper.getParentsPaths(targetNodePath);
 
-		debugLog("expanding to node '" + nodePath + "'" + ' parents', parents);
-		expandedIds = uniq([...expandedIds, ...parents.map((node) => node.id)]);
+		debugLog("expanding to node '" + targetNodePath + "'" + ' parents', parentPaths);
+
+		expandedPaths = uniq([...expandedPaths, ...parentPaths]);
 	}
 
 	export function setNodeExpansion(nodePath: string, changeTo: boolean) {
-		const targetNode = helper.findNode(computedTree, nodePath);
-
-		if (!targetNode) {
-			console.error('Node with path', nodePath, 'not found');
+		if (!nodePath) {
+			console.warn('Cannot expand node with null path');
 			return;
 		}
 
-		expandedIds = helper.changeExpansion(targetNode, changeTo, expandedIds);
+		expandedPaths = helper.changeExpansion(nodePath, changeTo, expandedPaths);
 	}
 
-	export function setExpansions(expansions: NodeId[]) {
+	export function setExpansions(expansions: string[]) {
 		if (!Array.isArray(expansions)) {
 			console.error('expansions must be an array');
 			return;
 		}
 
-		expandedIds = expansions;
+		expandedPaths = expansions;
 	}
 
 	export function focusNode(nodePath: string | null) {
@@ -262,7 +267,7 @@
 	function onExpand(detail: { node: Node; changeTo: boolean }) {
 		const { node, changeTo } = detail;
 
-		expandedIds = helper.changeExpansion(node, changeTo, expandedIds);
+		expandedPaths = helper.changeExpansion(node.path, changeTo, expandedPaths);
 
 		debugLog("changed expansion of node '", node.id, "' to ", changeTo);
 

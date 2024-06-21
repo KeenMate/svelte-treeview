@@ -115,11 +115,14 @@
 	class:child-menu={childDepth > 0}
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
+	<!-- TODO fix accessibility -->
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	{#each directChildren as node (getNodeId(node))}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
 		{@const draggable = !readonly && dragAndDrop && !node.dragDisabled}
 		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
 		{@const effectiveHighlight = getHighlighMode(node, highlightedNode, insertionType)}
+		<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 		<li
 			class:is-child={helper.nodePathIsChild(node.path)}
 			class:has-children={node.hasChildren}
