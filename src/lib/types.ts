@@ -24,7 +24,7 @@ export type MappedNode = {
 };
 
 export type Node = {
-	// TODO matbe use generics
+	// TODO maybe use generics
 	originalNode: any;
 	id: NodeId;
 	path: string;
@@ -64,14 +64,14 @@ export type CustomizableClasses = {
 	collapseIcon: string;
 	nestIcon: string;
 	expandClass: string;
-	inserLineClass: string;
+	insertLineClass: string;
 	currentlyDraggedClass: string;
 };
 
-export type DragEnterCallback = (draggendNode: Node, targetNode: Node) => Promise<boolean>;
+export type DragEnterCallback = (draggedNode: Node, targetNode: Node) => Promise<boolean>;
 
 export type BeforeMovedCallback = (
-	draggendNode: Node,
+	draggedNode: Node,
 	oldParent: Node,
 	newParent: Node,
 	insertionType: string

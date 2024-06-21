@@ -19,7 +19,7 @@ export const defaultClasses: CustomizableClasses = {
 	nodeClass: '',
 	expandIcon: 'far fa-fw fa-plus-square',
 	collapseIcon: 'far fa-fw fa-minus-square',
-	inserLineClass: '',
+	insertLineClass: '',
 	nestIcon: 'fas fa-level-down-alt'
 };
 
