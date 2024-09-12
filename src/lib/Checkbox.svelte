@@ -39,6 +39,8 @@
 				type="checkbox"
 				on:click={null}
 				disabled={true}
+				checked={node.visualState === VisualState.selected}
+				indeterminate={node.visualState === VisualState.indeterminate}
 				class:invisible={hideDisabledCheckboxes}
 			/>
 		{/if}

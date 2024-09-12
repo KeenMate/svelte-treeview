@@ -196,7 +196,7 @@ export class SelectionProvider {
 				}
 
 				// prevent double selection
-				newSelection = newSelection.filter((x) => x !== node.id ?? '');
+				newSelection = newSelection.filter((x) => x !== (node.id ?? ''));
 
 				if (changeTo === true) {
 					newSelection.push(node.id ?? '');
