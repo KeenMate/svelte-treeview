@@ -1,6 +1,6 @@
 <script>
 	// Global styles
-	import '../assets/main.scss';
+	import "../assets/main.scss"
 </script>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">

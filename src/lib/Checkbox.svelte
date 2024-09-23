@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import { SelectionModes, VisualState, type Node } from './types.js';
-	import { isSelectable } from '$lib/providers/selection-provider.js';
+	import {createEventDispatcher} from "svelte"
+	import {type Node, SelectionModes, VisualState} from "./types.js"
+	import {isSelectable} from "$lib/providers/selection-provider.js"
 
-	export let checkboxes: SelectionModes;
-	export let recursive: boolean;
-	export let node: Node;
-	export let onlyLeafCheckboxes: boolean;
-	export let hideDisabledCheckboxes: boolean;
-	export let readonly = false;
+	export let checkboxes: SelectionModes
+	export let recursive: boolean
+	export let node: Node
+	export let onlyLeafCheckboxes: boolean
+	export let hideDisabledCheckboxes: boolean
+	export let readonly = false
 
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher()
 
 	function onSelect(e: Event, node: Node) {
 		// e.preventDefault();
-		dispatch('select', { node });
-		return false;
+		dispatch("select", {node})
+		return false
 	}
 </script>
 

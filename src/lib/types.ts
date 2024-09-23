@@ -42,15 +42,15 @@ export type Node = {
 };
 
 export enum VisualState {
-	indeterminate = 'indeterminate',
-	selected = 'true',
-	notSelected = 'false'
+	indeterminate = "indeterminate",
+	selected      = "true",
+	notSelected   = "false"
 }
 
 export enum SelectionModes {
-	all = 'all',
-	perNode = 'perNode',
-	none = 'none'
+	all     = "all",
+	perNode = "perNode",
+	none    = "none"
 }
 
 export type Tree = Node[];
@@ -81,13 +81,14 @@ export type ExpandedCallback = (node: Node) => Promise<void>;
 
 export type HelperConfig = {
 	separator: string;
+	nodeSorter?: NodeSorter | null
 };
 
 export enum InsertionType {
-	nest = 'nest',
-	insertAbove = 'insert-above',
-	insertBelow = 'insert-below',
-	none = 'none'
+	nest        = "nest",
+	insertAbove = "insert-above",
+	insertBelow = "insert-below",
+	none        = "none"
 }
 
 export type TreeVisualStates = {
@@ -100,8 +101,10 @@ export type ProvidedTree = any[];
 export type FilterFunction = (node: Node) => boolean;
 
 export enum KeyboardMovement {
-	Up = 'ArrowUp',
-	Down = 'ArrowDown',
-	Left = 'ArrowLeft',
-	Right = 'ArrowRight'
+	Up    = "ArrowUp",
+	Down  = "ArrowDown",
+	Left  = "ArrowLeft",
+	Right = "ArrowRight"
 }
+
+export type NodeSorter = (left: Node, right: Node) => number

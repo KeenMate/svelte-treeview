@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { joinPaths } from '@keenmate/js-common-helpers/helpers/string.js';
+	import {joinPaths} from "@keenmate/js-common-helpers/helpers/string.js"
 
-	const githubUrlBase = 'https://github.com/KeenMate/svelte-treeview/blob/master/';
+	const githubUrlBase = "https://github.com/KeenMate/svelte-treeview/blob/master/"
 
-	export let relativePath: string;
+	export let relativePath: string
 
-	$: fullUrl = joinPaths(githubUrlBase, relativePath);
+	$: fullUrl = joinPaths(githubUrlBase, relativePath)
 </script>
 
 <a href={fullUrl}>

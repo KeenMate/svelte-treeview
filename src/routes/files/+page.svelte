@@ -1,51 +1,51 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { MenuDivider, MenuOption, TreeView } from '../../lib/index.js';
-	import Files from '../../data/files.js';
-	import { Card } from '@keenmate/svelte-adminlte';
-	import { SelectionModes, type Node } from '$lib/types.js';
-	import GithubButton from '../../components/GithubButton.svelte';
+	import {onMount} from "svelte"
+	import {MenuDivider, MenuOption, TreeView} from "../../lib/index.js"
+	import Files from "../../data/files.js"
+	import {Card} from "@keenmate/svelte-adminlte"
+	import {type Node, SelectionModes} from "$lib/types.js"
+	import GithubButton from "../../components/GithubButton.svelte"
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
-	let tree: file[] = [];
-	let showObject: boolean;
-	let lastSelectedNodePath: string;
-	let searchText = '';
-	let selectedNodes: string[] = [];
-	let expandToNode: (node: string) => void;
-	let focusFirstNode: () => null | Node;
+	let tree: file[]            = []
+	let showObject: boolean
+	let lastSelectedNodePath: string
+	let searchText              = ""
+	let selectedNodes: string[] = []
+	let expandToNode: (node: string) => void
+	let focusFirstNode: () => null | Node
 
-	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText);
+	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText)
 
 	onMount(() => {
 		tree = Files.map((n) => {
 			return {
 				...n,
-				path: n.path.replaceAll('\\', '/'),
-				dragDisabled: n.path.startsWith('.'),
-				selected: false,
-				nestAllowed: n.hasChildren
-			};
-		});
-		console.log('MountedTree', tree);
-	});
+				path:         n.path.replaceAll("\\", "/"),
+				dragDisabled: n.path.startsWith("."),
+				selected:     false,
+				nestAllowed:  n.hasChildren
+			}
+		})
+		console.log("MountedTree", tree)
+	})
 
 	function onSelectRandomNode() {
-		const leafNodes = tree.filter((n) => !n.hasChildren);
+		const leafNodes = tree.filter((n) => !n.hasChildren)
 
-		const idx = Math.floor(Math.random() * leafNodes.length);
-		const node = leafNodes[idx];
+		const idx  = Math.floor(Math.random() * leafNodes.length)
+		const node = leafNodes[idx]
 
-		selectedNodes = [...selectedNodes, node.path];
-		lastSelectedNodePath = node.path;
+		selectedNodes        = [...selectedNodes, node.path]
+		lastSelectedNodePath = node.path
 
-		expandToNode(node.path);
+		expandToNode(node.path)
 	}
 
 	function onChange(e: CustomEvent<string[]>) {
-		console.log('selection changed ', e.detail);
-		selectedNodes = e.detail;
+		console.log("selection changed ", e.detail)
+		selectedNodes = e.detail
 	}
 </script>
 
@@ -124,7 +124,7 @@
 			<input id="showObjects" type="checkbox" bind:checked={showObject} />
 
 			<br />
-			<button class="btn btn-primary" on:click={focusFirstNode}> Focus first node </button>
+			<button class="btn btn-primary" on:click={focusFirstNode}> Focus first node</button>
 			<br />
 
 			<label for="showObjects">Search tree</label>
@@ -132,7 +132,7 @@
 
 			<br />
 
-			<button class="btn btn-primary" on:click={onSelectRandomNode}> Select random node </button>
+			<button class="btn btn-primary" on:click={onSelectRandomNode}> Select random node</button>
 
 			<br />
 			selected nodes:

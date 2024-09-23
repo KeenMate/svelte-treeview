@@ -1,101 +1,95 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import Checkbox from './Checkbox.svelte';
-	import {
-		SelectionModes,
-		InsertionType,
-		type Node,
-		type Tree,
-		type CustomizableClasses
-	} from '$lib/types.js';
-	import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-	import { capturedKeys } from '$lib/constants.js';
+	import {createEventDispatcher} from "svelte"
+	import Checkbox from "./Checkbox.svelte"
+	import {type CustomizableClasses, InsertionType, type Node, SelectionModes} from "$lib/types.js"
+	import type {TreeHelper} from "$lib/helpers/tree-helper.js"
+	import {capturedKeys} from "$lib/constants.js"
 
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher()
 
-	export let tree: Node[];
-	export let treeId: string;
-	export let recursive = false;
-	export let checkboxes: SelectionModes = SelectionModes.none;
-	export let onlyLeafCheckboxes: boolean;
-	export let hideDisabledCheckboxes: boolean;
-	export let dragAndDrop: boolean;
-	export let verticalLines: boolean;
-	export let readonly: boolean;
-	export let expandTo: number;
-	export let classes: CustomizableClasses;
-	export let helper: TreeHelper;
-	export let childDepth: number;
-	export let branchRootNode: Node | null;
+	export let tree: Node[]
+	export let treeId: string
+	export let recursive                  = false
+	export let checkboxes: SelectionModes = SelectionModes.none
+	export let onlyLeafCheckboxes: boolean
+	export let hideDisabledCheckboxes: boolean
+	export let dragAndDrop: boolean
+	export let verticalLines: boolean
+	export let readonly: boolean
+	export let expandTo: number
+	export let classes: CustomizableClasses
+	export let helper: TreeHelper
+	export let childDepth: number
+	export let branchRootNode: Node | null
 
-	export let draggedNode: Node | null;
-	export let highlightedNode: Node | null;
-	export let insertionType: InsertionType;
-	export let focusedNode: Node | null;
-	export let allowKeyboardNavigation: boolean;
+	export let draggedNode: Node | null
+	export let highlightedNode: Node | null
+	export let insertionType: InsertionType
+	export let focusedNode: Node | null
+	export let allowKeyboardNavigation: boolean
 
-	let liElements: { [key: string]: HTMLLIElement } = {};
+	let liElements: { [key: string]: HTMLLIElement } = {}
 
-	const getNodeId = (node: Node) => `${treeId}-${node.path}`;
-	$: directChildren = helper.getDirectChildren(tree, branchRootNode?.path ?? null);
+	const getNodeId = (node: Node) => `${treeId}-${node.path}`
+	$: directChildren = helper.getDirectChildren(tree, branchRootNode?.path ?? null)
 
 	$: if (focusedNode && liElements[getNodeId(focusedNode)]) {
-		liElements[getNodeId(focusedNode)].focus();
+		liElements[getNodeId(focusedNode)].focus()
 	}
 
 	function setExpansion(node: Node, changeTo: boolean) {
-		dispatch('internal-expand', { node: node, changeTo });
+		dispatch("internal-expand", {node: node, changeTo})
 	}
 
 	function isExpanded(node: Node, depth: number, expandToDepth: number) {
-		const nodeExpanded = node.expanded;
+		const nodeExpanded = node.expanded
 
 		//if expanded prop is defined it has priority over expand to
 		if (nodeExpanded === null) {
-			return depth <= expandToDepth;
+			return depth <= expandToDepth
 		}
-		return nodeExpanded;
+		return nodeExpanded
 	}
 
 	//checkboxes
 	function selectionChanged(node: Node) {
-		dispatch('internal-selectionChanged', { node: node });
+		dispatch("internal-selectionChanged", {node: node})
 	}
 
 	// drag and drop
 	function handleDragStart(e: DragEvent, node: Node) {
-		dispatch('internal-handleDragStart', { node: node, e: e });
+		dispatch("internal-handleDragStart", {node: node, e: e})
 	}
 
 	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragDrop', { node: node, event: e, element: el });
+		dispatch("internal-handleDragDrop", {node: node, event: e, element: el})
 	}
 
 	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement, nest: boolean) {
-		dispatch('internal-handleDragOver', { node: node, event: e, element: el, nest });
+		dispatch("internal-handleDragOver", {node: node, event: e, element: el, nest})
 	}
 
 	function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragEnter', { node: node, event: e, element: el });
+		dispatch("internal-handleDragEnter", {node: node, event: e, element: el})
 	}
 
 	function handleDragEnd(e: DragEvent, node: Node) {
-		dispatch('internal-handleDragEnd', { node: node, event: e });
+		dispatch("internal-handleDragEnd", {node: node, event: e})
 	}
 
 	function handleDragLeave(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch('internal-handleDragLeave', { node: node, event: e, element: el });
+		dispatch("internal-handleDragLeave", {node: node, event: e, element: el})
 	}
 
 	function handleKeyPress(e: KeyboardEvent, node: Node) {
 		if (!capturedKeys.includes(e.key)) {
-			return;
+			return
 		}
 
-		e.preventDefault();
-		e.stopPropagation();
+		e.preventDefault()
+		e.stopPropagation()
 
-		dispatch('internal-keypress', { event: e, node });
+		dispatch("internal-keypress", {event: e, node})
 	}
 
 	function getHighlighMode(
@@ -105,8 +99,10 @@
 	): InsertionType {
 		// return InsertionType.insertAbove;
 
-		if (highlightedNode?.path !== node.path) return InsertionType.none;
-		return insertionType;
+		if (highlightedNode?.path !== node.path) {
+			return InsertionType.none
+		}
+		return insertionType
 	}
 </script>
 
