@@ -1,3 +1,3 @@
-const key = {};
+const key = {}
 
-export { key };
+export {key}

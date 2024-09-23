@@ -1,24 +1,24 @@
 <script lang="ts">
-	import type { Node } from '$lib/types.js';
-	import Menu from './Menu.svelte';
+	import type {Node} from "$lib/types.js"
+	import Menu from "./Menu.svelte"
 
-	let pos = { x: 0, y: 0 };
-	let showMenu = false;
-	let clickedNode: Node | null = null;
+	let pos                      = {x: 0, y: 0}
+	let showMenu                 = false
+	let clickedNode: Node | null = null
 
 	export async function onRightClick(event: MouseEvent, node: Node) {
 		if (showMenu) {
-			showMenu = false;
-			await new Promise((res) => setTimeout(res, 100));
+			showMenu = false
+			await new Promise((res) => setTimeout(res, 100))
 		}
-		clickedNode = node;
-		pos = { x: event.clientX, y: event.clientY };
-		showMenu = true;
+		clickedNode = node
+		pos         = {x: event.clientX, y: event.clientY}
+		showMenu    = true
 	}
 
 	function closeMenu() {
-		showMenu = false;
-		clickedNode = null;
+		showMenu    = false
+		clickedNode = null
 	}
 </script>
 

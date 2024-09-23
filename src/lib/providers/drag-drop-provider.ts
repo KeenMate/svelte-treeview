@@ -1,10 +1,11 @@
-import type { TreeHelper } from '$lib/helpers/tree-helper.js';
-import { type Node, InsertionType } from '$lib/types.js';
+import type {TreeHelper} from "$lib/helpers/tree-helper.js"
+import {InsertionType, type Node} from "$lib/types.js"
 
 export class DragDropProvider {
-	helper: TreeHelper;
+	helper: TreeHelper
+
 	constructor(treeHelper: TreeHelper) {
-		this.helper = treeHelper;
+		this.helper = treeHelper
 	}
 
 	getInsertionPosition(
@@ -15,34 +16,34 @@ export class DragDropProvider {
 		nest: boolean
 	): InsertionType {
 		if (nest && draggedOverNode.nestAllowed) {
-			return InsertionType.nest;
+			return InsertionType.nest
 		}
 
 		if (draggedOverNode.insertDisabled) {
-			return InsertionType.none;
+			return InsertionType.none
 		}
 
-		return this.getRelativePosition(element, e);
+		return this.getRelativePosition(element, e)
 	}
 
 	getRelativePosition(element: Element, e: DragEvent): InsertionType {
-		const targetCords = element.getBoundingClientRect();
-		const half = targetCords.bottom - targetCords.height / 2;
+		const targetCords = element.getBoundingClientRect()
+		const half        = targetCords.bottom - targetCords.height / 2
 
 		if (e.y < half) {
-			return InsertionType.insertAbove;
+			return InsertionType.insertAbove
 		}
-		return InsertionType.insertBelow;
+		return InsertionType.insertBelow
 	}
 
 	isDropAllowed(draggedNode: Node, targeNode: Node): boolean {
 		if (targeNode.dropDisabled) {
-			return false;
+			return false
 		}
 		if (targeNode.path.startsWith(draggedNode.path + this.helper.config.separator)) {
-			return false;
+			return false
 		}
-		return true;
+		return true
 	}
 
 	// /**

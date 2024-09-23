@@ -1,23 +1,24 @@
 <script>
 	// @ts-nocheck
 
-	import { onMount, getContext } from 'svelte';
-	import { key } from './menu.js';
+	import {createEventDispatcher, getContext} from "svelte"
+	import {key} from "./menu.js"
 
-	export let isDisabled = false;
-	export let text = '';
+	export let isDisabled = false
+	export let text       = ""
 
-	import { createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher()
 
-	const { dispatchClick } = getContext(key);
+	const {dispatchClick} = getContext(key)
 
 	const handleClick = (e) => {
-		if (isDisabled) return;
+		if (isDisabled) {
+			return
+		}
 
-		dispatch('click');
-		dispatchClick();
-	};
+		dispatch("click")
+		dispatchClick()
+	}
 </script>
 
 <div class:disabled={isDisabled} on:click={handleClick} on:keydown={handleClick} role="button" tabindex="">
@@ -37,12 +38,15 @@
 		align-items: center;
 		grid-gap: 5px;
 	}
+
 	div:hover {
 		background: #0002;
 	}
+
 	div.disabled {
 		color: #0006;
 	}
+
 	div.disabled:hover {
 		background: white;
 	}
