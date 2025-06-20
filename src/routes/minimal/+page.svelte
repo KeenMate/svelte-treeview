@@ -2,6 +2,8 @@
 	import {TreeView} from "$lib/index.js"
 	import {Card} from "@keenmate/svelte-adminlte"
 
+	let treeView: any
+
 	let tree = [
 		{nodePath: "animals", title: "Animals", hasChildren: true},
 		{nodePath: "animals.mammals", title: "Mammals", hasChildren: true},
@@ -21,16 +23,22 @@
 		{nodePath: "animals.insects.beetles", title: "Beetles"},
 		{nodePath: "animals.insects.butterflies", title: "Butterflies"}
 	]
+
+	function onNodeClick(node) {
+		treeView.setNodeExpansion(node.nodePath, null)
+	}
 </script>
 
 <div class="row mt-3">
 	<div class="col-lg-8 col-12">
 		<Card>
-			<TreeView {tree} treeId="my-tree" >
-				{#snippet children({ node })}
-								{node.title}
-											{/snippet}
-						</TreeView>
+			<TreeView bind:this={treeView} {tree} treeId="my-tree">
+				{#snippet children({node})}
+					<span onclick={() => onNodeClick(node)}>
+						{node.title}
+					</span>
+				{/snippet}
+			</TreeView>
 		</Card>
 	</div>
 	<div class="col-lg-4 col-12">

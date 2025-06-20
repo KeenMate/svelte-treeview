@@ -1,4 +1,3 @@
-https://svelte.dev/e/svelte_fragment_invalid_placement -->
 <script lang="ts">
 	import Branch from "./Branch.svelte"
 
