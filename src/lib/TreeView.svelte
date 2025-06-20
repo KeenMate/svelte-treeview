@@ -1,3 +1,8 @@
+<!-- @migration-task Error while migrating Svelte code: migrating this component would require adding a `$props` rune but there's already a variable named props.
+     Rename the variable and try again or migrate by hand. -->
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (context-menu to context_menu) making the component unusable -->
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
 <!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
@@ -12,7 +17,7 @@
 		type Node,
 		type NodeId,
 		type NodeSorter,
-		type Props,
+		type TreeProps,
 		type ProvidedTree,
 		SelectionModes as SelectionModes,
 		type Tree
@@ -37,15 +42,15 @@
 	/**
 	 * Node paths of selected nodes
 	 */
-	export let value: NodeId[]                            = []
+	export let value: NodeId[]               = []
 	/**
 	 * Object properties where information about node is stored
 	 */
-	export let props: Partial<Props>                      = {}
+	export let treeProps: Partial<TreeProps> = {}
 	/**
 	 * Show vertical lines as visual guide
 	 */
-	export let verticalLines                              = false
+	export let verticalLines                 = false
 	/**
 	 * Disables drag and drop and selection, expansion is still allowed
 	 */
@@ -164,7 +169,7 @@
 		selectionProvider,
 		tree,
 		filter,
-		props,
+		treeProps,
 		expandedPaths,
 		value
 	)
@@ -246,7 +251,7 @@
 		selectionProvider: SelectionProvider,
 		userProvidedTree: any[],
 		filter: FilterFunction | null,
-		props: Partial<Props>,
+		props: Partial<TreeProps>,
 		expandedPaths: string[],
 		value: NodeId[]
 	): Tree {
@@ -548,13 +553,13 @@
 	on:internal-selectionChanged={(e) => onSelectionChanged(e.detail)}
 >
 	<slot node={nodeInSlot} />
-	<svelte:fragment slot="nest-highlight">
-		<slot name="nest-highlight" />
+	<svelte:fragment slot="nestHighlight">
+		<slot name="nestHighlight" />
 	</svelte:fragment>
 </Branch>
 <ContextMenu bind:this={ctxMenu}>
 	<svelte:fragment let:node>
-		<slot name="context-menu" {node} />
+		<slot name="contextMenu" {node} />
 	</svelte:fragment>
 </ContextMenu>
 

@@ -1,5 +1,5 @@
 // TODO rename nodeId to id and nodePath to path
-export type Props = {
+export type TreeProps = {
 	nodeId: string;
 	nodePath: string;
 	hasChildren: string;
