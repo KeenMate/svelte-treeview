@@ -3,9 +3,13 @@
 
 	const githubUrlBase = "https://github.com/KeenMate/svelte-treeview/blob/master/"
 
-	export let relativePath: string
+	interface Props {
+		relativePath: string;
+	}
 
-	$: fullUrl = joinPaths(githubUrlBase, relativePath)
+	let { relativePath }: Props = $props();
+
+	let fullUrl = $derived(joinPaths(githubUrlBase, relativePath))
 </script>
 
 <a href={fullUrl}>

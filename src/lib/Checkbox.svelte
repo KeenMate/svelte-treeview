@@ -1,14 +1,28 @@
 <script lang="ts">
+	import { createBubbler, preventDefault, stopPropagation } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	import {createEventDispatcher} from "svelte"
 	import {type Node, SelectionModes, VisualState} from "./types.js"
 	import {isSelectable} from "$lib/providers/selection-provider.js"
 
-	export let checkboxes: SelectionModes
-	export let recursive: boolean
-	export let node: Node
-	export let onlyLeafCheckboxes: boolean
-	export let hideDisabledCheckboxes: boolean
-	export let readonly = false
+	interface Props {
+		checkboxes: SelectionModes;
+		recursive: boolean;
+		node: Node;
+		onlyLeafCheckboxes: boolean;
+		hideDisabledCheckboxes: boolean;
+		readonly?: boolean;
+	}
+
+	let {
+		checkboxes,
+		recursive,
+		node,
+		onlyLeafCheckboxes,
+		hideDisabledCheckboxes,
+		readonly = false
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher()
 
@@ -26,8 +40,8 @@
 				tabindex="-1"
 				type="checkbox"
 				class="arrow"
-				on:click={(e) => onSelect(e, node)}
-				on:keypress={(e) => e.key === 'Enter' && onSelect(e, node)}
+				onclick={(e) => onSelect(e, node)}
+				onkeypress={(e) => e.key === 'Enter' && onSelect(e, node)}
 				checked={node.visualState === VisualState.selected}
 				indeterminate={node.visualState === VisualState.indeterminate}
 				disabled={readonly}
@@ -37,7 +51,7 @@
 				tabindex="-1"
 				class="arrow"
 				type="checkbox"
-				on:click={null}
+				onclick={null}
 				disabled={true}
 				checked={node.visualState === VisualState.selected}
 				indeterminate={node.visualState === VisualState.indeterminate}
@@ -49,7 +63,7 @@
 			tabindex="-1"
 			class="arrow"
 			type="checkbox"
-			on:click|preventDefault|stopPropagation
+			onclick={stopPropagation(preventDefault(bubble('click')))}
 			disabled={true}
 			class:invisible={hideDisabledCheckboxes}
 		/>

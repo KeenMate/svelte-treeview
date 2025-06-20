@@ -26,9 +26,11 @@
 <div class="row mt-3">
 	<div class="col-lg-8 col-12">
 		<Card>
-			<TreeView {tree} treeId="my-tree" let:node>
-				{node.title}
-			</TreeView>
+			<TreeView {tree} treeId="my-tree" >
+				{#snippet children({ node })}
+								{node.title}
+											{/snippet}
+						</TreeView>
 		</Card>
 	</div>
 	<div class="col-lg-4 col-12">

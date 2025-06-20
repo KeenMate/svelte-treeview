@@ -1,10 +1,15 @@
 <script lang="ts">
 	import type {Node} from "$lib/types.js"
 	import Menu from "./Menu.svelte"
+	interface Props {
+		children?: import('svelte').Snippet<[any]>;
+	}
 
-	let pos                      = {x: 0, y: 0}
-	let showMenu                 = false
-	let clickedNode: Node | null = null
+	let { children }: Props = $props();
+
+	let pos                      = $state({x: 0, y: 0})
+	let showMenu                 = $state(false)
+	let clickedNode: Node | null = $state(null)
 
 	export async function onRightClick(event: MouseEvent, node: Node) {
 		if (showMenu) {
@@ -22,11 +27,11 @@
 	}
 </script>
 
-<svelte:window on:click={closeMenu} />
+<svelte:window onclick={closeMenu} />
 {#if showMenu}
 	<Menu {...pos} on:click={closeMenu} on:clickoutside={closeMenu}>
-		<slot node={clickedNode}>
+		{#if children}{@render children({ node: clickedNode, })}{:else}
 			<b> context menu openned from: {clickedNode?.path}</b>
-		</slot>
+		{/if}
 	</Menu>
 {/if}

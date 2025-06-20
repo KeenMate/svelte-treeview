@@ -1,3 +1,4 @@
+<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
 	import {createEventDispatcher} from "svelte"
