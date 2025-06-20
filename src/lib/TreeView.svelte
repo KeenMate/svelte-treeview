@@ -6,7 +6,6 @@
 <!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
-	import {createEventDispatcher} from "svelte"
 	import {defaultClasses, defaultPropNames} from "./constants.js"
 	import {
 		type CustomizableClasses,
@@ -29,150 +28,174 @@
 	import uniq from "lodash.uniq"
 	import {calculateNewFocusedNode, parseMovementDirection} from "$lib/providers/movement-provider.js"
 
-	const dispatch = createEventDispatcher()
-
-	export let treeId: string
-	/**
-	 * Array of nodes that represent tree structure.
-	 * Each node should have unique path
-	 * All tree modifications are made by modifying this array, so you need to bind it to parent component
-	 */
-	export let tree: ProvidedTree
-
-	/**
-	 * Node paths of selected nodes
-	 */
-	export let value: NodeId[]               = []
-	/**
-	 * Object properties where information about node is stored
-	 */
-	export let treeProps: Partial<TreeProps> = {}
-	/**
-	 * Show vertical lines as visual guide
-	 */
-	export let verticalLines                 = false
-	/**
-	 * Disables drag and drop and selection, expansion is still allowed
-	 */
-	export let readonly                                   = false
-	/**
-	 * Separator used to parse paths. It is used for getting node depth and getting parent node.
-	 * Default is '.'.
-	 */
-	export let separator                                  = "."
-	/**
-	 * only leaf nodes can be selected, non-leaf nodes only select/deselect its children.
-	 * Their visual state is calculated based on their children
-	 * If you set selected on non-leaf node, it will be ignored and may be deleted
-	 */
-	export let recursiveSelection                         = false
-	/**
-	 * Controls if checkboxes are shown and how they behave. Default is none
-	 * TODO write about all the different modes
-	 * TODO find better name
-	 */
-	export let selectionMode: SelectionModes              = SelectionModes.none
-	/**
-	 * By default, in recursive mode, non-leaf checkboxes will select/deselect all its children
-	 * If you set this to true, this behavior will be disabled and only leaf nodes will be selectable
-	 */
-	export let onlyLeafCheckboxes                         = false //bool
-	/**
-	 * Instead of showing disabled checkboxes, show blank space
-	 */
-	export let hideDisabledCheckboxes                     = false //bool
-	/**
-	 * Function that will be caged when node is expanded and useCallback is set to true
-	 * It should return array of nodes that will be added to tree
-	 * If it throws error, node will be collapsed,
-	 * but user will be able to open it again and callback will be called
-	 */
-	export let loadChildrenAsync: ExpandedCallback | null = null
-	/**
-	 * Show context menu on right click.
-	 * Its defined in slot context-menu
-	 */
-	export let showContextMenu                            = false
-
-	// TODO stopped working in new version
-	/**
-	 * Automatically expand nodes to this level,
-	 * any user made expansion will override this.
-	 */
-	export let expandTo = 0
-
-	/**
-	 * Threshold for automatic expansion. If tree has less or equal nodes than this value,
-	 * all nodes will be expanded. Default is 0, which means no automatic expansion
-	 */
-	export let expansionThreshold = 0
-
-	/**
-	 * Classes used in tree. You can override default classes with this prop.
-	 * It is recommended to use default classes and add additional styles in your css
-	 */
-	export let customClasses: Partial<CustomizableClasses> = {}
-
-	/**
-	 * Function used to filter what nodes should be shown.
-	 * Tree automatically adds all parents for nodes.
-	 * User Higher order functions for reactive search.
-	 * If you want to only search leaf nodes,
-	 * its your responsibility to check if its hasChildren property is false
-	 */
-	export let filter: FilterFunction | null = null
-
-	/**
-	 * Log function that will be called when something happens in tree.
-	 * Used mostly for debugging
-	 */
-	export let logger: ((...data: any[]) => void) | null = null
-	export let nodeSorter: NodeSorter | null             = null
-
-	/*
+	interface Props {
+		treeId: string;
+		/**
+		 * Array of nodes that represent tree structure.
+		 * Each node should have unique path
+		 * All tree modifications are made by modifying this array, so you need to bind it to parent component
+		 */
+		tree: ProvidedTree;
+		/**
+		 * Node paths of selected nodes
+		 */
+		value?: NodeId[];
+		/**
+		 * Object properties where information about node is stored
+		 */
+		treeProps?: Partial<TreeProps>;
+		/**
+		 * Show vertical lines as visual guide
+		 */
+		verticalLines?: boolean;
+		/**
+		 * Disables drag and drop and selection, expansion is still allowed
+		 */
+		readonly?: boolean;
+		/**
+		 * Separator used to parse paths. It is used for getting node depth and getting parent node.
+		 * Default is '.'.
+		 */
+		separator?: string;
+		/**
+		 * only leaf nodes can be selected, non-leaf nodes only select/deselect its children.
+		 * Their visual state is calculated based on their children
+		 * If you set selected on non-leaf node, it will be ignored and may be deleted
+		 */
+		recursiveSelection?: boolean;
+		/**
+		 * Controls if checkboxes are shown and how they behave. Default is none
+		 * TODO write about all the different modes
+		 * TODO find better name
+		 */
+		selectionMode?: SelectionModes;
+		/**
+		 * By default, in recursive mode, non-leaf checkboxes will select/deselect all its children
+		 * If you set this to true, this behavior will be disabled and only leaf nodes will be selectable
+		 */
+		onlyLeafCheckboxes?: boolean; //bool
+		/**
+		 * Instead of showing disabled checkboxes, show blank space
+		 */
+		hideDisabledCheckboxes?: boolean; //bool
+		/**
+		 * Function that will be caged when node is expanded and useCallback is set to true
+		 * It should return array of nodes that will be added to tree
+		 * If it throws error, node will be collapsed,
+		 * but user will be able to open it again and callback will be called
+		 */
+		loadChildrenAsync?: ExpandedCallback | null;
+		/**
+		 * Show context menu on right click.
+		 * Its defined in slot context-menu
+		 */
+		showContextMenu?: boolean;
+		/**
+		 * Automatically expand nodes to this level,
+		 * any user made expansion will override this.
+		 */
+		expandTo?: number;
+		/**
+		 * Threshold for automatic expansion. If tree has less or equal nodes than this value,
+		 * all nodes will be expanded. Default is 0, which means no automatic expansion
+		 */
+		expansionThreshold?: number;
+		/**
+		 * Classes used in tree. You can override default classes with this prop.
+		 * It is recommended to use default classes and add additional styles in your css
+		 */
+		customClasses?: Partial<CustomizableClasses>;
+		/**
+		 * Function used to filter what nodes should be shown.
+		 * Tree automatically adds all parents for nodes.
+		 * User Higher order functions for reactive search.
+		 * If you want to only search leaf nodes,
+		 * its your responsibility to check if its hasChildren property is false
+		 */
+		filter?: FilterFunction | null;
+		/**
+		 * Log function that will be called when something happens in tree.
+		 * Used mostly for debugging
+		 */
+		logger?: ((...data: any[]) => void) | null;
+		nodeSorter?: NodeSorter | null;
+		/*
 	 * Drag and drop mode allows all nodes, that don't have dragDisabled property set to true
 	 * to be dragged and dropped. By default you can only insert at same level node you are dropping on,
 	 * but you can allow nesting by setting nestAllowed to true on node. If you want to disable insertion,
 	 * set dropDisabled to true on node. if both is disabled, you wont be able to drop on node.
 	 */
-	export let dragAndDrop                                    = false //bool
-	/**
-	 * Callback that will be called when user drags above node.
-	 * It should return true, if drop is disabled on that node.
-	 */
-	export let dropDisabledCallback: DragEnterCallback | null = null
+		dragAndDrop?: boolean; //bool
+		/**
+		 * Callback that will be called when user drags above node.
+		 * It should return true, if drop is disabled on that node.
+		 */
+		dropDisabledCallback?: DragEnterCallback | null;
+		/**
+		 * If true, keyboard navigation will be enabled. Use arrow keys to navigate and space to select node.
+		 */
+		allowKeyboardNavigation?: boolean;
 
-	/**
-	 * If true, keyboard navigation will be enabled. Use arrow keys to navigate and space to select node.
-	 */
-	export let allowKeyboardNavigation = false
+		onFocus?: (x: any) => void
+		onFocusLeave?: (x: any) => void
+		onExpansion?: (x: any) => void
+		onExpanded?: (x: any) => void
+		onClosed?: (x: any) => void
+		onChange?: (x: any) => void
+		onSelection?: (x: any) => void
+		onSelected?: (x: any) => void
+		onUnselected?: (x: any) => void
+		onMoved?: (x: any) => void
 
-	let ctxMenu: ContextMenu
-	let expandedPaths: string[]      = []
-	let draggedNode: Node | null     = null
-	let highlightedNode: Node | null = null
-	let insertionType: InsertionType = InsertionType.none
-	let focusedNode: Node | null     = null
+		children?: import("svelte").Snippet<[any]>;
+		nestHighlight?: import("svelte").Snippet;
+		contextMenu?: import("svelte").Snippet<[any]>;
+	}
 
-	$: computedClasses = {...defaultClasses, ...(customClasses ?? {})}
+	let {
+		    treeId,
+		    tree,
+		    value                   = [],
+		    treeProps               = {},
+		    verticalLines           = false,
+		    readonly                = false,
+		    separator               = ".",
+		    recursiveSelection      = false,
+		    selectionMode           = SelectionModes.none,
+		    onlyLeafCheckboxes      = false,
+		    hideDisabledCheckboxes  = false,
+		    loadChildrenAsync       = null,
+		    showContextMenu         = false,
+		    expandTo                = 0,
+		    expansionThreshold      = 0,
+		    customClasses           = {},
+		    filter                  = null,
+		    logger                  = null,
+		    nodeSorter              = null,
+		    dragAndDrop             = false,
+		    dropDisabledCallback    = null,
+		    allowKeyboardNavigation = false,
+		    onFocus                 = undefined,
+		    onFocusLeave            = undefined,
+		    onExpansion             = undefined,
+		    onExpanded              = undefined,
+		    onClosed                = undefined,
+		    onChange                = undefined,
+		    onSelection             = undefined,
+		    onSelected              = undefined,
+		    onUnselected            = undefined,
+		    onMoved                 = undefined,
+		    children,
+		    nestHighlight,
+		    contextMenu
+	    }: Props = $props()
 
-	$: dragAndDrop && console.warn("Drag and drop is not supported in this version")
-
-	$: helper = new TreeHelper({
-		separator,
-		nodeSorter
-	})
-	$: dragAndDropProvider = new DragDropProvider(helper)
-	$: selectionProvider = new SelectionProvider(helper, recursiveSelection)
-	$: computedTree = computeTree(
-		helper,
-		selectionProvider,
-		tree,
-		filter,
-		treeProps,
-		expandedPaths,
-		value
-	)
+	let ctxMenu: ContextMenu         = $state()
+	let expandedPaths: string[]      = $state([])
+	let draggedNode: Node | null     = $state(null)
+	let highlightedNode: Node | null = $state(null)
+	let insertionType: InsertionType = $state(InsertionType.none)
+	let focusedNode: Node | null     = $state(null)
 
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog("changing expansion of every node to ", changeTo ? "expanded" : "collapsed")
@@ -242,9 +265,30 @@
 
 		focusedNode = rootChildren[0]
 
-		dispatch("focus", focusedNode)
+		onFocus?.(focusedNode)
+
 		return focusedNode
 	}
+
+	let computedClasses = $derived({...defaultClasses, ...(customClasses ?? {})})
+	$effect(() => {
+		dragAndDrop && console.warn("Drag and drop is not supported in this version")
+	})
+	let helper              = $derived(new TreeHelper({
+		separator,
+		nodeSorter
+	}))
+	let dragAndDropProvider = $derived(new DragDropProvider(helper))
+	let selectionProvider   = $derived(new SelectionProvider(helper, recursiveSelection))
+	let computedTree        = $derived(computeTree(
+		helper,
+		selectionProvider,
+		tree,
+		filter,
+		treeProps,
+		expandedPaths,
+		value
+	))
 
 	function computeTree(
 		helper: TreeHelper,
@@ -296,15 +340,15 @@
 		}
 
 		//expansion events
-		dispatch("expansion", {
+		onExpansion?.({
 			node:  node,
 			value: changeTo
 		})
 
 		if (changeTo) {
-			dispatch("expanded", node)
+			onExpanded?.(node)
 		} else {
-			dispatch("closed", node)
+			onClosed?.(node)
 		}
 	}
 
@@ -351,17 +395,17 @@
 			newValue
 		)
 
-		dispatch("change", newValue)
+		onChange?.(newValue)
 
-		dispatch("selection", {
+		onSelection?.({
 			node:  node,
 			value: changeTo
 		})
 
 		if (changeTo) {
-			dispatch("selected", {node, value: newValue})
+			onSelected?.({node, value: newValue})
 		} else {
-			dispatch("unselected", {node, value: newValue})
+			onUnselected?.({node, value: newValue})
 		}
 	}
 
@@ -408,7 +452,7 @@
 
 		debugLog("DROPPED: ", draggedNode, "on", node)
 
-		dispatch("moved", {
+		onMoved?.({
 			node:       draggedNode,
 			target:     node,
 			insertType: insertionType
@@ -492,7 +536,7 @@
 				onExpand({node: node, changeTo: setExpansion})
 			}
 
-			dispatch("focus", node)
+			onFocus?.(node)
 			return
 		}
 
@@ -507,7 +551,7 @@
 				document.activeElement.blur()
 			}
 
-			dispatch("focus-leave")
+			onFocusLeave?.()
 
 			return
 		}
@@ -534,33 +578,29 @@
 	{helper}
 	classes={computedClasses}
 	{verticalLines}
-	let:node={nodeInSlot}
 	childDepth={0}
 	{insertionType}
 	{highlightedNode}
 	{draggedNode}
 	{focusedNode}
 	{allowKeyboardNavigation}
-	on:internal-handleDragStart={onDragStart}
-	on:internal-handleDragDrop={onDragDrop}
-	on:internal-handleDragOver={onDragOver}
-	on:internal-handleDragEnter={onDragEnter}
-	on:internal-handleDragEnd={onDragEnd}
-	on:internal-handleDragLeave={onDragLeave}
-	on:internal-keypress={(e) => onKeyPress(e.detail)}
-	on:open-ctxmenu={openContextMenu}
-	on:internal-expand={(e) => onExpand(e.detail)}
-	on:internal-selectionChanged={(e) => onSelectionChanged(e.detail)}
->
-	<slot node={nodeInSlot} />
-	<svelte:fragment slot="nestHighlight">
-		<slot name="nestHighlight" />
-	</svelte:fragment>
-</Branch>
+	{children}
+	{nestHighlight}
+	internal_onHandleDragStart={onDragStart}
+	internal_onHandleDragDrop={onDragDrop}
+	internal_onHandleDragOver={onDragOver}
+	internal_onHandleDragEnter={onDragEnter}
+	internal_onHandleDragEnd={onDragEnd}
+	internal_onHandleDragLeave={onDragLeave}
+	internal_onKeypress={(e) => onKeyPress(e.detail)}
+	internal_onExpand={(e) => onExpand(e.detail)}
+	internal_onSelectionChanged={(e) => onSelectionChanged(e.detail)}
+	onOpenCtxmenu={openContextMenu}
+/>
 <ContextMenu bind:this={ctxMenu}>
-	<svelte:fragment let:node>
-		<slot name="contextMenu" {node} />
-	</svelte:fragment>
+	{#snippet children({node})}
+		{@render contextMenu?.({node})}
+	{/snippet}
 </ContextMenu>
 
 <style lang="sass" global>
