@@ -8,15 +8,15 @@
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
-	let tree: file[]            = []
-	let showObject: boolean
+	let tree: file[]            = $state([])
+	let showObject: boolean = $state()
 	let lastSelectedNodePath: string
-	let searchText              = ""
-	let selectedNodes: string[] = []
-	let expandToNode: (node: string) => void
-	let focusFirstNode: () => null | Node
+	let searchText              = $state("")
+	let selectedNodes: string[] = $state([])
+	let expandToNode: (node: string) => void = $state()
+	let focusFirstNode: () => null | Node = $state()
 
-	$: filterFunc = (node: any) => node.originalNode.name.includes(searchText)
+	let filterFunc = $derived((node: any) => node.originalNode.name.includes(searchText))
 
 	onMount(() => {
 		tree = Files.map((n) => {
@@ -57,7 +57,7 @@
 				bind:focusFirstNode
 				{tree}
 				treeId="tree"
-				let:node
+				
 				value={selectedNodes}
 				on:change={onChange}
 				on:expansion={(e) => console.log(e.detail)}
@@ -75,26 +75,29 @@
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				filter={filterFunc}
 			>
-				{#if showObject}
-					{JSON.stringify(node)}
-				{:else}
-					{#if node.hasChildren}
-						<img
-							src="https://static.vecteezy.com/system/resources/thumbnails/000/439/792/small/Basic_Ui__28178_29.jpg"
-							alt="folder"
-							height="20"
-						/>
+				{#snippet children({ node })}
+								{#if showObject}
+						{JSON.stringify(node)}
 					{:else}
-						<img
-							src="https://cdn-icons-png.flaticon.com/512/124/124837.png"
-							alt="folder"
-							height="20"
-						/>
+						{#if node.hasChildren}
+							<img
+								src="https://static.vecteezy.com/system/resources/thumbnails/000/439/792/small/Basic_Ui__28178_29.jpg"
+								alt="folder"
+								height="20"
+							/>
+						{:else}
+							<img
+								src="https://cdn-icons-png.flaticon.com/512/124/124837.png"
+								alt="folder"
+								height="20"
+							/>
+						{/if}
+						{node.name}
 					{/if}
-					{node.name}
-				{/if}
 
-				<svelte:fragment slot="context-menu" let:node>
+					{/snippet}
+							<!-- @migration-task: migrate this slot by hand, `context-menu` is an invalid identifier -->
+	<svelte:fragment slot="context-menu" let:node>
 					<MenuOption text={node.path} isDisabled />
 					<MenuDivider />
 					<MenuOption
@@ -106,16 +109,21 @@
 						Open on github
 					</MenuOption>
 				</svelte:fragment>
-				<svelte:fragment slot="nest-highlight">Place into folder</svelte:fragment>
+				<!-- @migration-task: migrate this slot by hand, `nest-highlight` is an invalid identifier -->
+	<svelte:fragment slot="nest-highlight">Place into folder</svelte:fragment>
 			</TreeView>
 		</Card>
 	</div>
 	<div class="col-lg-4 col-12">
 		<Card>
-			<svelte:fragment slot="tools">
-				<GithubButton relativePath="src/routes/files/+page.svelte" />
-			</svelte:fragment>
-			<svelte:fragment slot="header">Files demo</svelte:fragment>
+			{#snippet tools()}
+					
+					<GithubButton relativePath="src/routes/files/+page.svelte" />
+				
+					{/snippet}
+			{#snippet header()}
+						Files demo
+					{/snippet}
 			<p>This demo shows how treeview can be used to browse files.</p>
 
 			<br />
@@ -124,7 +132,7 @@
 			<input id="showObjects" type="checkbox" bind:checked={showObject} />
 
 			<br />
-			<button class="btn btn-primary" on:click={focusFirstNode}> Focus first node</button>
+			<button class="btn btn-primary" onclick={focusFirstNode}> Focus first node</button>
 			<br />
 
 			<label for="showObjects">Search tree</label>
@@ -132,7 +140,7 @@
 
 			<br />
 
-			<button class="btn btn-primary" on:click={onSelectRandomNode}> Select random node</button>
+			<button class="btn btn-primary" onclick={onSelectRandomNode}> Select random node</button>
 
 			<br />
 			selected nodes:

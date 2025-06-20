@@ -1,6 +1,11 @@
-<script>
+<script lang="ts">
 	// Global styles
 	import "../assets/main.scss"
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 </script>
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -14,7 +19,7 @@
 		aria-expanded="false"
 		aria-label="Toggle navigation"
 	>
-		<span class="navbar-toggler-icon" />
+		<span class="navbar-toggler-icon"></span>
 	</button>
 
 	<div class="collapse navbar-collapse" id="navbarSupportedContent">
@@ -38,5 +43,5 @@
 	</div>
 </nav>
 <div class="container">
-	<slot />
+	{@render children?.()}
 </div>

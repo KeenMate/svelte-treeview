@@ -1,27 +1,16 @@
 <!-- component from https://svelte.dev/repl/3a33725c3adb4f57b46b597f9dade0c1?version=3.25.0 -->
 
-<script>
+<script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	// @ts-nocheck
 
 	import {createEventDispatcher, setContext} from "svelte"
 	import {fade} from "svelte/transition"
 	import {key} from "./menu.js"
 
-	export let x
-	export let y
+	let { x = $bindable(), y = $bindable(), children } = $props();
 
-	// whenever x and y is changed, restrict box to be within bounds
-	$: (() => {
-		if (!menuEl) {
-			return
-		}
-
-		const rect = menuEl.getBoundingClientRect()
-		x          = Math.min(window.innerWidth - rect.width, x)
-		if (y > window.innerHeight - rect.height) {
-			y -= rect.height
-		}
-	})(x, y)
 
 	const dispatch = createEventDispatcher()
 
@@ -29,7 +18,7 @@
 		dispatchClick: () => dispatch("click")
 	})
 
-	let menuEl
+	let menuEl = $state()
 
 	function onPageClick(e) {
 		if (e.target === menuEl || menuEl.contains(e.target)) {
@@ -37,12 +26,26 @@
 		}
 		dispatch("clickoutside")
 	}
+	// whenever x and y is changed, restrict box to be within bounds
+	run(() => {
+		(() => {
+			if (!menuEl) {
+				return
+			}
+
+			const rect = menuEl.getBoundingClientRect()
+			x          = Math.min(window.innerWidth - rect.width, x)
+			if (y > window.innerHeight - rect.height) {
+				y -= rect.height
+			}
+		})(x, y)
+	});
 </script>
 
-<svelte:body on:click={onPageClick} />
+<svelte:body onclick={onPageClick} />
 
 <div transition:fade={{ duration: 100 }} bind:this={menuEl} style="top: {y}px; left: {x}px;">
-	<slot />
+	{@render children?.()}
 </div>
 
 <style>

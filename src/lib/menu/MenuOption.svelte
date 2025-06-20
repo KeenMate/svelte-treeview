@@ -1,11 +1,16 @@
-<script>
+<script lang="ts">
 	// @ts-nocheck
 
 	import {createEventDispatcher, getContext} from "svelte"
 	import {key} from "./menu.js"
 
-	export let isDisabled = false
-	export let text       = ""
+	interface Props {
+		isDisabled?: boolean;
+		text?: string;
+		children?: import('svelte').Snippet;
+	}
+
+	let { isDisabled = false, text = "", children }: Props = $props();
 
 	const dispatch = createEventDispatcher()
 
@@ -21,11 +26,11 @@
 	}
 </script>
 
-<div class:disabled={isDisabled} on:click={handleClick} on:keydown={handleClick} role="button" tabindex="">
+<div class:disabled={isDisabled} onclick={handleClick} onkeydown={handleClick} role="button" tabindex="">
 	{#if text}
 		{text}
 	{:else}
-		<slot />
+		{@render children?.()}
 	{/if}
 </div>
 

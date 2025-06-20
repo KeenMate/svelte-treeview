@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: `<svelte:fragment>` must be the direct child of a component
+https://svelte.dev/e/svelte_fragment_invalid_placement -->
 <script lang="ts">
 	import {createEventDispatcher} from "svelte"
 	import Checkbox from "./Checkbox.svelte"
