@@ -1,46 +1,98 @@
-<!-- @migration-task Error while migrating Svelte code: `<svelte:fragment>` must be the direct child of a component
 https://svelte.dev/e/svelte_fragment_invalid_placement -->
 <script lang="ts">
-	import {createEventDispatcher} from "svelte"
+	import Branch from "./Branch.svelte"
+
 	import Checkbox from "./Checkbox.svelte"
 	import {type CustomizableClasses, InsertionType, type Node, SelectionModes} from "$lib/types.js"
 	import type {TreeHelper} from "$lib/helpers/tree-helper.js"
 	import {capturedKeys} from "$lib/constants.js"
 
-	const dispatch = createEventDispatcher()
+	interface Props {
+		tree: Node[];
+		treeId: string;
+		recursive?: boolean;
+		checkboxes?: SelectionModes;
+		onlyLeafCheckboxes: boolean;
+		hideDisabledCheckboxes: boolean;
+		dragAndDrop: boolean;
+		verticalLines: boolean;
+		readonly: boolean;
+		expandTo: number;
+		classes: CustomizableClasses;
+		helper: TreeHelper;
+		childDepth: number;
+		branchRootNode: Node | null;
+		draggedNode: Node | null;
+		highlightedNode: Node | null;
+		insertionType: InsertionType;
+		focusedNode: Node | null;
+		allowKeyboardNavigation: boolean;
 
-	export let tree: Node[]
-	export let treeId: string
-	export let recursive                  = false
-	export let checkboxes: SelectionModes = SelectionModes.none
-	export let onlyLeafCheckboxes: boolean
-	export let hideDisabledCheckboxes: boolean
-	export let dragAndDrop: boolean
-	export let verticalLines: boolean
-	export let readonly: boolean
-	export let expandTo: number
-	export let classes: CustomizableClasses
-	export let helper: TreeHelper
-	export let childDepth: number
-	export let branchRootNode: Node | null
+		onOpenCtxmenu?: () => void
 
-	export let draggedNode: Node | null
-	export let highlightedNode: Node | null
-	export let insertionType: InsertionType
-	export let focusedNode: Node | null
-	export let allowKeyboardNavigation: boolean
+		internal_onExpand?: () => void
+		internal_onSelectionChanged?: () => void
+		internal_onHandleDragStart?: () => void
+		internal_onHandleDragDrop?: () => void
+		internal_onHandleDragOver?: () => void
+		internal_onHandleDragEnter?: () => void
+		internal_onHandleDragEnd?: () => void
+		internal_onHandleDragLeave?: () => void
+		internal_onKeypress?: () => void
 
-	let liElements: { [key: string]: HTMLLIElement } = {}
-
-	const getNodeId = (node: Node) => `${treeId}-${node.path}`
-	$: directChildren = helper.getDirectChildren(tree, branchRootNode?.path ?? null)
-
-	$: if (focusedNode && liElements[getNodeId(focusedNode)]) {
-		liElements[getNodeId(focusedNode)].focus()
+		children?: import("svelte").Snippet<[any]>;
+		nestHighlight?: import("svelte").Snippet;
 	}
 
+	let {
+		    tree,
+		    treeId,
+		    recursive                   = false,
+		    checkboxes                  = SelectionModes.none,
+		    onlyLeafCheckboxes,
+		    hideDisabledCheckboxes,
+		    dragAndDrop,
+		    verticalLines,
+		    readonly,
+		    expandTo,
+		    classes,
+		    helper,
+		    childDepth,
+		    branchRootNode,
+		    draggedNode,
+		    highlightedNode,
+		    insertionType,
+		    focusedNode,
+		    allowKeyboardNavigation,
+		    onOpenCtxmenu = undefined,
+
+		    internal_onExpand           = undefined,
+		    internal_onSelectionChanged = undefined,
+		    internal_onHandleDragStart  = undefined,
+		    internal_onHandleDragDrop   = undefined,
+		    internal_onHandleDragOver   = undefined,
+		    internal_onHandleDragEnter  = undefined,
+		    internal_onHandleDragEnd    = undefined,
+		    internal_onHandleDragLeave  = undefined,
+		    internal_onKeypress         = undefined,
+
+		    children,
+		    nestHighlight
+	    }: Props = $props()
+
+	let liElements: { [key: string]: HTMLLIElement } = $state({})
+
+	const getNodeId    = (node: Node) => `${treeId}-${node.path}`
+	let directChildren = $derived(helper.getDirectChildren(tree, branchRootNode?.path ?? null))
+
+	$effect(() => {
+		if (focusedNode && liElements[getNodeId(focusedNode)]) {
+			liElements[getNodeId(focusedNode)].focus()
+		}
+	})
+
 	function setExpansion(node: Node, changeTo: boolean) {
-		dispatch("internal-expand", {node: node, changeTo})
+		internal_onExpand?.({node: node, changeTo})
 	}
 
 	function isExpanded(node: Node, depth: number, expandToDepth: number) {
@@ -55,32 +107,37 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 
 	//checkboxes
 	function selectionChanged(node: Node) {
-		dispatch("internal-selectionChanged", {node: node})
+		internal_onSelectionChanged?.({node: node})
 	}
 
 	// drag and drop
 	function handleDragStart(e: DragEvent, node: Node) {
-		dispatch("internal-handleDragStart", {node: node, e: e})
+		internal_onHandleDragStart?.({node: node, e: e})
 	}
 
 	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch("internal-handleDragDrop", {node: node, event: e, element: el})
+		e.stopImmediatePropagation()
+		internal_onHandleDragDrop?.({node: node, event: e, element: el})
 	}
 
 	function handleDragOver(e: DragEvent, node: Node, el: HTMLElement, nest: boolean) {
-		dispatch("internal-handleDragOver", {node: node, event: e, element: el, nest})
+		e.stopImmediatePropagation()
+		internal_onHandleDragOver?.({node: node, event: e, element: el, nest})
 	}
 
 	function handleDragEnter(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch("internal-handleDragEnter", {node: node, event: e, element: el})
+		e.stopImmediatePropagation()
+		internal_onHandleDragEnter?.({node: node, event: e, element: el})
 	}
 
 	function handleDragEnd(e: DragEvent, node: Node) {
-		dispatch("internal-handleDragEnd", {node: node, event: e})
+		e.stopImmediatePropagation()
+		internal_onHandleDragEnd?.({node: node, event: e})
 	}
 
 	function handleDragLeave(e: DragEvent, node: Node, el: HTMLElement) {
-		dispatch("internal-handleDragLeave", {node: node, event: e, element: el})
+		e.stopImmediatePropagation()
+		internal_onHandleDragLeave?.({node: node, event: e, element: el})
 	}
 
 	function handleKeyPress(e: KeyboardEvent, node: Node) {
@@ -91,7 +148,7 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 		e.preventDefault()
 		e.stopPropagation()
 
-		dispatch("internal-keypress", {event: e, node})
+		internal_onKeypress?.({event: e, node})
 	}
 
 	function getHighlighMode(
@@ -106,6 +163,11 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 		}
 		return insertionType
 	}
+
+	function onContextMenu(ev: Event, node: any) {
+		ev.stopImmediatePropagation()
+		onOpenCtxmenu({ev, node})
+	}
 </script>
 
 <ul
@@ -114,35 +176,32 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 	class={childDepth === 0 ? classes.treeClass : ''}
 >
 	<!-- TODO fix accessibility -->
-	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	{#each directChildren as node (getNodeId(node))}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
 		{@const draggable = !readonly && dragAndDrop && !node.dragDisabled}
 		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
 		{@const effectiveHighlight = getHighlighMode(node, highlightedNode, insertionType)}
-		<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<li
 			class:is-child={helper.nodePathIsChild(node.path)}
 			class:has-children={node.hasChildren}
-			on:contextmenu|stopPropagation={(e) => {
-				dispatch('open-ctxmenu', { e, node });
-			}}
-			on:drop|stopPropagation={(e) => handleDragDrop(e, node, liElements[getNodeId(node)])}
-			on:dragover|stopPropagation={(e) =>
-				handleDragOver(e, node, liElements[getNodeId(node)], false)}
-			on:dragenter|stopPropagation={(e) => handleDragEnter(e, node, liElements[getNodeId(node)])}
-			on:dragleave|stopPropagation={(e) => handleDragLeave(e, node, liElements[getNodeId(node)])}
+			oncontextmenu={e => onContextMenu(e, node)}
+			ondrop={e => handleDragDrop(e, node, liElements[getNodeId(node)])}
+			ondragover={e => handleDragOver(e, node, liElements[getNodeId(node)], false)}
+			ondragenter={e => handleDragEnter(e, node, liElements[getNodeId(node)])}
+			ondragleave={e => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
-			on:keydown={(e) => handleKeyPress(e, node)}
+			onkeydown={(e) => handleKeyPress(e, node)}
 			tabindex={allowKeyboardNavigation ? 1 : -1}
 		>
 			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.insertLineClass}" />
+					<div class="insert-line {classes.insertLineClass}"></div>
 				</div>
 			{/if}
 
-			<!-- svelte-ignore a11y-no-static-element-interactions -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="tree-item
 				{effectiveHighlight === InsertionType.nest ? classes.expandClass : ''}
@@ -150,20 +209,20 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 				class:div-has-children={node.hasChildren}
 				class:hover={effectiveHighlight !== InsertionType.none}
 				{draggable}
-				on:dragstart={(e) => handleDragStart(e, node)}
-				on:dragend={(e) => handleDragEnd(e, node)}
+				ondragstart={(e) => handleDragStart(e, node)}
+				ondragend={(e) => handleDragEnd(e, node)}
 			>
 				{#if node.hasChildren}
 					<button
 						class="expansion-button arrow"
-						on:click={() => setExpansion(node, !expanded)}
+						onclick={() => setExpansion(node, !expanded)}
 						type="button"
 						tabindex="-1"
 					>
-						<i class="fixed-icon arrow {expanded ? classes.collapseIcon : classes.expandIcon}" />
+						<i class="fixed-icon arrow {expanded ? classes.collapseIcon : classes.expandIcon}"></i>
 					</button>
 				{:else}
-					<span class="fixed-icon" />
+					<span class="fixed-icon"></span>
 				{/if}
 
 				<Checkbox
@@ -176,24 +235,23 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 					on:select={({ detail: { node } }) => selectionChanged(node)}
 				/>
 				<span class:pointer-cursor={draggable}>
-					<slot node={node.originalNode} />
+					{@render children?.({node: node.originalNode,})}
 				</span>
 
 				{#if dragAndDrop && node.nestAllowed}
 					<span
-						on:dragover|stopPropagation={(e) =>
-							handleDragOver(e, node, liElements[getNodeId(node)], true)}
+						ondragover={e => handleDragOver(e, node, liElements[getNodeId(node)], true)}
 					>
-						<i class="fixed-icon {classes.nestIcon}" />
+						<i class="fixed-icon {classes.nestIcon}"></i>
 
 						{#if effectiveHighlight === InsertionType.nest}
-							<slot name="nest-highlight" />
+							{@render nestHighlight?.()}
 						{/if}
 					</span>
 				{/if}
 			</div>
 			{#if expanded && node.hasChildren}
-				<svelte:self
+				<Branch
 					branchRootNode={node}
 					childDepth={childDepth + 1}
 					{treeId}
@@ -223,21 +281,23 @@ https://svelte.dev/e/svelte_fragment_invalid_placement -->
 					on:internal-handleDragEnd
 					on:internal-handleDragLeave
 					on:internal-keypress
-					let:node={nodeNested}
+					
 				>
-					<slot node={nodeNested} />
-					<svelte:fragment slot="nest-highlight">
-						<slot name="nest-highlight" />
-					</svelte:fragment>
-				</svelte:self>
+					{#snippet children({ node: nodeNested })}
+										{@render children?.({node: nodeNested,})}
+						<!--<svelte:fragment slot="nest-highlight">-->
+						<!--	<slot name="nest-highlight" />-->
+						<!--</svelte:fragment>-->
+														{/snippet}
+								</Branch>
 			{/if}
 			{#if !expanded && node.hasChildren}
-				<ul class:child-menu={childDepth > 0} />
+				<ul class:child-menu={childDepth > 0}></ul>
 			{/if}
 			<!-- Show line if insering -->
 			{#if effectiveHighlight === InsertionType.insertBelow}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.insertLineClass}" />
+					<div class="insert-line {classes.insertLineClass}"></div>
 				</div>
 			{/if}
 		</li>

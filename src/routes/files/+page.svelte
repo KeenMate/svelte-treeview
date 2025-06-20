@@ -1,3 +1,13 @@
+<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
+https://svelte.dev/e/snippet_conflict -->
+<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
+https://svelte.dev/e/snippet_conflict -->
+<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
+https://svelte.dev/e/snippet_conflict -->
+<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
+https://svelte.dev/e/snippet_conflict -->
+<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
+https://svelte.dev/e/snippet_conflict -->
 <script lang="ts">
 	import {onMount} from "svelte"
 	import {MenuDivider, MenuOption, TreeView} from "../../lib/index.js"
