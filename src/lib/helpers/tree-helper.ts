@@ -37,11 +37,9 @@ export class TreeHelper {
 	}
 
 	markExpanded(tree: Tree, expandedPaths: string[]) {
-		{
-			tree.forEach((node: Node) => {
-				node.expanded = expandedPaths.includes(node.path ?? "")
-			})
-		}
+		tree.forEach((node: Node) => {
+			node.expanded = expandedPaths.includes(node.path ?? "")
+		})
 	}
 
 	//#region basic helpers

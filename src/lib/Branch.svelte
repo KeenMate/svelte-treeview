@@ -29,15 +29,15 @@
 
 		onOpenCtxmenu?: () => void
 
-		internal_onExpand?: () => void
-		internal_onSelectionChanged?: () => void
-		internal_onHandleDragStart?: () => void
-		internal_onHandleDragDrop?: () => void
-		internal_onHandleDragOver?: () => void
-		internal_onHandleDragEnter?: () => void
-		internal_onHandleDragEnd?: () => void
-		internal_onHandleDragLeave?: () => void
-		internal_onKeypress?: () => void
+		internal_onExpand?: ({node: any, changeTo: boolean}) => void
+		internal_onSelectionChanged?: ({node: any}) => void
+		internal_onHandleDragStart?: ({node: any, event: any}) => void
+		internal_onHandleDragDrop?: ({node: any, event: any, element: any}) => void
+		internal_onHandleDragOver?: ({node: any, event: any, element: any, nest: any}) => void
+		internal_onHandleDragEnter?: ({node: any, event: any, element: any}) => void
+		internal_onHandleDragEnd?: ({node: any, event: any}) => void
+		internal_onHandleDragLeave?: ({node: any, event: any, element: any}) => void
+		internal_onKeypress?: ({node: any, event: any}) => void
 
 		children?: import("svelte").Snippet<[any]>;
 		nestHighlight?: import("svelte").Snippet;
@@ -111,7 +111,7 @@
 
 	// drag and drop
 	function handleDragStart(e: DragEvent, node: Node) {
-		internal_onHandleDragStart?.({node: node, e: e})
+		internal_onHandleDragStart?.({node: node, event: e})
 	}
 
 	function handleDragDrop(e: DragEvent, node: Node, el: HTMLElement) {
@@ -270,25 +270,19 @@
 					{insertionType}
 					{focusedNode}
 					{allowKeyboardNavigation}
-					on:open-ctxmenu
-					on:internal-expand
-					on:internal-selectionChanged
-					on:internal-handleDragStart
-					on:internal-handleDragDrop
-					on:internal-handleDragOver
-					on:internal-handleDragEnter
-					on:internal-handleDragEnd
-					on:internal-handleDragLeave
-					on:internal-keypress
-					
-				>
-					{#snippet children({ node: nodeNested })}
-										{@render children?.({node: nodeNested,})}
-						<!--<svelte:fragment slot="nest-highlight">-->
-						<!--	<slot name="nest-highlight" />-->
-						<!--</svelte:fragment>-->
-														{/snippet}
-								</Branch>
+					{children}
+					{nestHighlight}
+					{onOpenCtxmenu}
+					{internal_onExpand}
+					{internal_onSelectionChanged}
+					{internal_onHandleDragStart}
+					{internal_onHandleDragDrop}
+					{internal_onHandleDragOver}
+					{internal_onHandleDragEnter}
+					{internal_onHandleDragEnd}
+					{internal_onHandleDragLeave}
+					{internal_onKeypress}
+				/>
 			{/if}
 			{#if !expanded && node.hasChildren}
 				<ul class:child-menu={childDepth > 0}></ul>

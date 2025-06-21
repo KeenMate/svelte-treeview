@@ -1,15 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
-<!-- @migration-task Error while migrating Svelte code: Cannot use explicit children snippet at the same time as implicit children content. Remove either the non-whitespace content or the children snippet block
-https://svelte.dev/e/snippet_conflict -->
 <script lang="ts">
 	import {onMount} from "svelte"
 	import {MenuDivider, MenuOption, TreeView} from "../../lib/index.js"
@@ -20,13 +8,13 @@ https://svelte.dev/e/snippet_conflict -->
 
 	type file = { path: string; hasChildren: boolean; name: string; selected: boolean };
 
-	let tree: file[]            = $state([])
-	let showObject: boolean = $state()
+	let tree: file[]                         = $state([])
+	let showObject: boolean                  = $state()
 	let lastSelectedNodePath: string
-	let searchText              = $state("")
-	let selectedNodes: string[] = $state([])
+	let searchText                           = $state("")
+	let selectedNodes: string[]              = $state([])
 	let expandToNode: (node: string) => void = $state()
-	let focusFirstNode: () => null | Node = $state()
+	let focusFirstNode: () => null | Node    = $state()
 
 	let filterFunc = $derived((node: any) => node.originalNode.name.includes(searchText))
 
@@ -69,12 +57,11 @@ https://svelte.dev/e/snippet_conflict -->
 				bind:focusFirstNode
 				{tree}
 				treeId="tree"
-				
 				value={selectedNodes}
-				on:change={onChange}
-				on:expansion={(e) => console.log(e.detail)}
-				on:moved={(e) => console.log(e.detail)}
-				on:focus-leave={(e) => console.log('focus leave')}
+				onChange={onChange}
+				onExpansion={(e) => console.log(e.detail)}
+				onMoved={(e) => console.log(e.detail)}
+				onFocusLeave={(e) => console.log('focus leave')}
 				props={{ nodePath: 'path', nodeId: 'path' }}
 				separator="/"
 				showContextMenu
@@ -87,8 +74,8 @@ https://svelte.dev/e/snippet_conflict -->
 				logger={(...data) => console.debug('treeview: ', ...data)}
 				filter={filterFunc}
 			>
-				{#snippet children({ node })}
-								{#if showObject}
+				{#snippet children({node})}
+					{#if showObject}
 						{JSON.stringify(node)}
 					{:else}
 						{#if node.hasChildren}
@@ -106,10 +93,8 @@ https://svelte.dev/e/snippet_conflict -->
 						{/if}
 						{node.name}
 					{/if}
-
-					{/snippet}
-							<!-- @migration-task: migrate this slot by hand, `context-menu` is an invalid identifier -->
-	<svelte:fragment slot="context-menu" let:node>
+				{/snippet}
+				{#snippet contextMenu(node)}
 					<MenuOption text={node.path} isDisabled />
 					<MenuDivider />
 					<MenuOption
@@ -120,22 +105,23 @@ https://svelte.dev/e/snippet_conflict -->
 					>
 						Open on github
 					</MenuOption>
-				</svelte:fragment>
-				<!-- @migration-task: migrate this slot by hand, `nest-highlight` is an invalid identifier -->
-	<svelte:fragment slot="nest-highlight">Place into folder</svelte:fragment>
+				{/snippet}
+				{#snippet nestHighlight()}
+					Place into folder
+				{/snippet}
 			</TreeView>
 		</Card>
 	</div>
 	<div class="col-lg-4 col-12">
 		<Card>
 			{#snippet tools()}
-					
-					<GithubButton relativePath="src/routes/files/+page.svelte" />
-				
-					{/snippet}
+
+				<GithubButton relativePath="src/routes/files/+page.svelte" />
+
+			{/snippet}
 			{#snippet header()}
-						Files demo
-					{/snippet}
+				Files demo
+			{/snippet}
 			<p>This demo shows how treeview can be used to browse files.</p>
 
 			<br />
