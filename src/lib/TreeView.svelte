@@ -1,9 +1,3 @@
-<!-- @migration-task Error while migrating Svelte code: migrating this component would require adding a `$props` rune but there's already a variable named props.
-     Rename the variable and try again or migrate by hand. -->
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (context-menu to context_menu) making the component unusable -->
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
-<!-- @migration-task Error while migrating Svelte code: This migration would change the name of a slot (nest-highlight to nest_highlight) making the component unusable -->
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
 	import {defaultClasses, defaultPropNames} from "./constants.js"
@@ -190,13 +184,6 @@
 		    contextMenu
 	    }: Props = $props()
 
-	let ctxMenu: ContextMenu         = $state()
-	let expandedPaths: string[]      = $state([])
-	let draggedNode: Node | null     = $state(null)
-	let highlightedNode: Node | null = $state(null)
-	let insertionType: InsertionType = $state(InsertionType.none)
-	let focusedNode: Node | null     = $state(null)
-
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog("changing expansion of every node to ", changeTo ? "expanded" : "collapsed")
 		if (changeTo) {
@@ -229,11 +216,17 @@
 			return
 		}
 
+		const expandedPathsBefore = $state.snapshot(expandedPaths)
 		if (changeTo === null) {
 			changeTo = !expandedPaths.includes(nodePath)
 		}
 
 		expandedPaths = helper.changeExpansion(nodePath, changeTo, expandedPaths)
+
+		console.log("Setting expansion", {
+			expandedPathsBefore: expandedPathsBefore,
+			expandedPaths: $state.snapshot(expandedPaths),
+		})
 	}
 
 	export function setExpansions(expansions: string[]) {
@@ -270,10 +263,14 @@
 		return focusedNode
 	}
 
+	let ctxMenu: ContextMenu         = $state()
+	let expandedPaths: string[]      = $state([])
+	let draggedNode: Node | null     = $state(null)
+	let highlightedNode: Node | null = $state(null)
+	let insertionType: InsertionType = $state(InsertionType.none)
+	let focusedNode: Node | null     = $state(null)
+
 	let computedClasses = $derived({...defaultClasses, ...(customClasses ?? {})})
-	$effect(() => {
-		dragAndDrop && console.warn("Drag and drop is not supported in this version")
-	})
 	let helper              = $derived(new TreeHelper({
 		separator,
 		nodeSorter
@@ -289,6 +286,10 @@
 		expandedPaths,
 		value
 	))
+
+	$effect(() => {
+		dragAndDrop && console.warn("Drag and drop is not supported in this version")
+	})
 
 	function computeTree(
 		helper: TreeHelper,
@@ -327,8 +328,8 @@
 		return filteredTree
 	}
 
-	function onExpand(detail: { node: Node; changeTo: boolean }) {
-		const {node, changeTo} = detail
+	function onExpand(data: { node: Node; changeTo: boolean }) {
+		const {node, changeTo} = data
 
 		expandedPaths = helper.changeExpansion(node.path, changeTo, expandedPaths)
 
@@ -377,8 +378,8 @@
 		loadChildrenAsync(node)
 	}
 
-	function onSelectionChanged(detail: { node: Node }) {
-		const {node} = detail
+	function onSelectionChanged(data: { node: Node }) {
+		const {node} = data
 
 		const nodePath = node.path
 
@@ -409,17 +410,17 @@
 		}
 	}
 
-	function openContextMenu(ce: CustomEvent<{ e: MouseEvent; node: Node }>) {
-		const {e, node} = ce.detail
+	function openContextMenu(data: { event: MouseEvent; node: Node }) {
+		const {event, node} = data
 		if (!showContextMenu) {
 			return
 		}
-		e.preventDefault()
-		ctxMenu.onRightClick(e, node)
+		event.preventDefault()
+		ctxMenu.onRightClick(event, node)
 	}
 
-	function onDragStart(event: CustomEvent<{ node: Node; e: DragEvent }>) {
-		const {node, e} = event.detail
+	function onDragStart(data: { node: Node; event: DragEvent }) {
+		const {node, event} = data
 
 		draggedNode = null
 
@@ -430,18 +431,14 @@
 		draggedNode = node
 	}
 
-	function onDragEnd({
-		                   detail: {node, event, element}
-	                   }: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+	function onDragEnd({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		// fires when you stop dragging element
 
 		draggedNode     = null
 		highlightedNode = null
 	}
 
-	function onDragDrop({
-		                    detail: {node, event, element}
-	                    }: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+	function onDragDrop({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		// here we assume that highlightType is correctly calculated in handleDragOver
 		if (!dragAndDrop || draggedNode === null || insertionType === InsertionType.none) {
 			event.preventDefault()
@@ -460,9 +457,7 @@
 	}
 
 	// handle highlighting
-	function onDragEnter({
-		                     detail: {node, event, element}
-	                     }: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+	function onDragEnter({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		highlightedNode = null
 
 		if (!draggedNode || !dragAndDrop) {
@@ -486,9 +481,7 @@
 		}
 	}
 
-	function onDragOver({
-		                    detail: {node, event, element, nest}
-	                    }: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement; nest: boolean }>) {
+	function onDragOver({node, event, element, nest}: { node: Node; event: DragEvent; element: HTMLElement; nest: boolean }) {
 		if (!dragAndDrop || draggedNode === null || node.dropDisabled) {
 			return
 		}
@@ -510,14 +503,12 @@
 		insertionType = insertType
 	}
 
-	function onDragLeave({
-		                     detail: {node, event, element}
-	                     }: CustomEvent<{ node: Node; event: DragEvent; element: HTMLElement }>) {
+	function onDragLeave({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		insertionType = InsertionType.none
 	}
 
-	function onKeyPress(detail: { event: KeyboardEvent; node: Node }) {
-		const {event, node: targetNode} = detail
+	function onKeyPress(data: { event: KeyboardEvent; node: Node }) {
+		const {event, node: targetNode} = data
 		if (!allowKeyboardNavigation) {
 			return
 		}
@@ -564,45 +555,52 @@
 	}
 </script>
 
-<Branch
-	branchRootNode={null}
-	{treeId}
-	checkboxes={selectionMode}
-	tree={computedTree}
-	recursive={recursiveSelection}
-	{onlyLeafCheckboxes}
-	{hideDisabledCheckboxes}
-	{expandTo}
-	{dragAndDrop}
-	{readonly}
-	{helper}
-	classes={computedClasses}
-	{verticalLines}
-	childDepth={0}
-	{insertionType}
-	{highlightedNode}
-	{draggedNode}
-	{focusedNode}
-	{allowKeyboardNavigation}
-	{children}
-	{nestHighlight}
-	internal_onHandleDragStart={onDragStart}
-	internal_onHandleDragDrop={onDragDrop}
-	internal_onHandleDragOver={onDragOver}
-	internal_onHandleDragEnter={onDragEnter}
-	internal_onHandleDragEnd={onDragEnd}
-	internal_onHandleDragLeave={onDragLeave}
-	internal_onKeypress={(e) => onKeyPress(e.detail)}
-	internal_onExpand={(e) => onExpand(e.detail)}
-	internal_onSelectionChanged={(e) => onSelectionChanged(e.detail)}
-	onOpenCtxmenu={openContextMenu}
-/>
-<ContextMenu bind:this={ctxMenu}>
-	{#snippet children({node})}
-		{@render contextMenu?.({node})}
-	{/snippet}
-</ContextMenu>
+<div class="treeview-parent">
+	<Branch
+		branchRootNode={null}
+		{treeId}
+		checkboxes={selectionMode}
+		tree={computedTree}
+		recursive={recursiveSelection}
+		{onlyLeafCheckboxes}
+		{hideDisabledCheckboxes}
+		{expandTo}
+		{dragAndDrop}
+		{readonly}
+		{helper}
+		classes={computedClasses}
+		{verticalLines}
+		childDepth={0}
+		{insertionType}
+		{highlightedNode}
+		{draggedNode}
+		{focusedNode}
+		{allowKeyboardNavigation}
+		{children}
+		{nestHighlight}
+		internal_onHandleDragStart={onDragStart}
+		internal_onHandleDragDrop={onDragDrop}
+		internal_onHandleDragOver={onDragOver}
+		internal_onHandleDragEnter={onDragEnter}
+		internal_onHandleDragEnd={onDragEnd}
+		internal_onHandleDragLeave={onDragLeave}
+		internal_onKeypress={onKeyPress}
+		internal_onExpand={onExpand}
+		internal_onSelectionChanged={onSelectionChanged}
+		onOpenCtxmenu={openContextMenu}
+	/>
+	<ContextMenu bind:this={ctxMenu}>
+		{#snippet children({node})}
+			{@render contextMenu?.({node})}
+		{/snippet}
+	</ContextMenu>
+</div>
 
-<style lang="sass" global>
-	@import "./tree-styles.sass"
+<style lang="scss" global>
+	.treeview-parent {
+		:global {
+			color: red !important;
+			@import "./tree-styles";
+		}
+	}
 </style>
