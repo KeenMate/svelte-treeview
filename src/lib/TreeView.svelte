@@ -21,6 +21,7 @@
 	import {DragDropProvider} from "$lib/providers/drag-drop-provider.js"
 	import uniq from "lodash.uniq"
 	import {calculateNewFocusedNode, parseMovementDirection} from "$lib/providers/movement-provider.js"
+	import {untrack} from "svelte"
 
 	interface Props {
 		treeId: string;
@@ -225,7 +226,7 @@
 
 		console.log("Setting expansion", {
 			expandedPathsBefore: expandedPathsBefore,
-			expandedPaths: $state.snapshot(expandedPaths),
+			expandedPaths:       $state.snapshot(expandedPaths),
 		})
 	}
 
@@ -270,68 +271,83 @@
 	let insertionType: InsertionType = $state(InsertionType.none)
 	let focusedNode: Node | null     = $state(null)
 
-	let computedClasses = $derived({...defaultClasses, ...(customClasses ?? {})})
+	let computedClasses     = $derived({...defaultClasses, ...(customClasses ?? {})})
 	let helper              = $derived(new TreeHelper({
 		separator,
 		nodeSorter
 	}))
 	let dragAndDropProvider = $derived(new DragDropProvider(helper))
 	let selectionProvider   = $derived(new SelectionProvider(helper, recursiveSelection))
-	let computedTree        = $derived(computeTree(
-		helper,
+	let computedTree        = $derived((helper,
 		selectionProvider,
 		tree,
 		filter,
 		treeProps,
 		expandedPaths,
-		value
-	))
+		value, computeTree()))
 
 	$effect(() => {
 		dragAndDrop && console.warn("Drag and drop is not supported in this version")
 	})
 
 	function computeTree(
-		helper: TreeHelper,
-		selectionProvider: SelectionProvider,
-		userProvidedTree: any[],
-		filter: FilterFunction | null,
-		props: Partial<TreeProps>,
-		expandedPaths: string[],
-		value: NodeId[]
+		// helper: TreeHelper,
+		// selectionProvider: SelectionProvider,
+		// userProvidedTree: any[],
+		// filter: FilterFunction | null,
+		// props: Partial<TreeProps>,
+		// expandedPaths: string[],
+		// value: NodeId[]
 	): Tree {
-		if (!Array.isArray(userProvidedTree) || !Array.isArray(value)) {
+		if (!Array.isArray(tree) || !Array.isArray(value)) {
 			console.error("value and tree must be arrays!!")
 			return []
 		}
 		const start = Date.now()
 
-		const mappedTree                                 = helper.mapTree(
-			userProvidedTree,
-			{...defaultPropNames, ...props}
+		const mappedTree                                 = untrack(() => helper.mapTree(
+				tree,
+				{...defaultPropNames, ...treeProps}
+			)
 		)
-		const {tree: filteredTree, count: filteredCount} = helper.searchTree(mappedTree, filter)
+		const {tree: filteredTree, count: filteredCount} = untrack(() => helper.searchTree(mappedTree, filter))
 
+		console.log("threshold condition", {
+			res:           (!expandedPaths?.length || filter) && filteredCount <= expansionThreshold,
+			expandedPaths: $state.snapshot(expandedPaths),
+			filter,
+			filteredCount,
+			expansionThreshold
+		})
 		// threshold applies to nodes that match the filter, not all their parents
-		if (filteredCount <= expansionThreshold) {
-			expandedPaths = uniq([...expandedPaths, ...filteredTree.map((node) => node.path)])
+		if ((!expandedPaths?.length || filter) && filteredCount <= expansionThreshold) {
+			untrack(() => {
+				expandedPaths = uniq([...expandedPaths, ...filteredTree.map((node) => node.path)])
+			})
 		}
 
-		helper.markExpanded(filteredTree, expandedPaths)
+		untrack(() => helper.markExpanded(filteredTree, expandedPaths))
 
 		// TODO here we could save last value and only recompute visual state if value changed
 		// or use diff to only update affected nodes
-		selectionProvider.markSelected(filteredTree, value)
+		untrack(() =>selectionProvider.markSelected(filteredTree, value))
 
 		const end = Date.now()
-		debugLog(`Tree computed in: ${end - start}`, computeTree)
+		debugLog(`Tree computed in: ${end - start}`)
 		return filteredTree
 	}
 
 	function onExpand(data: { node: Node; changeTo: boolean }) {
 		const {node, changeTo} = data
 
+		console.log("expandedPaths before after expand", {
+			after:  expandedPaths,
+			before: $state.snapshot(expandedPaths)
+		})
 		expandedPaths = helper.changeExpansion(node.path, changeTo, expandedPaths)
+		console.log("expandedPaths before after expand", {
+			after: $state.snapshot(expandedPaths),
+		})
 
 		debugLog("changed expansion of node '", node.id, "' to ", changeTo)
 
@@ -481,7 +497,12 @@
 		}
 	}
 
-	function onDragOver({node, event, element, nest}: { node: Node; event: DragEvent; element: HTMLElement; nest: boolean }) {
+	function onDragOver({node, event, element, nest}: {
+		node: Node;
+		event: DragEvent;
+		element: HTMLElement;
+		nest: boolean
+	}) {
 		if (!dragAndDrop || draggedNode === null || node.dropDisabled) {
 			return
 		}
