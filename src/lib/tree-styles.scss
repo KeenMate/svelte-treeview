@@ -40,16 +40,6 @@ $treeview-lines: solid black 1px;
 			left: 0;
 		}
 
-		li:before {
-			content: "";
-			display: block;
-			width: 10px;
-			height: 0;
-			margin-top: -1px;
-			position: absolute;
-			top: 0.8em;
-			left: 0;
-		}
 
 		li:not(.has-children):before {
 			width: 26px;
@@ -76,6 +66,9 @@ $treeview-lines: solid black 1px;
 		column-gap: 0.4em;
 		align-items: center;
 		padding: 4px 0;
+		& + .child-menu {
+			margin-left: var(--treeview-children-offset, 1.25em);
+		}
 	}
 
 	.no-arrow {
@@ -144,8 +137,11 @@ $treeview-lines: solid black 1px;
 	.fixed-icon {
 		text-align: center;
 		width: 1.25em;
-		// fix deformation on small screens
-		min-width: 1.25em;
 	}
 
+	.tree-item {
+		& > .child-offset {
+			width: 1.25em;
+		}
+	}
 }

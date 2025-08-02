@@ -214,9 +214,9 @@
 				{#if node.hasChildren}
 					<button
 						class="expansion-button arrow"
-						onclick={() => setExpansion(node, !expanded)}
 						type="button"
 						tabindex="-1"
+						onclick={() => setExpansion(node, !expanded)}
 					>
 						<i class="fixed-icon arrow {expanded ? classes.collapseIcon : classes.expandIcon}"></i>
 					</button>
