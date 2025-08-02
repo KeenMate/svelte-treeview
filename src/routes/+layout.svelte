@@ -36,6 +36,9 @@
 			<li class="nav-item active">
 				<a class="nav-link" href="/minimal">Minimal</a>
 			</li>
+			<li class="nav-item active">
+				<a class="nav-link" href="/drag-n-drop">Drag'n'Drop</a>
+			</li>
 			<!-- <li class="nav-item active">
 				<a class="nav-link" href="/dhl-demo">DHL demo</a>
 			</li> -->
