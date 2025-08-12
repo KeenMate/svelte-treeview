@@ -43,14 +43,14 @@ export type Node = {
 
 export enum VisualState {
 	indeterminate = "indeterminate",
-	selected      = "true",
-	notSelected   = "false"
+	selected = "true",
+	notSelected = "false"
 }
 
 export enum SelectionModes {
-	all     = "all",
+	all = "all",
 	perNode = "perNode",
-	none    = "none"
+	none = "none"
 }
 
 export type Tree = Node[];
@@ -85,10 +85,10 @@ export type HelperConfig = {
 };
 
 export enum InsertionType {
-	nest        = "nest",
+	nest = "nest",
 	insertAbove = "insert-above",
 	insertBelow = "insert-below",
-	none        = "none"
+	none = "none"
 }
 
 export type TreeVisualStates = {
@@ -101,10 +101,18 @@ export type ProvidedTree = any[];
 export type FilterFunction = (node: Node) => boolean;
 
 export enum KeyboardMovement {
-	Up    = "ArrowUp",
-	Down  = "ArrowDown",
-	Left  = "ArrowLeft",
+	Up = "ArrowUp",
+	Down = "ArrowDown",
+	Left = "ArrowLeft",
 	Right = "ArrowRight"
 }
 
 export type NodeSorter = (left: Node, right: Node) => number
+
+export type DragMode = "local" | "drag_source" | "drag_target" | "drag_both"
+
+export type DraggableContext = {
+	treeId: string
+	node: Node
+	dragMode: "local" | "drag_source" | "drag_both"
+}

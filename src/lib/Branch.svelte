@@ -2,7 +2,7 @@
 	import Branch from "./Branch.svelte"
 
 	import Checkbox from "./Checkbox.svelte"
-	import {type CustomizableClasses, InsertionType, type Node, SelectionModes} from "$lib/types.js"
+	import {type CustomizableClasses, type DragMode, InsertionType, type Node, SelectionModes} from "$lib/types.js"
 	import type {TreeHelper} from "$lib/helpers/tree-helper.js"
 	import {capturedKeys} from "$lib/constants.js"
 
@@ -13,7 +13,7 @@
 		checkboxes?: SelectionModes;
 		onlyLeafCheckboxes: boolean;
 		hideDisabledCheckboxes: boolean;
-		dragAndDrop: boolean;
+		dragMode: DragMode;
 		verticalLines: boolean;
 		readonly: boolean;
 		expandTo: number;
@@ -50,7 +50,7 @@
 		    checkboxes                  = SelectionModes.none,
 		    onlyLeafCheckboxes,
 		    hideDisabledCheckboxes,
-		    dragAndDrop,
+		    dragMode,
 		    verticalLines,
 		    readonly,
 		    expandTo,
@@ -178,7 +178,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	{#each directChildren as node (getNodeId(node))}
 		{@const expanded = isExpanded(node, childDepth, expandTo)}
-		{@const draggable = !readonly && dragAndDrop && !node.dragDisabled}
+		{@const draggable = !readonly && (dragMode && dragMode !== "drag_target") && !node.dragDisabled}
 		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
 		{@const effectiveHighlight = getHighlighMode(node, highlightedNode, insertionType)}
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -237,7 +237,7 @@
 					{@render children?.({node: node.originalNode,})}
 				</span>
 
-				{#if dragAndDrop && node.nestAllowed}
+				{#if dragMode && dragMode !== "drag_target" && node.nestAllowed}
 					<span
 						ondragover={e => handleDragOver(e, node, liElements[getNodeId(node)], true)}
 					>
@@ -263,7 +263,7 @@
 					{onlyLeafCheckboxes}
 					{hideDisabledCheckboxes}
 					{expandTo}
-					{dragAndDrop}
+					{dragMode}
 					{verticalLines}
 					{draggedNode}
 					{highlightedNode}

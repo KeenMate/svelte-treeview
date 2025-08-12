@@ -13,7 +13,7 @@
 		type TreeProps,
 		type ProvidedTree,
 		SelectionModes as SelectionModes,
-		type Tree
+		type Tree, type DragMode, type DraggableContext
 	} from "$lib/types.js"
 	import {TreeHelper} from "$lib/index.js"
 	import Branch from "./Branch.svelte"
@@ -120,7 +120,7 @@
 	 * but you can allow nesting by setting nestAllowed to true on node. If you want to disable insertion,
 	 * set dropDisabled to true on node. if both is disabled, you wont be able to drop on node.
 	 */
-		dragAndDrop?: boolean; //bool
+		dragMode?: DragMode | undefined; //bool
 		/**
 		 * Callback that will be called when user drags above node.
 		 * It should return true, if drop is disabled on that node.
@@ -167,7 +167,7 @@
 		    filter                  = null,
 		    logger                  = null,
 		    nodeSorter              = null,
-		    dragAndDrop             = false,
+		    dragMode             = undefined,
 		    dropDisabledCallback    = null,
 		    allowKeyboardNavigation = false,
 		    onFocus                 = undefined,
@@ -286,9 +286,9 @@
 		expandedPaths,
 		value, computeTree()))
 
-	$effect(() => {
-		dragAndDrop && console.warn("Drag and drop is not supported in this version")
-	})
+	// $effect(() => {
+	// 	dragMode && console.warn("Drag and drop is not supported in this version")
+	// })
 
 	function computeTree(
 		// helper: TreeHelper,
@@ -436,18 +436,23 @@
 	}
 
 	function onDragStart(data: { node: Node; event: DragEvent }) {
+		console.log("onDragStart", ...arguments)
 		const {node, event} = data
 
-		draggedNode = null
-
-		if (!dragAndDrop || node.dragDisabled) {
+		if (!dragMode || dragMode === "drag_target" || node.dragDisabled) {
 			return
 		}
 
 		draggedNode = node
+		data.event.dataTransfer?.setData("application/json", JSON.stringify({
+			treeId,
+			dragMode,
+			node
+		} as DraggableContext))
 	}
 
 	function onDragEnd({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
+		console.log("onDragEnd", ...arguments)
 		// fires when you stop dragging element
 
 		draggedNode     = null
@@ -455,8 +460,9 @@
 	}
 
 	function onDragDrop({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
+		console.log("onDragDrop", ...arguments)
 		// here we assume that highlightType is correctly calculated in handleDragOver
-		if (!dragAndDrop || draggedNode === null || insertionType === InsertionType.none) {
+		if (!dragMode || dragMode === "drag_source" || draggedNode === null || insertionType === InsertionType.none) {
 			event.preventDefault()
 			return
 		}
@@ -474,9 +480,10 @@
 
 	// handle highlighting
 	function onDragEnter({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
+		console.log("onDragEnter", ...arguments)
 		highlightedNode = null
 
-		if (!draggedNode || !dragAndDrop) {
+		if (!draggedNode || !dragMode) {
 			return
 		}
 
@@ -503,7 +510,8 @@
 		element: HTMLElement;
 		nest: boolean
 	}) {
-		if (!dragAndDrop || draggedNode === null || node.dropDisabled) {
+		console.log("onDragOver", ...arguments)
+		if (!dragMode || draggedNode === null || node.dropDisabled) {
 			return
 		}
 
@@ -525,6 +533,7 @@
 	}
 
 	function onDragLeave({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
+		console.log("onDragLeave", ...arguments)
 		insertionType = InsertionType.none
 	}
 
@@ -586,7 +595,7 @@
 		{onlyLeafCheckboxes}
 		{hideDisabledCheckboxes}
 		{expandTo}
-		{dragAndDrop}
+		{dragMode}
 		{readonly}
 		{helper}
 		classes={computedClasses}

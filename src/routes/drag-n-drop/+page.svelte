@@ -61,7 +61,7 @@
 				bind:this={leftTreeView}
 				tree={leftTree}
 				treeId="my-left-tree"
-				dragAndDrop
+				dragMode="drag_source"
 			>
 				{#snippet children({node})}
 					<span onclick={() => onLeftNodeClick(node)}>
