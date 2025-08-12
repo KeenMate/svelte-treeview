@@ -36,11 +36,11 @@ export class DragDropProvider {
 		return InsertionType.insertBelow
 	}
 
-	isDropAllowed(draggedNode: Node, targeNode: Node): boolean {
-		if (targeNode.dropDisabled) {
+	isDropAllowed(draggedNode: Node, targetNode: Node): boolean {
+		if (targetNode.dropDisabled) {
 			return false
 		}
-		if (targeNode.path.startsWith(draggedNode.path + this.helper.config.separator)) {
+		if (targetNode.path.startsWith(draggedNode.path + this.helper.config.separator)) {
 			return false
 		}
 		return true
