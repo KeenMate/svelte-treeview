@@ -7,25 +7,21 @@
 	import {capturedKeys} from "$lib/constants.js"
 
 	interface Props {
-		tree: Node[];
-		treeId: string;
-		recursive?: boolean;
-		checkboxes?: SelectionModes;
-		onlyLeafCheckboxes: boolean;
-		hideDisabledCheckboxes: boolean;
-		dragMode: DragMode;
-		verticalLines: boolean;
-		readonly: boolean;
-		expandTo: number;
-		classes: CustomizableClasses;
-		helper: TreeHelper;
+		// tree: Node[];
+		// treeId: string;
+		// recursive?: boolean;
+		// checkboxes?: SelectionModes;
+		// onlyLeafCheckboxes: boolean;
+		// hideDisabledCheckboxes: boolean;
+		// dragMode: DragMode;
+		// verticalLines: boolean;
+		// readonly: boolean;
+		// expandTo: number;
+		// classes: CustomizableClasses;
+		// helper: TreeHelper;
+		// allowKeyboardNavigation: boolean;
 		childDepth: number;
 		branchRootNode: Node | null;
-		draggedNode: Node | null;
-		highlightedNode: Node | null;
-		insertionType: InsertionType;
-		focusedNode: Node | null;
-		allowKeyboardNavigation: boolean;
 
 		onOpenCtxmenu?: () => void
 

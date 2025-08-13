@@ -1,4 +1,6 @@
 // TODO rename nodeId to id and nodePath to path
+import {TreeViewDraggableType} from "./constants.js"
+
 export type TreeProps = {
 	nodeId: string;
 	nodePath: string;
@@ -10,6 +12,33 @@ export type TreeProps = {
 	nestAllowed: string;
 	checkbox: string;
 };
+
+export type TreeConfig = {
+	treeId: string;
+	tree: ProvidedTree;
+	treeProps?: Partial<TreeProps>;
+	verticalLines?: boolean;
+	readonly?: boolean;
+	separator?: string;
+	recursiveSelection?: boolean;
+	selectionMode?: SelectionModes;
+	onlyLeafCheckboxes?: boolean; //bool
+	hideDisabledCheckboxes?: boolean; //bool
+	loadChildrenAsync?: ExpandedCallback | null;
+	showContextMenu?: boolean;
+	expandTo?: number;
+	expansionThreshold?: number;
+	customClasses?: Partial<CustomizableClasses>;
+	cssClasses?: Partial<CustomizableClasses>;
+	filter?: FilterFunction | null;
+	logger?: ((...data: unknown[]) => void) | null;
+	nodeSorter?: NodeSorter | null;
+	dragMode?: DragMode | undefined; //bool
+	dropDisabledCallback?: DragEnterCallback | null;
+	allowKeyboardNavigation?: boolean;
+}
+
+export type TreeState = {}
 
 export type MappedNode = {
 	id: NodeId;
@@ -68,7 +97,7 @@ export type CustomizableClasses = {
 	currentlyDraggedClass: string;
 };
 
-export type DragEnterCallback = (draggedNode: Node, targetNode: Node) => Promise<boolean>;
+export type DragEnterCallback = (draggedContext: DraggableContext, targetNode: Node) => Promise<boolean>;
 
 export type BeforeMovedCallback = (
 	draggedNode: Node,
@@ -112,6 +141,7 @@ export type NodeSorter = (left: Node, right: Node) => number
 export type DragMode = "local" | "drag_source" | "drag_target" | "drag_both"
 
 export type DraggableContext = {
+	type: typeof TreeViewDraggableType
 	treeId: string
 	node: Node
 	dragMode: "local" | "drag_source" | "drag_both"
