@@ -36,3 +36,5 @@ export const capturedKeys = [
 	" ",
 	"Escape"
 ]
+
+export const TreeViewDraggableType = "svelte_treeview_draggable_context"

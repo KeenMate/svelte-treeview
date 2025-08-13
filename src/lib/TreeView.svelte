@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
-	import {defaultClasses, defaultPropNames} from "./constants.js"
+	import {defaultClasses, defaultPropNames, TreeViewDraggableType} from "./constants.js"
 	import {
 		type CustomizableClasses,
 		type DragEnterCallback,
@@ -13,7 +13,7 @@
 		type TreeProps,
 		type ProvidedTree,
 		SelectionModes as SelectionModes,
-		type Tree, type DragMode, type DraggableContext
+		type Tree, type DragMode, type DraggableContext, type TreeConfig, type TreeState
 	} from "$lib/types.js"
 	import {TreeHelper} from "$lib/index.js"
 	import Branch from "./Branch.svelte"
@@ -21,7 +21,8 @@
 	import {DragDropProvider} from "$lib/providers/drag-drop-provider.js"
 	import uniq from "lodash.uniq"
 	import {calculateNewFocusedNode, parseMovementDirection} from "$lib/providers/movement-provider.js"
-	import {untrack} from "svelte"
+	import {setContext, untrack} from "svelte"
+	import {writable} from "svelte/store"
 
 	interface Props {
 		treeId: string;
@@ -148,42 +149,42 @@
 	}
 
 	let {
-		    treeId,
-		    tree,
-		    value                   = [],
-		    treeProps               = {},
-		    verticalLines           = false,
-		    readonly                = false,
-		    separator               = ".",
-		    recursiveSelection      = false,
-		    selectionMode           = SelectionModes.none,
-		    onlyLeafCheckboxes      = false,
-		    hideDisabledCheckboxes  = false,
-		    loadChildrenAsync       = null,
-		    showContextMenu         = false,
-		    expandTo                = 0,
-		    expansionThreshold      = 0,
-		    customClasses           = {},
-		    filter                  = null,
-		    logger                  = null,
-		    nodeSorter              = null,
-		    dragMode             = undefined,
-		    dropDisabledCallback    = null,
-		    allowKeyboardNavigation = false,
-		    onFocus                 = undefined,
-		    onFocusLeave            = undefined,
-		    onExpansion             = undefined,
-		    onExpanded              = undefined,
-		    onClosed                = undefined,
-		    onChange                = undefined,
-		    onSelection             = undefined,
-		    onSelected              = undefined,
-		    onUnselected            = undefined,
-		    onMoved                 = undefined,
-		    children,
-		    nestHighlight,
-		    contextMenu
-	    }: Props = $props()
+		treeId,
+		tree,
+		value = [],
+		treeProps = {},
+		verticalLines = false,
+		readonly = false,
+		separator = ".",
+		recursiveSelection = false,
+		selectionMode = SelectionModes.none,
+		onlyLeafCheckboxes = false,
+		hideDisabledCheckboxes = false,
+		loadChildrenAsync = null,
+		showContextMenu = false,
+		expandTo = 0,
+		expansionThreshold = 0,
+		customClasses = {},
+		filter = null,
+		logger = null,
+		nodeSorter = null,
+		dragMode = undefined,
+		dropDisabledCallback = null,
+		allowKeyboardNavigation = false,
+		onFocus = undefined,
+		onFocusLeave = undefined,
+		onExpansion = undefined,
+		onExpanded = undefined,
+		onClosed = undefined,
+		onChange = undefined,
+		onSelection = undefined,
+		onSelected = undefined,
+		onUnselected = undefined,
+		onMoved = undefined,
+		children,
+		nestHighlight,
+		contextMenu
+	}: Props = $props()
 
 	export function changeAllExpansion(changeTo: boolean) {
 		debugLog("changing expansion of every node to ", changeTo ? "expanded" : "collapsed")
@@ -245,7 +246,7 @@
 			return
 		}
 
-		const node  = helper.findNode(computedTree, nodePath)
+		const node = helper.findNode(computedTree, nodePath)
 		focusedNode = node
 	}
 
@@ -264,21 +265,26 @@
 		return focusedNode
 	}
 
-	let ctxMenu: ContextMenu         = $state()
-	let expandedPaths: string[]      = $state([])
-	let draggedNode: Node | null     = $state(null)
+	const treeConfig = writable<TreeConfig>({} as TreeConfig)
+	const treeState = writable<TreeState>({} as TreeState)
+	const draggedContext = writable<DraggableContext | null>(null)
+	setContext("treeConfig", treeConfig)
+	setContext("draggedContext", draggedContext)
+
+	let ctxMenu: ContextMenu = $state()
+	let expandedPaths: string[] = $state([])
 	let highlightedNode: Node | null = $state(null)
 	let insertionType: InsertionType = $state(InsertionType.none)
-	let focusedNode: Node | null     = $state(null)
+	let focusedNode: Node | null = $state(null)
 
-	let computedClasses     = $derived({...defaultClasses, ...(customClasses ?? {})})
-	let helper              = $derived(new TreeHelper({
+	let computedClasses = $derived({...defaultClasses, ...(customClasses ?? {})})
+	let helper = $derived(new TreeHelper({
 		separator,
 		nodeSorter
 	}))
 	let dragAndDropProvider = $derived(new DragDropProvider(helper))
-	let selectionProvider   = $derived(new SelectionProvider(helper, recursiveSelection))
-	let computedTree        = $derived((helper,
+	let selectionProvider = $derived(new SelectionProvider(helper, recursiveSelection))
+	let computedTree = $derived((helper,
 		selectionProvider,
 		tree,
 		filter,
@@ -286,9 +292,43 @@
 		expandedPaths,
 		value, computeTree()))
 
-	// $effect(() => {
-	// 	dragMode && console.warn("Drag and drop is not supported in this version")
-	// })
+	$effect(() => {
+		treeConfig.update(x => {
+			return Object.assign(x, {
+				treeId,
+				helper,
+				computedTree,
+				treeProps,
+				verticalLines,
+				readonly,
+				separator,
+				recursiveSelection,
+				selectionMode,
+				onlyLeafCheckboxes,
+				hideDisabledCheckboxes,
+				loadChildrenAsync,
+				showContextMenu,
+				expandTo,
+				expansionThreshold,
+				computedClasses,
+				filter,
+				logger,
+				nodeSorter,
+				dragMode,
+				dropDisabledCallback,
+				allowKeyboardNavigation
+			})
+		})
+	})
+
+	$effect(() => {
+		treeState.update(x => {
+			return Object.assign(x, {
+				highlightedNode,
+				focusedNode
+			})
+		})
+	})
 
 	function computeTree(
 		// helper: TreeHelper,
@@ -305,7 +345,7 @@
 		}
 		const start = Date.now()
 
-		const mappedTree                                 = untrack(() => helper.mapTree(
+		const mappedTree = untrack(() => helper.mapTree(
 				tree,
 				{...defaultPropNames, ...treeProps}
 			)
@@ -330,7 +370,7 @@
 
 		// TODO here we could save last value and only recompute visual state if value changed
 		// or use diff to only update affected nodes
-		untrack(() =>selectionProvider.markSelected(filteredTree, value))
+		untrack(() => selectionProvider.markSelected(filteredTree, value))
 
 		const end = Date.now()
 		debugLog(`Tree computed in: ${end - start}`)
@@ -443,39 +483,42 @@
 			return
 		}
 
-		draggedNode = node
-		data.event.dataTransfer?.setData("application/json", JSON.stringify({
+		draggedContext = {
+			type: TreeViewDraggableType,
 			treeId,
 			dragMode,
 			node
-		} as DraggableContext))
+		}
+		data.event.dataTransfer?.setData("application/json", JSON.stringify(draggedContext))
 	}
 
 	function onDragEnd({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		console.log("onDragEnd", ...arguments)
 		// fires when you stop dragging element
 
-		draggedNode     = null
 		highlightedNode = null
 	}
 
 	function onDragDrop({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		console.log("onDragDrop", ...arguments)
 		// here we assume that highlightType is correctly calculated in handleDragOver
-		if (!dragMode || dragMode === "drag_source" || draggedNode === null || insertionType === InsertionType.none) {
+		if (!dragMode || dragMode === "drag_source" || !draggedContext || insertionType === InsertionType.none) {
 			event.preventDefault()
 			return
 		}
 
 		highlightedNode = null
 
-		debugLog("DROPPED: ", draggedNode, "on", node)
+		debugLog("DROPPED: ", draggedContext, "on", node)
 
-		onMoved?.({
-			node:       draggedNode,
+		const payload = {
+			...draggedContext,
 			target:     node,
 			insertType: insertionType
-		})
+		} as DraggableContext | { type?: string }
+		delete payload.type
+
+		onMoved?.(payload)
 	}
 
 	// handle highlighting
@@ -483,18 +526,18 @@
 		console.log("onDragEnter", ...arguments)
 		highlightedNode = null
 
-		if (!draggedNode || !dragMode) {
+		if (!draggedContext?.node || !dragMode || dragMode === "drag_source") {
 			return
 		}
 
 		// static rules
-		if (!dragAndDropProvider.isDropAllowed(draggedNode, node)) {
+		if (!dragAndDropProvider.isDropAllowed(draggedContext.node, node)) {
 			return
 		}
 
 		if (typeof dropDisabledCallback === "function") {
 			// possible bug, if the promise is resolved, when user is over another node
-			dropDisabledCallback(draggedNode, node).then((dropDisabled) => {
+			dropDisabledCallback(draggedContext, node).then((dropDisabled) => {
 				if (!dropDisabled) {
 					highlightedNode = node
 				}
@@ -535,6 +578,25 @@
 	function onDragLeave({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		console.log("onDragLeave", ...arguments)
 		insertionType = InsertionType.none
+	}
+
+	function onTreeViewDragEnter(event: DragEvent) {
+		console.log("onTreeViewDragStart", event)
+
+		const transferData = event.dataTransfer?.getData("application/json")
+		if (transferData && transferData !== "") {
+			draggedContext = JSON.parse(transferData)
+
+			if (!draggedContext || draggedContext.type !== TreeViewDraggableType) {
+				return
+			}
+		}
+	}
+
+	function onTreeViewDragEnd(event: DragEvent) {
+		console.log("onTreeViewDragEnd", event)
+
+		draggedContext = null
 	}
 
 	function onKeyPress(data: { event: KeyboardEvent; node: Node }) {
@@ -585,27 +647,16 @@
 	}
 </script>
 
-<div class="treeview-parent">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="treeview-parent"
+	class:drag-drop-target={draggedContext && draggedContext.dragMode !== "local"}
+	ondragenter={onTreeViewDragEnter}
+	ondragend={onTreeViewDragEnd}
+>
 	<Branch
 		branchRootNode={null}
-		{treeId}
-		checkboxes={selectionMode}
-		tree={computedTree}
-		recursive={recursiveSelection}
-		{onlyLeafCheckboxes}
-		{hideDisabledCheckboxes}
-		{expandTo}
-		{dragMode}
-		{readonly}
-		{helper}
-		classes={computedClasses}
-		{verticalLines}
 		childDepth={0}
-		{insertionType}
-		{highlightedNode}
-		{draggedNode}
-		{focusedNode}
-		{allowKeyboardNavigation}
 		{children}
 		{nestHighlight}
 		internal_onHandleDragStart={onDragStart}
