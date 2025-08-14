@@ -1,10 +1,16 @@
 <script lang="ts">
 	import Branch from "./Branch.svelte"
-
 	import Checkbox from "./Checkbox.svelte"
-	import {type CustomizableClasses, type DragMode, InsertionType, type Node, SelectionModes} from "$lib/types.js"
-	import type {TreeHelper} from "$lib/helpers/tree-helper.js"
+	import {
+		type DraggableContext,
+		InsertionType,
+		type Node,
+		type TreeConfig, type TreeState
+	} from "$lib/types.js"
 	import {capturedKeys} from "$lib/constants.js"
+	import {getContext} from "svelte"
+	import type {Writable} from "svelte/store"
+	import type {VolatileTreeConfig} from "./types.js"
 
 	interface Props {
 		// tree: Node[];
@@ -40,25 +46,25 @@
 	}
 
 	let {
-		    tree,
-		    treeId,
-		    recursive                   = false,
-		    checkboxes                  = SelectionModes.none,
-		    onlyLeafCheckboxes,
-		    hideDisabledCheckboxes,
-		    dragMode,
-		    verticalLines,
-		    readonly,
-		    expandTo,
-		    classes,
-		    helper,
+		    // tree,
+		    // treeId,
+		    // recursive                   = false,
+		    // checkboxes                  = SelectionModes.none,
+		    // onlyLeafCheckboxes,
+		    // hideDisabledCheckboxes,
+		    // dragMode,
+		    // verticalLines,
+		    // readonly,
+		    // expandTo,
+		    // classes,
+		    // helper,
 		    childDepth,
 		    branchRootNode,
-		    draggedNode,
-		    highlightedNode,
-		    insertionType,
-		    focusedNode,
-		    allowKeyboardNavigation,
+		    // draggedNode,
+		    // highlightedNode,
+		    // insertionType,
+		    // focusedNode,
+		    // allowKeyboardNavigation,
 		    onOpenCtxmenu = undefined,
 
 		    internal_onExpand           = undefined,
@@ -75,14 +81,19 @@
 		    nestHighlight
 	    }: Props = $props()
 
+	const volatileTreeConfig: Writable<VolatileTreeConfig> = getContext("volatileTreeConfig")
+	const treeConfig: Writable<TreeConfig> = getContext("treeConfig")
+	const treeState: Writable<TreeState> = getContext("treeState")
+	const draggedContext: Writable<DraggableContext> = getContext("draggedContext")
+
 	let liElements: { [key: string]: HTMLLIElement } = $state({})
 
-	const getNodeId    = (node: Node) => `${treeId}-${node.path}`
-	let directChildren = $derived(helper.getDirectChildren(tree, branchRootNode?.path ?? null))
+	const getNodeId    = (node: Node) => `${$treeConfig.treeId}-${node.path}`
+	let directChildren = $derived($treeState.helper.getDirectChildren($treeState.computedTree, branchRootNode?.path ?? null))
 
 	$effect(() => {
-		if (focusedNode && liElements[getNodeId(focusedNode)]) {
-			liElements[getNodeId(focusedNode)].focus()
+		if ($treeState.focusedNode && liElements[getNodeId($treeState.focusedNode)]) {
+			liElements[getNodeId($treeState.focusedNode)].focus()
 		}
 	})
 
@@ -166,20 +177,20 @@
 </script>
 
 <ul
-	class:show-lines={childDepth === 0 && verticalLines}
+	class:show-lines={childDepth === 0 && $treeConfig.verticalLines}
 	class:child-menu={childDepth > 0}
-	class={childDepth === 0 ? classes.treeClass : ''}
+	class={childDepth === 0 ? $volatileTreeConfig.cssClasses.treeClass : ''}
 >
 	<!-- TODO fix accessibility -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	{#each directChildren as node (getNodeId(node))}
-		{@const expanded = isExpanded(node, childDepth, expandTo)}
-		{@const draggable = !readonly && (dragMode && dragMode !== "drag_target") && !node.dragDisabled}
-		{@const isCurrentlyDragged = draggedNode && node.path.startsWith(draggedNode?.path)}
-		{@const effectiveHighlight = getHighlighMode(node, highlightedNode, insertionType)}
+		{@const expanded = isExpanded(node, childDepth, $treeConfig.expandTo)}
+		{@const draggable = !$volatileTreeConfig.readonly && ($treeConfig.dragMode && $treeConfig.dragMode !== "drag_target") && !node.dragDisabled}
+		{@const isCurrentlyDragged = $draggedContext?.node && node.path.startsWith($draggedContext.node.path)}
+		{@const effectiveHighlight = getHighlighMode(node, $treeState.highlightedNode, $treeConfig.insertionType)}
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<li
-			class:is-child={helper.nodePathIsChild(node.path)}
+			class:is-child={$treeState.helper.nodePathIsChild(node.path)}
 			class:has-children={node.hasChildren}
 			oncontextmenu={e => onContextMenu(e, node)}
 			ondrop={e => handleDragDrop(e, node, liElements[getNodeId(node)])}
@@ -188,19 +199,19 @@
 			ondragleave={e => handleDragLeave(e, node, liElements[getNodeId(node)])}
 			bind:this={liElements[getNodeId(node)]}
 			onkeydown={(e) => handleKeyPress(e, node)}
-			tabindex={allowKeyboardNavigation ? 1 : -1}
+			tabindex={$treeConfig.allowKeyboardNavigation ? 1 : -1}
 		>
 			{#if effectiveHighlight == InsertionType.insertAbove}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.insertLineClass}"></div>
+					<div class="insert-line {$volatileTreeConfig.cssClasses.insertLineClass}"></div>
 				</div>
 			{/if}
 
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				class="tree-item
-				{effectiveHighlight === InsertionType.nest ? classes.expandClass : ''}
-				{classes.nodeClass} {isCurrentlyDragged ? classes.currentlyDraggedClass : ''}"
+				{effectiveHighlight === InsertionType.nest ? $volatileTreeConfig.cssClasses.expandClass : ''}
+				{$volatileTreeConfig.cssClasses.nodeClass} {isCurrentlyDragged ? $volatileTreeConfig.cssClasses.currentlyDraggedClass : ''}"
 				class:div-has-children={node.hasChildren}
 				class:hover={effectiveHighlight !== InsertionType.none}
 				{draggable}
@@ -214,30 +225,30 @@
 						tabindex="-1"
 						onclick={() => setExpansion(node, !expanded)}
 					>
-						<i class="fixed-icon arrow {expanded ? classes.collapseIcon : classes.expandIcon}"></i>
+						<i class="fixed-icon arrow {expanded ? $volatileTreeConfig.cssClasses.collapseIcon : $volatileTreeConfig.cssClasses.expandIcon}"></i>
 					</button>
 				{:else}
 					<span class="fixed-icon"></span>
 				{/if}
 
 				<Checkbox
-					{checkboxes}
-					{recursive}
+					checkboxes={$treeConfig.selectionMode}
+					recursive={$treeConfig.recursiveSelection}
 					{node}
-					{onlyLeafCheckboxes}
-					{hideDisabledCheckboxes}
-					{readonly}
+					onlyLeafCheckboxes={$treeConfig.onlyLeafCheckboxes}
+					hideDisabledCheckboxes={$treeConfig.hideDisabledCheckboxes}
+					readonly={$volatileTreeConfig.readonly}
 					on:select={({ detail: { node } }) => selectionChanged(node)}
 				/>
 				<span class:pointer-cursor={draggable}>
 					{@render children?.({node: node.originalNode,})}
 				</span>
 
-				{#if dragMode && dragMode !== "drag_target" && node.nestAllowed}
+				{#if $treeConfig.dragMode && $treeConfig.dragMode !== "drag_target" && node.nestAllowed}
 					<span
 						ondragover={e => handleDragOver(e, node, liElements[getNodeId(node)], true)}
 					>
-						<i class="fixed-icon {classes.nestIcon}"></i>
+						<i class="fixed-icon {$treeConfig.cssClasses.nestIcon}"></i>
 
 						{#if effectiveHighlight === InsertionType.nest}
 							{@render nestHighlight?.()}
@@ -249,23 +260,6 @@
 				<Branch
 					branchRootNode={node}
 					childDepth={childDepth + 1}
-					{treeId}
-					{checkboxes}
-					{tree}
-					{recursive}
-					{helper}
-					{classes}
-					{readonly}
-					{onlyLeafCheckboxes}
-					{hideDisabledCheckboxes}
-					{expandTo}
-					{dragMode}
-					{verticalLines}
-					{draggedNode}
-					{highlightedNode}
-					{insertionType}
-					{focusedNode}
-					{allowKeyboardNavigation}
 					{children}
 					{nestHighlight}
 					{onOpenCtxmenu}
@@ -286,7 +280,7 @@
 			<!-- Show line if insering -->
 			{#if effectiveHighlight === InsertionType.insertBelow}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {classes.insertLineClass}"></div>
+					<div class="insert-line {$treeConfig.cssClasses.insertLineClass}"></div>
 				</div>
 			{/if}
 		</li>
