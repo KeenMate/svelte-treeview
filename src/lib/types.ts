@@ -1,5 +1,6 @@
 // TODO rename nodeId to id and nodePath to path
 import {TreeViewDraggableType} from "./constants.js"
+import {TreeHelper} from "./helpers/tree-helper.js"
 
 export type TreeProps = {
 	nodeId: string;
@@ -15,30 +16,37 @@ export type TreeProps = {
 
 export type TreeConfig = {
 	treeId: string;
-	tree: ProvidedTree;
-	treeProps?: Partial<TreeProps>;
-	verticalLines?: boolean;
-	readonly?: boolean;
-	separator?: string;
-	recursiveSelection?: boolean;
-	selectionMode?: SelectionModes;
-	onlyLeafCheckboxes?: boolean; //bool
-	hideDisabledCheckboxes?: boolean; //bool
-	loadChildrenAsync?: ExpandedCallback | null;
-	showContextMenu?: boolean;
-	expandTo?: number;
-	expansionThreshold?: number;
-	customClasses?: Partial<CustomizableClasses>;
-	cssClasses?: Partial<CustomizableClasses>;
-	filter?: FilterFunction | null;
-	logger?: ((...data: unknown[]) => void) | null;
-	nodeSorter?: NodeSorter | null;
-	dragMode?: DragMode | undefined; //bool
-	dropDisabledCallback?: DragEnterCallback | null;
-	allowKeyboardNavigation?: boolean;
+	treeProps: Partial<TreeProps>;
+	verticalLines: boolean;
+	separator: string;
+	recursiveSelection: boolean;
+	selectionMode: SelectionModes;
+	onlyLeafCheckboxes: boolean; //bool
+	hideDisabledCheckboxes: boolean; //bool
+	loadChildrenAsync: ExpandedCallback | null;
+	showContextMenu: boolean;
+	expandTo: number;
+	expansionThreshold: number;
+	filter: FilterFunction | null;
+	nodeSorter: NodeSorter | null;
+	dragMode: DragMode | undefined; //bool
+	dropDisabledCallback: DragEnterCallback | null;
+	allowKeyboardNavigation: boolean;
+	insertionType: InsertionType;
 }
 
-export type TreeState = {}
+export type VolatileTreeConfig = {
+	readonly: boolean;
+	cssClasses: Partial<CustomizableClasses>;
+}
+
+export type TreeState = {
+	helper: TreeHelper,
+	computedTree: ProvidedTree,
+	logger: ((...data: unknown[]) => void) | null;
+	highlightedNode: Node | null,
+	focusedNode: Node | null
+}
 
 export type MappedNode = {
 	id: NodeId;

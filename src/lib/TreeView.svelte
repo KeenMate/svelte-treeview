@@ -13,7 +13,7 @@
 		type TreeProps,
 		type ProvidedTree,
 		SelectionModes as SelectionModes,
-		type Tree, type DragMode, type DraggableContext, type TreeConfig, type TreeState
+		type Tree, type DragMode, type DraggableContext, type TreeConfig, type TreeState, type VolatileTreeConfig
 	} from "$lib/types.js"
 	import {TreeHelper} from "$lib/index.js"
 	import Branch from "./Branch.svelte"
@@ -265,11 +265,19 @@
 		return focusedNode
 	}
 
+	/**
+	 * a tree config that is expected to be frequentlierly updated
+	 * (Until deep reactivity of runes will be possible to pass down via context)
+	 * Now single change in store will update all places the store is used at...
+	 */
+	const volatileTreeConfig = writable<VolatileTreeConfig>({} as VolatileTreeConfig)
 	const treeConfig = writable<TreeConfig>({} as TreeConfig)
 	const treeState = writable<TreeState>({} as TreeState)
 	const draggedContext = writable<DraggableContext | null>(null)
+	setContext("volatileTreeConfig", volatileTreeConfig)
 	setContext("treeConfig", treeConfig)
 	setContext("draggedContext", draggedContext)
+	setContext("treeState", treeState)
 
 	let ctxMenu: ContextMenu = $state()
 	let expandedPaths: string[] = $state([])
@@ -296,11 +304,8 @@
 		treeConfig.update(x => {
 			return Object.assign(x, {
 				treeId,
-				helper,
-				computedTree,
 				treeProps,
 				verticalLines,
-				readonly,
 				separator,
 				recursiveSelection,
 				selectionMode,
@@ -310,13 +315,21 @@
 				showContextMenu,
 				expandTo,
 				expansionThreshold,
-				computedClasses,
-				filter,
-				logger,
 				nodeSorter,
 				dragMode,
 				dropDisabledCallback,
-				allowKeyboardNavigation
+				filter,
+				allowKeyboardNavigation,
+				insertionType
+			})
+		})
+	})
+
+	$effect(() => {
+		volatileTreeConfig.update(x => {
+			return Object.assign(x, {
+				readonly,
+				cssClasses: computedClasses,
 			})
 		})
 	})
@@ -324,9 +337,12 @@
 	$effect(() => {
 		treeState.update(x => {
 			return Object.assign(x, {
+				helper,
+				computedTree,
+				logger,
 				highlightedNode,
-				focusedNode
-			})
+				focusedNode,
+			} as TreeState)
 		})
 	})
 
