@@ -1,7 +1,8 @@
 <script lang="ts">
-	import {TreeView} from "$lib/index.js"
+	import {type DraggableContext, TreeView} from "$lib/index.js"
 	import {Card} from "@keenmate/svelte-adminlte"
 	import type {SvelteComponent} from "svelte"
+	import {writable} from "svelte/store"
 
 	let leftTreeView: SvelteComponent | undefined = $state()
 	let rightTreeView: SvelteComponent | undefined = $state()
@@ -45,6 +46,8 @@
 		{nodePath: "animals.insects.butterflies", title: "Butterflies"}
 	]
 
+	let draggableContext = writable<DraggableContext | null>(null)
+
 	function onLeftNodeClick(node) {
 		leftTreeView?.setNodeExpansion(node.nodePath, null)
 	}
@@ -62,6 +65,7 @@
 				tree={leftTree}
 				treeId="my-left-tree"
 				dragMode="drag_source"
+				draggedContext={draggableContext}
 			>
 				{#snippet children({node})}
 					<span onclick={() => onLeftNodeClick(node)}>
@@ -77,7 +81,8 @@
 				bind:this={rightTreeView}
 				tree={rightTree}
 				treeId="my-right-tree"
-				dragAndDrop
+				dragMode="drag_target"
+				draggedContext={draggableContext}
 			>
 				{#snippet children({node})}
 					<span onclick={() => onRightNodeClick(node)}>
