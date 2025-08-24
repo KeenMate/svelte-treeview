@@ -1,5 +1,4 @@
 // TODO rename nodeId to id and nodePath to path
-import {TreeViewDraggableType} from "./constants.js"
 import {TreeHelper} from "./helpers/tree-helper.js"
 
 export type TreeProps = {
@@ -149,8 +148,12 @@ export type NodeSorter = (left: Node, right: Node) => number
 export type DragMode = "local" | "drag_source" | "drag_target" | "drag_both"
 
 export type DraggableContext = {
-	type: typeof TreeViewDraggableType
 	treeId: string
 	node: Node
 	dragMode: "local" | "drag_source" | "drag_both"
+}
+
+export type DragData = DraggableContext & {
+	target: Node,
+	insertType: InsertionType
 }

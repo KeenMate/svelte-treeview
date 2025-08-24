@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ContextMenu from "./menu/ContextMenu.svelte"
-	import {defaultClasses, defaultPropNames, TreeViewDraggableType} from "./constants.js"
+	import {defaultClasses, defaultPropNames} from "./constants.js"
 	import {
 		type CustomizableClasses,
 		type DragEnterCallback,
@@ -13,7 +13,13 @@
 		type TreeProps,
 		type ProvidedTree,
 		SelectionModes as SelectionModes,
-		type Tree, type DragMode, type DraggableContext, type TreeConfig, type TreeState, type VolatileTreeConfig
+		type Tree,
+		type DragMode,
+		type DraggableContext,
+		type TreeConfig,
+		type TreeState,
+		type VolatileTreeConfig,
+		type DragData
 	} from "$lib/types.js"
 	import {TreeHelper} from "$lib/index.js"
 	import Branch from "./Branch.svelte"
@@ -281,13 +287,17 @@
 	}))
 	let dragAndDropProvider = $derived(new DragDropProvider(helper))
 	let selectionProvider = $derived(new SelectionProvider(helper, recursiveSelection))
-	let computedTree = $derived((helper,
-		selectionProvider,
-		tree,
-		filter,
-		treeProps,
-		expandedPaths,
-		value, computeTree()))
+	let computedTree = $derived.by(() => {
+		console.log("Computing tree", {tree})
+
+		return computeTree(helper,
+			selectionProvider,
+			tree,
+			filter,
+			treeProps,
+			expandedPaths,
+			value)
+	})
 
 	/**
 	 * a tree config that is expected to be frequentlierly updated
@@ -302,6 +312,10 @@
 	setContext("draggedContext", draggedContext)
 	setContext("treeState", treeState)
 
+	$inspect("Tree from view", {tree, computedTree})
+	$inspect("Tree state from view", $treeState)
+	$inspect("computedTree from view", computedTree)
+
 	$effect(() => {
 		treeConfig.update(updateTreeConfig)
 	})
@@ -311,7 +325,20 @@
 	})
 
 	$effect(() => {
-		treeState.update(updateTreeState)
+		console.log("Tree state before update", {
+			tree,
+			helper
+		})
+		treeState.update(state => {
+
+			state.helper = helper
+			state.computedTree = computedTree
+			state.logger = logger
+			state.highlightedNode = highlightedNode
+			state.focusedNode = focusedNode
+
+			return state
+		})
 	})
 
 	function updateTreeConfig(config: TreeConfig) {
@@ -509,7 +536,6 @@
 		}
 
 		$draggedContext = {
-			type: TreeViewDraggableType,
 			treeId,
 			dragMode,
 			node
@@ -524,6 +550,7 @@
 		// fires when you stop dragging element
 
 		highlightedNode = null
+		$draggedContext = null
 	}
 
 	function onDragDrop({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
@@ -542,8 +569,7 @@
 			...$draggedContext,
 			target:     node,
 			insertType: insertionType
-		} as DraggableContext | { type?: string }
-		delete payload.type
+		} as DragData
 
 		onMoved?.(payload)
 	}
