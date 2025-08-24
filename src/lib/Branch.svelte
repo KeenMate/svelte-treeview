@@ -88,8 +88,11 @@
 
 	let liElements: { [key: string]: HTMLLIElement } = $state({})
 
+
 	const getNodeId    = (node: Node) => `${$treeConfig.treeId}-${node.path}`
 	let directChildren = $derived($treeState.helper.getDirectChildren($treeState.computedTree, branchRootNode?.path ?? null))
+	$inspect("$treeState", $treeState)
+	$inspect("$treeState.helper", {helper: $treeState.helper, compTree: $treeState.computedTree})
 
 	$effect(() => {
 		if ($treeState.focusedNode && liElements[getNodeId($treeState.focusedNode)]) {
@@ -186,7 +189,10 @@
 	{#each directChildren as node (getNodeId(node))}
 		{@const expanded = isExpanded(node, childDepth, $treeConfig.expandTo)}
 		{@const draggable = !$volatileTreeConfig.readonly && ($treeConfig.dragMode && $treeConfig.dragMode !== "drag_target") && !node.dragDisabled}
-		{@const isCurrentlyDragged = $draggedContext?.node && node.path.startsWith($draggedContext.node.path)}
+		{@const isCurrentlyDragged = $draggedContext?.node
+			&& $draggedContext.treeId === $treeConfig.treeId
+			&& node.path.startsWith($draggedContext.node.path)
+		}
 		{@const effectiveHighlight = getHighlighMode(node, $treeState.highlightedNode, $treeConfig.insertionType)}
 		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<li
