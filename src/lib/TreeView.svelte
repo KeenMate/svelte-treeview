@@ -22,7 +22,8 @@
 	import uniq from "lodash.uniq"
 	import {calculateNewFocusedNode, parseMovementDirection} from "$lib/providers/movement-provider.js"
 	import {setContext, untrack} from "svelte"
-	import {writable} from "svelte/store"
+	import {type Writable, writable} from "svelte/store"
+	import {DragDropDataTransferType} from "../constants/index.js"
 
 	interface Props {
 		treeId: string;
@@ -117,11 +118,12 @@
 		nodeSorter?: NodeSorter | null;
 		/*
 	 * Drag and drop mode allows all nodes, that don't have dragDisabled property set to true
-	 * to be dragged and dropped. By default you can only insert at same level node you are dropping on,
+	 * to be dragged and dropped. By default, you can only insert at same level node you are dropping on,
 	 * but you can allow nesting by setting nestAllowed to true on node. If you want to disable insertion,
 	 * set dropDisabled to true on node. if both is disabled, you wont be able to drop on node.
 	 */
-		dragMode?: DragMode | undefined; //bool
+		dragMode?: DragMode | undefined;
+		draggedContext?: Writable<DraggableContext | null>
 		/**
 		 * Callback that will be called when user drags above node.
 		 * It should return true, if drop is disabled on that node.
@@ -168,6 +170,7 @@
 		filter = null,
 		logger = null,
 		nodeSorter = null,
+		draggedContext = writable(),
 		dragMode = undefined,
 		dropDisabledCallback = null,
 		allowKeyboardNavigation = false,
@@ -265,20 +268,6 @@
 		return focusedNode
 	}
 
-	/**
-	 * a tree config that is expected to be frequentlierly updated
-	 * (Until deep reactivity of runes will be possible to pass down via context)
-	 * Now single change in store will update all places the store is used at...
-	 */
-	const volatileTreeConfig = writable<VolatileTreeConfig>({} as VolatileTreeConfig)
-	const treeConfig = writable<TreeConfig>({} as TreeConfig)
-	const treeState = writable<TreeState>({} as TreeState)
-	const draggedContext = writable<DraggableContext | null>(null)
-	setContext("volatileTreeConfig", volatileTreeConfig)
-	setContext("treeConfig", treeConfig)
-	setContext("draggedContext", draggedContext)
-	setContext("treeState", treeState)
-
 	let ctxMenu: ContextMenu = $state()
 	let expandedPaths: string[] = $state([])
 	let highlightedNode: Node | null = $state(null)
@@ -300,51 +289,71 @@
 		expandedPaths,
 		value, computeTree()))
 
+	/**
+	 * a tree config that is expected to be frequentlierly updated
+	 * (Until deep reactivity of runes will be possible to pass down via context)
+	 * Now single change in store will update all places the store is used at...
+	 */
+	const volatileTreeConfig = writable<VolatileTreeConfig>(updateVolatileTreeConfig({} as VolatileTreeConfig))
+	const treeConfig = writable<TreeConfig>(updateTreeConfig({} as TreeConfig))
+	const treeState = writable<TreeState>(updateTreeState({} as TreeState))
+	setContext("volatileTreeConfig", volatileTreeConfig)
+	setContext("treeConfig", treeConfig)
+	setContext("draggedContext", draggedContext)
+	setContext("treeState", treeState)
+
 	$effect(() => {
-		treeConfig.update(x => {
-			return Object.assign(x, {
-				treeId,
-				treeProps,
-				verticalLines,
-				separator,
-				recursiveSelection,
-				selectionMode,
-				onlyLeafCheckboxes,
-				hideDisabledCheckboxes,
-				loadChildrenAsync,
-				showContextMenu,
-				expandTo,
-				expansionThreshold,
-				nodeSorter,
-				dragMode,
-				dropDisabledCallback,
-				filter,
-				allowKeyboardNavigation,
-				insertionType
-			})
-		})
+		treeConfig.update(updateTreeConfig)
 	})
 
 	$effect(() => {
-		volatileTreeConfig.update(x => {
-			return Object.assign(x, {
-				readonly,
-				cssClasses: computedClasses,
-			})
-		})
+		volatileTreeConfig.update(updateVolatileTreeConfig)
 	})
 
 	$effect(() => {
-		treeState.update(x => {
-			return Object.assign(x, {
-				helper,
-				computedTree,
-				logger,
-				highlightedNode,
-				focusedNode,
-			} as TreeState)
-		})
+		treeState.update(updateTreeState)
 	})
+
+	function updateTreeConfig(config: TreeConfig) {
+		config.treeId = treeId
+		config.treeProps = treeProps
+		config.verticalLines = verticalLines
+		config.separator = separator
+		config.recursiveSelection = recursiveSelection
+		config.selectionMode = selectionMode
+		config.onlyLeafCheckboxes = onlyLeafCheckboxes
+		config.hideDisabledCheckboxes = hideDisabledCheckboxes
+		config.loadChildrenAsync = loadChildrenAsync
+		config.showContextMenu = showContextMenu
+		config.expandTo = expandTo
+		config.expansionThreshold = expansionThreshold
+		config.nodeSorter = nodeSorter
+		config.dragMode = dragMode
+		config.dropDisabledCallback = dropDisabledCallback
+		config.filter = filter
+		config.allowKeyboardNavigation = allowKeyboardNavigation
+		config.insertionType = insertionType
+
+		return config
+	}
+
+	function updateVolatileTreeConfig(config: VolatileTreeConfig) {
+		console.log("updating volatile tree", computedClasses)
+		config.readonly = readonly
+		config.cssClasses = computedClasses
+
+		return config
+	}
+
+	function updateTreeState(state: TreeState) {
+		state.helper = helper
+		state.computedTree = computedTree
+		state.logger = logger
+		state.highlightedNode = highlightedNode
+		state.focusedNode = focusedNode
+
+		return state
+	}
 
 	function computeTree(
 		// helper: TreeHelper,
@@ -499,16 +508,18 @@
 			return
 		}
 
-		draggedContext = {
+		$draggedContext = {
 			type: TreeViewDraggableType,
 			treeId,
 			dragMode,
 			node
 		}
-		data.event.dataTransfer?.setData("application/json", JSON.stringify(draggedContext))
+		const transferData = JSON.stringify($draggedContext)
+		data.event.dataTransfer?.setData(DragDropDataTransferType, transferData)
+		// console.log("onDragStart transfer data", {transferData, dataTransfer: data.event.dataTransfer})
 	}
 
-	function onDragEnd({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
+	function onDragEnd({node, event}: { node: Node; event: DragEvent }) {
 		console.log("onDragEnd", ...arguments)
 		// fires when you stop dragging element
 
@@ -518,17 +529,17 @@
 	function onDragDrop({node, event, element}: { node: Node; event: DragEvent; element: HTMLElement }) {
 		console.log("onDragDrop", ...arguments)
 		// here we assume that highlightType is correctly calculated in handleDragOver
-		if (!dragMode || dragMode === "drag_source" || !draggedContext || insertionType === InsertionType.none) {
+		if (!dragMode || dragMode === "drag_source" || !$draggedContext || insertionType === InsertionType.none) {
 			event.preventDefault()
 			return
 		}
 
 		highlightedNode = null
 
-		debugLog("DROPPED: ", draggedContext, "on", node)
+		debugLog("DROPPED: ", $draggedContext, "on", node)
 
 		const payload = {
-			...draggedContext,
+			...$draggedContext,
 			target:     node,
 			insertType: insertionType
 		} as DraggableContext | { type?: string }
@@ -542,18 +553,18 @@
 		console.log("onDragEnter", ...arguments)
 		highlightedNode = null
 
-		if (!draggedContext?.node || !dragMode || dragMode === "drag_source") {
+		if (!$draggedContext?.node || !dragMode || dragMode === "drag_source") {
 			return
 		}
 
 		// static rules
-		if (!dragAndDropProvider.isDropAllowed(draggedContext.node, node)) {
+		if (!dragAndDropProvider.isDropAllowed($draggedContext.node, node)) {
 			return
 		}
 
 		if (typeof dropDisabledCallback === "function") {
 			// possible bug, if the promise is resolved, when user is over another node
-			dropDisabledCallback(draggedContext, node).then((dropDisabled) => {
+			dropDisabledCallback($draggedContext, node).then((dropDisabled) => {
 				if (!dropDisabled) {
 					highlightedNode = node
 				}
@@ -570,12 +581,12 @@
 		nest: boolean
 	}) {
 		console.log("onDragOver", ...arguments)
-		if (!dragMode || draggedNode === null || node.dropDisabled) {
+		if (!dragMode || $draggedContext.node === null || node.dropDisabled) {
 			return
 		}
 
 		const insertType = dragAndDropProvider.getInsertionPosition(
-			draggedNode,
+			$draggedContext.node,
 			node,
 			event,
 			element,
@@ -596,24 +607,23 @@
 		insertionType = InsertionType.none
 	}
 
-	function onTreeViewDragEnter(event: DragEvent) {
-		console.log("onTreeViewDragStart", event)
+	// function onTreeViewDragEnter(event: DragEvent) {
+	// 	const transferData = event.dataTransfer?.getData(DragDropDataTransferType)
+	// 	console.log("onTreeViewDragEnter", {event, transferData})
+	// 	if (transferData && transferData !== "") {
+	// 		$draggedContext = JSON.parse(transferData)
+	//
+	// 		if (!$draggedContext || $draggedContext.type !== TreeViewDraggableType) {
+	// 			return
+	// 		}
+	// 	}
+	// }
 
-		const transferData = event.dataTransfer?.getData("application/json")
-		if (transferData && transferData !== "") {
-			draggedContext = JSON.parse(transferData)
-
-			if (!draggedContext || draggedContext.type !== TreeViewDraggableType) {
-				return
-			}
-		}
-	}
-
-	function onTreeViewDragEnd(event: DragEvent) {
-		console.log("onTreeViewDragEnd", event)
-
-		draggedContext = null
-	}
+	// function onTreeViewDragEnd(event: DragEvent) {
+	// 	console.log("onTreeViewDragEnd", event)
+	//
+	// 	$draggedContext = null
+	// }
 
 	function onKeyPress(data: { event: KeyboardEvent; node: Node }) {
 		const {event, node: targetNode} = data
@@ -663,12 +673,9 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="treeview-parent"
-	class:drag-drop-target={draggedContext && draggedContext.dragMode !== "local"}
-	ondragenter={onTreeViewDragEnter}
-	ondragend={onTreeViewDragEnd}
+	class:drag-drop-target={$draggedContext && $draggedContext.dragMode !== "local"}
 >
 	<Branch
 		branchRootNode={null}

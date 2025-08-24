@@ -248,7 +248,7 @@
 					<span
 						ondragover={e => handleDragOver(e, node, liElements[getNodeId(node)], true)}
 					>
-						<i class="fixed-icon {$treeConfig.cssClasses.nestIcon}"></i>
+						<i class="fixed-icon {$volatileTreeConfig.cssClasses.nestIcon}"></i>
 
 						{#if effectiveHighlight === InsertionType.nest}
 							{@render nestHighlight?.()}
@@ -277,10 +277,10 @@
 			{#if !expanded && node.hasChildren}
 				<ul class:child-menu={childDepth > 0}></ul>
 			{/if}
-			<!-- Show line if insering -->
+			<!-- Show line if inserting -->
 			{#if effectiveHighlight === InsertionType.insertBelow}
 				<div class="insert-line-wrapper">
-					<div class="insert-line {$treeConfig.cssClasses.insertLineClass}"></div>
+					<div class="insert-line {$volatileTreeConfig.cssClasses.insertLineClass}"></div>
 				</div>
 			{/if}
 		</li>
