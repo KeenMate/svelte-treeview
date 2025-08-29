@@ -288,16 +288,7 @@
 	let dragAndDropProvider = $derived(new DragDropProvider(helper))
 	let selectionProvider = $derived(new SelectionProvider(helper, recursiveSelection))
 	let computedTree = $derived.by(() => {
-		console.log("Computing tree", {tree})
-
-		return computeTree(helper,
-			selectionProvider,
-			tree,
-			filter,
-			treeProps,
-			expandedPaths,
-			value)
-	})
+	let computedTree = $derived(computeTree())
 
 	/**
 	 * a tree config that is expected to be frequentlierly updated
@@ -312,7 +303,7 @@
 	setContext("draggedContext", draggedContext)
 	setContext("treeState", treeState)
 
-	$inspect("Tree from view", {tree, computedTree})
+	$inspect("Tree from view", tree)
 	$inspect("Tree state from view", $treeState)
 	$inspect("computedTree from view", computedTree)
 
@@ -383,13 +374,6 @@
 	}
 
 	function computeTree(
-		// helper: TreeHelper,
-		// selectionProvider: SelectionProvider,
-		// userProvidedTree: any[],
-		// filter: FilterFunction | null,
-		// props: Partial<TreeProps>,
-		// expandedPaths: string[],
-		// value: NodeId[]
 	): Tree {
 		if (!Array.isArray(tree) || !Array.isArray(value)) {
 			console.error("value and tree must be arrays!!")
