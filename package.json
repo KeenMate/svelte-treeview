@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "dev": "vite --config demo.vite.config.ts",
-    "build": "vite build --config lib.vite.config.ts && tsc",
+    "build": "vite build --config lib.vite.config.ts && tsc -p tsconfig.lib.json",
     "build:demo": "vite build --config demo.vite.config.ts",
     "preview": "vite preview --config demo.vite.config.ts",
     "check": "svelte-check --tsconfig ./tsconfig.lib.json && tsc -p tsconfig.node.json",
