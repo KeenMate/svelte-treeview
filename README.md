@@ -20,6 +20,20 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 npm install @keenmate/svelte-treeview
 ```
 
+## 🔨 Development Setup
+
+For developers working on the project, you can use either standard npm commands or the provided Makefile (which provides a unified interface for all contributors):
+
+```bash
+# Using Makefile (recommended for consistency)
+make setup      # or make install
+make dev
+
+# Or using standard npm commands
+npm install
+npm run dev
+```
+
 ## 🎨 Importing Styles
 
 The component requires CSS to display correctly. Import the styles in your app:
@@ -240,21 +254,80 @@ $primary-color: #custom-color;
 
 ### Tree Component Props
 
+#### Core Required Properties
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `data` | `T[]` | ✅ | Array of data objects |
+| `idMember` | `string` | ✅ | Property name for unique identifiers |
+| `pathMember` | `string` | ✅ | Property name for hierarchical paths |
+| `sortCallback` | `(items: T[]) => T[]` | ✅ | Function to sort items |
+
+#### Data Mapping Properties
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `data` | `T[]` | Required | Array of data objects |
-| `idMember` | `string` | Required | Property name for unique identifiers |
-| `pathMember` | `string` | Required | Property name for hierarchical paths |
-| `parentPathMember` | `string` | `null` | Property name for parent path references |
-| `displayValueMember` | `string` | `null` | Property name for display text |
-| `searchValueMember` | `string` | `null` | Property name for search indexing |
-| `selectedNodeClass` | `string` | `null` | CSS class for selected nodes |
+| `trieId` | `string \| null` | `null` | Unique identifier for the trie |
+| `parentPathMember` | `string \| null` | `null` | Property name for parent path references |
+| `levelMember` | `string \| null` | `null` | Property name for node level |
+| `isExpandedMember` | `string \| null` | `null` | Property name for expanded state |
+| `isSelectedMember` | `string \| null` | `null` | Property name for selected state |
+| `hasChildrenMember` | `string \| null` | `null` | Property name for children existence |
+| `isSorted` | `boolean \| null` | `null` | Whether items should be sorted |
+
+#### Display & Search Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `displayValueMember` | `string \| null` | `null` | Property name for display text |
+| `getDisplayValueCallback` | `(node) => string` | `undefined` | Function to get display value |
+| `searchValueMember` | `string \| null` | `null` | Property name for search indexing |
+| `getSearchValueCallback` | `(node) => string` | `undefined` | Function to get search value |
 | `shouldUseInternalSearchIndex` | `boolean` | `false` | Enable built-in search functionality |
+| `initializeIndexCallback` | `() => Index` | `undefined` | Function to initialize search index |
+| `searchText` | `string` (bindable) | `undefined` | Current search text |
+
+#### Tree Configuration
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
+| `selectedNode` | `LTreeTrieNode<T>` (bindable) | `undefined` | Currently selected node |
+
+#### Behavior Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
-| `onNodeClicked` | `function` | `null` | Node click event handler |
-| `onNodeDragStart` | `function` | `null` | Drag start event handler |
-| `onNodeDragOver` | `function` | `null` | Drag over event handler |
-| `onNodeDrop` | `function` | `null` | Drop event handler |
+
+#### Event Handler Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
+| `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
+| `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
+| `onNodeDrop` | `(dropNode, draggedNode, event) => void` | `undefined` | Drop event handler |
+
+#### Visual Styling Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `bodyClass` | `string \| null` | `undefined` | CSS class for tree body |
+| `selectedNodeClass` | `string \| null` | `undefined` | CSS class for selected nodes |
+| `expandIconClass` | `string \| null` | `"ltree-icon-expand"` | CSS class for expand icons |
+| `collapseIconClass` | `string \| null` | `"ltree-icon-collapse"` | CSS class for collapse icons |
+| `leafIconClass` | `string \| null` | `"ltree-icon-leaf"` | CSS class for leaf node icons |
+
+#### Available Slots
+| Slot | Description |
+|------|-------------|
+| `nodeTemplate` | Custom node template |
+| `treeHeader` | Tree header content |
+| `treeBody` | Tree body content |
+| `treeFooter` | Tree footer content |
+| `noDataFound` | No data template |
+| `contextMenu` | Context menu template |
+
+#### Public Methods
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `expandNodes` | `nodePath: string` | Expand nodes at specified path |
+| `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
+| `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
 
 ### Events
 
