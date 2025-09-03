@@ -378,6 +378,26 @@ export function createLTreeTrie<T>(
 			return this; // Return the API object for chaining
 		},
 
+		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
+			let node: LTreeTrieNode<T> | undefined = this.root;
+
+			const pathParts = path.split(this.treePathSeparator);
+			for (let i = 0; i < pathParts.length; i++) {
+				const part = pathParts[i];
+
+				if (node.children.hasOwnProperty(part)) {
+					node = node.children[part];
+					node.isExpanded = false;
+				}
+			}
+
+			if (!noEmitChanges) {
+				this._emitTreeChanged();
+			}
+
+			return this; // Return the API object for chaining
+		},
+
 		// Private helper methods
 		getNodeByPath: function (path: string): LTreeTrieNode<T> | null {
 			let node = this.root;

@@ -138,6 +138,11 @@
 		// });
 	}
 
+	export async function collapseNodes(nodePath: string) {
+		console.log("🚀 ~ collapseNodes ~ nodePath:", nodePath);
+		trie.collapseNodes(nodePath);
+	}
+
 	export function expandAll(nodePath?: string | null | undefined) {
 		trie?.expandAll(nodePath);
 	}

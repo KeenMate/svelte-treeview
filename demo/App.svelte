@@ -493,6 +493,9 @@
 								<button class="ltree-context-menu-item" onclick={() => { orgTreeElement.expandNodes(node.path); closeMenu(); }}>
 									🌳 Expand All Below
 								</button>
+								<button class="ltree-context-menu-item" onclick={() => { orgTreeElement.collapseAll(); closeMenu(); }}>
+									📁 Collapse All
+								</button>
 								<button class="ltree-context-menu-item" onclick={() => { console.log('Export org chart', node.path); closeMenu(); }}>
 									📊 Export Chart
 								</button>

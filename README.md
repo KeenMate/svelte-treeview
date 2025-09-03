@@ -326,6 +326,7 @@ $primary-color: #custom-color;
 | Method | Parameters | Description |
 |--------|------------|-------------|
 | `expandNodes` | `nodePath: string` | Expand nodes at specified path |
+| `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
 | `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
 | `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
 

@@ -56,6 +56,8 @@ export interface LTreeTrie<T> {
 
 	expandNodes(path: string): LTreeTrie<T>; // Returns self for chaining
 
+	collapseNodes(path: string): LTreeTrie<T>; // Returns self for chaining
+
 	getNodeDisplayValue(node: LTreeTrieNode<T>): string;
 
 	getNodeSearchValue(node: LTreeTrieNode<T>): string;
