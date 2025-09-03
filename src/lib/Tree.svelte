@@ -180,11 +180,11 @@
 
 	setContext("TreeTrie", trie);
 
-	$effect(() => {
+	$effect.root(() => {
 		trie.filterNodes(searchText);
 	});
 
-	$effect(() => {
+	$effect.root(() => {
 		trie?.insertArray(data);
 	});
 
@@ -300,7 +300,7 @@
 	}
 
 	// Add global event listener for document clicks
-	$effect(() => {
+	$effect.root(() => {
 		if (contextMenuVisible) {
 			const handleGlobalClick = (event: MouseEvent) => {
 				const target = event.target as Element;

@@ -8,7 +8,7 @@ export interface LTreeTrie<T> {
 	root: LTreeTrieNode<T>;
 
 	changeTracker: Symbol | undefined;
-	sortCallback: (items: T[]) => T[];
+	sortCallback?: (items: T[]) => T[];
 
 	idMember: string | null | undefined;
 	pathMember: string | null | undefined;
@@ -61,6 +61,8 @@ export interface LTreeTrie<T> {
 	getNodeDisplayValue(node: LTreeTrieNode<T>): string;
 
 	getNodeSearchValue(node: LTreeTrieNode<T>): string;
+
+	_defaultSort(items: T[]): T[];
 
 	_emitTreeChanged(): void;
 

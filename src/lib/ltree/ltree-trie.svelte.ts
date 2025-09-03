@@ -79,9 +79,6 @@ export function createLTreeTrie<T>(
 		searchValueMember: _searchValueMember,
 		getSearchValueCallback: _getSearchValueCallback,
 		isSorted: false,
-		sortCallback: function (items: T[]) {
-			return items.sort((a, b) => a[_pathMember].localeCompare(b[_pathMember]));
-		},
 
 		// Properties for filtering
 		filteredTree,
@@ -105,7 +102,7 @@ export function createLTreeTrie<T>(
 			data = data || [];
 
 			if (!this.isSorted) {
-				data = this.sortCallback?.(data);
+				data = (this.sortCallback || this._defaultSort)?.(data);
 			}
 
 			performance.mark("sort-end");
@@ -333,7 +330,11 @@ export function createLTreeTrie<T>(
 			this._emitTreeChanged();
 		},
 
-		insert: function (path: string, data: T, noEmitChanges: boolean = false): void {
+		insert: function (
+			path: string,
+			data: T,
+			noEmitChanges: boolean = false
+		): void {
 			let node = this.root;
 
 			const pathParts = path.split(this.treePathSeparator);
@@ -436,9 +437,14 @@ export function createLTreeTrie<T>(
 			this._emitTreeChanged();
 		},
 
+		_defaultSort: function (items: T[]): T[] {
+			return items.sort((a, b) => a[_pathMember].localeCompare(b[_pathMember]));
+		},
+
 		_emitTreeChanged: function () {
 			changeTracker = Symbol();
 		},
+
 		...opts,
 	};
 }
