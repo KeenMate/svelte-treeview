@@ -26,6 +26,7 @@
     "preview": "vite preview --config demo.vite.config.ts",
     "check": "svelte-check --tsconfig ./tsconfig.lib.json && tsc -p tsconfig.node.json",
     "package": "npm run build && npm pack",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
