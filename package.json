@@ -1,0 +1,72 @@
+{
+  "name": "@keenmate/svelte-treeview",
+  "version": "4.0.0-rc.01",
+  "description": "A high-performance hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree Trie",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "svelte": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite --config demo.vite.config.ts",
+    "build": "vite build --config lib.vite.config.ts && tsc",
+    "build:demo": "vite build --config demo.vite.config.ts",
+    "preview": "vite preview --config demo.vite.config.ts",
+    "check": "svelte-check --tsconfig ./tsconfig.lib.json && tsc -p tsconfig.node.json",
+    "package": "npm run build && npm pack",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "tree",
+    "treeview",
+    "hierarchical",
+    "ltree",
+    "trie",
+    "drag-drop",
+    "search",
+    "flexsearch",
+    "component",
+    "ui"
+  ],
+  "author": "KeenMate",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keenmate/svelte-treeview.git"
+  },
+  "homepage": "https://github.com/keenmate/svelte-treeview#readme",
+  "bugs": {
+    "url": "https://github.com/keenmate/svelte-treeview/issues"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "dependencies": {
+    "flexsearch": "^0.8.205"
+  },
+  "devDependencies": {
+    "@sveltejs/package": "^2.5.0",
+    "@sveltejs/vite-plugin-svelte": "^6.1.1",
+    "@tsconfig/svelte": "^5.0.4",
+    "bootstrap": "^5.3.7",
+    "sass": "^1.90.0",
+    "svelte": "^5.38.1",
+    "svelte-check": "^4.3.1",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.2"
+  }
+}

@@ -1,0 +1,261 @@
+// Import custom variable overrides first
+@import './variable-override.scss';
+
+// Import Bootstrap Sass
+@import 'bootstrap/scss/bootstrap';
+
+// Tree Component Variables
+$tree-node-indent-per-level: 0.5rem !default;
+
+:root {
+  --tree-node-indent-per-level: #{$tree-node-indent-per-level};
+}
+$tree-node-font-family: monospace !default;
+$tree-node-font-size: 14px !default;
+$tree-node-content-padding: 4px 8px !default;
+$tree-node-content-border-radius: 4px !default;
+$tree-node-hover-bg: var(--bs-light) !default;
+$tree-toggle-icon-width: 20px !default;
+$tree-toggle-icon-font-size: 12px !default;
+$tree-toggle-icon-color: var(--bs-secondary) !default;
+$tree-toggle-icon-margin-right: 8px !default;
+$tree-node-icon-margin-right: 6px !default;
+$tree-node-icon-font-size: 14px !default;
+$tree-node-label-font-weight: 500 !default;
+$tree-node-label-margin-right: 8px !default;
+$tree-node-path-font-size: 12px !default;
+$tree-node-path-color: var(--bs-secondary) !default;
+$tree-children-margin-top: 2px !default;
+
+// Tree Component Styles
+.ltree-tree {
+  // Empty state
+  .ltree-empty-state {
+    font-style: italic;
+  }
+}
+
+.ltree-node {
+  font-family: $tree-node-font-family;
+  font-size: $tree-node-font-size;
+
+  .ltree-node-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .ltree-node-content {
+    display: flex;
+    align-items: center;
+    padding: $tree-node-content-padding;
+    border-radius: $tree-node-content-border-radius;
+    transition: background-color 0.2s;
+    flex: 1;
+
+    &:hover {
+      background-color: $tree-node-hover-bg;
+    }
+  }
+
+  .ltree-clickable {
+    cursor: pointer;
+  }
+
+  .ltree-toggle-icon {
+    width: $tree-toggle-icon-width;
+    display: inline-block;
+    text-align: center;
+    margin-right: $tree-toggle-icon-margin-right;
+    font-size: $tree-toggle-icon-font-size;
+    color: $tree-toggle-icon-color;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+
+    &.expanded {
+      transform: rotate(0deg);
+    }
+  }
+
+  .ltree-node-icon {
+    margin-right: $tree-node-icon-margin-right;
+    font-size: $tree-node-icon-font-size;
+  }
+
+  .ltree-node-label {
+    font-weight: $tree-node-label-font-weight;
+    margin-right: $tree-node-label-margin-right;
+  }
+
+  .ltree-node-path {
+    font-size: $tree-node-path-font-size;
+    color: $tree-node-path-color;
+  }
+
+  .ltree-children {
+    margin-top: $tree-children-margin-top;
+  }
+}
+
+// Expand/Collapse Icon Classes
+.ltree-icon-expand::before {
+  content: "▶";
+}
+
+.ltree-icon-collapse::before {
+  content: "▼";
+}
+
+.ltree-icon-leaf::before {
+  content: "•";
+}
+
+// Alternative icon sets
+.ltree-icon-expand-alt::before {
+  content: "⯈";
+}
+
+.ltree-icon-collapse-alt::before {
+  content: "⯆";
+}
+
+.ltree-icon-expand-plus::before {
+  content: "+";
+}
+
+.ltree-icon-collapse-minus::before {
+  content: "−";
+}
+
+.ltree-icon-expand-arrow::before {
+  content: "→";
+}
+
+.ltree-icon-collapse-arrow::before {
+  content: "↓";
+}
+
+// Selected Node Styles
+.ltree-selected-bold {
+  font-weight: bold !important;
+  color: var(--bs-primary) !important;
+}
+
+.ltree-selected-border {
+  border: 2px solid var(--bs-primary) !important;
+  border-radius: 4px !important;
+  background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+  padding: 6px 10px !important;
+}
+
+.ltree-selected-brackets {
+  position: relative;
+  
+  &::before {
+    content: "❯";
+    margin-right: 6px;
+    color: var(--bs-primary);
+    font-weight: bold;
+  }
+  
+  &::after {
+    content: "❮";
+    margin-left: 6px;
+    color: var(--bs-primary);
+    font-weight: bold;
+  }
+}
+
+// Drag and Drop Styles
+.ltree-draggable {
+  cursor: grab;
+  
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.ltree-dragged {
+  opacity: 0.5;
+  transform: scale(0.95);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.ltree-node-content {
+  position: relative;
+  
+  &.ltree-drag-over {
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+    border: 2px dashed var(--bs-primary);
+    border-radius: 4px;
+    
+    &::before {
+      content: "";
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, transparent, rgba(var(--bs-primary-rgb), 0.05));
+      pointer-events: none;
+      border-radius: 4px;
+    }
+  }
+  
+  &.ltree-drop-valid {
+    border-color: var(--bs-success) !important;
+    background-color: rgba(var(--bs-success-rgb), 0.1) !important;
+  }
+  
+  &.ltree-drop-invalid {
+    border-color: var(--bs-danger) !important;
+    background-color: rgba(var(--bs-danger-rgb), 0.1) !important;
+  }
+}
+
+// Context Menu Styles
+.ltree-context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: white;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 4px 0;
+  min-width: 150px;
+  
+  .ltree-context-menu-item {
+    display: block;
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    font-size: 14px;
+    
+    &:hover {
+      background-color: var(--bs-light);
+    }
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    &.danger {
+      color: var(--bs-danger);
+      
+      &:hover {
+        background-color: rgba(var(--bs-danger-rgb), 0.1);
+      }
+    }
+  }
+  
+  .ltree-context-menu-separator {
+    height: 1px;
+    background-color: var(--bs-border-color);
+    margin: 4px 0;
+  }
+}

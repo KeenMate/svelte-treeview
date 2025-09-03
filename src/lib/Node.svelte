@@ -1,0 +1,160 @@
+<script lang="ts" generics="T">
+	import { type LTreeTrieNode } from "./ltree/ltree-trie-node.svelte.js";
+
+	import Node from "./Node.svelte";
+	import { getContext, type Snippet } from "svelte";
+	import { type LTreeTrie } from "./ltree/ltree-trie.svelte";
+
+	// Define component props interface
+	interface Props {
+		node: LTreeTrieNode<T>;
+		children?: Snippet<[T]>; // Keep the general children slot for backward compatibility
+		onNodeClicked?: (node: LTreeTrieNode<T>) => void;
+		onNodeRightClicked?: (node: LTreeTrieNode<T>, event: MouseEvent) => void;
+		onNodeDragStart?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
+		onNodeDragOver?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
+		onNodeDrop?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
+
+		// BEHAVIOUR
+		shouldToggleOnNodeClick?: boolean | null | undefined;
+
+		// VISUALS
+		expandIconClass?: string | null | undefined;
+		collapseIconClass?: string | null | undefined;
+		leafIconClass?: string | null | undefined;
+		selectedNodeClass?: string | null | undefined;
+		isDraggedNode?: boolean | null | undefined;
+	}
+
+	// Destructure props using Svelte 5 syntax
+	let {
+		node,
+		children,
+		onNodeClicked,
+		onNodeRightClicked,
+		onNodeDragStart,
+		onNodeDragOver,
+		onNodeDrop,
+
+		// BEHAVIOUR
+		shouldToggleOnNodeClick = true,
+
+		// VISUALS
+		expandIconClass = "ltree-icon-expand",
+		collapseIconClass = "ltree-icon-collapse",
+		leafIconClass = "ltree-icon-leaf",
+		selectedNodeClass,
+		isDraggedNode = false,
+	}: Props = $props();
+
+	const trie = getContext<LTreeTrie<T>>("TreeTrie");
+
+	// Convert reactive statements to derived values
+	const childrenWithData = $derived(Object.values(node?.children || []));
+	const hasChildren = $derived(node?.hasChildren || false);
+	const indentStyle = $derived(
+		`margin-left: calc(${node?.level || 0} * var(--tree-node-indent-per-level, 0.5rem))`,
+	);
+
+	function toggleExpanded() {
+		if (node.hasChildren) {
+			node.isExpanded = !node.isExpanded;
+			trie.refresh();
+		}
+	}
+
+	function _onNodeClicked() {
+		onNodeClicked?.(node);
+		if (shouldToggleOnNodeClick) toggleExpanded();
+	}
+</script>
+
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="ltree-node" style={indentStyle}>
+	<div class="ltree-node-row">
+		<!-- Toggle icon with its own click handler -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		{#if hasChildren}
+			<span
+				class="ltree-toggle-icon ltree-clickable {node.isExpanded
+					? collapseIconClass
+					: expandIconClass}"
+				class:expanded={node.isExpanded}
+				onclick={toggleExpanded}
+			></span>
+		{:else}
+			<span class="ltree-toggle-icon {leafIconClass}"></span>
+		{/if}
+
+		<!-- Node content with separate click handler -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''}"
+			class:ltree-clickable={node.isSelectable}
+			class:ltree-dragged={isDraggedNode}
+			class:ltree-draggable={node?.data?.isDraggable}
+			draggable={node?.data?.isDraggable}
+			onclick={(e) => {
+				e.stopPropagation();
+				_onNodeClicked();
+			}}
+			oncontextmenu={(e) => {
+				e.stopPropagation();
+				onNodeRightClicked?.(node, e);
+			}}
+			ondragstart={(e) => {
+				if (node?.data?.isDraggable && e.dataTransfer) {
+					// e.stopPropagation();
+					e.dataTransfer.effectAllowed = "move";
+					e.dataTransfer.setData(
+						"application/svelte-treeview",
+						JSON.stringify(node),
+					);
+					console.log(
+						"dataTransfer types",
+						JSON.stringify(e.dataTransfer.types),
+					);
+					onNodeDragStart?.(node, e);
+				}
+			}}
+			ondragover={(e) => {
+				if (e.dataTransfer?.types.includes("application/svelte-treeview"))
+					e.preventDefault();
+				onNodeDragOver?.(node, e);
+			}}
+			ondrop={(e) => {
+				e.stopPropagation();
+				onNodeDrop?.(node, e);
+			}}
+		>
+			{#if children}
+				{@render children(node)}
+			{:else}
+				{trie.getNodeDisplayValue(node)}
+			{/if}
+		</div>
+	</div>
+
+	{#if node?.isExpanded && node?.hasChildren}
+		<div class="ltree-children">
+			{#each Object.values(node?.children) as item (item.id)}
+				<Node
+					node={item}
+					{children}
+					{shouldToggleOnNodeClick}
+					{onNodeClicked}
+					{onNodeRightClicked}
+					{onNodeDragStart}
+					{onNodeDragOver}
+					{onNodeDrop}
+					{expandIconClass}
+					{collapseIconClass}
+					{leafIconClass}
+					{selectedNodeClass}
+					{isDraggedNode}
+				/>
+			{/each}
+		</div>
+	{/if}
+</div>
