@@ -1,19 +1,19 @@
 <script lang="ts" generics="T">
-	import type { Index } from "flexsearch";
-	import Node from "./Node.svelte";
-	import { type LTreeTrieNode } from "./ltree/ltree-trie-node.svelte";
-	import { createLTreeTrie } from "./ltree/ltree-trie.svelte";
-	import { type LTreeTrie } from "./ltree/types.js";
-	import { setContext, tick, type Snippet } from "svelte";
+	import type {Index} from "flexsearch"
+	import Node from "./Node.svelte"
+	import {type LTreeTrieNode} from "../ltree/ltree-trie-node.svelte"
+	import {createLTreeTrie} from "../ltree/ltree-trie.svelte"
+	import {type LTreeTrie} from "../ltree/types.js"
+	import {setContext} from "svelte"
 
 	// Context menu state
-	let contextMenuVisible = $state(false);
-	let contextMenuX = $state(0);
-	let contextMenuY = $state(0);
-	let contextMenuNode: LTreeTrieNode<T> | null = $state(null);
+	let contextMenuVisible = $state(false)
+	let contextMenuX = $state(0)
+	let contextMenuY = $state(0)
+	let contextMenuNode: LTreeTrieNode<T> | null = $state(null)
 
 	// Drag and drop state
-	let draggedNode: LTreeTrieNode<any> | null = $state.raw(null);
+	let draggedNode: LTreeTrieNode<any> | null = $state.raw(null)
 
 	interface Props {
 		trieId?: string | null | undefined;
@@ -35,7 +35,7 @@
 		getSearchValueCallback?: (node: LTreeTrieNode<T>) => string;
 
 		treeId?: string | null | undefined;
-		sortCallback: (items: T[]) => T[];
+		sortCallback?: (items: T[]) => T[];
 
 		// DATA
 		data: T[];
@@ -122,11 +122,11 @@
 		collapseIconClass = "ltree-icon-collapse",
 		leafIconClass = "ltree-icon-leaf",
 		selectedNodeClass,
-	}: Props = $props();
+	}: Props = $props()
 
 	export async function expandNodes(nodePath: string) {
-		console.log("🚀 ~ expandNodes ~ nodePath:", nodePath);
-		trie.expandNodes(nodePath);
+		console.log("🚀 ~ expandNodes ~ nodePath:", nodePath)
+		trie.expandNodes(nodePath)
 
 		// trie.dummyText = Date.now().toLocaleString();
 		// console.log(trie.dummyText);
@@ -139,16 +139,16 @@
 	}
 
 	export async function collapseNodes(nodePath: string) {
-		console.log("🚀 ~ collapseNodes ~ nodePath:", nodePath);
-		trie.collapseNodes(nodePath);
+		console.log("🚀 ~ collapseNodes ~ nodePath:", nodePath)
+		trie.collapseNodes(nodePath)
 	}
 
 	export function expandAll(nodePath?: string | null | undefined) {
-		trie?.expandAll(nodePath);
+		trie?.expandAll(nodePath)
 	}
 
 	export function collapseAll(nodePath?: string | null | undefined) {
-		trie?.collapseAll(nodePath);
+		trie?.collapseAll(nodePath)
 	}
 
 	// svelte-ignore non_reactive_update
@@ -176,63 +176,67 @@
 			isSorted,
 			sortCallback,
 		},
-	);
+	)
 
-	setContext("TreeTrie", trie);
-
-	$effect.root(() => {
-		trie.filterNodes(searchText);
-	});
+	setContext("TreeTrie", trie)
 
 	$effect.root(() => {
-		trie?.insertArray(data);
-	});
+		trie.filterNodes(searchText)
+	})
 
-	$inspect("draggedNode", draggedNode);
+	$effect.root(() => {
+		trie?.insertArray(data)
+	})
+
+	$inspect("draggedNode", draggedNode)
 
 	// $inspect("trie change tracker", trie?.changeTracker?.toString());
 
 	function generateTreeId(): string {
-		return `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+		return `${Date.now()}${Math.floor(Math.random() * 10000)}`
 	}
 
 	async function _onNodeClicked(node: LTreeTrieNode<T>) {
 		// Close context menu when clicking on any node
 		if (contextMenuVisible) {
-			closeContextMenu();
+			closeContextMenu()
 		}
 
 		if (selectedNode) {
-			const previousNode = trie.getNodeByPath(selectedNode.path);
-			previousNode.isSelected = false;
+			const previousNode = trie.getNodeByPath(selectedNode.path)
+			previousNode.isSelected = false
 		}
 
-		node.isSelected = true;
-		selectedNode = node;
+		node.isSelected = true
+		selectedNode = node
 
-		onNodeClicked?.(node);
+		onNodeClicked?.(node)
 
-		if (!node.hasChildren) trie.refresh();
+		if (!node.hasChildren) {
+			trie.refresh()
+		}
 	}
 
 	function _onNodeRightClicked(node: LTreeTrieNode<T>, event: MouseEvent) {
-		if (!contextMenu) return;
+		if (!contextMenu) {
+			return
+		}
 
-		event.preventDefault();
-		contextMenuNode = node;
-		contextMenuX = event.clientX;
-		contextMenuY = event.clientY;
-		contextMenuVisible = true;
+		event.preventDefault()
+		contextMenuNode = node
+		contextMenuX = event.clientX
+		contextMenuY = event.clientY
+		contextMenuVisible = true
 	}
 
 	function closeContextMenu() {
-		contextMenuVisible = false;
-		contextMenuNode = null;
+		contextMenuVisible = false
+		contextMenuNode = null
 	}
 
 	function _onNodeDragStart(node: LTreeTrieNode<T>, event: DragEvent) {
-		draggedNode = node;
-		onNodeDragStart?.(node, event);
+		draggedNode = node
+		onNodeDragStart?.(node, event)
 
 		// Set drag effect and data
 		// if (event.dataTransfer) {
@@ -240,13 +244,13 @@
 		// 	event.dataTransfer.setData("text/plain", node.path);
 		// }
 
-		console.log("🚀 ~ _onNodeDragStart ~ draggedNode:", draggedNode, event);
+		console.log("🚀 ~ _onNodeDragStart ~ draggedNode:", draggedNode, event)
 	}
 
 	function _onNodeDragOver(node: LTreeTrieNode<T>, event: DragEvent) {
 		if (node.treeId !== treeId) {
-			console.warn("Updating draggedNode to node from a different tree");
-			draggedNode = node;
+			console.warn("Updating draggedNode to node from a different tree")
+			draggedNode = node
 		} // this is for cases when we drag node from one tree to another
 
 		// 		console.log(
@@ -258,12 +262,12 @@
 		// 			event
 		// 		);
 		if (draggedNode && $state.snapshot(draggedNode) !== node) {
-			event.preventDefault();
-			onNodeDragOver?.(node, event);
+			event.preventDefault()
+			onNodeDragOver?.(node, event)
 
 			// Set visual feedback
 			if (event.dataTransfer) {
-				event.dataTransfer.dropEffect = "move";
+				event.dataTransfer.dropEffect = "move"
 			}
 		}
 	}
@@ -273,28 +277,29 @@
 			"🚀 ~ _onNodeDrop ~ _onNodeDrop:",
 			_onNodeDrop,
 			event.dataTransfer?.getData("application/svelte-treeview"),
-		);
-		event.preventDefault();
+		)
+		event.preventDefault()
 
-		if (!draggedNode)
+		if (!draggedNode) {
 			draggedNode = JSON.parse(
 				event.dataTransfer?.getData("application/svelte-treeview"),
-			);
+			)
+		}
 
 		if (draggedNode && draggedNode !== node) {
-			onNodeDrop?.(node, draggedNode, event);
+			onNodeDrop?.(node, draggedNode, event)
 		}
 
 		// Reset drag state
-		draggedNode = null;
+		draggedNode = null
 	}
 
 	// Close context menu when clicking outside
 	function handleDocumentClick(event: MouseEvent) {
 		if (contextMenuVisible) {
-			const target = event.target as Element;
+			const target = event.target as Element
 			if (!target.closest(".ltree-context-menu")) {
-				closeContextMenu();
+				closeContextMenu()
 			}
 		}
 	}
@@ -303,21 +308,21 @@
 	$effect.root(() => {
 		if (contextMenuVisible) {
 			const handleGlobalClick = (event: MouseEvent) => {
-				const target = event.target as Element;
+				const target = event.target as Element
 				if (!target.closest(".ltree-context-menu")) {
-					closeContextMenu();
+					closeContextMenu()
 				}
-			};
+			}
 
-			document.addEventListener("click", handleGlobalClick);
-			document.addEventListener("contextmenu", handleGlobalClick);
+			document.addEventListener("click", handleGlobalClick)
+			document.addEventListener("contextmenu", handleGlobalClick)
 
 			return () => {
-				document.removeEventListener("click", handleGlobalClick);
-				document.removeEventListener("contextmenu", handleGlobalClick);
-			};
+				document.removeEventListener("click", handleGlobalClick)
+				document.removeEventListener("contextmenu", handleGlobalClick)
+			}
 		}
-	});
+	})
 </script>
 
 <div>

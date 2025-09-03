@@ -1,9 +1,8 @@
 <script lang="ts" generics="T">
-	import { type LTreeTrieNode } from "./ltree/ltree-trie-node.svelte.js";
-
-	import Node from "./Node.svelte";
-	import { getContext, type Snippet } from "svelte";
-	import { type LTreeTrie } from "./ltree/ltree-trie.svelte";
+	import {type LTreeTrieNode} from "../ltree/ltree-trie-node.svelte.js"
+	import Node from "./Node.svelte"
+	import {getContext, type Snippet} from "svelte"
+	import type {LTreeTrie} from "../ltree/types.js"
 
 	// Define component props interface
 	interface Props {
@@ -45,27 +44,29 @@
 		leafIconClass = "ltree-icon-leaf",
 		selectedNodeClass,
 		isDraggedNode = false,
-	}: Props = $props();
+	}: Props = $props()
 
-	const trie = getContext<LTreeTrie<T>>("TreeTrie");
+	const trie = getContext<LTreeTrie<T>>("TreeTrie")
 
 	// Convert reactive statements to derived values
-	const childrenWithData = $derived(Object.values(node?.children || []));
-	const hasChildren = $derived(node?.hasChildren || false);
+	const childrenWithData = $derived(Object.values(node?.children || []))
+	const hasChildren = $derived(node?.hasChildren || false)
 	const indentStyle = $derived(
 		`margin-left: calc(${node?.level || 0} * var(--tree-node-indent-per-level, 0.5rem))`,
-	);
+	)
 
 	function toggleExpanded() {
 		if (node.hasChildren) {
-			node.isExpanded = !node.isExpanded;
-			trie.refresh();
+			node.isExpanded = !node.isExpanded
+			trie.refresh()
 		}
 	}
 
 	function _onNodeClicked() {
-		onNodeClicked?.(node);
-		if (shouldToggleOnNodeClick) toggleExpanded();
+		onNodeClicked?.(node)
+		if (shouldToggleOnNodeClick) {
+			toggleExpanded()
+		}
 	}
 </script>
 
