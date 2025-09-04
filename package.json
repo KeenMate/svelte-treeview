@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "0.0.1",
+	"version": "4.0.0-rc01",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -61,6 +61,27 @@
 		"flexsearch": "^0.8.205"
 	},
 	"keywords": [
-		"svelte"
-	]
+		"svelte",
+		"svelte5",
+		"tree",
+		"treeview",
+		"hierarchical",
+		"ltree",
+		"trie",
+		"drag-drop",
+		"search",
+		"flexsearch",
+		"component",
+		"ui"
+	],
+	"author": "KeenMate",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/keenmate/svelte-treeview.git"
+	},
+	"homepage": "https://github.com/keenmate/svelte-treeview#readme",
+	"bugs": {
+		"url": "https://github.com/keenmate/svelte-treeview/issues"
+	}
 }
