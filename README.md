@@ -1,11 +1,11 @@
 # @keenmate/svelte-treeview
 
-A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree Trie.
+A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
 ## 🚀 Features
 
 - **Svelte 5 Native**: Built specifically for Svelte 5 with full support for runes and modern Svelte patterns
-- **High Performance**: Uses LTree Trie data structure for efficient hierarchical data management
+- **High Performance**: Uses LTree data structure for efficient hierarchical data management
 - **Drag & Drop**: Built-in drag and drop support with validation and visual feedback
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
@@ -265,11 +265,13 @@ $primary-color: #custom-color;
 #### Data Mapping Properties
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `trieId` | `string \| null` | `null` | Unique identifier for the trie |
+| `treeId` | `string \| null` | `null` | Unique identifier for the tree |
 | `parentPathMember` | `string \| null` | `null` | Property name for parent path references |
 | `levelMember` | `string \| null` | `null` | Property name for node level |
 | `isExpandedMember` | `string \| null` | `null` | Property name for expanded state |
 | `isSelectedMember` | `string \| null` | `null` | Property name for selected state |
+| `isDraggableMember` | `string \| null` | `null` | Property name for draggable state |
+| `isDropAllowedMember` | `string \| null` | `null` | Property name for drop allowed state |
 | `hasChildrenMember` | `string \| null` | `null` | Property name for children existence |
 | `isSorted` | `boolean \| null` | `null` | Whether items should be sorted |
 
@@ -294,6 +296,7 @@ $primary-color: #custom-color;
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
+| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics |
 
 #### Event Handler Properties
 | Prop | Type | Default | Description |
@@ -329,6 +332,38 @@ $primary-color: #custom-color;
 | `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
 | `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
 | `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
+
+#### Statistics
+The tree provides real-time statistics about the loaded data:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `statistics` | `{ nodeCount: number; maxLevel: number }` | Returns current node count and maximum depth level |
+
+```typescript
+const { nodeCount, maxLevel } = tree.statistics;
+console.log(`Tree has ${nodeCount} nodes with maximum depth of ${maxLevel} levels`);
+```
+
+### Debug Information
+
+Enable debug information to see real-time tree statistics:
+
+```svelte
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  shouldDisplayDebugInformation={true}
+/>
+```
+
+The debug panel shows:
+- Tree ID
+- Data array length  
+- Node count
+- Maximum depth levels
+- Currently dragged node
 
 ### Events
 
@@ -387,7 +422,7 @@ interface NodeData {
 
 The component is optimized for large datasets:
 
-- **LTree Trie**: Efficient hierarchical data structure
+- **LTree**: Efficient hierarchical data structure
 - **Virtual Scrolling**: (Coming soon)
 - **Lazy Loading**: (Coming soon)
 - **Search Indexing**: Uses FlexSearch for fast search operations

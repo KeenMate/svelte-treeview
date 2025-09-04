@@ -30,10 +30,16 @@ export interface Ltree<T> {
 	filteredTree: LTreeNode<T>[] | null;
 	isFiltered: boolean;
 
+	isSelectableMember: string | null | undefined;
+	isDraggableMember: string | null | undefined;
+	isDropAllowedMember: string | null | undefined;
+
 	shouldDisplayDebugInformation: boolean | null | undefined;
 
 	// Methods
 	get tree(): LTreeNode<T>[];
+	get statistics(): { nodeCount: number; maxLevel: number };
+
 
 	insertArray(data: T[]): void;
 
@@ -65,4 +71,5 @@ export interface Ltree<T> {
 	_emitTreeChanged(): void;
 
 	refresh(): void;
+
 }

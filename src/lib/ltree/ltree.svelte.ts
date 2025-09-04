@@ -21,6 +21,8 @@ export function createLTree<T>(
 	_hasChildrenMember?: string | null | undefined,
 	_isExpandedMember?: string | null | undefined,
 	_isSelectableMember?: string | null | undefined,
+	_isDraggableMember?: string | null | undefined,
+	_isDropAllowedMember?: string | null | undefined,
 	_displayValueMember?: string | null | undefined,
 	_getDisplayValueCallback?: (node: LTreeNode<T>) => string,
 
@@ -39,6 +41,8 @@ export function createLTree<T>(
 	let shouldCalculateHasChildren: boolean = isEmptyString(_hasChildrenMember);
 	let shouldCalculateIsExpanded: boolean = isEmptyString(_isExpandedMember);
 	let shouldCalculateIsSelectable: boolean = isEmptyString(_isSelectableMember);
+	let shouldCalculateIsDraggable: boolean = isEmptyString(_isDraggableMember);
+	let shouldCalculateIsDropAllowed: boolean = isEmptyString(_isDropAllowedMember);
 	let shouldCalculateDisplayValue: boolean = isEmptyString(_displayValueMember);
 	let shouldCalculateSearchValue: boolean = isEmptyString(_searchValueMember);
 
@@ -55,6 +59,8 @@ export function createLTree<T>(
 
 	let changeTracker = $state(Symbol());
 	let size = 0;
+	let nodeCount = 0;
+	let maxLevel = 0;
 
 	let flatTreeNodes: LTreeNode<T>[] = [];
 	let filteredTree: LTreeNode<T>[] | null = null;
@@ -72,6 +78,9 @@ export function createLTree<T>(
 		parentPathMember: _parentPathMember,
 		levelMember: _levelMember,
 		isExpandedMember: _isExpandedMember,
+		isSelectableMember: _isSelectableMember,
+		isDraggableMember: _isDraggableMember,
+		isDropAllowedMember: _isDropAllowedMember,
 		hasChildrenMember: _hasChildrenMember,
 		displayValueMember: _displayValueMember,
 		getDisplayValueCallback: _getDisplayValueCallback,
@@ -118,6 +127,8 @@ export function createLTree<T>(
 				if (!shouldCalculateIsExpanded) node.isExpanded = row[_isExpandedMember];
 
 				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
+				if (!shouldCalculateIsDraggable) node.isDraggable = row[_isDraggableMember];
+				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = row[_isDropAllowedMember];
 
 				if (!shouldCalculateHasChildren) node.hasChildren = row[_hasChildrenMember];
 
@@ -197,6 +208,11 @@ export function createLTree<T>(
 				if (shouldCalculateHasChildren && !parentNode.hasChildren) {
 					parentNode.hasChildren = true;
 				}
+
+				// Update statistics
+				nodeCount++;
+				console.log(nodeCount)
+				maxLevel = Math.max(maxLevel, newNode.level || 0);
 			}
 
 			flatTreeNodes.push(newNode);
@@ -431,6 +447,11 @@ export function createLTree<T>(
 
 		refresh(): void {
 			this._emitTreeChanged();
+		},
+
+		get statistics() {
+			console.log(nodeCount, maxLevel)
+			return { nodeCount, maxLevel };
 		},
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {

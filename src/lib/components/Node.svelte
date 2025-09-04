@@ -46,7 +46,7 @@
 		isDraggedNode = false,
 	}: Props = $props()
 
-	const trie = getContext<Ltree<T>>("TreeTrie")
+	const trie = getContext<Ltree<T>>("Ltree")
 
 	// Convert reactive statements to derived values
 	const childrenWithData = $derived(Object.values(node?.children || []))
@@ -94,8 +94,8 @@
 			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
-			class:ltree-draggable={node?.data?.isDraggable}
-			draggable={node?.data?.isDraggable}
+			class:ltree-draggable={node?.isDraggable}
+			draggable={node?.isDraggable}
 			onclick={(e) => {
 				e.stopPropagation();
 				_onNodeClicked();
@@ -105,7 +105,7 @@
 				onNodeRightClicked?.(node, e);
 			}}
 			ondragstart={(e) => {
-				if (node?.data?.isDraggable && e.dataTransfer) {
+				if (node?.isDraggable && e.dataTransfer) {
 					// e.stopPropagation();
 					e.dataTransfer.effectAllowed = "move";
 					e.dataTransfer.setData(

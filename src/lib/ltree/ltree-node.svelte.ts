@@ -21,7 +21,7 @@ export interface LTreeNode<T> {
 	useCallback: boolean;
 	priority: number | null | undefined;
 
-	isDragAllowed: boolean;
+	isDraggable: boolean;
 	isDropAllowed: boolean;
 
 	isInsertAllowed: boolean;
@@ -50,7 +50,7 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 
 		useCallback: false,
 		priority: undefined,
-		isDragAllowed: true,
+		isDraggable: true,
 		isDropAllowed: true,
 		isInsertAllowed: true,
 		isNestAllowed: true,

@@ -7,7 +7,7 @@ The library follows the standard SvelteKit library format with the following str
 ### Core Library Files
 - `src/lib/components/Tree.svelte` - Main tree component
 - `src/lib/components/Node.svelte` - Individual node component  
-- `src/lib/ltree/` - LTree Trie data structure implementation
+- `src/lib/ltree/` - LTree data structure implementation
 - `src/lib/helpers/` - Utility functions
 - `src/lib/demo/` - Demo data generators and sample data
 - `src/lib/styles/` - SCSS styling files
@@ -124,7 +124,7 @@ Without the SCSS import, the tree will not display correctly.
 ### Library Files
 - `src/lib/index.ts` - Main library exports
 - `src/lib/components/` - Svelte components
-- `src/lib/ltree/` - Core trie data structure
+- `src/lib/ltree/` - Core LTree data structure
 - `src/lib/helpers/` - Utility functions
 - `src/lib/styles/` - SCSS styling
 

@@ -25,6 +25,8 @@
 		levelMember?: string | null | undefined;
 		isExpandedMember?: string | null | undefined;
 		isSelectedMember?: string | null | undefined;
+		isDraggableMember?: string | null | undefined;
+		isDropAllowedMember?: string | null | undefined;
 		hasChildrenMember?: string | null | undefined;
 		isSorted?: boolean | null | undefined;
 
@@ -35,7 +37,7 @@
 		getSearchValueCallback?: (node: LTreeNode<T>) => string;
 
 		treeId?: string | null | undefined;
-		sortCallback?: (items: T[]) => T[];
+		sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
 
 		// DATA
 		data: T[];
@@ -51,9 +53,9 @@
 
 		// BEHAVIOUR
 		shouldToggleOnNodeClick?: boolean | null | undefined;
-		shouldUseInternalSearchIndex?: boolean | null | undefined;
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
+		shouldUseInternalSearchIndex?: boolean | null | undefined;
 		shouldDisplayDebugInformation?: boolean;
 
 		// EVENTS
@@ -82,6 +84,8 @@
 
 		isExpandedMember,
 		isSelectedMember,
+		isDraggableMember,
+		isDropAllowedMember,
 
 		displayValueMember,
 		getDisplayValueCallback,
@@ -123,7 +127,7 @@
 	}: Props = $props();
 
 	export async function expandNodes(nodePath: string) {
-		trie.expandNodes(nodePath);
+		tree.expandNodes(nodePath);
 
 		// trie.dummyText = Date.now().toLocaleString();
 		// console.log(trie.dummyText);
@@ -136,15 +140,15 @@
 	}
 
 	export async function collapseNodes(nodePath: string) {
-		trie.collapseNodes(nodePath);
+		tree.collapseNodes(nodePath);
 	}
 
 	export function expandAll(nodePath?: string | null | undefined) {
-		trie?.expandAll(nodePath);
+		tree?.expandAll(nodePath);
 	}
 
 	export function collapseAll(nodePath?: string | null | undefined) {
-		trie?.collapseAll(nodePath);
+		tree?.collapseAll(nodePath);
 	}
 
 	treeId = treeId || generateTreeId();
@@ -152,7 +156,7 @@
 	// svelte-ignore non_reactive_update
 	// let trie: Ltree<T> | null = null
 	// svelte-ignore non_reactive_update
-	const trie: Ltree<T> = createLTree<T>(
+	const tree: Ltree<T> = createLTree<T>(
 		idMember,
 		pathMember,
 		parentPathMember,
@@ -161,6 +165,8 @@
 
 		isExpandedMember,
 		isSelectedMember,
+		isDraggableMember,
+		isDropAllowedMember,
 
 		displayValueMember,
 		getDisplayValueCallback,
@@ -171,22 +177,21 @@
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
 		{
+			shouldDisplayDebugInformation,
 			isSorted,
 			sortCallback
 		}
 	);
 
-	setContext('TreeTrie', trie);
+	setContext('Ltree', tree);
 
 	$effect(() => {
-		trie.filterNodes(searchText);
+		tree.filterNodes(searchText);
 	});
 
 	$effect(() => {
-		trie?.insertArray(data);
+		tree?.insertArray(data);
 	});
-
-	$inspect('draggedNode', draggedNode);
 
 	// $inspect("trie change tracker", trie?.changeTracker?.toString());
 
@@ -201,7 +206,7 @@
 		}
 
 		if (selectedNode) {
-			const previousNode = trie.getNodeByPath(selectedNode.path);
+			const previousNode = tree.getNodeByPath(selectedNode.path);
 			previousNode.isSelected = false;
 		}
 
@@ -211,7 +216,7 @@
 		onNodeClicked?.(node);
 
 		if (!node.hasChildren) {
-			trie.refresh();
+			tree.refresh();
 		}
 	}
 
@@ -271,11 +276,12 @@
 	}
 
 	function _onNodeDrop(node: LTreeNode<T>, event: DragEvent) {
-		console.log(
-			'🚀 ~ _onNodeDrop ~ _onNodeDrop:',
-			_onNodeDrop,
-			event.dataTransfer?.getData('application/svelte-treeview')
-		);
+		if (shouldDisplayDebugInformation)
+			console.log(
+				'🚀 ~ _onNodeDrop ~ _onNodeDrop:',
+				_onNodeDrop,
+				event.dataTransfer?.getData('application/svelte-treeview')
+			);
 		event.preventDefault();
 
 		if (!draggedNode) {
@@ -325,17 +331,26 @@
 	{#if treeHeader}
 		{@render treeHeader?.()}
 	{/if}
-	{#if shouldDisplayDebugPanel}
-		Tree id: {treeId}
-		Data items: {data?.length}
-		Dragging node: {draggedNode?.path || 'none'}
+	{#if shouldDisplayDebugInformation}
+		<div class="ltree-debug-info">
+			<details>
+				<summary>Debug Info</summary>
+				<div class="ltree-debug-stats">
+					<span>Tree: {treeId}</span>
+					<span>Data: {data?.length || 0}</span>
+					<span>Nodes: {tree?.statistics.nodeCount || 0}</span>
+					<span>Levels: {tree?.statistics.maxLevel || 0}</span>
+					<span>Dragging: {draggedNode?.path || 'none'}</span>
+				</div>
+			</details>
+		</div>
 	{/if}
 
 	<div class:bodyClass>
-		{#if trie?.root}
-			{#key trie.changeTracker}
+		{#if tree?.root}
+			{#key tree.changeTracker}
 				<div class="ltree-tree">
-					{#each trie.tree as node (node.id)}
+					{#each tree.tree as node (node.id)}
 						<Node
 							{node}
 							children={nodeTemplate}

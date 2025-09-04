@@ -105,7 +105,7 @@
 		pathMember="path"
 		displayValueMember="name"
 		isSorted={false}
-
+shouldDisplayDebugInformation={true}
 	/>
 {:else}
 	<p>Loading...</p>
