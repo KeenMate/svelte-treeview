@@ -237,6 +237,27 @@ $primary-color: #custom-color;
 - `.ltree-drag-over` - Applied during drag operations
 - `.ltree-drop-valid` / `.ltree-drop-invalid` - Drop target validation
 
+### Pre-built Selected Node Styles
+
+The component includes several pre-built classes for styling selected nodes:
+
+```svelte
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  selectedNodeClass="ltree-selected-bold"
+/>
+```
+
+**Available Selected Node Classes:**
+
+| Class | Description | Visual Effect |
+|-------|-------------|---------------|
+| `ltree-selected-bold` | Bold text with primary color | **Bold text** in theme primary color |
+| `ltree-selected-border` | Border and background highlight | Solid border with light background |
+| `ltree-selected-brackets` | Decorative brackets around text | ❯ **Node Text** ❮ |
+
 ### Custom Icon Classes
 
 ```svelte
@@ -295,6 +316,7 @@ $primary-color: #custom-color;
 #### Behavior Properties
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
+| `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics |
 
@@ -338,11 +360,14 @@ The tree provides real-time statistics about the loaded data:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `statistics` | `{ nodeCount: number; maxLevel: number }` | Returns current node count and maximum depth level |
+| `statistics` | `{ nodeCount: number; maxLevel: number; filteredNodeCount: number }` | Returns current node count, maximum depth level, and filtered nodes count |
 
 ```typescript
-const { nodeCount, maxLevel } = tree.statistics;
+const { nodeCount, maxLevel, filteredNodeCount } = tree.statistics;
 console.log(`Tree has ${nodeCount} nodes with maximum depth of ${maxLevel} levels`);
+if (filteredNodeCount > 0) {
+  console.log(`Currently showing ${filteredNodeCount} filtered nodes`);
+}
 ```
 
 ### Debug Information
@@ -360,9 +385,11 @@ Enable debug information to see real-time tree statistics:
 
 The debug panel shows:
 - Tree ID
-- Data array length  
+- Data array length
+- Expand level setting
 - Node count
 - Maximum depth levels
+- Filtered node count (when filtering is active)
 - Currently dragged node
 
 ### Events

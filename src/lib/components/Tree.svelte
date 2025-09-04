@@ -52,6 +52,7 @@
 		contextMenu?: any;
 
 		// BEHAVIOUR
+		expandLevel?: number | null | undefined,
 		shouldToggleOnNodeClick?: boolean | null | undefined;
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
@@ -106,8 +107,10 @@
 		contextMenu,
 
 		// BEHAVIOUR
+		expandLevel = 2,
+
 		shouldToggleOnNodeClick = true,
-		shouldUseInternalSearchIndex,
+		shouldUseInternalSearchIndex = true,
 		initializeIndexCallback,
 		searchText = $bindable(),
 		shouldDisplayDebugInformation = false,
@@ -173,6 +176,8 @@
 		searchValueMember,
 		getSearchValueCallback,
 		treeId,
+
+expandLevel,
 
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
@@ -338,8 +343,12 @@
 				<div class="ltree-debug-stats">
 					<span>Tree: {treeId}</span>
 					<span>Data: {data?.length || 0}</span>
+					<span>Expand level: {expandLevel || 0}</span>
 					<span>Nodes: {tree?.statistics.nodeCount || 0}</span>
 					<span>Levels: {tree?.statistics.maxLevel || 0}</span>
+					{#if tree?.statistics.filteredNodeCount > 0}
+					<span>Filtered: {tree.statistics.filteredNodeCount}</span>
+					{/if}
 					<span>Dragging: {draggedNode?.path || 'none'}</span>
 				</div>
 			</details>

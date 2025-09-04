@@ -31,6 +31,7 @@ export function createLTree<T>(
 
 	_treeId?: string,
 
+	_expandLevel?: number | null | undefined,
 	_shouldUseInternalSearchIndex?: boolean | null | undefined,
 	_initializeIndexCallback?: () => Index,
 
@@ -105,6 +106,11 @@ export function createLTree<T>(
 			return Object.values(this.root.children);
 		},
 
+		get statistics() {
+			const filteredNodeCount = isFiltered ? (filteredTree?.length || 0) : 0;
+			return changeTracker && { nodeCount, maxLevel, filteredNodeCount };
+		},
+
 		insertArray: function (data: T[], noEmitChanges: boolean = false) {
 			data = data || [];
 
@@ -125,6 +131,7 @@ export function createLTree<T>(
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
 				if (!shouldCalculateIsExpanded) node.isExpanded = row[_isExpandedMember];
+				else if (_expandLevel) node.isExpanded = node.level <= _expandLevel;
 
 				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
 				if (!shouldCalculateIsDraggable) node.isDraggable = row[_isDraggableMember];
@@ -154,16 +161,16 @@ export function createLTree<T>(
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
-
-				if (_shouldUseInternalSearchIndex) {
-					if (!shouldCalculateSearchValue) {
-						searchIndex.add(index, node.data[_searchValueMember]);
-					} else if (_getSearchValueCallback) {
-						searchIndex.add(index, _getSearchValueCallback(node));
+				if (result) errors.push(result);
+				else {
+					if (_shouldUseInternalSearchIndex) {
+						if (!shouldCalculateSearchValue) {
+							searchIndex.add(index, node.data[_searchValueMember]);
+						} else if (_getSearchValueCallback) {
+							searchIndex.add(index, _getSearchValueCallback(node));
+						}
 					}
 				}
-
-				if (result) errors.push(result);
 			});
 			if (errors.length > 0) console.warn(errors);
 
@@ -211,7 +218,6 @@ export function createLTree<T>(
 
 				// Update statistics
 				nodeCount++;
-				console.log(nodeCount)
 				maxLevel = Math.max(maxLevel, newNode.level || 0);
 			}
 
@@ -225,18 +231,22 @@ export function createLTree<T>(
 		},
 
 		filterNodes(_searchText: string | null | undefined): void {
-			if (!_searchText) return;
+			if (this.shouldDisplayDebugInformation) console.log('Filtering nodes by:', _searchText);
 
-			if (!_shouldUseInternalSearchIndex) {
-				if (this.shouldDisplayDebugInformation) console.warn('Internal search index is disabled');
-				return;
-			}
-
-			if (!_searchText || _searchText.trim() === '') {
+			if (isEmptyString(_searchText)) {
+				if (this.shouldDisplayDebugInformation)
+					console.log(
+						'Search text is empty, cleaning filtered tree and setting isFiltered = false'
+					);
 				// Clear filter when search is empty
 				filteredTree = null;
 				isFiltered = false;
 				this._emitTreeChanged();
+				return;
+			}
+
+			if (!_shouldUseInternalSearchIndex) {
+				if (this.shouldDisplayDebugInformation) console.warn('Internal search index is disabled');
 				return;
 			}
 
@@ -263,7 +273,8 @@ export function createLTree<T>(
 				}
 			});
 
-			console.log('allRequiredPaths', Array.from(allRequiredPaths));
+			if (this.shouldDisplayDebugInformation)
+				console.log('allRequiredPaths', Array.from(allRequiredPaths));
 
 			// 2. Build filtered tree with only required paths
 			const pathToNode = new Map<string, LTreeNode<T>>();
@@ -447,11 +458,6 @@ export function createLTree<T>(
 
 		refresh(): void {
 			this._emitTreeChanged();
-		},
-
-		get statistics() {
-			console.log(nodeCount, maxLevel)
-			return { nodeCount, maxLevel };
 		},
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
