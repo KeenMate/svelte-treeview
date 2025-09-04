@@ -6,7 +6,7 @@ export enum VisualState {
 	notSelected = "false",
 }
 
-export interface LTreeTrieNode<T> {
+export interface LTreeNode<T> {
 	treeId: string;
 	id: NodeId;
 	path: string;
@@ -14,7 +14,7 @@ export interface LTreeTrieNode<T> {
 	parentPath: string | null | undefined;
 	level: number | null | undefined;
 
-	children: Record<string, LTreeTrieNode<T>>;
+	children: Record<string, LTreeNode<T>>;
 	hasChildren: boolean;
 	data: T | null | undefined;
 
@@ -35,7 +35,7 @@ export interface LTreeTrieNode<T> {
 	isSelectable: boolean;
 }
 
-export function createLTreeTrieNode<T>(data?: Partial<LTreeTrieNode<T>>): LTreeTrieNode<T> {
+export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 	return {
 		treeId: "",
 		path: "",

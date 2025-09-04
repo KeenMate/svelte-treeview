@@ -1,9 +1,9 @@
-import { createLTreeTrie, type LTreeTrie } from './ltree-trie.svelte';
+import { createLTree, type LTree } from './ltree.svelte';
 
 // Usage Examples and Performance Test
-export function demonstrateLTreeTrie() {
-    const trie = createLTreeTrie('id', 'path', null, null, null, null, null, null, null, null, null, null, null, { isSorted: false, sortCallback: null });
-    
+export function demonstrateLTree() {
+    const trie = createLTree('id', 'path', null, null, null, null, null, null, null, null, null, null, null, { isSorted: false, sortCallback: null });
+
     // Sample ltree paths
     const paths = [
         '1',
@@ -20,7 +20,7 @@ export function demonstrateLTreeTrie() {
     ];
 
     console.log('=== LTree Trie Demo ===');
-    
+
     // Insert paths with some sample data
     console.log('\n1. Inserting paths...');
     paths.forEach((path, index) => {
@@ -57,7 +57,7 @@ export function demonstrateLTreeTrie() {
 // Performance test with larger dataset
 export function performanceTest(): void {
     console.log('\n=== Performance Test ===');
-    const trie = createLTreeTrie('path', 'path', null, null, null, null, null, null, null, null, null, null, null, { isSorted: false, sortCallback: null });
+    const trie = createLtree('path', 'path', null, null, null, null, null, null, null, null, null, null, null, { isSorted: false, sortCallback: null });
     const paths: string[] = [];
 
     // Generate test data: hierarchical paths up to 4 levels deep
@@ -103,6 +103,6 @@ export function performanceTest(): void {
 
 // Run demonstrations if this file is executed directly
 if (typeof window === 'undefined' && typeof process !== 'undefined') {
-    demonstrateLTreeTrie();
+    demonstrateLtree();
     performanceTest();
 }

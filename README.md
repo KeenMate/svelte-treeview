@@ -288,7 +288,7 @@ $primary-color: #custom-color;
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
-| `selectedNode` | `LTreeTrieNode<T>` (bindable) | `undefined` | Currently selected node |
+| `selectedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently selected node |
 
 #### Behavior Properties
 | Prop | Type | Default | Description |

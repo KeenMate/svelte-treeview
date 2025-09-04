@@ -1,14 +1,13 @@
-import type { Index } from "flexsearch";
-import type { LTreeTrieNode } from "./ltree-trie-node.svelte";
+import type { Index } from 'flexsearch';
+import type { LTreeNode } from './ltree-node.svelte';
 
-export interface LTreeTrie<T> {
+export interface Ltree<T> {
 	// Properties (readonly getters)
 	treePathSeparator: string;
 
-	root: LTreeTrieNode<T>;
+	root: LTreeNode<T>;
 
 	changeTracker: Symbol | undefined;
-	sortCallback?: (items: T[]) => T[];
 
 	idMember: string | null | undefined;
 	pathMember: string | null | undefined;
@@ -19,27 +18,26 @@ export interface LTreeTrie<T> {
 	isExpandedMember: string | null | undefined;
 
 	displayValueMember?: string | null | undefined;
-	getDisplayValueCallback?: (node: LTreeTrieNode<T>) => string;
+	getDisplayValueCallback?: (node: LTreeNode<T>) => string;
 
 	searchValueMember?: string | null | undefined;
-	getSearchValueCallback?: (node: LTreeTrieNode<T>) => string;
+	getSearchValueCallback?: (node: LTreeNode<T>) => string;
 
 	isSorted: boolean | null | undefined;
+	sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
 
 	// Filtering properties
-	filteredTree: LTreeTrieNode<T>[] | null;
+	filteredTree: LTreeNode<T>[] | null;
 	isFiltered: boolean;
 
+	shouldDisplayDebugInformation: boolean | null | undefined;
+
 	// Methods
-	get tree(): LTreeTrieNode<T>[];
+	get tree(): LTreeNode<T>[];
 
 	insertArray(data: T[]): void;
 
-	insertTreeNode(
-		parentPath: string,
-		newNode: LTreeTrieNode<T>,
-		noEmitChanges?: boolean
-	): string | null;
+	insertTreeNode(parentPath: string, newNode: LTreeNode<T>, noEmitChanges?: boolean): string | null;
 
 	filterNodes(_searchText: string): void;
 
@@ -52,17 +50,17 @@ export interface LTreeTrie<T> {
 
 	insert(path: string, data: T, noEmitChanges?: boolean): void;
 
-	getNodeByPath(path: string): LTreeTrieNode<T> | null;
+	getNodeByPath(path: string): LTreeNode<T> | null;
 
-	expandNodes(path: string): LTreeTrie<T>; // Returns self for chaining
+	expandNodes(path: string): Ltree<T>; // Returns self for chaining
 
-	collapseNodes(path: string): LTreeTrie<T>; // Returns self for chaining
+	collapseNodes(path: string): Ltree<T>; // Returns self for chaining
 
-	getNodeDisplayValue(node: LTreeTrieNode<T>): string;
+	getNodeDisplayValue(node: LTreeNode<T>): string;
 
-	getNodeSearchValue(node: LTreeTrieNode<T>): string;
+	getNodeSearchValue(node: LTreeNode<T>): string;
 
-	_defaultSort(items: T[]): T[];
+	_defaultSort(self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[];
 
 	_emitTreeChanged(): void;
 

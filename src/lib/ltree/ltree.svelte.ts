@@ -1,21 +1,19 @@
-import FlexSearch, { Index } from "flexsearch";
+import FlexSearch, { Index } from 'flexsearch';
 
-import {
-	type LTreeTrieNode,
-	createLTreeTrieNode,
-} from "./ltree-trie-node.svelte";
+import { type LTreeNode, createLTreeNode } from './ltree-node.svelte';
 
-import { isEmptyString } from "../helpers/string-helpers";
+import { isEmptyString } from '../helpers/string-helpers.js';
 import {
+	getLevel,
 	getParentPath,
 	getPathSegments,
-	getRelativePath,
-} from "../helpers/ltree-helpers";
+	getRelativePath
+} from '../helpers/ltree-helpers.js';
 
-import type { LTreeTrie } from "./types";
-import { createSearchIndex } from "./flex";
+import type { Ltree } from './types.js';
+import { createSearchIndex } from './flex.js';
 
-export function createLTreeTrie<T>(
+export function createLTree<T>(
 	_idMember: string,
 	_pathMember: string,
 	_parentPathMember?: string | null | undefined,
@@ -24,18 +22,18 @@ export function createLTreeTrie<T>(
 	_isExpandedMember?: string | null | undefined,
 	_isSelectableMember?: string | null | undefined,
 	_displayValueMember?: string | null | undefined,
-	_getDisplayValueCallback?: (node: LTreeTrieNode<T>) => string,
+	_getDisplayValueCallback?: (node: LTreeNode<T>) => string,
 
 	_searchValueMember?: string | null | undefined,
-	_getSearchValueCallback?: (node: LTreeTrieNode<T>) => string,
+	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
 	_treeId?: string,
 
 	_shouldUseInternalSearchIndex?: boolean | null | undefined,
 	_initializeIndexCallback?: () => Index,
 
-	opts?: Partial<LTreeTrie<T>>
-): LTreeTrie<T> {
+	opts?: Partial<Ltree<T>>
+): Ltree<T> {
 	let shouldCalculateParentPath: boolean = isEmptyString(_parentPathMember);
 	let shouldCalculateLevel: boolean = isEmptyString(_levelMember);
 	let shouldCalculateHasChildren: boolean = isEmptyString(_hasChildrenMember);
@@ -44,25 +42,27 @@ export function createLTreeTrie<T>(
 	let shouldCalculateDisplayValue: boolean = isEmptyString(_displayValueMember);
 	let shouldCalculateSearchValue: boolean = isEmptyString(_searchValueMember);
 
+	// this is absolutely crucial to keep order of sorted items. Segments are just numbers and numbers as properties are always sorted
+	// see https://stackoverflow.com/questions/33351816/how-to-prevent-automatic-sort-of-object-numeric-property/51497854#51497854
+	const segmentPrefix = 'x';
+
 	// Private state variables
-	let root = createLTreeTrieNode<T>();
+	let root = createLTreeNode<T>();
 	let searchIndex: Index | null | undefined = null;
 
 	if (_shouldUseInternalSearchIndex)
-		searchIndex = _initializeIndexCallback
-			? _initializeIndexCallback()
-			: createSearchIndex();
+		searchIndex = _initializeIndexCallback ? _initializeIndexCallback() : createSearchIndex();
 
 	let changeTracker = $state(Symbol());
 	let size = 0;
 
-	let flatTreeNodes: LTreeTrieNode<T>[] = [];
-	let filteredTree: LTreeTrieNode<T>[] | null = null;
+	let flatTreeNodes: LTreeNode<T>[] = [];
+	let filteredTree: LTreeNode<T>[] | null = null;
 	let isFiltered = false;
 
 	return {
 		// Properties
-		treePathSeparator: ".",
+		treePathSeparator: '.',
 		root,
 		get changeTracker() {
 			return changeTracker;
@@ -85,7 +85,7 @@ export function createLTreeTrie<T>(
 		isFiltered,
 
 		// Methods (will be bound later)
-		get tree(): LTreeTrieNode<T>[] {
+		get tree(): LTreeNode<T>[] {
 			if (isFiltered) {
 				return filteredTree || [];
 			}
@@ -97,18 +97,11 @@ export function createLTreeTrie<T>(
 		},
 
 		insertArray: function (data: T[], noEmitChanges: boolean = false) {
-			performance.mark("sort-start");
-
 			data = data || [];
 
-			if (!this.isSorted) {
-				data = (this.sortCallback || this._defaultSort)?.(data);
-			}
-
-			performance.mark("sort-end");
-			performance.mark("conversion-start");
-			const mappedData = data.map((row, index) => {
-				const node = createLTreeTrieNode<T>();
+			performance.mark('conversion-start');
+			let mappedData = data.map((row, index) => {
+				const node = createLTreeNode<T>();
 				node.treeId = _treeId;
 				node.id = _idMember ? row[_idMember] : undefined;
 				node.path = _pathMember ? row[_pathMember] : undefined;
@@ -117,26 +110,34 @@ export function createLTreeTrie<T>(
 					node.parentPath = getParentPath(node.path);
 				} else node.parentPath = row[_parentPathMember];
 
-				node.pathSegment = getPathSegments(
-					getRelativePath(node.path, node.parentPath)
-				);
+				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath));
 
 				if (!shouldCalculateLevel) node.level = row[_levelMember];
+				else node.level = getLevel(node.path, this.treePathSeparator);
 
-				if (!shouldCalculateIsExpanded)
-					node.isExpanded = row[_isExpandedMember];
+				if (!shouldCalculateIsExpanded) node.isExpanded = row[_isExpandedMember];
 
-				if (!shouldCalculateIsSelectable)
-					node.isSelectable = row[_isSelectableMember];
+				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
 
-				if (!shouldCalculateHasChildren)
-					node.hasChildren = row[_hasChildrenMember];
+				if (!shouldCalculateHasChildren) node.hasChildren = row[_hasChildrenMember];
 
 				node.data = row;
 				return node;
 			});
-			performance.mark("conversion-end");
-			performance.mark("insert-start");
+			performance.mark('conversion-end');
+
+			if (this.shouldDisplayDebugInformation) console.log('Mapped data before sort', mappedData);
+
+			performance.mark('sort-start');
+			if (!this.isSorted) {
+				if (this.sortCallback) mappedData = this.sortCallback(mappedData);
+				else mappedData = this._defaultSort(this, mappedData);
+			}
+
+			if (this.shouldDisplayDebugInformation) console.log('Mapped data after sort', mappedData);
+			performance.mark('sort-end');
+
+			performance.mark('insert-start');
 
 			const errors: string[] = [];
 
@@ -158,29 +159,25 @@ export function createLTreeTrie<T>(
 			if (!noEmitChanges) {
 				this._emitTreeChanged();
 			}
-			performance.mark("insert-end");
+			performance.mark('insert-end');
 
-			performance.measure("sort-duration", "sort-start", "sort-end");
-			performance.measure(
-				"conversion-duration",
-				"conversion-start",
-				"conversion-end"
-			);
-			performance.measure("insert-duration", "insert-start", "insert-end");
+			performance.measure('sort-duration', 'sort-start', 'sort-end');
+			performance.measure('conversion-duration', 'conversion-start', 'conversion-end');
+			performance.measure('insert-duration', 'insert-start', 'insert-end');
 
-			let measure = performance.getEntriesByName("sort-duration")[0];
+			let measure = performance.getEntriesByName('sort-duration')[0];
 			console.log(`Sort took: ${measure.duration}ms`);
 
-			measure = performance.getEntriesByName("conversion-duration")[0];
+			measure = performance.getEntriesByName('conversion-duration')[0];
 			console.log(`Conversion took: ${measure.duration}ms`);
 
-			measure = performance.getEntriesByName("insert-duration")[0];
+			measure = performance.getEntriesByName('insert-duration')[0];
 			console.log(`Insert took: ${measure.duration}ms`);
 		},
 
 		insertTreeNode: function (
 			parentPath: string,
-			newNode: LTreeTrieNode<T>,
+			newNode: LTreeNode<T>,
 			noEmitChanges?: boolean
 		): string | null {
 			const parentNode = this.getNodeByPath(parentPath);
@@ -192,9 +189,8 @@ export function createLTreeTrie<T>(
 				newNode.level = (parentNode.level || 0) + 1;
 			}
 
-			const newSegment = getPathSegments(
-				getRelativePath(newNode?.path, parentPath)
-			);
+			const newSegment =
+				segmentPrefix + getPathSegments(getRelativePath(newNode?.path, parentPath));
 
 			if (!parentNode.children.hasOwnProperty(newSegment)) {
 				parentNode.children[newSegment] = newNode;
@@ -202,6 +198,7 @@ export function createLTreeTrie<T>(
 					parentNode.hasChildren = true;
 				}
 			}
+
 			flatTreeNodes.push(newNode);
 
 			if (!noEmitChanges) {
@@ -211,13 +208,15 @@ export function createLTreeTrie<T>(
 			return null;
 		},
 
-		filterNodes(_searchText: string): void {
+		filterNodes(_searchText: string | null | undefined): void {
+			if (!_searchText) return;
+
 			if (!_shouldUseInternalSearchIndex) {
-				console.warn("Internal search index is disabled");
+				if (this.shouldDisplayDebugInformation) console.warn('Internal search index is disabled');
 				return;
 			}
 
-			if (!_searchText || _searchText.trim() === "") {
+			if (!_searchText || _searchText.trim() === '') {
 				// Clear filter when search is empty
 				filteredTree = null;
 				isFiltered = false;
@@ -248,21 +247,21 @@ export function createLTreeTrie<T>(
 				}
 			});
 
-			console.log("allRequiredPaths", Array.from(allRequiredPaths));
+			console.log('allRequiredPaths', Array.from(allRequiredPaths));
 
 			// 2. Build filtered tree with only required paths
-			const pathToNode = new Map<string, LTreeTrieNode<T>>();
+			const pathToNode = new Map<string, LTreeNode<T>>();
 
 			// First pass: create copies of all required nodes
 			allRequiredPaths.forEach((path) => {
 				const originalNode = this.getNodeByPath(path);
 				if (originalNode) {
 					// Deep copy the node but reset children
-					const copiedNode: LTreeTrieNode<T> = {
+					const copiedNode: LTreeNode<T> = {
 						...originalNode,
 						children: {},
 						hasChildren: false,
-						isExpanded: true, // Expand all nodes in filtered tree
+						isExpanded: true // Expand all nodes in filtered tree
 					};
 					pathToNode.set(path, copiedNode);
 				}
@@ -288,7 +287,7 @@ export function createLTreeTrie<T>(
 			});
 
 			// 3. Extract root level nodes for filteredTree
-			const rootNodes: LTreeTrieNode<T>[] = [];
+			const rootNodes: LTreeNode<T>[] = [];
 			allRequiredPaths.forEach((path) => {
 				if (!path.includes(this.treePathSeparator)) {
 					// This is a root level node
@@ -303,7 +302,8 @@ export function createLTreeTrie<T>(
 			isFiltered = true;
 			this._emitTreeChanged();
 
-			console.log("Created filtered tree with", rootNodes.length, "root nodes");
+			if (this.shouldDisplayDebugInformation)
+				console.log('Created filtered tree with', rootNodes.length, 'root nodes');
 		},
 
 		clearFilter(): void {
@@ -330,11 +330,7 @@ export function createLTreeTrie<T>(
 			this._emitTreeChanged();
 		},
 
-		insert: function (
-			path: string,
-			data: T,
-			noEmitChanges: boolean = false
-		): void {
+		insert: function (path: string, data: T, noEmitChanges: boolean = false): void {
 			let node = this.root;
 
 			const pathParts = path.split(this.treePathSeparator);
@@ -342,7 +338,7 @@ export function createLTreeTrie<T>(
 				const part = pathParts[i];
 
 				if (!node.children.hasOwnProperty(part)) {
-					node.children[part] = createLTreeTrieNode<T>();
+					node.children[part] = createLTreeNode<T>();
 				}
 				node = node.children[part]!;
 			}
@@ -360,7 +356,7 @@ export function createLTreeTrie<T>(
 		},
 
 		expandNodes: function (path: string, noEmitChanges: boolean = false) {
-			let node: LTreeTrieNode<T> | undefined = this.root;
+			let node: LTreeNode<T> | undefined = this.root;
 
 			const pathParts = path.split(this.treePathSeparator);
 			for (let i = 0; i < pathParts.length; i++) {
@@ -380,7 +376,7 @@ export function createLTreeTrie<T>(
 		},
 
 		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
-			let node: LTreeTrieNode<T> | undefined = this.root;
+			let node: LTreeNode<T> | undefined = this.root;
 
 			const pathParts = path.split(this.treePathSeparator);
 			for (let i = 0; i < pathParts.length; i++) {
@@ -400,51 +396,65 @@ export function createLTreeTrie<T>(
 		},
 
 		// Private helper methods
-		getNodeByPath: function (path: string): LTreeTrieNode<T> | null {
+		getNodeByPath: function (path: string): LTreeNode<T> | null {
 			let node = this.root;
 
 			if (path) {
 				const parts = path.split(this.treePathSeparator);
 
 				for (let i = 0; i < parts.length; i++) {
-					if (!node.children.hasOwnProperty(parts[i])) {
+					const segment = segmentPrefix + parts[i];
+					if (!node.children.hasOwnProperty(segment)) {
 						return null;
 					}
-					node = node.children[parts[i]]!;
+					node = node.children[segment]!;
 				}
 			}
 			return node;
 		},
 
-		getNodeDisplayValue(node: LTreeTrieNode<T>): string {
+		getNodeDisplayValue(node: LTreeNode<T>): string {
 			if (!shouldCalculateDisplayValue) return node.data[_displayValueMember];
 
-			if (this.getDisplayValueCallback)
-				return this.getDisplayValueCallback(node);
+			if (this.getDisplayValueCallback) return this.getDisplayValueCallback(node);
 
-			return "[N/A]";
+			return '[N/A]';
 		},
 
-		getNodeSearchValue(node: LTreeTrieNode<T>): string {
+		getNodeSearchValue(node: LTreeNode<T>): string {
 			if (!shouldCalculateSearchValue) return node.data[_searchValueMember];
 
 			if (this.getSearchValueCallback) return this.getSearchValueCallback(node);
 
-			return "[N/A]";
+			return '[N/A]';
 		},
 
 		refresh(): void {
 			this._emitTreeChanged();
 		},
 
-		_defaultSort: function (items: T[]): T[] {
-			return items.sort((a, b) => a[_pathMember].localeCompare(b[_pathMember]));
+		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
+			return items.sort((a, b) => {
+				if (a.parentPath !== b.parentPath) {
+					if (a.parentPath === '') return -1;
+					if (b.parentPath === '') return 1;
+					return a.parentPath.localeCompare(b.parentPath);
+				}
+				// console.log(
+				// 	'a.name, b.name, comparison',
+				// 	self.getNodeDisplayValue(a),
+				// 	self.getNodeDisplayValue(b),
+				// 	self.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b))
+				// );
+
+				return self.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b));
+			});
 		},
 
 		_emitTreeChanged: function () {
 			changeTracker = Symbol();
 		},
 
-		...opts,
+		...opts
 	};
 }

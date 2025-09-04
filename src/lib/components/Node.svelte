@@ -1,18 +1,18 @@
 <script lang="ts" generics="T">
-	import {type LTreeTrieNode} from "../ltree/ltree-trie-node.svelte.js"
+	import {type LTreeNode} from "../ltree/ltree-node.svelte.js"
 	import Node from "./Node.svelte"
 	import {getContext, type Snippet} from "svelte"
-	import type {LTreeTrie} from "../ltree/types.js"
+	import type {Ltree} from "../ltree/types.js"
 
 	// Define component props interface
 	interface Props {
-		node: LTreeTrieNode<T>;
+		node: LTreeNode<T>;
 		children?: Snippet<[T]>; // Keep the general children slot for backward compatibility
-		onNodeClicked?: (node: LTreeTrieNode<T>) => void;
-		onNodeRightClicked?: (node: LTreeTrieNode<T>, event: MouseEvent) => void;
-		onNodeDragStart?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
-		onNodeDragOver?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
-		onNodeDrop?: (node: LTreeTrieNode<T>, event: DragEvent) => void;
+		onNodeClicked?: (node: LTreeNode<T>) => void;
+		onNodeRightClicked?: (node: LTreeNode<T>, event: MouseEvent) => void;
+		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDrop?: (node: LTreeNode<T>, event: DragEvent) => void;
 
 		// BEHAVIOUR
 		shouldToggleOnNodeClick?: boolean | null | undefined;
@@ -46,7 +46,7 @@
 		isDraggedNode = false,
 	}: Props = $props()
 
-	const trie = getContext<LTreeTrie<T>>("TreeTrie")
+	const trie = getContext<Ltree<T>>("TreeTrie")
 
 	// Convert reactive statements to derived values
 	const childrenWithData = $derived(Object.values(node?.children || []))
