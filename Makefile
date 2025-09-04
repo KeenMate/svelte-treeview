@@ -1,4 +1,4 @@
-.PHONY: setup dev install
+.PHONY: setup dev install build publish publish-dry
 
 setup: install
 
