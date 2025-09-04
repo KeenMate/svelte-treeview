@@ -38,23 +38,23 @@ npm run dev
 
 The component requires CSS to display correctly. Import the styles in your app:
 
-### Option 1: Import CSS in your main app file
+### Option 1: Import SCSS in your main app file
 ```javascript
 // In your main.js or main.ts
-import '@keenmate/svelte-treeview/styles.css';
+import '@keenmate/svelte-treeview/styles.scss';
 ```
 
 ### Option 2: Import in your Svelte component
 ```svelte
 <style>
-  @import '@keenmate/svelte-treeview/styles.css';
+  @import '@keenmate/svelte-treeview/styles.scss';
 </style>
 ```
 
 ### Option 3: Use with your build system
-If using Vite, Webpack, or similar, you can import the CSS:
+If using Vite, Webpack, or similar, you can import the SCSS:
 ```javascript
-import '@keenmate/svelte-treeview/styles.css';
+import '@keenmate/svelte-treeview/styles.scss';
 ```
 
 ## 🎯 Quick Start
@@ -222,7 +222,7 @@ $tree-node-indent-per-level: 1rem;
 $tree-node-font-family: 'Custom Font', sans-serif;
 $primary-color: #custom-color;
 
-@import '@keenmate/svelte-treeview/styles.css';
+@import '@keenmate/svelte-treeview/styles.scss';
 ```
 
 ### CSS Classes

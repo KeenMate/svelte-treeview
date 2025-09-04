@@ -2,42 +2,39 @@
 
 ## Library Structure
 
-The library has been successfully prepared for publishing with the following structure:
+The library follows the standard SvelteKit library format with the following structure:
 
 ### Core Library Files
-- `src/lib/Tree.svelte` - Main tree component
-- `src/lib/Node.svelte` - Individual node component  
+- `src/lib/components/Tree.svelte` - Main tree component
+- `src/lib/components/Node.svelte` - Individual node component  
 - `src/lib/ltree/` - LTree Trie data structure implementation
 - `src/lib/helpers/` - Utility functions
-- `src/lib/treeData.ts` - Demo data generators
-- `src/index.ts` - Main library entry point
+- `src/lib/demo/` - Demo data generators and sample data
+- `src/lib/styles/` - SCSS styling files
+- `src/lib/index.ts` - Main library entry point
 
-### Demo Files (Separate)
-- `demo/` - Complete demo application
-- `demo/App.svelte` - Demo application with all examples
-- `demo/assets/` - Demo-specific styles and assets
+### Development Files
+- `src/routes/` - SvelteKit development/demo pages
+- `src/app.html` - SvelteKit app template
 
 ## Build Configuration
 
 ### Library Build
-- **Config**: `lib.vite.config.ts`
+- **Config**: `vite.config.ts` (with SvelteKit plugin)
+- **SvelteKit Config**: `svelte.config.js`
 - **Output**: `dist/` directory
-- **Command**: `npm run build`
-
-### Demo Build  
-- **Config**: `demo.vite.config.ts`
-- **Output**: `demo-dist/` directory
-- **Command**: `npm run build:demo`
+- **Command**: `npm run build` (runs `vite build && npm run prepack`)
+- **Packaging**: Uses `svelte-package` for library preparation
 
 ## Package Information
 
 - **Name**: `@keenmate/svelte-treeview`
-- **Version**: `4.0.0`
+- **Version**: `4.0.0-rc01`
 - **Main Entry**: `dist/index.js`
 - **Types**: `dist/index.d.ts`
-- **Styles**: `dist/styles.css`
+- **Styles**: `dist/styles.scss`
 - **Peer Dependencies**: `svelte ^5.0.0`
-- **Dependencies**: `flexsearch ^0.8.205`
+- **Optional Dependencies**: `flexsearch ^0.8.205`
 
 ## Key Features Included
 
@@ -54,11 +51,11 @@ The library has been successfully prepared for publishing with the following str
 # Build the library
 npm run build
 
-# Create package for testing
-npm run package
-
 # Check package contents
 npm pack --dry-run
+
+# Test package locally
+npm link
 
 # Publish to npm (when ready)
 npm publish --access public
@@ -72,7 +69,7 @@ npm install @keenmate/svelte-treeview
 
 ```javascript
 // Import styles in your main.js or main.ts
-import '@keenmate/svelte-treeview/styles.css';
+import '@keenmate/svelte-treeview/styles.scss';
 ```
 
 ```svelte
@@ -94,9 +91,9 @@ import '@keenmate/svelte-treeview/styles.css';
 />
 ```
 
-## Important: CSS Import Required
+## Important: SCSS Import Required
 
-The component **requires** the CSS to be imported for proper styling. The styles include:
+The component **requires** the SCSS to be imported for proper styling. The styles include:
 
 - Core component layout and positioning
 - Tree node indentation and hierarchy visualization  
@@ -106,7 +103,7 @@ The component **requires** the CSS to be imported for proper styling. The styles
 - Context menu styling
 - Selected node indicators
 
-Without the CSS import, the tree will not display correctly.
+Without the SCSS import, the tree will not display correctly.
 
 ## Next Steps
 
@@ -116,22 +113,25 @@ Without the CSS import, the tree will not display correctly.
 4. Test search and filtering
 5. Publish to npm registry when ready
 
-## Files Created/Modified for Publishing
+## SvelteKit Library Structure
 
-### New Files
-- `lib.vite.config.ts` - Library build configuration
-- `demo.vite.config.ts` - Demo build configuration  
-- `tsconfig.lib.json` - TypeScript config for library
-- `tsconfig.demo.json` - TypeScript config for demo
-- `.npmignore` - Files to exclude from npm package
-- `LICENSE` - MIT license file
-- `PUBLISHING.md` - This guide
+### Configuration Files
+- `vite.config.ts` - Vite configuration with SvelteKit plugin
+- `svelte.config.js` - SvelteKit configuration
+- `tsconfig.json` - TypeScript configuration
+- `package.json` - Package configuration with library exports
 
-### Modified Files
-- `package.json` - Updated for library publishing
-- `README.md` - Comprehensive library documentation
-- `src/index.ts` - Main library exports
-- `tsconfig.json` - Updated references
-- `demo/App.svelte` - Updated imports to reference library source
+### Library Files
+- `src/lib/index.ts` - Main library exports
+- `src/lib/components/` - Svelte components
+- `src/lib/ltree/` - Core trie data structure
+- `src/lib/helpers/` - Utility functions
+- `src/lib/styles/` - SCSS styling
 
-The library is now ready for publishing to npm as `@keenmate/svelte-treeview` version 4.0.0.
+### Build Process
+The library uses the standard SvelteKit library workflow:
+1. `vite build` - Builds the SvelteKit app
+2. `svelte-package` - Packages the library from `src/lib/`
+3. `publint` - Validates the package
+
+The library is now ready for publishing to npm as `@keenmate/svelte-treeview` version 4.0.0-rc01.
