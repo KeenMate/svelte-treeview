@@ -349,6 +349,9 @@ expandLevel,
 					{#if tree?.statistics.filteredNodeCount > 0}
 					<span>Filtered: {tree.statistics.filteredNodeCount}</span>
 					{/if}
+					{#if tree?.statistics.isIndexing}
+					<span>Indexing: {tree.statistics.pendingIndexCount} pending</span>
+					{/if}
 					<span>Dragging: {draggedNode?.path || 'none'}</span>
 				</div>
 			</details>

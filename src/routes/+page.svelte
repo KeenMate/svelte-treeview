@@ -104,8 +104,10 @@
 		idMember="id"
 		pathMember="path"
 		displayValueMember="name"
+		searchValueMember="name"
 		isSorted={false}
-shouldDisplayDebugInformation={true}
+		shouldUseInternalSearchIndex={true}
+		shouldDisplayDebugInformation={true}
 	/>
 {:else}
 	<p>Loading...</p>

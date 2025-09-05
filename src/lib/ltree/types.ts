@@ -1,6 +1,8 @@
 import type { Index } from 'flexsearch';
 import type { LTreeNode } from './ltree-node.svelte';
 
+export type Tuple<T, U> = [T, U];
+
 export interface Ltree<T> {
 	// Properties (readonly getters)
 	treePathSeparator: string;
@@ -26,6 +28,8 @@ export interface Ltree<T> {
 	isSorted: boolean | null | undefined;
 	sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
 
+	indexingCompleteCallback?: () => void;
+
 	// Filtering properties
 	filteredTree: LTreeNode<T>[] | null;
 	isFiltered: boolean;
@@ -39,7 +43,6 @@ export interface Ltree<T> {
 	// Methods
 	get tree(): LTreeNode<T>[];
 	get statistics(): { nodeCount: number; maxLevel: number };
-
 
 	insertArray(data: T[]): void;
 
@@ -71,5 +74,4 @@ export interface Ltree<T> {
 	_emitTreeChanged(): void;
 
 	refresh(): void;
-
 }

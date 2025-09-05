@@ -10,7 +10,7 @@ import {
 	getRelativePath
 } from '../helpers/ltree-helpers.js';
 
-import type { Ltree } from './types.js';
+import type { Ltree, Tuple } from './types.js';
 import { createSearchIndex } from './flex.js';
 
 export function createLTree<T>(
@@ -67,6 +67,94 @@ export function createLTree<T>(
 	let filteredTree: LTreeNode<T>[] | null = null;
 	let isFiltered = false;
 
+	// Async search indexing infrastructure
+	let indexingQueue: { node: LTreeNode<T>; index: number }[] = [];
+	let isIndexing = false;
+	let indexingBatchSize = 1000;
+	let pendingIndexingId: number | null = null;
+	let onIndexingComplete: (() => void) | null = null;
+
+	// RequestIdleCallback wrapper with fallback
+	function scheduleIdleWork(callback: () => void): number {
+		if (typeof requestIdleCallback !== 'undefined') {
+			return requestIdleCallback(callback, { timeout: 50 }) as number;
+		} else {
+			return setTimeout(callback, 0) as number;
+		}
+	}
+
+	function cancelIdleWork(id: number): void {
+		if (typeof cancelIdleCallback !== 'undefined') {
+			cancelIdleCallback(id);
+		} else {
+			clearTimeout(id);
+		}
+	}
+
+	// // Async search indexing functions
+	// function addToIndexingQueue(self: Ltree<T>): void {
+	// 	if (!_shouldUseInternalSearchIndex || !searchIndex) return;
+
+	// 	indexingQueue.push({ node, index });
+	// 	console.log('🚀 ~ addToIndexingQueue ~ indexingQueue:', indexingQueue);
+
+	// 	if (!isIndexing) {
+	// 		startAsyncIndexing(self);
+	// 	}
+	// }
+
+	function startAsyncIndexing(self: Ltree<T>): void {
+		if (isIndexing || indexingQueue.length === 0) return;
+
+		if (!isIndexing) {
+			isIndexing = true;
+			processIndexingQueue(self);
+		}
+	}
+
+	function processIndexingQueue(self: Ltree<T>): void {
+		// const batchEnd = Math.min(indexingBatchSize, indexingQueue.length);
+		// const batch = indexingQueue.splice(0, batchEnd);
+
+		if (indexingQueue.length > 0) {
+			if (self.shouldDisplayDebugInformation) console.log('Indexing of whole indexing queue');
+			pendingIndexingId = scheduleIdleWork(() => {
+				addNodesToIndex(indexingQueue);
+				// processIndexingBatch(self);
+			});
+		} else {
+			if (self.shouldDisplayDebugInformation) console.log('Indexing of batch finished');
+
+			isIndexing = false;
+			pendingIndexingId = null;
+
+			// Trigger completion callback and refresh tree
+			if (onIndexingComplete) {
+				onIndexingComplete();
+				onIndexingComplete = null;
+			}
+		}
+	}
+
+	function addNodesToIndex(batch: { node: LTreeNode<T>; index: number }[]) {
+		for (const { node, index } of batch) {
+			if (!shouldCalculateSearchValue) {
+				searchIndex!.add(index, node.data[_searchValueMember]);
+			} else if (_getSearchValueCallback) {
+				searchIndex!.add(index, _getSearchValueCallback(node));
+			}
+		}
+	}
+
+	function clearIndexingQueue(): void {
+		indexingQueue.length = 0;
+		isIndexing = false;
+		if (pendingIndexingId !== null) {
+			cancelIdleWork(pendingIndexingId);
+			pendingIndexingId = null;
+		}
+	}
+
 	return {
 		// Properties
 		treePathSeparator: '.',
@@ -107,12 +195,23 @@ export function createLTree<T>(
 		},
 
 		get statistics() {
-			const filteredNodeCount = isFiltered ? (filteredTree?.length || 0) : 0;
-			return changeTracker && { nodeCount, maxLevel, filteredNodeCount };
+			const filteredNodeCount = isFiltered ? filteredTree?.length || 0 : 0;
+			return (
+				changeTracker && {
+					nodeCount,
+					maxLevel,
+					filteredNodeCount,
+					isIndexing,
+					pendingIndexCount: indexingQueue.length
+				}
+			);
 		},
 
 		insertArray: function (data: T[], noEmitChanges: boolean = false) {
 			data = data || [];
+
+			// Clear any pending indexing from previous calls
+			clearIndexingQueue();
 
 			performance.mark('conversion-start');
 			let mappedData = data.map((row, index) => {
@@ -161,22 +260,31 @@ export function createLTree<T>(
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
-				if (result) errors.push(result);
-				else {
-					if (_shouldUseInternalSearchIndex) {
-						if (!shouldCalculateSearchValue) {
-							searchIndex.add(index, node.data[_searchValueMember]);
-						} else if (_getSearchValueCallback) {
-							searchIndex.add(index, _getSearchValueCallback(node));
-						}
-					}
+				if (result) {
+					errors.push(result);
+				} else {
+					// Queue node for async search indexing
+					if (_shouldUseInternalSearchIndex) indexingQueue.push({ node, index });
 				}
 			});
 			if (errors.length > 0) console.warn(errors);
 
+			if (_shouldUseInternalSearchIndex) {
+				startAsyncIndexing(this);
+			}
+
 			if (!noEmitChanges) {
 				this._emitTreeChanged();
 			}
+
+			// Set completion callback to emit changes when indexing is done
+			if (_shouldUseInternalSearchIndex && indexingQueue.length > 0) {
+				if (!noEmitChanges) {
+					this._emitTreeChanged();
+				}
+				this.indexingCompleteCallback?.();
+			}
+
 			performance.mark('insert-end');
 
 			performance.measure('sort-duration', 'sort-start', 'sort-end');
