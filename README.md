@@ -309,6 +309,12 @@ The component includes several pre-built classes for styling selected nodes:
 
 **Note**: When `shouldUseInternalSearchIndex` is enabled, node indexing is performed asynchronously using `requestIdleCallback` (with fallback to `setTimeout`). This ensures the tree renders immediately while search indexing happens during browser idle time, providing better performance for large datasets.
 
+**⚠️ Important**: For internal search indexing to work, you must:
+1. Set `shouldUseInternalSearchIndex={true}`
+2. Provide either `searchValueMember` (property name) or `getSearchValueCallback` (function)
+
+Without both requirements, no search indexing will occur.
+
 #### Tree Configuration
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
