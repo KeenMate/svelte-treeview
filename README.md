@@ -307,6 +307,8 @@ The component includes several pre-built classes for styling selected nodes:
 | `initializeIndexCallback` | `() => Index` | `undefined` | Function to initialize search index |
 | `searchText` | `string` (bindable) | `undefined` | Current search text |
 
+**Note**: When `shouldUseInternalSearchIndex` is enabled, node indexing is performed asynchronously using `requestIdleCallback` (with fallback to `setTimeout`). This ensures the tree renders immediately while search indexing happens during browser idle time, providing better performance for large datasets.
+
 #### Tree Configuration
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -360,13 +362,16 @@ The tree provides real-time statistics about the loaded data:
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `statistics` | `{ nodeCount: number; maxLevel: number; filteredNodeCount: number }` | Returns current node count, maximum depth level, and filtered nodes count |
+| `statistics` | `{ nodeCount: number; maxLevel: number; filteredNodeCount: number; isIndexing: boolean; pendingIndexCount: number }` | Returns current node count, maximum depth level, filtered nodes count, indexing status, and pending index count |
 
 ```typescript
-const { nodeCount, maxLevel, filteredNodeCount } = tree.statistics;
+const { nodeCount, maxLevel, filteredNodeCount, isIndexing, pendingIndexCount } = tree.statistics;
 console.log(`Tree has ${nodeCount} nodes with maximum depth of ${maxLevel} levels`);
 if (filteredNodeCount > 0) {
   console.log(`Currently showing ${filteredNodeCount} filtered nodes`);
+}
+if (isIndexing) {
+  console.log(`Search indexing in progress: ${pendingIndexCount} nodes pending`);
 }
 ```
 
@@ -390,6 +395,7 @@ The debug panel shows:
 - Node count
 - Maximum depth levels
 - Filtered node count (when filtering is active)
+- Search indexing progress (when indexing is active)
 - Currently dragged node
 
 ### Events
@@ -450,6 +456,7 @@ interface NodeData {
 The component is optimized for large datasets:
 
 - **LTree**: Efficient hierarchical data structure
+- **Async Search Indexing**: Uses `requestIdleCallback` for non-blocking search index building
 - **Virtual Scrolling**: (Coming soon)
 - **Lazy Loading**: (Coming soon)
 - **Search Indexing**: Uses FlexSearch for fast search operations
