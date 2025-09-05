@@ -4,7 +4,7 @@
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
 	import { type Ltree } from '../ltree/types.js';
-	import { setContext } from 'svelte';
+	import { setContext, tick } from 'svelte';
 
 	// Context menu state
 	let contextMenuVisible = $state(false);
@@ -179,6 +179,7 @@
 		if (expand) {
 			tree.expandNodes(path);
 			tree.refresh();
+			await tick();
 			// Wait for DOM update
 			await new Promise((resolve) => setTimeout(resolve, 100));
 		}
