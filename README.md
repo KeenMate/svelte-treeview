@@ -315,6 +315,10 @@ The component includes several pre-built classes for styling selected nodes:
 
 Without both requirements, no search indexing will occur.
 
+**Performance Tuning**: 
+- `indexerBatchSize` controls how many nodes are processed per idle callback. Lower values (10-25) provide smoother UI performance but slower indexing, while higher values (50-100) index faster but may cause brief UI pauses. Default: 25.
+- `indexerTimeout` sets the maximum wait time before forcing indexing when the browser is busy. Lower values (25-50ms) ensure more responsive indexing, while higher values (100-200ms) give more time for genuine idle periods. Default: 50ms.
+
 #### Tree Configuration
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -326,6 +330,8 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
+| `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
+| `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics |
 
 #### Event Handler Properties

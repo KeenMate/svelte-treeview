@@ -12,6 +12,7 @@ import {
 
 import type { Ltree, Tuple } from './types.js';
 import { createSearchIndex } from './flex.js';
+import { Indexer } from './indexer.js';
 
 export function createLTree<T>(
 	_idMember: string,
@@ -34,6 +35,8 @@ export function createLTree<T>(
 	_expandLevel?: number | null | undefined,
 	_shouldUseInternalSearchIndex?: boolean | null | undefined,
 	_initializeIndexCallback?: () => Index,
+	_indexerBatchSize?: number | null | undefined,
+	_indexerTimeout?: number | null | undefined,
 
 	opts?: Partial<Ltree<T>>
 ): Ltree<T> {
@@ -53,6 +56,7 @@ export function createLTree<T>(
 
 	// Private state variables
 	let root = createLTreeNode<T>();
+	let filteredRoot = createLTreeNode<T>();
 	let searchIndex: Index | null | undefined = null;
 
 	if (_shouldUseInternalSearchIndex)
@@ -68,93 +72,19 @@ export function createLTree<T>(
 	let isFiltered = false;
 
 	// Async search indexing infrastructure
-	let indexingQueue: { node: LTreeNode<T>; index: number }[] = [];
-	let isIndexing = false;
-	let indexingBatchSize = 1000;
-	let pendingIndexingId: number | null = null;
-	let onIndexingComplete: (() => void) | null = null;
+	let indexer: Indexer<T> | null = null;
 
-	// RequestIdleCallback wrapper with fallback
-	function scheduleIdleWork(callback: () => void): number {
-		if (typeof requestIdleCallback !== 'undefined') {
-			return requestIdleCallback(callback, { timeout: 50 }) as number;
-		} else {
-			return setTimeout(callback, 0) as number;
-		}
-	}
-
-	function cancelIdleWork(id: number): void {
-		if (typeof cancelIdleCallback !== 'undefined') {
-			cancelIdleCallback(id);
-		} else {
-			clearTimeout(id);
-		}
-	}
-
-	// // Async search indexing functions
-	// function addToIndexingQueue(self: Ltree<T>): void {
-	// 	if (!_shouldUseInternalSearchIndex || !searchIndex) return;
-
-	// 	indexingQueue.push({ node, index });
-	// 	console.log('🚀 ~ addToIndexingQueue ~ indexingQueue:', indexingQueue);
-
-	// 	if (!isIndexing) {
-	// 		startAsyncIndexing(self);
-	// 	}
-	// }
-
-	function startAsyncIndexing(self: Ltree<T>): void {
-		if (isIndexing || indexingQueue.length === 0) return;
-
-		if (!isIndexing) {
-			isIndexing = true;
-			processIndexingQueue(self);
-		}
-	}
-
-	function processIndexingQueue(self: Ltree<T>): void {
-		// const batchEnd = Math.min(indexingBatchSize, indexingQueue.length);
-		// const batch = indexingQueue.splice(0, batchEnd);
-
-		if (indexingQueue.length > 0) {
-			if (self.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Indexing of whole indexing queue`);
-			pendingIndexingId = scheduleIdleWork(() => {
-				addNodesToIndex(indexingQueue);
-				// processIndexingBatch(self);
-			});
-		} else {
-			if (self.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Indexing of batch finished`);
-
-			isIndexing = false;
-			pendingIndexingId = null;
-
-			// Trigger completion callback and refresh tree
-			if (onIndexingComplete) {
-				onIndexingComplete();
-				onIndexingComplete = null;
-			}
-		}
-	}
-
-	function addNodesToIndex(batch: { node: LTreeNode<T>; index: number }[]) {
-		for (const { node, index } of batch) {
-			if (!shouldCalculateSearchValue) {
-				searchIndex!.add(index, node.data[_searchValueMember]);
-			} else if (_getSearchValueCallback) {
-				searchIndex!.add(index, _getSearchValueCallback(node));
-			}
-		}
-	}
-
-	function clearIndexingQueue(): void {
-		indexingQueue.length = 0;
-		isIndexing = false;
-		if (pendingIndexingId !== null) {
-			cancelIdleWork(pendingIndexingId);
-			pendingIndexingId = null;
-		}
+	// Initialize indexer when search index is available
+	if (_shouldUseInternalSearchIndex && searchIndex) {
+		indexer = new Indexer<T>(
+			_treeId || 'unknown',
+			searchIndex,
+			shouldCalculateSearchValue,
+			_searchValueMember,
+			_getSearchValueCallback,
+			_indexerBatchSize || 25, // batch size with fallback
+			_indexerTimeout || 50 // timeout with fallback
+		);
 	}
 
 	return {
@@ -186,25 +116,27 @@ export function createLTree<T>(
 
 		// Methods (will be bound later)
 		get tree(): LTreeNode<T>[] {
-			if (isFiltered) {
-				return filteredTree || [];
+			if (this.isFiltered) {
+				return Object.values(filteredRoot?.children) || [];
 			}
-			if (!this.root?.children || !changeTracker) {
+			if (!root?.children || !changeTracker) {
 				return [];
 			}
 
-			return Object.values(this.root.children);
+			return Object.values(root.children);
 		},
 
 		get statistics() {
 			const filteredNodeCount = isFiltered ? filteredTree?.length || 0 : 0;
+			const indexerStatus = indexer?.getStatus() || { isProcessing: false, queueSize: 0 };
+
 			return (
 				changeTracker && {
 					nodeCount,
 					maxLevel,
 					filteredNodeCount,
-					isIndexing,
-					pendingIndexCount: indexingQueue.length
+					isIndexing: indexerStatus.isProcessing,
+					pendingIndexCount: indexerStatus.queueSize
 				}
 			);
 		},
@@ -213,7 +145,7 @@ export function createLTree<T>(
 			data = data || [];
 
 			// Clear any pending indexing from previous calls
-			clearIndexingQueue();
+			indexer?.clearQueue();
 
 			performance.mark('conversion-start');
 			let mappedData = data.map((row, index) => {
@@ -262,31 +194,37 @@ export function createLTree<T>(
 
 			const errors: string[] = [];
 
+			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
+
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
 				if (result) {
 					errors.push(result);
 				} else {
-					// Queue node for async search indexing
-					if (_shouldUseInternalSearchIndex) indexingQueue.push({ node, index });
+					// Collect items for batch indexing
+					if (_shouldUseInternalSearchIndex && indexer) {
+						itemsToIndex.push({ node, index });
+					}
 				}
 			});
 			if (errors.length > 0) console.warn(`[Tree ${_treeId}]`, errors);
 
-			if (_shouldUseInternalSearchIndex) {
-				startAsyncIndexing(this);
+			// Batch add items to indexer
+			if (itemsToIndex.length > 0 && indexer) {
+				indexer.setCallbacks(
+					undefined, // no progress callback for now
+					() => {
+						// Completion callback - refresh tree when indexing is done
+						if (!noEmitChanges) {
+							this._emitTreeChanged();
+						}
+					}
+				);
+				indexer.addToQueue(itemsToIndex);
 			}
 
 			if (!noEmitChanges) {
 				this._emitTreeChanged();
-			}
-
-			// Set completion callback to emit changes when indexing is done
-			if (_shouldUseInternalSearchIndex && indexingQueue.length > 0) {
-				if (!noEmitChanges) {
-					this._emitTreeChanged();
-				}
-				this.indexingCompleteCallback?.();
 			}
 
 			performance.mark('insert-end');
@@ -352,8 +290,8 @@ export function createLTree<T>(
 						`[Tree ${_treeId}] Search text is empty, cleaning filtered tree and setting isFiltered = false`
 					);
 				// Clear filter when search is empty
-				filteredTree = null;
-				isFiltered = false;
+				filteredRoot.children = {};
+				this.isFiltered = false;
 				this._emitTreeChanged();
 				return;
 			}
@@ -371,12 +309,9 @@ export function createLTree<T>(
 		},
 
 		createFilteredTree(targetPaths: string[]): void {
-			if (!targetPaths || targetPaths.length === 0) {
-				filteredTree = null;
-				// isFiltered = false;
-				this._emitTreeChanged();
-				return;
-			}
+			filteredRoot.children = {};
+			filteredTree = null;
+			// isFiltered = false;
 
 			// 1. Expand all target paths to include their parents
 			const allRequiredPaths = new Set<string>();
@@ -395,7 +330,8 @@ export function createLTree<T>(
 
 			// First pass: create copies of all required nodes
 			allRequiredPaths.forEach((path) => {
-				const originalNode = this.getNodeByPath(path);
+				const originalNode = this.getNodeByPath(path, root);
+
 				if (originalNode) {
 					// Deep copy the node but reset children
 					const copiedNode: LTreeNode<T> = {
@@ -418,7 +354,7 @@ export function createLTree<T>(
 					// This node has a parent
 					const parentPath = parts.slice(0, -1).join(this.treePathSeparator);
 					const parentNode = pathToNode.get(parentPath);
-					const segment = parts[parts.length - 1];
+					const segment = segmentPrefix + parts[parts.length - 1];
 
 					if (parentNode) {
 						parentNode.children[segment] = node;
@@ -429,6 +365,7 @@ export function createLTree<T>(
 
 			// 3. Extract root level nodes for filteredTree
 			const rootNodes: LTreeNode<T>[] = [];
+
 			allRequiredPaths.forEach((path) => {
 				if (!path.includes(this.treePathSeparator)) {
 					// This is a root level node
@@ -439,8 +376,12 @@ export function createLTree<T>(
 				}
 			});
 
+			rootNodes.forEach((node) => {
+				filteredRoot.children[segmentPrefix + node.path] = node;
+			});
+
 			filteredTree = rootNodes;
-			isFiltered = true;
+			this.isFiltered = true;
 			this._emitTreeChanged();
 
 			if (this.shouldDisplayDebugInformation)
@@ -448,8 +389,9 @@ export function createLTree<T>(
 		},
 
 		clearFilter(): void {
+			filteredRoot.children = {};
 			filteredTree = null;
-			isFiltered = false;
+			this.isFiltered = false;
 			this._emitTreeChanged();
 		},
 
@@ -497,7 +439,7 @@ export function createLTree<T>(
 		},
 
 		expandNodes: function (path: string, noEmitChanges: boolean = false) {
-			let node: LTreeNode<T> | undefined = this.root;
+			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : root;
 
 			const pathParts = path.split(this.treePathSeparator);
 			for (let i = 0; i < pathParts.length; i++) {
@@ -517,7 +459,7 @@ export function createLTree<T>(
 		},
 
 		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
-			let node: LTreeNode<T> | undefined = this.root;
+			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : this.root;
 
 			const pathParts = path.split(this.treePathSeparator);
 			for (let i = 0; i < pathParts.length; i++) {
@@ -537,8 +479,11 @@ export function createLTree<T>(
 		},
 
 		// Private helper methods
-		getNodeByPath: function (path: string): LTreeNode<T> | null {
-			let node = this.root;
+		getNodeByPath: function (
+			path: string,
+			_root?: LTreeNode<T> | null | undefined
+		): LTreeNode<T> | null {
+			let node = _root || (this.isFiltered ? filteredRoot : root);
 
 			if (path) {
 				const parts = path.split(this.treePathSeparator);
@@ -551,6 +496,7 @@ export function createLTree<T>(
 					node = node.children[segment]!;
 				}
 			}
+
 			return node;
 		},
 
@@ -574,52 +520,7 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 		},
 
-		async scrollToPath(
-			path: string,
-			options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }
-		): Promise<boolean> {
-			const {
-				expand = true,
-				highlight = true,
-				scrollOptions = { behavior: 'smooth', block: 'center' }
-			} = options || {};
 
-			// First, find the node to get its ID
-			const node = this.getNodeByPath(path);
-			if (!node || !node.id) {
-				console.warn(`[Tree ${_treeId}] Node not found for path: ${path}`);
-				return false;
-			}
-
-			// Expand the path if requested
-			if (expand) {
-				this.expandNodes(path);
-				// Wait for DOM update
-				await new Promise((resolve) => setTimeout(resolve, 100));
-			}
-
-			// Find the DOM element using the generated ID
-			const elementId = `${_treeId}-${node.id}`;
-			const element = document.getElementById(elementId);
-
-			if (!element) {
-				console.warn(`[Tree ${_treeId}] DOM element not found for node ID: ${elementId}`);
-				return false;
-			}
-
-			// Scroll to the element
-			element.scrollIntoView(scrollOptions);
-
-			// Highlight the node temporarily if requested
-			if (highlight) {
-				element.classList.add('ltree-scroll-highlight');
-				setTimeout(() => {
-					element.classList.remove('ltree-scroll-highlight');
-				}, 2000);
-			}
-
-			return true;
-		},
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
 			return items.sort((a, b) => {

@@ -41,7 +41,7 @@
 
 		// DATA
 		data: T[];
-		selectedNode?: LTreeNode<T>;
+		selectedNode?: LTreeNode<T> | null | undefined;
 
 		// SLOTS
 		nodeTemplate?: any;
@@ -52,11 +52,13 @@
 		contextMenu?: any;
 
 		// BEHAVIOUR
-		expandLevel?: number | null | undefined,
+		expandLevel?: number | null | undefined;
 		shouldToggleOnNodeClick?: boolean | null | undefined;
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
 		shouldUseInternalSearchIndex?: boolean | null | undefined;
+		indexerBatchSize?: number | null | undefined;
+		indexerTimeout?: number | null | undefined;
 		shouldDisplayDebugInformation?: boolean;
 
 		// EVENTS
@@ -113,6 +115,8 @@
 		shouldUseInternalSearchIndex = true,
 		initializeIndexCallback,
 		searchText = $bindable(),
+		indexerBatchSize = 25,
+		indexerTimeout = 50,
 		shouldDisplayDebugInformation = false,
 
 		// EVENTS
@@ -154,8 +158,54 @@
 		tree?.collapseAll(nodePath);
 	}
 
-	export async function scrollToPath(path: string, options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }): Promise<boolean> {
-		return tree?.scrollToPath(path, options) || false;
+	export async function scrollToPath(
+		path: string,
+		options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }
+	): Promise<boolean> {
+		const {
+			expand = true,
+			highlight = true,
+			scrollOptions = { behavior: 'smooth', block: 'center' }
+		} = options || {};
+
+		// First, find the node to get its ID
+		const node = tree.getNodeByPath(path);
+		if (!node || !node.id) {
+			console.warn(`[Tree ${treeId}] Node not found for path: ${path}`);
+			return false;
+		}
+
+		// Expand the path if requested
+		if (expand) {
+			tree.expandNodes(path);
+			tree.refresh();
+			// Wait for DOM update
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+
+
+
+		// Find the DOM element using the generated ID
+		const elementId = `${treeId}-${node.id}`;
+		const element = document.getElementById(elementId);
+
+		if (!element) {
+			console.warn(`[Tree ${treeId}] DOM element not found for node ID: ${elementId}`);
+			return false;
+		}
+
+		// Scroll to the element
+		element.scrollIntoView(scrollOptions);
+
+		// Highlight the node temporarily if requested
+		if (highlight) {
+			element.classList.add('ltree-scroll-highlight');
+			setTimeout(() => {
+				element.classList.remove('ltree-scroll-highlight');
+			}, 2000);
+		}
+
+		return true;
 	}
 
 	treeId = treeId || generateTreeId();
@@ -181,10 +231,12 @@
 		getSearchValueCallback,
 		treeId,
 
-expandLevel,
+		expandLevel,
 
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
+		indexerBatchSize,
+		indexerTimeout,
 		{
 			shouldDisplayDebugInformation,
 			isSorted,
@@ -216,7 +268,10 @@ expandLevel,
 
 		if (selectedNode) {
 			const previousNode = tree.getNodeByPath(selectedNode.path);
-			previousNode.isSelected = false;
+			if (previousNode) {
+				console.log('🚀 ~ _onNodeClicked ~ previousNode:', previousNode);
+				previousNode.isSelected = false;
+			} else selectedNode = null;
 		}
 
 		node.isSelected = true;
@@ -225,7 +280,7 @@ expandLevel,
 		onNodeClicked?.(node);
 
 		// if (!node.hasChildren) {
-			tree.refresh();
+		tree.refresh();
 		// }
 	}
 
@@ -337,9 +392,6 @@ expandLevel,
 </script>
 
 <div>
-	{#if treeHeader}
-		{@render treeHeader?.()}
-	{/if}
 	{#if shouldDisplayDebugInformation}
 		<div class="ltree-debug-info">
 			<details>
@@ -351,10 +403,10 @@ expandLevel,
 					<span>Nodes: {tree?.statistics.nodeCount || 0}</span>
 					<span>Levels: {tree?.statistics.maxLevel || 0}</span>
 					{#if tree?.statistics.filteredNodeCount > 0}
-					<span>Filtered: {tree.statistics.filteredNodeCount}</span>
+						<span>Filtered: {tree.statistics.filteredNodeCount}</span>
 					{/if}
 					{#if tree?.statistics.isIndexing}
-					<span>Indexing: {tree.statistics.pendingIndexCount} pending</span>
+						<span>Indexing: {tree.statistics.pendingIndexCount} pending</span>
 					{/if}
 					<span>Dragging: {draggedNode?.path || 'none'}</span>
 				</div>
@@ -362,6 +414,9 @@ expandLevel,
 		</div>
 	{/if}
 
+	{#if treeHeader}
+		{@render treeHeader?.()}
+	{/if}
 	<div class:bodyClass>
 		{#if tree?.root}
 			{#key tree.changeTracker}

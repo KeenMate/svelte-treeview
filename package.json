@@ -2,7 +2,7 @@
 	"name": "@keenmate/svelte-treeview",
 	"version": "4.0.0-rc05",
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev --port 7777",
 		"build": "vite build && npm run prepack",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",

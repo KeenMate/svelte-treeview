@@ -8,6 +8,7 @@ export interface Ltree<T> {
 	treePathSeparator: string;
 
 	root: LTreeNode<T>;
+	filteredRoot: LTreeNode<T>;
 
 	changeTracker: Symbol | undefined;
 
@@ -59,7 +60,7 @@ export interface Ltree<T> {
 
 	insert(path: string, data: T, noEmitChanges?: boolean): void;
 
-	getNodeByPath(path: string): LTreeNode<T> | null;
+	getNodeByPath(path: string, _root?: LTreeNode<T> | null | undefined): LTreeNode<T> | null;
 
 	expandNodes(path: string): Ltree<T>; // Returns self for chaining
 
