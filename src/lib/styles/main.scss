@@ -326,6 +326,24 @@ $body-color: #212529 !default;
   }
 }
 
+// Scroll Highlight Animation
+@keyframes ltree-highlight-fade {
+  0% {
+    background-color: rgba(var(--ltree-primary-rgb), 0.3);
+    box-shadow: 0 0 0.5em rgba(var(--ltree-primary-rgb), 0.4);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: none;
+  }
+}
+
+.ltree-scroll-highlight {
+  animation: ltree-highlight-fade 2s ease-out;
+  border-radius: 0.25em;
+  transition: all 0.3s ease;
+}
+
 // Utility classes for spacing (minimal Bootstrap-like utilities)
 .ltree-tree {
   // Reset any default margins/padding

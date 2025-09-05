@@ -154,6 +154,10 @@
 		tree?.collapseAll(nodePath);
 	}
 
+	export async function scrollToPath(path: string, options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }): Promise<boolean> {
+		return tree?.scrollToPath(path, options) || false;
+	}
+
 	treeId = treeId || generateTreeId();
 
 	// svelte-ignore non_reactive_update
@@ -220,9 +224,9 @@ expandLevel,
 
 		onNodeClicked?.(node);
 
-		if (!node.hasChildren) {
+		// if (!node.hasChildren) {
 			tree.refresh();
-		}
+		// }
 	}
 
 	function _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {

@@ -117,13 +117,15 @@ export function createLTree<T>(
 		// const batch = indexingQueue.splice(0, batchEnd);
 
 		if (indexingQueue.length > 0) {
-			if (self.shouldDisplayDebugInformation) console.log('Indexing of whole indexing queue');
+			if (self.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Indexing of whole indexing queue`);
 			pendingIndexingId = scheduleIdleWork(() => {
 				addNodesToIndex(indexingQueue);
 				// processIndexingBatch(self);
 			});
 		} else {
-			if (self.shouldDisplayDebugInformation) console.log('Indexing of batch finished');
+			if (self.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Indexing of batch finished`);
 
 			isIndexing = false;
 			pendingIndexingId = null;
@@ -243,7 +245,8 @@ export function createLTree<T>(
 			});
 			performance.mark('conversion-end');
 
-			if (this.shouldDisplayDebugInformation) console.log('Mapped data before sort', mappedData);
+			if (this.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Mapped data before sort`, mappedData);
 
 			performance.mark('sort-start');
 			if (!this.isSorted) {
@@ -251,7 +254,8 @@ export function createLTree<T>(
 				else mappedData = this._defaultSort(this, mappedData);
 			}
 
-			if (this.shouldDisplayDebugInformation) console.log('Mapped data after sort', mappedData);
+			if (this.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Mapped data after sort`, mappedData);
 			performance.mark('sort-end');
 
 			performance.mark('insert-start');
@@ -267,7 +271,7 @@ export function createLTree<T>(
 					if (_shouldUseInternalSearchIndex) indexingQueue.push({ node, index });
 				}
 			});
-			if (errors.length > 0) console.warn(errors);
+			if (errors.length > 0) console.warn(`[Tree ${_treeId}]`, errors);
 
 			if (_shouldUseInternalSearchIndex) {
 				startAsyncIndexing(this);
@@ -292,13 +296,13 @@ export function createLTree<T>(
 			performance.measure('insert-duration', 'insert-start', 'insert-end');
 
 			let measure = performance.getEntriesByName('sort-duration')[0];
-			console.log(`Sort took: ${measure.duration}ms`);
+			console.log(`[Tree ${_treeId}] Sort took: ${measure.duration}ms`);
 
 			measure = performance.getEntriesByName('conversion-duration')[0];
-			console.log(`Conversion took: ${measure.duration}ms`);
+			console.log(`[Tree ${_treeId}] Conversion took: ${measure.duration}ms`);
 
 			measure = performance.getEntriesByName('insert-duration')[0];
-			console.log(`Insert took: ${measure.duration}ms`);
+			console.log(`[Tree ${_treeId}] Insert took: ${measure.duration}ms`);
 		},
 
 		insertTreeNode: function (
@@ -339,12 +343,13 @@ export function createLTree<T>(
 		},
 
 		filterNodes(_searchText: string | null | undefined): void {
-			if (this.shouldDisplayDebugInformation) console.log('Filtering nodes by:', _searchText);
+			if (this.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Filtering nodes by:`, _searchText);
 
 			if (isEmptyString(_searchText)) {
 				if (this.shouldDisplayDebugInformation)
 					console.log(
-						'Search text is empty, cleaning filtered tree and setting isFiltered = false'
+						`[Tree ${_treeId}] Search text is empty, cleaning filtered tree and setting isFiltered = false`
 					);
 				// Clear filter when search is empty
 				filteredTree = null;
@@ -354,7 +359,8 @@ export function createLTree<T>(
 			}
 
 			if (!_shouldUseInternalSearchIndex) {
-				if (this.shouldDisplayDebugInformation) console.warn('Internal search index is disabled');
+				if (this.shouldDisplayDebugInformation)
+					console.warn(`[Tree ${_treeId}] Internal search index is disabled`);
 				return;
 			}
 
@@ -382,7 +388,7 @@ export function createLTree<T>(
 			});
 
 			if (this.shouldDisplayDebugInformation)
-				console.log('allRequiredPaths', Array.from(allRequiredPaths));
+				console.log(`[Tree ${_treeId}] allRequiredPaths`, Array.from(allRequiredPaths));
 
 			// 2. Build filtered tree with only required paths
 			const pathToNode = new Map<string, LTreeNode<T>>();
@@ -438,7 +444,7 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 
 			if (this.shouldDisplayDebugInformation)
-				console.log('Created filtered tree with', rootNodes.length, 'root nodes');
+				console.log(`[Tree ${_treeId}] Created filtered tree with`, rootNodes.length, 'root nodes');
 		},
 
 		clearFilter(): void {
@@ -566,6 +572,53 @@ export function createLTree<T>(
 
 		refresh(): void {
 			this._emitTreeChanged();
+		},
+
+		async scrollToPath(
+			path: string,
+			options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }
+		): Promise<boolean> {
+			const {
+				expand = true,
+				highlight = true,
+				scrollOptions = { behavior: 'smooth', block: 'center' }
+			} = options || {};
+
+			// First, find the node to get its ID
+			const node = this.getNodeByPath(path);
+			if (!node || !node.id) {
+				console.warn(`[Tree ${_treeId}] Node not found for path: ${path}`);
+				return false;
+			}
+
+			// Expand the path if requested
+			if (expand) {
+				this.expandNodes(path);
+				// Wait for DOM update
+				await new Promise((resolve) => setTimeout(resolve, 100));
+			}
+
+			// Find the DOM element using the generated ID
+			const elementId = `${_treeId}-${node.id}`;
+			const element = document.getElementById(elementId);
+
+			if (!element) {
+				console.warn(`[Tree ${_treeId}] DOM element not found for node ID: ${elementId}`);
+				return false;
+			}
+
+			// Scroll to the element
+			element.scrollIntoView(scrollOptions);
+
+			// Highlight the node temporarily if requested
+			if (highlight) {
+				element.classList.add('ltree-scroll-highlight');
+				setTimeout(() => {
+					element.classList.remove('ltree-scroll-highlight');
+				}, 2000);
+			}
+
+			return true;
 		},
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {

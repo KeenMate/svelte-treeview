@@ -71,7 +71,12 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="ltree-node" style={indentStyle}>
+<div 
+	class="ltree-node" 
+	id="{node.treeId}-{node.id}" 
+	data-tree-path="{node.path}"
+	style={indentStyle}
+>
 	<div class="ltree-node-row">
 		<!-- Toggle icon with its own click handler -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->

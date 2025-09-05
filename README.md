@@ -362,6 +362,31 @@ Without both requirements, no search indexing will occur.
 | `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
 | `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
 | `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
+| `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
+
+#### ScrollToPath Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `expand` | `boolean` | `true` | Automatically expand parent nodes to make target visible |
+| `highlight` | `boolean` | `true` | Apply temporary highlight animation to the target node |
+| `scrollOptions` | `ScrollIntoViewOptions` | `{ behavior: 'smooth', block: 'center' }` | Native browser scroll options |
+
+**Usage Example:**
+```typescript
+// Basic usage - scroll to path with default options
+await tree.scrollToPath('1.2.3');
+
+// Advanced usage - custom options
+await tree.scrollToPath('1.2.3', {
+  expand: false,           // Don't auto-expand parent nodes
+  highlight: false,        // Skip highlight animation
+  scrollOptions: {         // Custom scroll behavior
+    behavior: 'instant',
+    block: 'start'
+  }
+});
+```
 
 #### Statistics
 The tree provides real-time statistics about the loaded data:
