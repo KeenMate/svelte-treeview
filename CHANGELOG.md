@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.06] - 2025-01-06
+
+### Added
+- **Customizable Scroll Highlight**: New `scrollHighlightClass` property allows users to define custom CSS classes for scroll highlight effects
+- **Built-in Highlight Options**: Added pre-built highlight classes:
+  - `ltree-scroll-highlight` - Background glow with blue color (default)  
+  - `ltree-scroll-highlight-arrow` - Red arrow indicator positioned to the right of the node
+- **Scroll Highlight Timeout Control**: New `scrollHighlightTimeout` property (default: 4000ms) controls duration of highlight effect
+- **Enhanced scrollToPath Method**: Improved scroll highlighting with proper element targeting and CSS class management
+
+### Changed
+- **Removed CSS Animation Dependencies**: Scroll highlighting now uses pure CSS classes instead of CSS animations for better timeout control
+- **Improved Element Targeting**: `scrollToPath` now targets `.ltree-node-content` specifically for more precise highlighting
+- **Enhanced Documentation**: Updated README with comprehensive examples for highlight customization
+
+### Fixed
+- **Scroll Highlight Duration**: Fixed issue where CSS animations overrode JavaScript timeout values
+- **Element Selection**: Improved DOM element selection for scroll highlighting functionality
+- **LTree Path Traversal**: Fixed `expandNodes` and `collapseNodes` methods by correctly prefixing path segments with 'x' prefix to match internal tree structure storage
+
 ## [4.0.0-rc.05] - 2025-09-05
 
 ### Added

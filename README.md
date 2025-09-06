@@ -350,6 +350,8 @@ Without both requirements, no search indexing will occur.
 | `expandIconClass` | `string \| null` | `"ltree-icon-expand"` | CSS class for expand icons |
 | `collapseIconClass` | `string \| null` | `"ltree-icon-collapse"` | CSS class for collapse icons |
 | `leafIconClass` | `string \| null` | `"ltree-icon-leaf"` | CSS class for leaf node icons |
+| `scrollHighlightTimeout` | `number \| null` | `4000` | Duration (ms) for scroll highlight animation |
+| `scrollHighlightClass` | `string \| null` | `'ltree-scroll-highlight'` | CSS class to apply for scroll highlight effect |
 
 #### Available Slots
 | Slot | Description |
@@ -393,6 +395,40 @@ await tree.scrollToPath('1.2.3', {
   }
 });
 ```
+
+**Highlight Classes Example:**
+```svelte
+<!-- Default background highlight -->
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  scrollHighlightClass="ltree-scroll-highlight"
+  scrollHighlightTimeout={5000}
+/>
+
+<!-- Red arrow highlight -->
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  scrollHighlightClass="ltree-scroll-highlight-arrow"
+  scrollHighlightTimeout={3000}
+/>
+
+<!-- Custom highlight class -->
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  scrollHighlightClass="my-custom-highlight"
+  scrollHighlightTimeout={2000}
+/>
+```
+
+**Available Built-in Highlight Classes:**
+- `ltree-scroll-highlight` - Background glow with blue color (default)
+- `ltree-scroll-highlight-arrow` - Red left arrow indicator
 
 #### Statistics
 The tree provides real-time statistics about the loaded data:

@@ -73,6 +73,8 @@
 		expandIconClass?: string | null | undefined;
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
+		scrollHighlightTimeout?: number | null | undefined;
+		scrollHighlightClass?: string | null | undefined;
 	}
 
 	let {
@@ -130,7 +132,9 @@
 		expandIconClass = 'ltree-icon-expand',
 		collapseIconClass = 'ltree-icon-collapse',
 		leafIconClass = 'ltree-icon-leaf',
-		selectedNodeClass
+		selectedNodeClass,
+		scrollHighlightTimeout = 4000,
+		scrollHighlightClass = 'ltree-scroll-highlight'
 	}: Props = $props();
 
 	export async function expandNodes(nodePath: string) {
@@ -181,29 +185,38 @@
 			tree.refresh();
 			await tick();
 			// Wait for DOM update
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			// await new Promise((resolve) => setTimeout(resolve, 100));
 		}
-
-
 
 		// Find the DOM element using the generated ID
 		const elementId = `${treeId}-${node.id}`;
 		const element = document.getElementById(elementId);
+		const contentDiv = element.querySelector('.ltree-node-content');
 
-		if (!element) {
+		if (!contentDiv) {
 			console.warn(`[Tree ${treeId}] DOM element not found for node ID: ${elementId}`);
 			return false;
 		}
 
 		// Scroll to the element
-		element.scrollIntoView(scrollOptions);
+		contentDiv.scrollIntoView(scrollOptions);
 
 		// Highlight the node temporarily if requested
-		if (highlight) {
-			element.classList.add('ltree-scroll-highlight');
+		if (highlight && scrollHighlightClass) {
+			contentDiv.classList.add(scrollHighlightClass);
+			console.log(
+				'🚀 elementId ~ scrollToPath ~ adding scrollHighlightClass:',
+				elementId,
+				scrollHighlightClass
+			);
 			setTimeout(() => {
-				element.classList.remove('ltree-scroll-highlight');
-			}, 2000);
+				console.log(
+					'🚀 elementId ~ scrollToPath ~ removing scrollHighlightClass:',
+					elementId,
+					scrollHighlightClass
+				);
+				contentDiv.classList.remove(scrollHighlightClass);
+			}, scrollHighlightTimeout);
 		}
 
 		return true;

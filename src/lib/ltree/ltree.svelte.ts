@@ -316,9 +316,9 @@ export function createLTree<T>(
 			// 1. Expand all target paths to include their parents
 			const allRequiredPaths = new Set<string>();
 			targetPaths.forEach((path) => {
-				const parts = path.split(this.treePathSeparator);
-				for (let i = 1; i <= parts.length; i++) {
-					allRequiredPaths.add(parts.slice(0, i).join(this.treePathSeparator));
+				const segments = path.split(this.treePathSeparator);
+				for (let i = 1; i <= segments.length; i++) {
+					allRequiredPaths.add(segments.slice(0, i).join(this.treePathSeparator));
 				}
 			});
 
@@ -349,12 +349,12 @@ export function createLTree<T>(
 				const node = pathToNode.get(path);
 				if (!node) return;
 
-				const parts = path.split(this.treePathSeparator);
-				if (parts.length > 1) {
+				const segments = path.split(this.treePathSeparator);
+				if (segments.length > 1) {
 					// This node has a parent
-					const parentPath = parts.slice(0, -1).join(this.treePathSeparator);
+					const parentPath = segments.slice(0, -1).join(this.treePathSeparator);
 					const parentNode = pathToNode.get(parentPath);
-					const segment = segmentPrefix + parts[parts.length - 1];
+					const segment = segmentPrefix + segments[segments.length - 1];
 
 					if (parentNode) {
 						parentNode.children[segment] = node;
@@ -416,14 +416,14 @@ export function createLTree<T>(
 		insert: function (path: string, data: T, noEmitChanges: boolean = false): void {
 			let node = this.root;
 
-			const pathParts = path.split(this.treePathSeparator);
-			for (let i = 0; i < pathParts.length; i++) {
-				const part = pathParts[i];
+			const segments = path.split(this.treePathSeparator);
+			for (let i = 0; i < segments.length; i++) {
+				const segment = segmentPrefix + segments[i];
 
-				if (!node.children.hasOwnProperty(part)) {
-					node.children[part] = createLTreeNode<T>();
+				if (!node.children.hasOwnProperty(segment)) {
+					node.children[segment] = createLTreeNode<T>();
 				}
-				node = node.children[part]!;
+				node = node.children[segment]!;
 			}
 
 			// Mark as end of path and store data
@@ -441,12 +441,12 @@ export function createLTree<T>(
 		expandNodes: function (path: string, noEmitChanges: boolean = false) {
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : root;
 
-			const pathParts = path.split(this.treePathSeparator);
-			for (let i = 0; i < pathParts.length; i++) {
-				const part = pathParts[i];
+			const segments = path.split(this.treePathSeparator);
+			for (let i = 0; i < segments.length; i++) {
+				const segment = segmentPrefix + segments[i];
 
-				if (node.children.hasOwnProperty(part)) {
-					node = node.children[part];
+				if (node.children.hasOwnProperty(segment)) {
+					node = node.children[segment];
 					node.isExpanded = true;
 				}
 			}
@@ -461,12 +461,12 @@ export function createLTree<T>(
 		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : this.root;
 
-			const pathParts = path.split(this.treePathSeparator);
-			for (let i = 0; i < pathParts.length; i++) {
-				const part = pathParts[i];
+			const segments = path.split(this.treePathSeparator);
+			for (let i = 0; i < segments.length; i++) {
+				const segment = segmentPrefix + segments[i];
 
-				if (node.children.hasOwnProperty(part)) {
-					node = node.children[part];
+				if (node.children.hasOwnProperty(segment)) {
+					node = node.children[segment];
 					node.isExpanded = false;
 				}
 			}
