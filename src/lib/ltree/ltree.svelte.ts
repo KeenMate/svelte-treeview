@@ -83,7 +83,8 @@ export function createLTree<T>(
 			_searchValueMember,
 			_getSearchValueCallback,
 			_indexerBatchSize || 25, // batch size with fallback
-			_indexerTimeout || 50 // timeout with fallback
+			_indexerTimeout || 50, // timeout with fallback
+			opts.shouldDisplayDebugInformation
 		);
 	}
 

@@ -9,6 +9,7 @@ export class Indexer<T> {
 	private searchIndex: Index;
 	private isProcessing: boolean = false;
 	private shouldCalculateSearchValue: boolean;
+	private shouldDisplayDebugInformation: boolean;
 
 	private searchValueMember?: string | null | undefined;
 	private getSearchValueCallback?: (node: LTreeNode<T>) => string;
@@ -24,16 +25,19 @@ export class Indexer<T> {
 		searchValueMember?: string | null | undefined,
 		getSearchValueCallback?: (node: LTreeNode<T>) => string,
 		batchSize: number = 25,
-		private timeout: number = 50
+		private timeout: number = 50,
+		shouldDisplayDebugInformation: boolean = false
 	) {
 		this.treeId = treeId;
 		this.searchIndex = searchIndex;
 		this.batchSize = batchSize;
 		this.shouldCalculateSearchValue = shouldCalculateSearchValue;
+		this.shouldDisplayDebugInformation = shouldDisplayDebugInformation;
 		this.searchValueMember = searchValueMember;
 		this.getSearchValueCallback = getSearchValueCallback;
 
-		console.log(`[Tree ${this.treeId}] Indexer initialized with batch size: ${batchSize}`);
+		if (this.shouldDisplayDebugInformation)
+			console.log(`[Tree ${this.treeId}] Indexer initialized with batch size: ${batchSize}`);
 	}
 
 	// Add items to the processing queue
@@ -41,9 +45,10 @@ export class Indexer<T> {
 		this.processingQueue.push(...items);
 		this.totalItemsAdded += items.length;
 
-		console.log(
-			`[Tree ${this.treeId}] Added ${items.length} items to indexing queue. Queue size: ${this.processingQueue.length}`
-		);
+		if (this.shouldDisplayDebugInformation)
+			console.log(
+				`[Tree ${this.treeId}] Added ${items.length} items to indexing queue. Queue size: ${this.processingQueue.length}`
+			);
 
 		// Start processing if not already running
 		if (!this.isProcessing) {
@@ -73,7 +78,8 @@ export class Indexer<T> {
 	// Update batch size dynamically
 	setBatchSize(newBatchSize: number): void {
 		this.batchSize = newBatchSize;
-		console.log(`[Tree ${this.treeId}] Batch size updated to: ${this.batchSize}`);
+		if (this.shouldDisplayDebugInformation)
+			console.log(`[Tree ${this.treeId}] Batch size updated to: ${this.batchSize}`);
 	}
 
 	// Start the processing loop
@@ -83,9 +89,10 @@ export class Indexer<T> {
 		}
 
 		this.isProcessing = true;
-		console.log(
-			`[Tree ${this.treeId}] Starting indexing. Queue size: ${this.processingQueue.length}`
-		);
+		if (this.shouldDisplayDebugInformation)
+			console.log(
+				`[Tree ${this.treeId}] Starting indexing. Queue size: ${this.processingQueue.length}`
+			);
 
 		this.processNextBatch();
 	}
@@ -101,9 +108,10 @@ export class Indexer<T> {
 		let itemsProcessedInBatch = 0;
 		const isTimeout = deadline.didTimeout;
 
-		console.log(
-			`[Tree ${this.treeId}] Processing batch: timeout=${isTimeout}, timeRemaining=${deadline.timeRemaining()}ms, queueSize=${this.processingQueue.length}`
-		);
+		if (this.shouldDisplayDebugInformation)
+			console.log(
+				`[Tree ${this.treeId}] Processing batch: timeout=${isTimeout}, timeRemaining=${deadline.timeRemaining()}ms, queueSize=${this.processingQueue.length}`
+			);
 
 		// Determine how many items to process
 		let maxItemsInBatch: number;
@@ -134,9 +142,10 @@ export class Indexer<T> {
 		}
 
 		const batchTime = performance.now() - startTime;
-		console.log(
-			`[Tree ${this.treeId}] Batch completed: indexed ${itemsProcessedInBatch} items in ${batchTime.toFixed(2)}ms`
-		);
+		if (this.shouldDisplayDebugInformation)
+			console.log(
+				`[Tree ${this.treeId}] Batch completed: indexed ${itemsProcessedInBatch} items in ${batchTime.toFixed(2)}ms`
+			);
 
 		// Report progress
 		if (this.onProgressCallback) {
@@ -166,9 +175,10 @@ export class Indexer<T> {
 	// Finish processing
 	private finishProcessing(): void {
 		this.isProcessing = false;
-		console.log(
-			`[Tree ${this.treeId}] Indexing completed! Processed ${this.totalItemsProcessed} items total.`
-		);
+		if (this.shouldDisplayDebugInformation)
+			console.log(
+				`[Tree ${this.treeId}] Indexing completed! Processed ${this.totalItemsProcessed} items total.`
+			);
 
 		if (this.onCompleteCallback) {
 			this.onCompleteCallback();
@@ -198,7 +208,8 @@ export class Indexer<T> {
 		this.isProcessing = false;
 		this.totalItemsAdded = 0;
 		this.totalItemsProcessed = 0;
-		console.log(`[Tree ${this.treeId}] Indexing queue cleared`);
+		if (this.shouldDisplayDebugInformation)
+			console.log(`[Tree ${this.treeId}] Indexing queue cleared`);
 	}
 
 	// Check if indexer is busy

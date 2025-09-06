@@ -14,11 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ltree-scroll-highlight-arrow` - Red arrow indicator positioned to the right of the node
 - **Scroll Highlight Timeout Control**: New `scrollHighlightTimeout` property (default: 4000ms) controls duration of highlight effect
 - **Enhanced scrollToPath Method**: Improved scroll highlighting with proper element targeting and CSS class management
+- **Debug Logging Control for Indexer**: Added `shouldDisplayDebugInformation` property to Indexer class for consistent debug logging control
 
 ### Changed
 - **Removed CSS Animation Dependencies**: Scroll highlighting now uses pure CSS classes instead of CSS animations for better timeout control
 - **Improved Element Targeting**: `scrollToPath` now targets `.ltree-node-content` specifically for more precise highlighting
 - **Enhanced Documentation**: Updated README with comprehensive examples for highlight customization
+- **Consistent Debug Logging**: All indexer console.log messages now respect the `shouldDisplayDebugInformation` flag for unified logging control
 
 ### Fixed
 - **Scroll Highlight Duration**: Fixed issue where CSS animations overrode JavaScript timeout values

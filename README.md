@@ -332,7 +332,7 @@ Without both requirements, no search indexing will occur.
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
-| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics |
+| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging for tree operations and async search indexing |
 
 #### Event Handler Properties
 | Prop | Type | Default | Description |
@@ -450,7 +450,7 @@ if (isIndexing) {
 
 ### Debug Information
 
-Enable debug information to see real-time tree statistics:
+Enable debug information to see real-time tree statistics and console logging:
 
 ```svelte
 <Tree
@@ -461,7 +461,8 @@ Enable debug information to see real-time tree statistics:
 />
 ```
 
-The debug panel shows:
+#### Debug Panel
+The visual debug panel shows:
 - Tree ID
 - Data array length
 - Expand level setting
@@ -470,6 +471,22 @@ The debug panel shows:
 - Filtered node count (when filtering is active)
 - Search indexing progress (when indexing is active)
 - Currently dragged node
+
+#### Console Debug Logging
+When enabled, the component will log detailed information to the browser console including:
+
+**Tree Operations:**
+- Data mapping and sorting performance metrics
+- Node filtering and search operations
+- Tree structure changes
+
+**Async Search Indexing:**
+- Indexer initialization with batch size
+- Queue management (items added, queue size)
+- Batch processing details (timeout status, items processed, timing)
+- Indexing completion and progress updates
+
+This provides valuable insights for performance optimization and troubleshooting, especially when working with large datasets or complex search operations.
 
 ### Events
 
