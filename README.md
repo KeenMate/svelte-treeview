@@ -323,6 +323,7 @@ Without both requirements, no search indexing will occur.
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
+| `treePathSeparator` | `string \| null` | `"."` | Separator character for hierarchical paths (e.g., "." for "1.2.3" or "/" for "1/2/3") |
 | `selectedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently selected node |
 
 #### Behavior Properties
@@ -370,6 +371,7 @@ Without both requirements, no search indexing will occur.
 | `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
 | `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
 | `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
+| `searchNodes` | `searchText: string \| null \| undefined` | Search nodes using internal search index and return matching nodes |
 | `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
 
 #### ScrollToPath Options

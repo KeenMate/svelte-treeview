@@ -94,7 +94,7 @@ export function performanceTest(): void {
     console.time('Prefix search for "1."');
     const results = trie.findByPrefix('1.');
     console.timeEnd('Prefix search for "1."');
-    console.log(`Found ${results.length} paths with prefix "1."`);
+    console.log(`Found ${results?.length} paths with prefix "1."`);
 
     // Memory usage
     const stats = trie.getStats();

@@ -31,6 +31,7 @@ export function createLTree<T>(
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
 	_treeId?: string,
+	_treePathSeparator?: string | null | undefined,
 
 	_expandLevel?: number | null | undefined,
 	_shouldUseInternalSearchIndex?: boolean | null | undefined,
@@ -90,7 +91,7 @@ export function createLTree<T>(
 
 	return {
 		// Properties
-		treePathSeparator: '.',
+		treePathSeparator: _treePathSeparator || '.',
 		root,
 		get changeTracker() {
 			return changeTracker;
@@ -197,6 +198,8 @@ export function createLTree<T>(
 
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
 
+			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
+
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
 				if (result) {
@@ -204,7 +207,8 @@ export function createLTree<T>(
 				} else {
 					// Collect items for batch indexing
 					if (_shouldUseInternalSearchIndex && indexer) {
-						itemsToIndex.push({ node, index });
+						itemsToIndex.push({ node, index: realIndex });
+						realIndex++;
 					}
 				}
 			});
@@ -307,6 +311,29 @@ export function createLTree<T>(
 			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
 
 			this.createFilteredTree(foundPaths);
+		},
+
+		searchNodes(_searchText: string | null | undefined): LTreeNode<T>[] {
+			if (this.shouldDisplayDebugInformation)
+				console.log(`[Tree ${_treeId}] Searching nodes by:`, _searchText);
+
+			if (isEmptyString(_searchText)) {
+				return [];
+			}
+
+			if (!_shouldUseInternalSearchIndex) {
+				if (this.shouldDisplayDebugInformation)
+					console.warn(`[Tree ${_treeId}] Internal search index is disabled`);
+				return [];
+			}
+
+			const resultIndices = searchIndex.search(_searchText);
+			const foundNodes = resultIndices.map((row) => flatTreeNodes[row]);
+
+			if (this.shouldDisplayDebugInformation)
+				console.warn(`[Tree ${_treeId}] Search found ${foundNodes?.length || 0} nodes`);
+
+			return foundNodes;
 		},
 
 		createFilteredTree(targetPaths: string[]): void {
@@ -520,8 +547,6 @@ export function createLTree<T>(
 		refresh(): void {
 			this._emitTreeChanged();
 		},
-
-
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
 			return items.sort((a, b) => {

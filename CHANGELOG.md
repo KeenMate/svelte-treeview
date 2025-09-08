@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-01-08
+
+### Added
+- **searchNodes() Method**: New public method `searchNodes(searchText)` that returns an array of matching nodes without filtering the tree display
+  - Programmatically search nodes using the internal search index
+  - Returns `LTreeNode<T>[]` array of matching nodes
+  - Useful for building custom search interfaces, suggestions, and result summaries
+- **Configurable Path Separators**: New `treePathSeparator` property allows custom hierarchical path separators
+  - Default remains `"."` for backward compatibility (e.g., "1.2.3")
+  - Support for custom separators like `"/"` for file system style paths (e.g., "1/src/components")
+  - All path operations throughout the component respect the custom separator
+- **Data Structure Showcase Page**: New comprehensive `/data-structure` showcase page with four detailed sections:
+  - **LTree Path Structure**: Understanding path-based hierarchical data model
+  - **Optimized Data Structure**: Precomputed values for better performance
+  - **Custom Path Separators**: Live demo with file system style paths using "/" separator
+  - **External Search & Data Management**: Managing search outside the tree component
+  - **Invalid Data Structures**: Common mistakes and unsupported patterns
+- **Enhanced Search Showcase**: Added new `searchNodes()` method demonstration section to `/search` page
+  - Interactive search interface showing difference between `searchNodes()` and `filterNodes()`
+  - Live examples with result display and usage patterns
+
+### Changed
+- **Documentation Updates**: Updated README.md, CLAUDE.md, and showcase pages with new features
+  - Added `searchNodes` to public methods documentation
+  - Added `treePathSeparator` to Tree Configuration properties table
+  - Updated architecture description to reflect configurable separators
+  - Fixed path requirements documentation to clarify separator flexibility
+- **Navigation Enhancement**: Added "Data Structure" page to sidebar navigation with 🗂️ icon
+
+### Enhanced
+- **Type System**: Updated `Ltree<T>` interface to include `searchNodes` method signature
+- **Internal Architecture**: Enhanced `createLTree` function to accept configurable `treePathSeparator` parameter
+- **Component Integration**: Updated `Tree.svelte` component to pass through `treePathSeparator` property
+
+### Documentation
+- **Comprehensive Examples**: Added working code examples for both basic and advanced use cases
+- **Path Separator Flexibility**: Clarified that paths don't need to be dot-separated, can use any consistent separator
+- **External Data Management**: Detailed examples of filtering data outside the tree component
+- **Performance Optimization**: Guidelines for when to use precomputed values vs automatic calculations
+
 ## [4.0.0-rc.07] - 2025-01-06
 
 ### Added

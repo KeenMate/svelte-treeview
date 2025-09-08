@@ -51,6 +51,8 @@ export interface Ltree<T> {
 
 	filterNodes(_searchText: string): void;
 
+	searchNodes(_searchText: string | null | undefined): LTreeNode<T>[];
+
 	createFilteredTree(targetPaths: string[]): void;
 
 	clearFilter(): void;

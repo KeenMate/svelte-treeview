@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Tree } from '$lib/index.js';
 	import ShowcaseSection from '../ShowcaseSection.svelte';
-	
+
 	// Source data - draggable items
 	const sourceData = [
 		{ id: 's1', path: '1', name: '📋 Task Board', type: 'container', isDraggable: true, isDropAllowed: false },
@@ -15,7 +15,7 @@
 		{ id: 's9', path: '2.2', name: '🖼️ Image Assets', type: 'resource', isDraggable: true, isDropAllowed: false },
 		{ id: 's10', path: '2.3', name: '🎯 Brand Guidelines', type: 'resource', isDraggable: true, isDropAllowed: false }
 	];
-	
+
 	// Target data - drop zones
 	let targetData = $state([
 		{ id: 't1', path: '1', name: '📋 Project Status', type: 'container', isDraggable: false, isDropAllowed: true },
@@ -27,30 +27,30 @@
 		{ id: 't7', path: '2.2', name: '🔧 Backend Team', type: 'team', isDraggable: false, isDropAllowed: true, items: [] },
 		{ id: 't8', path: '2.3', name: '🎨 Design Team', type: 'team', isDraggable: false, isDropAllowed: true, items: [] }
 	]);
-	
+
 	// Drag state tracking
 	let draggedNode = $state(null);
 	let dropHistory = $state([]);
-	
+
 	// Event handlers
 	function handleDragStart(node, event) {
 		draggedNode = node;
 		console.log('Drag started:', node.data.name);
-		
+
 		// Set drag effect
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', node.data.name);
-		
+
 		// Add visual feedback
 		if (event.target) {
 			event.target.style.opacity = '0.5';
 		}
 	}
-	
+
 	function handleDragOver(node, event) {
 		// Prevent default to allow drop
 		event.preventDefault();
-		
+
 		// Validate drop target
 		if (node.data.isDropAllowed) {
 			event.dataTransfer.dropEffect = 'move';
@@ -58,15 +58,15 @@
 			event.dataTransfer.dropEffect = 'none';
 		}
 	}
-	
+
 	function handleDrop(dropNode, draggedNode, event) {
 		event.preventDefault();
-		
+
 		if (!dropNode.data.isDropAllowed) {
 			console.log('Drop not allowed on:', dropNode.data.name);
 			return;
 		}
-		
+
 		// Add to drop history
 		dropHistory.push({
 			id: Date.now(),
@@ -74,28 +74,28 @@
 			dropTarget: dropNode.data.name,
 			timestamp: new Date().toLocaleTimeString()
 		});
-		
+
 		// Keep only last 10 entries
 		if (dropHistory.length > 10) {
 			dropHistory = dropHistory.slice(-10);
 		}
-		
+
 		console.log(`Dropped "${draggedNode.data.name}" onto "${dropNode.data.name}"`);
-		
+
 		// Reset drag styles
 		const draggedElement = document.querySelector('[style*="opacity: 0.5"]');
 		if (draggedElement) {
 			draggedElement.style.opacity = '';
 		}
 	}
-	
+
 	// Sort callback
 	const sortCallback = (items) => {
 		return items.sort((a, b) => {
 			const typeOrder = { container: 0, status: 1, team: 1, task: 2, resource: 2 };
 			const aOrder = typeOrder[a.data.type] || 3;
 			const bOrder = typeOrder[b.data.type] || 3;
-			
+
 			if (aOrder !== bOrder) {
 				return aOrder - bOrder;
 			}
@@ -104,7 +104,7 @@
 	};
 </script>
 
-<div class="container">
+<div class="container-fluid">
 	<div class="row mb-4">
 		<div class="col-12">
 			<h1>Drag & Drop</h1>
@@ -112,14 +112,14 @@
 		</div>
 	</div>
 
-	<ShowcaseSection 
-		title="Basic Drag & Drop" 
+	<ShowcaseSection
+		title="Basic Drag & Drop"
 		subtitle="Drag tasks from the source tree to the target tree">
 		{#snippet demo()}
 			<div class="row">
 				<div class="col-6">
 					<h6 class="text-primary mb-3">📦 Source (Draggable Items)</h6>
-					<Tree 
+					<Tree
 						data={sourceData}
 						idMember="id"
 						pathMember="path"
@@ -141,10 +141,10 @@
 						{/snippet}
 					</Tree>
 				</div>
-				
+
 				<div class="col-6">
 					<h6 class="text-success mb-3">🎯 Target (Drop Zones)</h6>
-					<Tree 
+					<Tree
 						data={targetData}
 						idMember="id"
 						pathMember="path"
@@ -168,7 +168,7 @@
 				</div>
 			</div>
 		{/snippet}
-		
+
 		{#snippet controls()}
 			<div class="mb-3">
 				<h6>🎯 Currently Dragging:</h6>
@@ -181,7 +181,7 @@
 					<div class="text-muted">No item being dragged</div>
 				{/if}
 			</div>
-			
+
 			<div class="mb-3">
 				<h6>📋 Drop History:</h6>
 				{#if dropHistory.length > 0}
@@ -200,27 +200,27 @@
 				{/if}
 			</div>
 		{/snippet}
-		
+
 		{#snippet description()}
 			<h6>Drag & Drop Events</h6>
 			<p><code>onNodeDragStart</code> - Fired when dragging begins</p>
 			<p><code>onNodeDragOver</code> - Fired when hovering over potential targets</p>
 			<p><code>onNodeDrop</code> - Fired when item is dropped</p>
-			
+
 			<h6>Property Configuration</h6>
 			<p><code>isDraggableMember</code> - Property defining which nodes can be dragged</p>
 			<p><code>isDropAllowedMember</code> - Property defining valid drop targets</p>
-			
+
 			<h6>Event Data</h6>
 			<p>All events receive the node object and native drag event, allowing full customization of drag behavior.</p>
-			
+
 			<h6>Visual Feedback</h6>
 			<p>Use CSS classes and drag event properties to provide visual cues during drag operations.</p>
 		{/snippet}
 	</ShowcaseSection>
 
-	<ShowcaseSection 
-		title="Drag Validation & Styling" 
+	<ShowcaseSection
+		title="Drag Validation & Styling"
 		subtitle="Custom validation logic and visual feedback">
 		{#snippet demo()}
 			<div class="bg-light p-3 rounded">
@@ -233,7 +233,7 @@
 				</ul>
 			</div>
 		{/snippet}
-		
+
 		{#snippet controls()}
 			<div class="code-example">
 				<h6>Event Handler Example:</h6>
@@ -242,26 +242,26 @@
   if (!dropNode.data.isDropAllowed) {
     return; // Reject drop
   }
-  
+
   // Custom business logic
-  if (draggedNode.data.type === 'task' && 
+  if (draggedNode.data.type === 'task' &&
       dropNode.data.type === 'status') {
     // Allow task → status drops
     updateTaskStatus(draggedNode, dropNode);
   }
-  
+
   // Log the action
-  console.log(\`Moved \${draggedNode.data.name} 
+  console.log(\`Moved \${draggedNode.data.name}
     to \${dropNode.data.name}\`);
 }`}</code></pre>
 			</div>
 		{/snippet}
-		
+
 		{#snippet description()}
 			<h6>Validation Approaches</h6>
 			<p><strong>Property-based:</strong> Use <code>isDropAllowed</code> for simple validation</p>
 			<p><strong>Event-based:</strong> Implement custom logic in <code>onNodeDrop</code> handler</p>
-			
+
 			<h6>Visual States</h6>
 			<p>Apply CSS classes based on drag state:</p>
 			<ul class="small">
@@ -269,7 +269,7 @@
 				<li><code>.drop-zone</code> - Highlight valid drop targets</li>
 				<li><code>.drag-over</code> - Show hover state during drag</li>
 			</ul>
-			
+
 			<h6>Business Logic Integration</h6>
 			<p>Drop events can trigger state updates, API calls, or other application logic.</p>
 		{/snippet}
@@ -281,38 +281,38 @@
 		cursor: grab;
 		transition: all 0.2s ease;
 	}
-	
+
 	.draggable-item:hover {
 		background-color: #e3f2fd;
 		border-radius: 0.25rem;
 	}
-	
+
 	.drop-zone {
 		border: 2px dashed transparent;
 		transition: all 0.2s ease;
 	}
-	
+
 	.drop-zone:hover {
 		border-color: #28a745;
 		background-color: #f8fff8;
 		border-radius: 0.25rem;
 	}
-	
+
 	.drop-history {
 		max-height: 300px;
 		overflow-y: auto;
 	}
-	
+
 	.code-example pre {
 		font-size: 0.8rem;
 		line-height: 1.4;
 		white-space: pre-wrap;
 	}
-	
+
 	:global(.ltree-node[draggable="true"]) {
 		cursor: grab;
 	}
-	
+
 	:global(.ltree-node[draggable="true"]:active) {
 		cursor: grabbing;
 	}

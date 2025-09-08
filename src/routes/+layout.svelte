@@ -7,6 +7,7 @@
 	const navItems = [
 		{ href: '/', label: 'Home', icon: '🏠' },
 		{ href: '/basic', label: 'Basic', icon: '🌳' },
+		{ href: '/data-structure', label: 'Data Structure', icon: '🗂️' },
 		{ href: '/search', label: 'Search', icon: '🔍' },
 		{ href: '/drag-drop', label: 'Drag & Drop', icon: '🔄' },
 		{ href: '/context-menu', label: 'Context Menu', icon: '📝' },

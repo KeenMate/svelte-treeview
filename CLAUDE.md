@@ -18,7 +18,7 @@ COMMANDS:
 - npm run lint
 
 ARCHITECTURE:
-- Path-based hierarchy: "1", "1.1", "1.2.3"
+- Path-based hierarchy: "1", "1.1", "1.2.3" (separator configurable via treePathSeparator)
 - Internal segment prefix: 'x' (for object key ordering)
 - Async search indexing via requestIdleCallback
 - Optional FlexSearch integration
@@ -53,9 +53,11 @@ TREE_PROPS_KEY:
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
+- treePathSeparator: string (default ".")
 
 PUBLIC_METHODS:
 - expandNodes(path), collapseNodes(path), expandAll(), collapseAll()
+- searchNodes(searchText) - search nodes using internal index and return matching nodes
 - scrollToPath(path, options)
 
 EVENTS: 

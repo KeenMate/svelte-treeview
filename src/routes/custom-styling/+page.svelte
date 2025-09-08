@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Tree } from '$lib/index.js';
 	import ShowcaseSection from '../ShowcaseSection.svelte';
-	
+
 	// Sample data
 	const styleData = [
 		{ id: '1', path: '1', name: 'Design System', type: 'category', priority: 'high' },
@@ -18,16 +18,16 @@
 		{ id: '2.2', path: '2.2', name: 'Forms', type: 'component', priority: 'medium' },
 		{ id: '2.3', path: '2.3', name: 'Navigation', type: 'component', priority: 'low' }
 	];
-	
+
 	// Styling options
 	let selectedNodeClass = $state('ltree-selected-bold');
 	let expandIconClass = $state('ltree-icon-expand');
-	let collapseIconClass = $state('ltree-icon-collapse'); 
+	let collapseIconClass = $state('ltree-icon-collapse');
 	let leafIconClass = $state('ltree-icon-leaf');
 	let scrollHighlightClass = $state('ltree-scroll-highlight');
 	let scrollHighlightTimeout = $state(4000);
 	let customTheme = $state('default');
-	
+
 	// Available options
 	const selectedNodeStyles = [
 		{ value: 'ltree-selected-bold', label: 'Bold Primary', description: 'Bold text in primary color' },
@@ -35,23 +35,23 @@
 		{ value: 'ltree-selected-brackets', label: 'Decorative Brackets', description: 'Brackets around text' },
 		{ value: 'custom-gradient', label: 'Custom Gradient', description: 'Custom gradient background' }
 	];
-	
+
 	const highlightStyles = [
 		{ value: 'ltree-scroll-highlight', label: 'Background Glow', description: 'Blue background glow' },
 		{ value: 'ltree-scroll-highlight-arrow', label: 'Arrow Indicator', description: 'Red arrow on the left' },
 		{ value: 'custom-pulse', label: 'Custom Pulse', description: 'Custom pulse animation' }
 	];
-	
+
 	const themes = [
 		{ value: 'default', label: 'Default', description: 'Standard tree styling' },
 		{ value: 'dark', label: 'Dark Mode', description: 'Dark background theme' },
 		{ value: 'minimal', label: 'Minimal', description: 'Clean, minimal styling' },
 		{ value: 'colorful', label: 'Colorful', description: 'Vibrant color scheme' }
 	];
-	
+
 	// Tree reference for scrollToPath demo
 	let treeRef = $state();
-	
+
 	// Scroll to path demo
 	async function scrollToPath() {
 		if (treeRef) {
@@ -61,14 +61,14 @@
 			});
 		}
 	}
-	
+
 	// Sort callback
 	const sortCallback = (items) => {
 		return items.sort((a, b) => {
 			const typeOrder = { category: 0, section: 1, component: 1, element: 2, color: 2 };
 			const aOrder = typeOrder[a.data.type] || 3;
 			const bOrder = typeOrder[b.data.type] || 3;
-			
+
 			if (aOrder !== bOrder) {
 				return aOrder - bOrder;
 			}
@@ -77,7 +77,7 @@
 	};
 </script>
 
-<div class="container">
+<div class="container-fluid">
 	<div class="row mb-4">
 		<div class="col-12">
 			<h1>Custom Styling</h1>
@@ -85,12 +85,12 @@
 		</div>
 	</div>
 
-	<ShowcaseSection 
-		title="Selected Node Styles" 
+	<ShowcaseSection
+		title="Selected Node Styles"
 		subtitle="Different ways to highlight selected nodes">
 		{#snippet demo()}
 			<div class="tree-container {customTheme}">
-				<Tree 
+				<Tree
 					bind:this={treeRef}
 					data={styleData}
 					idMember="id"
@@ -122,7 +122,7 @@
 				</Tree>
 			</div>
 		{/snippet}
-		
+
 		{#snippet controls()}
 			<div class="form-group mb-3">
 				<label class="form-label">Selected Node Style</label>
@@ -135,7 +135,7 @@
 					{selectedNodeStyles.find(s => s.value === selectedNodeClass)?.description}
 				</small>
 			</div>
-			
+
 			<div class="form-group mb-3">
 				<label class="form-label">Theme</label>
 				<select class="form-select form-select-sm" bind:value={customTheme}>
@@ -147,7 +147,7 @@
 					{themes.find(t => t.value === customTheme)?.description}
 				</small>
 			</div>
-			
+
 			<div class="form-group mb-3">
 				<label class="form-label">Scroll Highlight</label>
 				<select class="form-select form-select-sm" bind:value={scrollHighlightClass}>
@@ -159,44 +159,44 @@
 					{highlightStyles.find(s => s.value === scrollHighlightClass)?.description}
 				</small>
 			</div>
-			
+
 			<div class="form-group mb-3">
 				<label class="form-label">Highlight Duration (ms)</label>
-				<input 
-					type="number" 
-					class="form-control form-control-sm" 
+				<input
+					type="number"
+					class="form-control form-control-sm"
 					bind:value={scrollHighlightTimeout}
 					min="1000"
 					max="10000"
 					step="500"
 				/>
 			</div>
-			
+
 			<button class="btn btn-primary btn-sm" onclick={scrollToPath}>
 				Test Scroll Highlight
 			</button>
 		{/snippet}
-		
+
 		{#snippet description()}
 			<h6>Pre-built Selected Node Classes</h6>
 			<p><code>ltree-selected-bold</code> - Bold text with primary color</p>
 			<p><code>ltree-selected-border</code> - Border and background highlight</p>
 			<p><code>ltree-selected-brackets</code> - Decorative brackets around text</p>
-			
+
 			<h6>Scroll Highlight Effects</h6>
 			<p><code>ltree-scroll-highlight</code> - Background glow animation</p>
 			<p><code>ltree-scroll-highlight-arrow</code> - Arrow indicator</p>
-			
+
 			<h6>Icon Customization</h6>
 			<p>Configure expand, collapse, and leaf icons via CSS classes.</p>
-			
+
 			<h6>Node Templates</h6>
 			<p>Use the <code>nodeTemplate</code> snippet for complete custom rendering.</p>
 		{/snippet}
 	</ShowcaseSection>
 
-	<ShowcaseSection 
-		title="CSS Variables & Theming" 
+	<ShowcaseSection
+		title="CSS Variables & Theming"
 		subtitle="Customize colors and spacing with CSS custom properties">
 		{#snippet demo()}
 			<div class="css-variables-demo">
@@ -229,7 +229,7 @@
 				</div>
 			</div>
 		{/snippet}
-		
+
 		{#snippet controls()}
 			<div class="code-example">
 				<h6>CSS Variable Override Example:</h6>
@@ -252,17 +252,17 @@
 }`}</code></pre>
 			</div>
 		{/snippet}
-		
+
 		{#snippet description()}
 			<h6>CSS Custom Properties</h6>
 			<p>Override default colors and spacing using CSS variables for consistent theming.</p>
-			
+
 			<h6>SCSS Variables</h6>
 			<p>When building from SCSS source, override variables before importing library styles.</p>
-			
+
 			<h6>Theme Implementation</h6>
 			<p>Use CSS classes or data attributes to implement theme switching.</p>
-			
+
 			<h6>Component-Specific Styling</h6>
 			<ul class="small">
 				<li><code>.ltree-tree</code> - Main container</li>
@@ -280,45 +280,45 @@
 		padding: 1rem;
 		transition: all 0.3s ease;
 	}
-	
+
 	.tree-container.default {
 		background: #ffffff;
 		border: 1px solid #dee2e6;
 	}
-	
+
 	.tree-container.dark {
 		background: #2d3748;
 		border: 1px solid #4a5568;
 		color: #e2e8f0;
 	}
-	
+
 	.tree-container.minimal {
 		background: #fafafa;
 		border: none;
 		box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 	}
-	
+
 	.tree-container.colorful {
 		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 		border: none;
 		color: white;
 	}
-	
+
 	.custom-node {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 	}
-	
+
 	.node-icon {
 		font-size: 1rem;
 	}
-	
+
 	.node-name {
 		flex: 1;
 		font-weight: 500;
 	}
-	
+
 	.priority-badge {
 		font-size: 0.7rem;
 		padding: 0.2rem 0.4rem;
@@ -326,26 +326,26 @@
 		text-transform: uppercase;
 		font-weight: 600;
 	}
-	
+
 	.badge-high {
 		background: #dc3545;
 		color: white;
 	}
-	
+
 	.badge-medium {
 		background: #fd7e14;
 		color: white;
 	}
-	
+
 	.badge-low {
 		background: #6c757d;
 		color: white;
 	}
-	
+
 	.priority-high .node-name {
 		font-weight: 600;
 	}
-	
+
 	/* Custom selected node style */
 	:global(.custom-gradient.ltree-selected) {
 		background: linear-gradient(90deg, #667eea, #764ba2);
@@ -353,7 +353,7 @@
 		border-radius: 0.25rem;
 		padding: 0.25rem 0.5rem;
 	}
-	
+
 	/* Custom pulse animation */
 	:global(.custom-pulse) {
 		animation: customPulse 2s infinite;
@@ -362,47 +362,47 @@
 		padding: 0.5rem;
 		transform: scale(1.05);
 	}
-	
+
 	@keyframes customPulse {
-		0%, 100% { 
+		0%, 100% {
 			box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
 		}
-		50% { 
+		50% {
 			box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
 		}
 	}
-	
+
 	.css-variables-demo {
 		background: #f8f9fa;
 		border-radius: 0.5rem;
 		padding: 1rem;
 	}
-	
+
 	.variables-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 		gap: 1rem;
 		margin-top: 1rem;
 	}
-	
+
 	.variable-item {
 		background: white;
 		padding: 0.75rem;
 		border-radius: 0.25rem;
 		border: 1px solid #dee2e6;
 	}
-	
+
 	.variable-item code {
 		display: block;
 		font-weight: 600;
 		color: #0066cc;
 		margin-bottom: 0.25rem;
 	}
-	
+
 	.variable-item small {
 		color: #6c757d;
 	}
-	
+
 	.code-example pre {
 		font-size: 0.8rem;
 		line-height: 1.4;
@@ -410,21 +410,21 @@
 		max-height: 300px;
 		overflow-y: auto;
 	}
-	
+
 	/* Dark theme styles */
 	.dark :global(.ltree-node-content) {
 		color: #e2e8f0;
 	}
-	
+
 	.dark :global(.ltree-node-content:hover) {
 		background-color: rgba(255, 255, 255, 0.1);
 	}
-	
+
 	/* Colorful theme styles */
 	.colorful :global(.ltree-node-content) {
 		color: white;
 	}
-	
+
 	.colorful :global(.ltree-selected-bold) {
 		color: #ffd93d;
 		font-weight: 700;

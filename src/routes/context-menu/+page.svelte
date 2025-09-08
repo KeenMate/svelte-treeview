@@ -47,7 +47,7 @@
 	};
 </script>
 
-<div class="container">
+<div class="container-fluid">
 	<div class="row mb-4">
 		<div class="col-12">
 			<h1>Context Menus</h1>

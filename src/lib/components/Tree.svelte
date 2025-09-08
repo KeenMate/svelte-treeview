@@ -37,6 +37,7 @@
 		getSearchValueCallback?: (node: LTreeNode<T>) => string;
 
 		treeId?: string | null | undefined;
+		treePathSeparator?: string | null | undefined;
 		sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
 
 		// DATA
@@ -79,6 +80,7 @@
 
 	let {
 		treeId,
+		treePathSeparator,
 
 		// MAPPINGS
 		idMember,
@@ -160,6 +162,10 @@
 
 	export function collapseAll(nodePath?: string | null | undefined) {
 		tree?.collapseAll(nodePath);
+	}
+
+	export function searchNodes(searchText: string | null | undefined): LTreeNode<T>[] {
+		return tree?.searchNodes(searchText) || [];
 	}
 
 	export async function scrollToPath(
@@ -244,6 +250,7 @@
 		searchValueMember,
 		getSearchValueCallback,
 		treeId,
+		treePathSeparator,
 
 		expandLevel,
 
