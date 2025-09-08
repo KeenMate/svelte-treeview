@@ -49,7 +49,8 @@ TREE_PROPS_REQUIRED:
 
 TREE_PROPS_KEY:
 - searchText (bindable)
-- selectedNode (bindable) 
+- selectedNode (bindable)
+- insertResult (bindable) - InsertArrayResult<T> with failed nodes info
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)

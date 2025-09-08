@@ -3,7 +3,7 @@
 	import Node from './Node.svelte';
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
-	import { type Ltree } from '../ltree/types.js';
+	import { type Ltree, type InsertArrayResult } from '../ltree/types.js';
 	import { setContext, tick } from 'svelte';
 
 	// Context menu state
@@ -43,6 +43,7 @@
 		// DATA
 		data: T[];
 		selectedNode?: LTreeNode<T> | null | undefined;
+		insertResult?: InsertArrayResult<T> | null | undefined;
 
 		// SLOTS
 		nodeTemplate?: any;
@@ -104,6 +105,7 @@
 		// DATA
 		data = $bindable(),
 		selectedNode = $bindable(),
+		insertResult = $bindable(),
 
 		// SLOTS
 		nodeTemplate,
@@ -272,7 +274,9 @@
 	});
 
 	$effect(() => {
-		tree?.insertArray(data);
+		if (tree && data) {
+			insertResult = tree.insertArray(data);
+		}
 	});
 
 	// $inspect("trie change tracker", trie?.changeTracker?.toString());

@@ -3,6 +3,16 @@ import type { LTreeNode } from './ltree-node.svelte';
 
 export type Tuple<T, U> = [T, U];
 
+export interface InsertArrayResult<T> {
+	successful: number;
+	failed: Array<{
+		node: LTreeNode<T>;
+		originalData: T;
+		error: string;
+	}>;
+	total: number;
+}
+
 export interface Ltree<T> {
 	// Properties (readonly getters)
 	treePathSeparator: string;
@@ -45,7 +55,7 @@ export interface Ltree<T> {
 	get tree(): LTreeNode<T>[];
 	get statistics(): { nodeCount: number; maxLevel: number };
 
-	insertArray(data: T[]): void;
+	insertArray(data: T[]): InsertArrayResult<T>;
 
 	insertTreeNode(parentPath: string, newNode: LTreeNode<T>, noEmitChanges?: boolean): string | null;
 

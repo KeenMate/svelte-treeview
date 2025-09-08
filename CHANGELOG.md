@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enhanced Search Showcase**: Added new `searchNodes()` method demonstration section to `/search` page
   - Interactive search interface showing difference between `searchNodes()` and `filterNodes()`
   - Live examples with result display and usage patterns
+- **Insert Result Information**: New `insertResult` bindable property provides detailed information about data insertion
+  - `InsertArrayResult<T>` interface with successful count and failed nodes array
+  - Each failed node includes original data, processed node, and error message
+  - Useful for data validation, debugging, and handling incomplete datasets
 
 ### Changed
 - **Documentation Updates**: Updated README.md, CLAUDE.md, and showcase pages with new features

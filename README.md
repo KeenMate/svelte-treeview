@@ -325,6 +325,7 @@ Without both requirements, no search indexing will occur.
 | `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
 | `treePathSeparator` | `string \| null` | `"."` | Separator character for hierarchical paths (e.g., "." for "1.2.3" or "/" for "1/2/3") |
 | `selectedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently selected node |
+| `insertResult` | `InsertArrayResult<T>` (bindable) | `undefined` | Result of the last data insertion including failed nodes |
 
 #### Behavior Properties
 | Prop | Type | Default | Description |
@@ -542,6 +543,65 @@ interface NodeData {
 - Root level: `"1"`, `"2"`, `"3"`
 - Second level: `"1.1"`, `"1.2"`, `"2.1"`
 - Third level: `"1.1.1"`, `"1.2.1"`, `"2.1.1"`
+
+### Insert Result Information
+
+The tree provides detailed information about data insertion through the `insertResult` bindable property:
+
+```typescript
+interface InsertArrayResult<T> {
+  successful: number;     // Number of nodes successfully inserted
+  failed: Array<{        // Nodes that failed to insert
+    node: LTreeNode<T>;  // The processed tree node
+    originalData: T;     // The original data object
+    error: string;       // Error message (usually "Could not find parent...")
+  }>;
+  total: number;         // Total number of nodes processed
+}
+```
+
+#### Usage Example
+
+```svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+  
+  let insertResult = $state();
+  
+  const data = [
+    { id: '1', path: '1', name: 'Root' },
+    { id: '1.2', path: '1.2', name: 'Child' },    // Missing parent "1.1"
+    { id: '1.1.1', path: '1.1.1', name: 'Deep' } // Missing parent "1.1"
+  ];
+  
+  // Check results after tree processes data
+  $effect(() => {
+    if (insertResult) {
+      console.log(`✅ ${insertResult.successful} nodes inserted successfully`);
+      console.log(`❌ ${insertResult.failed.length} nodes failed to insert`);
+      
+      insertResult.failed.forEach(failure => {
+        console.log(`Failed: ${failure.originalData.name} - ${failure.error}`);
+      });
+    }
+  });
+</script>
+
+<Tree 
+  {data} 
+  idMember="id" 
+  pathMember="path" 
+  displayValueMember="name"
+  bind:insertResult
+/>
+```
+
+#### Benefits
+
+- **Data Validation**: Identify missing parent nodes in hierarchical data
+- **Debugging**: Understand why certain nodes don't appear in the tree
+- **Data Integrity**: Handle incomplete datasets gracefully
+- **User Feedback**: Inform users about data issues
 
 ## 🚀 Performance
 

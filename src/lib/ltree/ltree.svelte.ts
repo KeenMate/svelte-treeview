@@ -10,7 +10,7 @@ import {
 	getRelativePath
 } from '../helpers/ltree-helpers.js';
 
-import type { Ltree, Tuple } from './types.js';
+import type { Ltree, Tuple, InsertArrayResult } from './types.js';
 import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
 
@@ -143,7 +143,7 @@ export function createLTree<T>(
 			);
 		},
 
-		insertArray: function (data: T[], noEmitChanges: boolean = false) {
+		insertArray: function (data: T[], noEmitChanges: boolean = false): InsertArrayResult<T> {
 			data = data || [];
 
 			// Clear any pending indexing from previous calls
@@ -194,17 +194,22 @@ export function createLTree<T>(
 
 			performance.mark('insert-start');
 
-			const errors: string[] = [];
-
+			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [];
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
 
 			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
+			let successfulCount = 0;
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
 				if (result) {
-					errors.push(result);
+					failedNodes.push({
+						node: node,
+						originalData: data[index],
+						error: result
+					});
 				} else {
+					successfulCount++;
 					// Collect items for batch indexing
 					if (_shouldUseInternalSearchIndex && indexer) {
 						itemsToIndex.push({ node, index: realIndex });
@@ -212,7 +217,12 @@ export function createLTree<T>(
 					}
 				}
 			});
-			if (errors.length > 0) console.warn(`[Tree ${_treeId}]`, errors);
+			
+			// Log errors for backward compatibility and debugging
+			if (failedNodes.length > 0) {
+				const errorMessages = failedNodes.map(f => f.error);
+				console.warn(`[Tree ${_treeId}] ${failedNodes.length} nodes failed to insert:`, errorMessages);
+			}
 
 			// Batch add items to indexer
 			if (itemsToIndex.length > 0 && indexer) {
@@ -246,6 +256,12 @@ export function createLTree<T>(
 
 			measure = performance.getEntriesByName('insert-duration')[0];
 			console.log(`[Tree ${_treeId}] Insert took: ${measure.duration}ms`);
+
+			return {
+				successful: successfulCount,
+				failed: failedNodes,
+				total: data.length
+			};
 		},
 
 		insertTreeNode: function (
