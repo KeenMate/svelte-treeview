@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-01-08
+## [4.0.0-rc.08] - 2025-01-08
 
 ### Added
 - **searchNodes() Method**: New public method `searchNodes(searchText)` that returns an array of matching nodes without filtering the tree display
@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `InsertArrayResult<T>` interface with successful count and failed nodes array
   - Each failed node includes original data, processed node, and error message
   - Useful for data validation, debugging, and handling incomplete datasets
+- **Drag-over Visual Feedback**: New `dragOverNodeClass` property for highlighting nodes during drag operations
+  - Two built-in classes: `ltree-dragover-highlight` (dashed border) and `ltree-dragover-glow` (shadow effect)
+  - Automatic state management with proper drag event handling
+  - Provides clear visual feedback for drop targets during drag-and-drop operations
 
 ### Changed
 - **Documentation Updates**: Updated README.md, CLAUDE.md, and showcase pages with new features

@@ -190,6 +190,31 @@ $body-color: #212529 !default;
 	}
 }
 
+// Drag-over Node Styles
+.ltree-dragover-highlight {
+	background-color: rgba(var(--ltree-success-rgb), 0.15) !important;
+	border: 2px dashed var(--ltree-success) !important;
+	border-radius: 4px !important;
+}
+
+.ltree-dragover-glow {
+	background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
+	box-shadow: 0 0 8px rgba(var(--ltree-primary-rgb), 0.4) !important;
+	border-radius: 4px !important;
+}
+
+@keyframes bounce {
+	0%, 20%, 50%, 80%, 100% {
+		transform: translateY(-50%);
+	}
+	40% {
+		transform: translateY(-60%);
+	}
+	60% {
+		transform: translateY(-40%);
+	}
+}
+
 // Drag and Drop Styles
 .ltree-draggable {
 	cursor: grab;

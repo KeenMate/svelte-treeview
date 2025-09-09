@@ -72,6 +72,7 @@
 		// VISUALS
 		bodyClass?: string | null | undefined;
 		selectedNodeClass?: string | null | undefined;
+		dragOverNodeClass?: string | null | undefined;
 		expandIconClass?: string | null | undefined;
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
@@ -137,6 +138,7 @@
 		collapseIconClass = 'ltree-icon-collapse',
 		leafIconClass = 'ltree-icon-leaf',
 		selectedNodeClass,
+		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
 		scrollHighlightClass = 'ltree-scroll-highlight'
 	}: Props = $props();
@@ -460,6 +462,7 @@
 							{collapseIconClass}
 							{leafIconClass}
 							{selectedNodeClass}
+							{dragOverNodeClass}
 							isDraggedNode={draggedNode === node}
 						/>
 					{:else}

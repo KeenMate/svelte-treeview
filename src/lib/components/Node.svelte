@@ -22,6 +22,7 @@
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
 		selectedNodeClass?: string | null | undefined;
+		dragOverNodeClass?: string | null | undefined;
 		isDraggedNode?: boolean | null | undefined;
 	}
 
@@ -43,10 +44,14 @@
 		collapseIconClass = "ltree-icon-collapse",
 		leafIconClass = "ltree-icon-leaf",
 		selectedNodeClass,
+		dragOverNodeClass,
 		isDraggedNode = false,
 	}: Props = $props()
 
 	const trie = getContext<Ltree<T>>("Ltree")
+
+	// Drag over state
+	let isDraggedOver = $state(false);
 
 	// Convert reactive statements to derived values
 	const childrenWithData = $derived(Object.values(node?.children || []))
@@ -96,7 +101,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''}"
+			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''} {isDraggedOver && dragOverNodeClass ? dragOverNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
 			class:ltree-draggable={node?.isDraggable}
@@ -125,12 +130,25 @@
 				}
 			}}
 			ondragover={(e) => {
-				if (e.dataTransfer?.types.includes("application/svelte-treeview"))
+				if (e.dataTransfer?.types.includes("application/svelte-treeview")) {
 					e.preventDefault();
+					isDraggedOver = true;
+				}
 				onNodeDragOver?.(node, e);
+			}}
+			ondragleave={(e) => {
+				// Only reset if we're actually leaving the node (not entering a child)
+				const rect = e.currentTarget.getBoundingClientRect();
+				const x = e.clientX;
+				const y = e.clientY;
+				
+				if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+					isDraggedOver = false;
+				}
 			}}
 			ondrop={(e) => {
 				e.stopPropagation();
+				isDraggedOver = false;
 				onNodeDrop?.(node, e);
 			}}
 		>
@@ -158,6 +176,7 @@
 					{collapseIconClass}
 					{leafIconClass}
 					{selectedNodeClass}
+					{dragOverNodeClass}
 					{isDraggedNode}
 				/>
 			{/each}

@@ -183,6 +183,7 @@ import '@keenmate/svelte-treeview/styles.scss';
       data={targetData}
       idMember="path"
       pathMember="path"
+      dragOverNodeClass="ltree-dragover-highlight"
       onNodeDrop={onDrop}
     />
   </div>
@@ -234,6 +235,7 @@ $primary-color: #custom-color;
 - `.ltree-node-content` - Node content area
 - `.ltree-toggle-icon` - Expand/collapse icons
 - `.ltree-selected-*` - Selected node styles
+- `.ltree-dragover-*` - Drag-over node styles
 - `.ltree-draggable` - Draggable nodes
 - `.ltree-context-menu` - Context menu styling
 - `.ltree-drag-over` - Applied during drag operations
@@ -259,6 +261,13 @@ The component includes several pre-built classes for styling selected nodes:
 | `ltree-selected-bold` | Bold text with primary color | **Bold text** in theme primary color |
 | `ltree-selected-border` | Border and background highlight | Solid border with light background |
 | `ltree-selected-brackets` | Decorative brackets around text | ❯ **Node Text** ❮ |
+
+**Available Drag-over Node Classes:**
+
+| Class | Description | Visual Effect |
+|-------|-------------|---------------|
+| `ltree-dragover-highlight` | Dashed border with success color background | Green dashed border with subtle background |
+| `ltree-dragover-glow` | Blue glow effect | Glowing shadow effect with primary color theme |
 
 ### Custom Icon Classes
 
@@ -351,6 +360,7 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `bodyClass` | `string \| null` | `undefined` | CSS class for tree body |
 | `selectedNodeClass` | `string \| null` | `undefined` | CSS class for selected nodes |
+| `dragOverNodeClass` | `string \| null` | `undefined` | CSS class for nodes being dragged over |
 | `expandIconClass` | `string \| null` | `"ltree-icon-expand"` | CSS class for expand icons |
 | `collapseIconClass` | `string \| null` | `"ltree-icon-collapse"` | CSS class for collapse icons |
 | `leafIconClass` | `string \| null` | `"ltree-icon-leaf"` | CSS class for leaf node icons |

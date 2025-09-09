@@ -75,6 +75,7 @@ STYLING:
 - src/lib/styles/main.scss → dist/styles.css
 - CSS variables for theming
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
+- Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow
 
 CONSTRAINTS:
 - Svelte 5 only (uses runes)
