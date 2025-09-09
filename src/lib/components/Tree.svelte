@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import type { Index } from 'flexsearch';
+	import type { Index, SearchOptions } from 'flexsearch';
 	import Node from './Node.svelte';
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
@@ -168,8 +168,12 @@
 		tree?.collapseAll(nodePath);
 	}
 
-	export function searchNodes(searchText: string | null | undefined): LTreeNode<T>[] {
-		return tree?.searchNodes(searchText) || [];
+	export function filterNodes(searchText: string, searchOptions?: SearchOptions): void {
+		tree?.filterNodes(searchText, searchOptions);
+	}
+
+	export function searchNodes(searchText: string | null | undefined, searchOptions?: SearchOptions): LTreeNode<T>[] {
+		return tree?.searchNodes(searchText, searchOptions) || [];
 	}
 
 	export async function scrollToPath(

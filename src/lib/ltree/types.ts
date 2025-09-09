@@ -1,4 +1,4 @@
-import type { Index } from 'flexsearch';
+import type { Index, SearchOptions } from 'flexsearch';
 import type { LTreeNode } from './ltree-node.svelte';
 
 export type Tuple<T, U> = [T, U];
@@ -59,9 +59,9 @@ export interface Ltree<T> {
 
 	insertTreeNode(parentPath: string, newNode: LTreeNode<T>, noEmitChanges?: boolean): string | null;
 
-	filterNodes(_searchText: string): void;
+	filterNodes(_searchText: string, _searchOptions?: SearchOptions): void;
 
-	searchNodes(_searchText: string | null | undefined): LTreeNode<T>[];
+	searchNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): LTreeNode<T>[];
 
 	createFilteredTree(targetPaths: string[]): void;
 

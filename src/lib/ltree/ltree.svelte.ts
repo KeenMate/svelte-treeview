@@ -1,4 +1,4 @@
-import FlexSearch, { Index } from 'flexsearch';
+import FlexSearch, { Index, type SearchOptions } from 'flexsearch';
 
 import { type LTreeNode, createLTreeNode } from './ltree-node.svelte';
 
@@ -304,7 +304,7 @@ export function createLTree<T>(
 			return null;
 		},
 
-		filterNodes(_searchText: string | null | undefined): void {
+		filterNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): void {
 			if (this.shouldDisplayDebugInformation)
 				console.log(`[Tree ${_treeId}] Filtering nodes by:`, _searchText);
 
@@ -326,16 +326,16 @@ export function createLTree<T>(
 				return;
 			}
 
-			const resultIndices = searchIndex.search(_searchText);
-			if (this.shouldDisplayDebugInformation)
-					console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices);
-
+			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
 			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
+
+			if (this.shouldDisplayDebugInformation)
+				console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices, foundPaths);
 
 			this.createFilteredTree(foundPaths);
 		},
 
-		searchNodes(_searchText: string | null | undefined): LTreeNode<T>[] {
+		searchNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): LTreeNode<T>[] {
 			if (this.shouldDisplayDebugInformation)
 				console.log(`[Tree ${_treeId}] Searching nodes by:`, _searchText);
 
@@ -349,11 +349,11 @@ export function createLTree<T>(
 				return [];
 			}
 
-			const resultIndices = searchIndex.search(_searchText);
+			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
 			const foundNodes = resultIndices.map((row) => flatTreeNodes[row]);
 
 			if (this.shouldDisplayDebugInformation)
-				console.warn(`[Tree ${_treeId}] Search found ${foundNodes?.length || 0} nodes`);
+				console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices, foundNodes);
 
 			return foundNodes;
 		},

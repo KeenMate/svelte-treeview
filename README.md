@@ -142,6 +142,71 @@ import '@keenmate/svelte-treeview/styles.scss';
 />
 ```
 
+### With Advanced Search Options
+
+```svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+  import type { SearchOptions } from 'flexsearch';
+  
+  let treeRef;
+  const data = [/* your data */];
+  
+  // Programmatic search with FlexSearch options
+  function performAdvancedSearch(searchTerm: string) {
+    const searchOptions: SearchOptions = {
+      suggest: true,        // Enable suggestions for typos
+      limit: 10,            // Limit results to 10 items  
+      bool: "and"           // Use AND logic for multiple terms
+    };
+    
+    const results = treeRef.searchNodes(searchTerm, searchOptions);
+    console.log('Advanced search results:', results);
+  }
+  
+  // Programmatic filtering with options
+  function filterWithOptions(searchTerm: string) {
+    const searchOptions: SearchOptions = {
+      threshold: 0.8,       // Similarity threshold
+      depth: 2              // Search depth
+    };
+    
+    treeRef.filterNodes(searchTerm, searchOptions);
+  }
+</script>
+
+<Tree
+  bind:this={treeRef}
+  {data}
+  idMember="path"
+  pathMember="path"
+  shouldUseInternalSearchIndex={true}
+  searchValueMember="name"
+/>
+
+<button onclick={() => performAdvancedSearch('document')}>
+  Advanced Search
+</button>
+<button onclick={() => filterWithOptions('project')}>
+  Filter with Options
+</button>
+```
+
+#### FlexSearch Options Reference
+
+The `searchOptions` parameter accepts any options supported by FlexSearch. Common options include:
+
+| Option | Type | Description | Example |
+|--------|------|-------------|---------|
+| `suggest` | `boolean` | Enable suggestions for typos | `{ suggest: true }` |
+| `limit` | `number` | Maximum number of results | `{ limit: 10 }` |
+| `threshold` | `number` | Similarity threshold (0-1) | `{ threshold: 0.8 }` |
+| `depth` | `number` | Search depth for nested content | `{ depth: 2 }` |
+| `bool` | `string` | Boolean logic: "and", "or" | `{ bool: "and" }` |
+| `where` | `object` | Filter by field values | `{ where: { type: "folder" } }` |
+
+For complete FlexSearch documentation, visit: [FlexSearch Options](https://github.com/nextapps-de/flexsearch#options)
+
 ### With Drag & Drop
 
 ```svelte
@@ -384,7 +449,8 @@ Without both requirements, no search indexing will occur.
 | `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
 | `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
 | `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
-| `searchNodes` | `searchText: string \| null \| undefined` | Search nodes using internal search index and return matching nodes |
+| `filterNodes` | `searchText: string, searchOptions?: SearchOptions` | Filter the tree display using internal search index with optional FlexSearch options |
+| `searchNodes` | `searchText: string \| null \| undefined, searchOptions?: SearchOptions` | Search nodes using internal search index and return matching nodes with optional FlexSearch options |
 | `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
 
 #### ScrollToPath Options

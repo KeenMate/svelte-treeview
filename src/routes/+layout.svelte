@@ -10,6 +10,7 @@
 		{ href: '/data-structure', label: 'Data Structure', icon: '🗂️' },
 		{ href: '/search', label: 'Search', icon: '🔍' },
 		{ href: '/drag-drop', label: 'Drag & Drop', icon: '🔄' },
+		{ href: '/drag-highlight', label: 'Drag Highlight', icon: '✨' },
 		{ href: '/context-menu', label: 'Context Menu', icon: '📝' },
 		{ href: '/custom-styling', label: 'Custom Styling', icon: '🎨' },
 		{ href: '/performance', label: 'Performance', icon: '⚡' }

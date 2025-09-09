@@ -176,6 +176,33 @@
 			searchResults = [];
 		}
 	}
+
+	// Advanced search with options
+	let advancedRef: any;
+	let advancedQuery = $state('');
+	let advancedResults = $state([]);
+	let useSuggest = $state(true);
+	let resultLimit = $state(10);
+	let useThreshold = $state(false);
+	let threshold = $state(0.8);
+
+	$effect(() => {
+		advancedQuery && performAdvancedSearch();
+	});
+
+	function performAdvancedSearch() {
+		if (advancedRef && advancedQuery.trim()) {
+			const searchOptions: any = {};
+
+			if (useSuggest) searchOptions.suggest = true;
+			if (resultLimit > 0) searchOptions.limit = resultLimit;
+			if (useThreshold) searchOptions.threshold = threshold;
+
+			advancedResults = advancedRef.searchNodes(advancedQuery.trim(), searchOptions);
+		} else {
+			advancedResults = [];
+		}
+	}
 </script>
 
 <div class="container-fluid">
@@ -528,6 +555,177 @@ console.log(`Found $&#123;results?.length&#125; nodes`);</code
 				<li>Implement search suggestions</li>
 				<li>Create search result summaries</li>
 				<li>Combine with other operations (scroll, expand, etc.)</li>
+			</ul>
+		{/snippet}
+	</ShowcaseSection>
+
+	<ShowcaseSection
+		title="Advanced Search Options"
+		subtitle="Using FlexSearch options with searchNodes() and filterNodes()"
+	>
+		{#snippet demo()}
+			<div class="mb-3">
+				<div class="input-group">
+					<input
+						type="text"
+						class="form-control"
+						placeholder="Enter search query with options..."
+						bind:value={advancedQuery}
+						onkeyup={(e) => e.key === 'Enter' && performAdvancedSearch()}
+					/>
+					<button class="btn btn-success" onclick={performAdvancedSearch}> Advanced Search </button>
+				</div>
+				<small class="text-muted">Try searching for: "databse" (typo), "project mobile", "media content"</small>
+			</div>
+
+			{#if advancedResults.length > 0}
+				<div class="alert alert-success">
+					<strong>Found {advancedResults.length} matching node{advancedResults.length > 1 ? 's' : ''}:</strong>
+					<small class="d-block">Applied options: {JSON.stringify({
+						suggest: useSuggest,
+						limit: resultLimit > 0 ? resultLimit : 'unlimited',
+						threshold: useThreshold ? threshold : 'disabled'
+					})}</small>
+				</div>
+				<div class="list-group mb-3">
+					{#each advancedResults as node}
+						<div class="list-group-item">
+							<div class="d-flex align-items-start">
+								<span class="me-2">
+									{#if node.data.type === 'folder'}📁
+									{:else if node.data.type === 'project'}💼
+									{:else if node.data.type === 'file'}📄
+									{:else}📄{/if}
+								</span>
+								<div class="flex-grow-1">
+									<h6 class="mb-1">{node.data.name}</h6>
+									<p class="mb-1 text-muted small">{node.data.description}</p>
+									<small><strong>Path:</strong> {node.path} | <strong>Type:</strong> {node.data.type}</small>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:else if advancedQuery.trim()}
+				<div class="alert alert-warning">
+					No nodes found for query: "{advancedQuery}" with current options
+				</div>
+			{/if}
+
+			<!-- Tree with reference for advanced search -->
+			<div class="bg-light p-3 rounded">
+				<h6>Search Target Tree</h6>
+				<Tree
+					bind:this={advancedRef}
+					data={searchableData}
+					idMember="id"
+					pathMember="path"
+					displayValueMember="name"
+					searchValueMember="name"
+					getSearchValueCallback={getSearchValueCallback}
+					shouldUseInternalSearchIndex={true}
+					expandLevel={2}
+					sortCallback={sortCallback}
+				>
+					{#snippet nodeTemplate(node)}
+						<div class="d-flex align-items-start">
+							<span class="me-2">
+								{#if node.data.type === 'folder'}📁
+								{:else if node.data.type === 'project'}💼
+								{:else if node.data.type === 'file'}📄
+								{:else}📄{/if}
+							</span>
+							<div>
+								<div class="fw-semibold small">{node.data.name}</div>
+								<small class="text-muted">{node.data.description}</small>
+							</div>
+						</div>
+					{/snippet}
+				</Tree>
+			</div>
+		{/snippet}
+
+		{#snippet controls()}
+			<div class="row">
+				<div class="col-md-4">
+					<div class="form-check mb-2">
+						<input
+							class="form-check-input"
+							type="checkbox"
+							bind:checked={useSuggest}
+							id="useSuggest"
+						/>
+						<label class="form-check-label" for="useSuggest">
+							Enable Suggestions
+						</label>
+						<small class="form-text text-muted">Fix typos automatically</small>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="form-check mb-2">
+						<input
+							class="form-check-input"
+							type="checkbox"
+							bind:checked={useThreshold}
+							id="useThreshold"
+						/>
+						<label class="form-check-label" for="useThreshold">
+							Use Threshold
+						</label>
+						<small class="form-text text-muted">Similarity matching</small>
+					</div>
+					{#if useThreshold}
+						<input
+							type="range"
+							class="form-range"
+							min="0.1"
+							max="1"
+							step="0.1"
+							bind:value={threshold}
+						/>
+						<small class="text-muted">Threshold: {threshold}</small>
+					{/if}
+				</div>
+				<div class="col-md-4">
+					<label class="form-label">Result Limit</label>
+					<input
+						type="number"
+						class="form-control form-control-sm"
+						bind:value={resultLimit}
+						min="0"
+						max="50"
+					/>
+					<small class="text-muted">0 = unlimited</small>
+				</div>
+			</div>
+		{/snippet}
+
+		{#snippet description()}
+			<h6>FlexSearch Options</h6>
+			<p>Both <code>searchNodes()</code> and <code>filterNodes()</code> accept optional <code>searchOptions</code> parameter:</p>
+
+			<pre><code>const results = treeRef.searchNodes("query", &#123;
+  suggest: true,      // Enable typo tolerance
+  limit: 10,          // Maximum results
+  threshold: 0.8,     // Similarity threshold
+  bool: "and"         // Boolean logic
+&#125;);</code></pre>
+
+			<h6>Common Options</h6>
+			<ul class="small">
+				<li><strong>suggest</strong>: Enables suggestions for typos and similar terms</li>
+				<li><strong>limit</strong>: Limits the number of search results returned</li>
+				<li><strong>threshold</strong>: Sets similarity threshold for fuzzy matching (0-1)</li>
+				<li><strong>bool</strong>: Boolean logic for multiple terms ("and", "or")</li>
+				<li><strong>where</strong>: Filter results by field values</li>
+			</ul>
+
+			<h6>Practical Applications</h6>
+			<ul class="small">
+				<li>Implement intelligent search with typo correction</li>
+				<li>Limit results for performance in large datasets</li>
+				<li>Fine-tune search relevance with thresholds</li>
+				<li>Combine search with filtering and navigation</li>
 			</ul>
 		{/snippet}
 	</ShowcaseSection>

@@ -204,7 +204,11 @@ $body-color: #212529 !default;
 }
 
 @keyframes bounce {
-	0%, 20%, 50%, 80%, 100% {
+	0%,
+	20%,
+	50%,
+	80%,
+	100% {
 		transform: translateY(-50%);
 	}
 	40% {
@@ -364,12 +368,24 @@ $body-color: #212529 !default;
 
 .ltree-scroll-highlight-arrow {
 	position: relative;
+	&::before {
+		content: '⇨'; /* arrow pointing right */
+		position: absolute;
+		left: -1.2em; /* place outside row */
+		top: 50%; /* vertical center */
+		transform: translateY(-57%);
+		font-size: 3em;
+		pointer-events: none; /* arrow doesn’t block hover */
+		color: var(--ltree-danger);
+
+		z-index: 1;
+	}
 	&::after {
 		content: '⇦'; /* arrow pointing right */
 		position: absolute;
 		right: 0em; /* place outside row */
 		top: 50%; /* vertical center */
-		transform: translateY(-50%);
+		transform: translateY(-57%);
 		font-size: 3em;
 		pointer-events: none; /* arrow doesn’t block hover */
 		color: var(--ltree-danger);
