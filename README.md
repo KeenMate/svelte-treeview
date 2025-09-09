@@ -199,7 +199,7 @@ The component uses CSS custom properties for easy theming:
 
 ```css
 :root {
-  --tree-node-indent-per-level: 0.5rem;
+  --tree-node-indent-per-level: 0.5rem;  /* Controls indentation for each hierarchy level */
   --ltree-primary: #0d6efd;
   --ltree-primary-rgb: 13, 110, 253;
   --ltree-success: #198754;
@@ -211,6 +211,8 @@ The component uses CSS custom properties for easy theming:
   --ltree-body-color: #212529;
 }
 ```
+
+**Note**: The `--tree-node-indent-per-level` variable controls the consistent indentation applied at each hierarchy level. Each nested level receives this fixed indent amount, creating proper visual hierarchy without exponential indentation growth.
 
 ### SCSS Variables (if using SCSS)
 
@@ -599,9 +601,10 @@ interface InsertArrayResult<T> {
 #### Benefits
 
 - **Data Validation**: Identify missing parent nodes in hierarchical data
-- **Debugging**: Understand why certain nodes don't appear in the tree
+- **Debugging**: Clear error messages with node paths like "Node: 1.1.1 - Could not find parent node: 1.1"
 - **Data Integrity**: Handle incomplete datasets gracefully
-- **User Feedback**: Inform users about data issues
+- **Search Accuracy**: Failed nodes are excluded from search index, ensuring search results match visible tree
+- **User Feedback**: Inform users about data issues with detailed failure information
 
 ## 🚀 Performance
 
@@ -609,6 +612,8 @@ The component is optimized for large datasets:
 
 - **LTree**: Efficient hierarchical data structure
 - **Async Search Indexing**: Uses `requestIdleCallback` for non-blocking search index building
+- **Accurate Search Results**: Search index only includes successfully inserted nodes, ensuring results match visible tree structure
+- **Consistent Visual Hierarchy**: Optimized CSS-based indentation prevents exponential spacing growth
 - **Virtual Scrolling**: (Coming soon)
 - **Lazy Loading**: (Coming soon)
 - **Search Indexing**: Uses FlexSearch for fast search operations

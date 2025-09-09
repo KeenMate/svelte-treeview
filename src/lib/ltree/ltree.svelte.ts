@@ -148,6 +148,7 @@ export function createLTree<T>(
 
 			// Clear any pending indexing from previous calls
 			indexer?.clearQueue();
+			flatTreeNodes = [];
 
 			performance.mark('conversion-start');
 			let mappedData = data.map((row, index) => {
@@ -198,7 +199,7 @@ export function createLTree<T>(
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
 
 			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
-			let successfulCount = 0;
+			let successfulCount: number = 0;
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
@@ -212,16 +213,20 @@ export function createLTree<T>(
 					successfulCount++;
 					// Collect items for batch indexing
 					if (_shouldUseInternalSearchIndex && indexer) {
+						flatTreeNodes.push(node);
 						itemsToIndex.push({ node, index: realIndex });
 						realIndex++;
 					}
 				}
 			});
-			
+
 			// Log errors for backward compatibility and debugging
 			if (failedNodes.length > 0) {
-				const errorMessages = failedNodes.map(f => f.error);
-				console.warn(`[Tree ${_treeId}] ${failedNodes.length} nodes failed to insert:`, errorMessages);
+				const errorMessages = failedNodes.map((f) => f.error);
+				console.warn(
+					`[Tree ${_treeId}] ${failedNodes.length} nodes failed to insert:`,
+					errorMessages
+				);
 			}
 
 			// Batch add items to indexer
@@ -272,7 +277,7 @@ export function createLTree<T>(
 			const parentNode = this.getNodeByPath(parentPath);
 
 			if (!parentNode) {
-				return `Could not find node for parent path: ${parentPath}`;
+				return `Node: ${newNode.path} - Could not find parent node: ${parentPath}`;
 			}
 			if (shouldCalculateLevel) {
 				newNode.level = (parentNode.level || 0) + 1;
@@ -291,8 +296,6 @@ export function createLTree<T>(
 				nodeCount++;
 				maxLevel = Math.max(maxLevel, newNode.level || 0);
 			}
-
-			flatTreeNodes.push(newNode);
 
 			if (!noEmitChanges) {
 				this._emitTreeChanged();
@@ -324,6 +327,9 @@ export function createLTree<T>(
 			}
 
 			const resultIndices = searchIndex.search(_searchText);
+			if (this.shouldDisplayDebugInformation)
+					console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices);
+
 			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
 
 			this.createFilteredTree(foundPaths);

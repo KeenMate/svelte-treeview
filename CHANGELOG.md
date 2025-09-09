@@ -43,6 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Internal Architecture**: Enhanced `createLTree` function to accept configurable `treePathSeparator` parameter
 - **Component Integration**: Updated `Tree.svelte` component to pass through `treePathSeparator` property
 
+### Fixed
+- **Node Indentation**: Fixed `Node.svelte` indent style to use consistent per-level indentation instead of cumulative indentation
+  - Previously: Each level had exponentially increasing indent (level * indent-per-level)
+  - Now: Each level uses fixed CSS variable `--tree-node-indent-per-level` allowing proper CSS-based indentation control
+- **Search Index Accuracy**: Fixed `insertArray` to only add successfully inserted nodes to `flatTreeNodes` array
+  - Prevents search index from returning incorrect node indices for nodes that failed to insert
+  - Failed nodes are no longer included in search operations, ensuring search results match visible tree structure
+- **Error Message Clarity**: Improved `insertTreeNode` error messages to include the failing node's path
+  - Error format: `"Node: {path} - Could not find parent node: {parentPath}"`
+  - Makes debugging hierarchical data issues much clearer
+
 ### Documentation
 - **Comprehensive Examples**: Added working code examples for both basic and advanced use cases
 - **Path Separator Flexibility**: Clarified that paths don't need to be dot-separated, can use any consistent separator

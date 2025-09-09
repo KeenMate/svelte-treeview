@@ -52,7 +52,7 @@
 	const childrenWithData = $derived(Object.values(node?.children || []))
 	const hasChildren = $derived(node?.hasChildren || false)
 	const indentStyle = $derived(
-		`margin-left: calc(${node?.level || 0} * var(--tree-node-indent-per-level, 0.5rem))`,
+		`margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
 	)
 
 	function toggleExpanded() {
@@ -71,9 +71,9 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div 
-	class="ltree-node" 
-	id="{node.treeId}-{node.id}" 
+<div
+	class="ltree-node"
+	id="{node.treeId}-{node.id}"
 	data-tree-path="{node.path}"
 	style={indentStyle}
 >
