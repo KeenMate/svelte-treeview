@@ -145,15 +145,6 @@
 
 	export async function expandNodes(nodePath: string) {
 		tree.expandNodes(nodePath);
-
-		// trie.dummyText = Date.now().toLocaleString();
-		// console.log(trie.dummyText);
-		// rootNodes.forEach((element) => {
-		//   if (element.path === nodePath) {
-		//     element.isExpanded = !element.isExpanded;
-		//     console.log(element)
-		//   }
-		// });
 	}
 
 	export async function collapseNodes(nodePath: string) {
