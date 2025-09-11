@@ -3,7 +3,7 @@
 	"version": "4.0.0-rc09",
 	"scripts": {
 		"dev": "vite dev --port 17777",
-		"build": "vite build",
+		"build": "vite build && npm run prepack",
 		"build:showcase": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
