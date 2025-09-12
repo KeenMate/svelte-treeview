@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.0.0-rc07 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.0.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -12,7 +12,7 @@ CORE_FILES:
 - src/lib/index.ts - public exports
 
 COMMANDS:
-- npm run dev (port 7777)
+- npm run dev (port 17777)
 - npm run build 
 - npm run check
 - npm run lint
@@ -83,4 +83,4 @@ CONSTRAINTS:
 - Search needs shouldUseInternalSearchIndex + searchValueMember/callback
 - Segments internally prefixed 'x' for ordering
 
-RECENT: v4.0.0-rc07 added customizable scroll highlighting, fixed expand/collapse path traversal
+RECENT: v4.0.0 stable release with enhanced search, visual drag feedback, customizable scroll highlighting, and improved error handling

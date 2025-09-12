@@ -163,7 +163,10 @@
 		tree?.filterNodes(searchText, searchOptions);
 	}
 
-	export function searchNodes(searchText: string | null | undefined, searchOptions?: SearchOptions): LTreeNode<T>[] {
+	export function searchNodes(
+		searchText: string | null | undefined,
+		searchOptions?: SearchOptions
+	): LTreeNode<T>[] {
 		return tree?.searchNodes(searchText, searchOptions) || [];
 	}
 
@@ -209,17 +212,7 @@
 		// Highlight the node temporarily if requested
 		if (highlight && scrollHighlightClass) {
 			contentDiv.classList.add(scrollHighlightClass);
-			console.log(
-				'🚀 elementId ~ scrollToPath ~ adding scrollHighlightClass:',
-				elementId,
-				scrollHighlightClass
-			);
 			setTimeout(() => {
-				console.log(
-					'🚀 elementId ~ scrollToPath ~ removing scrollHighlightClass:',
-					elementId,
-					scrollHighlightClass
-				);
 				contentDiv.classList.remove(scrollHighlightClass);
 			}, scrollHighlightTimeout);
 		}

@@ -29,7 +29,7 @@ The library follows the standard SvelteKit library format with the following str
 ## Package Information
 
 - **Name**: `@keenmate/svelte-treeview`
-- **Version**: `4.0.0-rc01`
+- **Version**: `4.0.0`
 - **Main Entry**: `dist/index.js`
 - **Types**: `dist/index.d.ts`
 - **Styles**: `dist/styles.scss`
@@ -134,4 +134,4 @@ The library uses the standard SvelteKit library workflow:
 2. `svelte-package` - Packages the library from `src/lib/`
 3. `publint` - Validates the package
 
-The library is now ready for publishing to npm as `@keenmate/svelte-treeview` version 4.0.0-rc01.
+The library is now ready for publishing to npm as `@keenmate/svelte-treeview` version 4.0.0.
