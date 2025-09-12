@@ -109,11 +109,11 @@
 		insertResult = $bindable(),
 
 		// SLOTS
-		nodeTemplate,
-		treeHeader,
-		treeFooter,
-		noDataFound,
-		contextMenu,
+		nodeTemplate = undefined,
+		treeHeader = undefined,
+		treeFooter = undefined,
+		noDataFound = undefined,
+		contextMenu = undefined,
 
 		// BEHAVIOUR
 		expandLevel = 2,
@@ -429,9 +429,7 @@
 		</div>
 	{/if}
 
-	{#if treeHeader}
-		{@render treeHeader?.()}
-	{/if}
+	{@render treeHeader?.()}
 	<div class:bodyClass>
 		{#if tree?.root}
 			{#key tree.changeTracker}
@@ -466,9 +464,8 @@
 			</div>
 		{/if}
 	</div>
-	{#if treeFooter}
+	
 		{@render treeFooter?.()}
-	{/if}
 
 	<!-- Context Menu -->
 	{#if contextMenuVisible && contextMenu && contextMenuNode}
