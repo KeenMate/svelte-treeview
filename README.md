@@ -2,6 +2,9 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
+> [!IMPORTANT]
+> **Looking for a framework-agnostic solution?** There's also a web component version that can be used standalone or in other frameworks at https://github.com/KeenMate/web-treeview/
+
 ## 🚀 Features
 
 - **Svelte 5 Native**: Built specifically for Svelte 5 with full support for runes and modern Svelte patterns
