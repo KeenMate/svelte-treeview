@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-rc.09] - 2025-01-09
+
+### Added
+- **Complete Showcase Site Redesign**: Comprehensive overhaul of the documentation and demo site
+  - **API Reference Page**: Complete tabbed reference with properties, methods, events, and templates tables
+  - **Professional Navigation**: Fixed-top navbar with burger menu, GitHub link, and responsive sidebar
+  - **Ocean Color Scheme**: Beautiful blue-themed design using Coolors.co palette (#00171F, #003459, #007EA7, #00A7E1, #FFFFFF)
+  - **Responsive Layout**: Mobile-first design with collapsible sidebar and backdrop overlay
+  - **Enhanced Examples**: Four comprehensive code examples with descriptions in tabbed interface
+- **Docker Production Setup**: Complete containerization for static site deployment
+  - **Multi-stage Dockerfile**: Optimized build with Node.js builder and nginx production stage
+  - **Static Site Generation**: SvelteKit configuration for pre-rendered HTML pages
+  - **Make Commands**: Docker build, run, and management commands with custom registry support
+  - **Nginx Configuration**: Optimized serving with gzip, caching, and SPA routing support
+
+### Changed
+- **Layout Architecture**: Moved from nested Bootstrap containers to clean, consistent structure
+  - **Fixed Navigation**: Top navbar with brand, burger menu, and GitHub link
+  - **Sidebar Design**: Fixed-width (280px) sidebar with consistent icon spacing
+  - **Footer Integration**: Professional footer with KeenMate branding
+- **SvelteKit Configuration**: Updated for optimal static generation
+  - **Static Adapter**: Switched from adapter-auto to adapter-static for reliable builds
+  - **Prerendering**: Enabled SSR and prerender for all showcase pages
+  - **Build Output**: Optimized for nginx serving with proper fallback handling
+- **Page Structure Consistency**: Standardized header structure across all showcase pages
+  - **Removed Redundant Containers**: Eliminated nested container-fluid wrappers
+  - **Clean Headers**: Direct h1 and description elements without Bootstrap grid overhead
+
+### Enhanced
+- **Visual Design**: Professional styling throughout the showcase site
+  - **Fixed Icon Alignment**: Consistent 1.5rem width for sidebar navigation icons
+  - **Gradient Backgrounds**: Sophisticated color gradients across navbar, sidebar, and footer
+  - **Interactive Elements**: Hover effects, focus states, and smooth transitions
+  - **Typography**: Clear hierarchy with proper contrast and accessibility
+- **User Experience**: Improved navigation and usability
+  - **Always-Visible Burger Menu**: Toggle sidebar on any screen size for flexible layout
+  - **Responsive Behavior**: Automatic sidebar hiding on mobile with backdrop close
+  - **Tab Navigation**: Full-width code examples with clean tab interface
+  - **Mobile Optimization**: Touch-friendly interactions and responsive text sizing
+
+### Fixed
+- **Container Structure**: Resolved double-container issues causing layout inconsistencies
+- **Sidebar Toggle**: Fixed burger menu functionality to work across all screen sizes
+- **Static Generation**: Proper SvelteKit configuration for nginx-compatible static builds
+- **Icon Spacing**: Consistent navigation icon width preventing text misalignment
+
+### Documentation
+- **API Reference**: Complete tables for all component properties, methods, events, and templates
+- **Usage Examples**: Real-world code examples including organization tree configuration
+- **Docker Documentation**: Make commands and containerization setup
+- **Responsive Design**: Mobile-first approach with professional styling
+
 ## [4.0.0-rc.08] - 2025-01-08
 
 ### Added
