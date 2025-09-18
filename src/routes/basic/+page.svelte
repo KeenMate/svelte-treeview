@@ -38,13 +38,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Basic Tree Display</h1>
-			<p class="lead">Learn the fundamental properties and behavior of the Svelte Treeview component.</p>
-		</div>
-	</div>
+<h1>Basic Tree Display</h1>
+<p class="lead">Learn the fundamental properties and behavior of the Svelte Treeview component.</p>
 
 	<ShowcaseSection
 		title="Essential Properties"
@@ -169,4 +164,3 @@
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>

@@ -77,13 +77,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Custom Styling</h1>
-			<p class="lead">Visual customization, theming options, and CSS class configurations.</p>
-		</div>
-	</div>
+<h1>Custom Styling</h1>
+<p class="lead">Visual customization, theming options, and CSS class configurations.</p>
 
 	<ShowcaseSection
 		title="Selected Node Styles"
@@ -272,7 +267,6 @@
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>
 
 <style>
 	.tree-container {

@@ -205,15 +205,10 @@
 	}
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Search & Filter</h1>
-			<p class="lead">
-				Explore async search indexing, filtering capabilities, and FlexSearch integration.
-			</p>
-		</div>
-	</div>
+<h1>Search & Filter</h1>
+<p class="lead">
+	Explore async search indexing, filtering capabilities, and FlexSearch integration.
+</p>
 
 	<ShowcaseSection
 		title="Async Search Indexing"
@@ -729,4 +724,3 @@ console.log(`Found $&#123;results?.length&#125; nodes`);</code
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>

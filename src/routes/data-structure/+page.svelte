@@ -86,13 +86,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Data Structure & Management</h1>
-			<p class="lead">Understanding LTree path-based data structure, optimization techniques, and external data management.</p>
-		</div>
-	</div>
+<h1>Data Structure & Management</h1>
+<p class="lead">Understanding LTree path-based data structure, optimization techniques, and external data management.</p>
 
 	<ShowcaseSection
 		title="LTree Path Structure"
@@ -514,4 +509,3 @@ let filteredData = originalData.filter(item =>
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>

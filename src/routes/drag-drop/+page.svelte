@@ -104,13 +104,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Drag & Drop</h1>
-			<p class="lead">Interactive drag and drop functionality with validation and visual feedback.</p>
-		</div>
-	</div>
+<h1>Drag & Drop</h1>
+<p class="lead">Interactive drag and drop functionality with validation and visual feedback.</p>
 
 	<ShowcaseSection
 		title="Basic Drag & Drop"
@@ -274,7 +269,6 @@
 			<p>Drop events can trigger state updates, API calls, or other application logic.</p>
 		{/snippet}
 	</ShowcaseSection>
-</div>
 
 <style>
 	.draggable-item {

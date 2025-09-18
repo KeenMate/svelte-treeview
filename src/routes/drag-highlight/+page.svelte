@@ -71,13 +71,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Drag-over Highlighting</h1>
-			<p class="lead">Visual feedback during drag-and-drop operations with customizable highlight styles.</p>
-		</div>
-	</div>
+<h1>Drag-over Highlighting</h1>
+<p class="lead">Visual feedback during drag-and-drop operations with customizable highlight styles.</p>
 
 	<ShowcaseSection 
 		title="Drag-over Highlight Styles" 
@@ -348,4 +343,3 @@
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>

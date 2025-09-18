@@ -77,7 +77,33 @@
 			</div>
 		</div>
 	</div>
-	
+
+	<div class="col-md-4">
+		<div class="card">
+			<div class="card-body">
+				<h5 class="card-title">✨ Drag Highlight</h5>
+				<p class="card-text">
+					Visual feedback during drag operations with customizable highlighting.
+				</p>
+				<a href="/drag-highlight" class="btn btn-outline-primary">See Demo</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row mt-4">
+	<div class="col-md-4">
+		<div class="card">
+			<div class="card-body">
+				<h5 class="card-title">📡 Events</h5>
+				<p class="card-text">
+					Explore all the events emitted by the tree component with interactive demos.
+				</p>
+				<a href="/events" class="btn btn-outline-primary">View Events</a>
+			</div>
+		</div>
+	</div>
+
 	<div class="col-md-4">
 		<div class="card">
 			<div class="card-body">
@@ -86,6 +112,18 @@
 					Large dataset handling, async indexing, and performance optimization techniques.
 				</p>
 				<a href="/performance" class="btn btn-outline-primary">Optimize</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-md-4">
+		<div class="card">
+			<div class="card-body">
+				<h5 class="card-title">📊 Data Structure</h5>
+				<p class="card-text">
+					Understand the path-based LTree structure and data organization.
+				</p>
+				<a href="/data-structure" class="btn btn-outline-primary">Learn More</a>
 			</div>
 		</div>
 	</div>

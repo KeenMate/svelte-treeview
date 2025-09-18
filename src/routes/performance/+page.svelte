@@ -130,13 +130,8 @@
 
 <svelte:window onbeforeunload={onBeforeUpdate} />
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Performance</h1>
-			<p class="lead">Large dataset handling, async indexing, and performance optimization techniques.</p>
-		</div>
-	</div>
+<h1>Performance</h1>
+<p class="lead">Large dataset handling, async indexing, and performance optimization techniques.</p>
 
 	<ShowcaseSection
 		title="Large Dataset Performance"
@@ -407,7 +402,6 @@
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>
 
 <style>
 	.performance-metrics {

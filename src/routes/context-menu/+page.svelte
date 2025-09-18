@@ -47,13 +47,8 @@
 	};
 </script>
 
-<div class="container-fluid">
-	<div class="row mb-4">
-		<div class="col-12">
-			<h1>Context Menus</h1>
-			<p class="lead">Right-click context menus with customizable actions and templates.</p>
-		</div>
-	</div>
+<h1>Context Menus</h1>
+<p class="lead">Right-click context menus with customizable actions and templates.</p>
 
 	<ShowcaseSection
 		title="Basic Context Menu"
@@ -281,7 +276,6 @@
 			</ul>
 		{/snippet}
 	</ShowcaseSection>
-</div>
 
 <style>
 	.context-menu-custom {
