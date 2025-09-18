@@ -14,7 +14,7 @@ RUN npm i
 COPY . .
 
 # Build the SvelteKit app for static deployment
-RUN npm run build
+RUN npm run build:showcase
 
 # Production stage with nginx
 FROM nginx:alpine
