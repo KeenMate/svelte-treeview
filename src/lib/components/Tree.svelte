@@ -222,6 +222,9 @@
 
 	treeId = treeId || generateTreeId();
 
+	if (shouldDisplayDebugInformation)
+		console.log("Tree treePathSeparator:", treePathSeparator)
+
 	// svelte-ignore non_reactive_update
 	// let trie: Ltree<T> | null = null
 	// svelte-ignore non_reactive_update
@@ -284,7 +287,6 @@
 		if (selectedNode) {
 			const previousNode = tree.getNodeByPath(selectedNode.path);
 			if (previousNode) {
-				console.log('🚀 ~ _onNodeClicked ~ previousNode:', previousNode);
 				previousNode.isSelected = false;
 			} else selectedNode = null;
 		}
@@ -325,8 +327,6 @@
 		// 	event.dataTransfer.effectAllowed = "move";
 		// 	event.dataTransfer.setData("text/plain", node.path);
 		// }
-
-		console.log('🚀 ~ _onNodeDragStart ~ draggedNode:', draggedNode, event);
 	}
 
 	function _onNodeDragOver(node: LTreeNode<T>, event: DragEvent) {
@@ -464,8 +464,8 @@
 			</div>
 		{/if}
 	</div>
-	
-		{@render treeFooter?.()}
+
+	{@render treeFooter?.()}
 
 	<!-- Context Menu -->
 	{#if contextMenuVisible && contextMenu && contextMenuNode}

@@ -15,6 +15,13 @@ describe('ltree-helpers', () => {
 			expect(getParentPath('1', '/')).toBe('');
 		});
 
+		it('should return parent path with backslash separator (e.g. "C:\\Users\\Documents" → "C:\\Users")', () => {
+			expect(getParentPath('C:\\Users\\Documents', '\\')).toBe('C:\\Users');
+			expect(getParentPath('C:\\Users', '\\')).toBe('C:');
+			expect(getParentPath('C:', '\\')).toBe('');
+			expect(getParentPath('root\\child\\grandchild', '\\')).toBe('root\\child');
+		});
+
 		it('should return parent path with multi-character separator (e.g. "1::2::3" → "1::2")', () => {
 			expect(getParentPath('1::2::3', '::')).toBe('1::2');
 			expect(getParentPath('1::2', '::')).toBe('1');
@@ -45,6 +52,12 @@ describe('ltree-helpers', () => {
 			expect(getRelativePath('1/2/3', '1/2', '/')).toBe('3');
 			expect(getRelativePath('1/2/3/4', '1/2', '/')).toBe('3/4');
 			expect(getRelativePath('1/2', '1', '/')).toBe('2');
+		});
+
+		it('should return relative path with backslash separator (e.g. "C:\\Users\\Documents" from "C:\\Users" → "Documents")', () => {
+			expect(getRelativePath('C:\\Users\\Documents', 'C:\\Users', '\\')).toBe('Documents');
+			expect(getRelativePath('C:\\Users\\Documents\\file.txt', 'C:\\Users', '\\')).toBe('Documents\\file.txt');
+			expect(getRelativePath('root\\child\\grandchild', 'root\\child', '\\')).toBe('grandchild');
 		});
 
 		it('should return relative path with multi-character separator (e.g. "1::2::3" from "1::2" → "3")', () => {
@@ -81,6 +94,13 @@ describe('ltree-helpers', () => {
 			expect(getPathSegments('1/2/3', 0, 2, '/')).toBe('1/2');
 		});
 
+		it('should return path segments with backslash separator (e.g. "C:\\Users\\Documents" first segment → "C:")', () => {
+			expect(getPathSegments('C:\\Users\\Documents', 0, 1, '\\')).toBe('C:');
+			expect(getPathSegments('C:\\Users\\Documents', 1, 1, '\\')).toBe('Users');
+			expect(getPathSegments('C:\\Users\\Documents', 2, 1, '\\')).toBe('Documents');
+			expect(getPathSegments('C:\\Users\\Documents', 0, 2, '\\')).toBe('C:\\Users');
+		});
+
 		it('should return path segments with multi-character separator (e.g. "1::2::3" first segment → "1")', () => {
 			expect(getPathSegments('1::2::3', 0, 1, '::')).toBe('1');
 			expect(getPathSegments('1::2::3', 1, 1, '::')).toBe('2');
@@ -113,6 +133,13 @@ describe('ltree-helpers', () => {
 			expect(getLevel('1/2', '/')).toBe(2);
 			expect(getLevel('1/2/3', '/')).toBe(3);
 			expect(getLevel('1/2/3/4/5', '/')).toBe(5);
+		});
+
+		it('should return correct level with backslash separator (e.g. "C:\\Users\\Documents" → level 3)', () => {
+			expect(getLevel('C:', '\\')).toBe(1);
+			expect(getLevel('C:\\Users', '\\')).toBe(2);
+			expect(getLevel('C:\\Users\\Documents', '\\')).toBe(3);
+			expect(getLevel('C:\\Users\\Documents\\Projects\\MyApp', '\\')).toBe(5);
 		});
 
 		it('should return correct level with multi-character separator (e.g. "1::2::3" → level 3)', () => {
