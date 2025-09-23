@@ -15,7 +15,17 @@
 	let searchText = $state('');
 
 	function sortCallback(items: any[]) {
-		return items.sort((a, b) => a.data.name.localeCompare(b.data.name));
+		return items.sort((a, b) => {
+			// First, sort by level (calculated from path depth)
+			const aLevel = a.path ? a.path.split('.').length : 0;
+			const bLevel = b.path ? b.path.split('.').length : 0;
+			if (aLevel !== bLevel) {
+				return aLevel - bLevel;
+			}
+
+			// Then sort alphabetically by name
+			return a.data.name.localeCompare(b.data.name);
+		});
 	}
 </script>
 

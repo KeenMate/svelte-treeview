@@ -30,8 +30,58 @@
 		{ id: 'fs10', path: 'C:\\Users\\Alice\\Desktop', name: 'Desktop', type: 'folder', size: null }
 	];
 
+	// Generate large dataset for performance testing
+	function generateLargeDataset(nodeCount: number = 1000) {
+		const data = [];
+		let id = 1;
+
+		// Generate hierarchical data: root -> categories -> subcategories -> items
+		for (let root = 1; root <= Math.ceil(nodeCount / 100); root++) {
+			data.push({
+				id: `${id++}`,
+				path: `${root}`,
+				name: `Category ${root}`,
+				type: 'category',
+				description: `Root category ${root}`
+			});
+
+			for (let cat = 1; cat <= 10 && data.length < nodeCount; cat++) {
+				data.push({
+					id: `${id++}`,
+					path: `${root}.${cat}`,
+					name: `Subcategory ${root}.${cat}`,
+					type: 'subcategory',
+					description: `Subcategory under Category ${root}`
+				});
+
+				for (let item = 1; item <= 10 && data.length < nodeCount; item++) {
+					data.push({
+						id: `${id++}`,
+						path: `${root}.${cat}.${item}`,
+						name: `Item ${root}.${cat}.${item}`,
+						type: 'item',
+						description: `Item in subcategory ${root}.${cat}`
+					});
+
+					// Add some deeper levels
+					for (let sub = 1; sub <= 3 && data.length < nodeCount; sub++) {
+						data.push({
+							id: `${id++}`,
+							path: `${root}.${cat}.${item}.${sub}`,
+							name: `Detail ${root}.${cat}.${item}.${sub}`,
+							type: 'detail',
+							description: `Detail level item`
+						});
+					}
+				}
+			}
+		}
+
+		return data.slice(0, nodeCount);
+	}
+
 	// Tree configuration
-	let currentExample = $state('basic'); // 'basic' or 'filesystem'
+	let currentExample = $state('basic'); // 'basic' or 'filesystem' or 'large'
 	let data = $state(sampleData);
 	let idMember = $state('id');
 	let pathMember = $state('path');
@@ -44,7 +94,14 @@
 	// Custom sort callback for basic example
 	const sortCallback = (items: any[]) => {
 		return items.sort((a, b) => {
-			// Folders first, then files
+			// First, sort by level (calculated from path depth)
+			const aLevel = a.path ? a.path.split('.').length : 0;
+			const bLevel = b.path ? b.path.split('.').length : 0;
+			if (aLevel !== bLevel) {
+				return aLevel - bLevel;
+			}
+
+			// Then folders first, then files
 			if (a.data.type !== b.data.type) {
 				if (a.data.type === 'folder') return -1;
 				if (b.data.type === 'folder') return 1;
@@ -56,7 +113,14 @@
 	// File system sort callback
 	const sortCallbackFileSystem = (items: any[]) => {
 		return items.sort((a, b) => {
-			// Drive first, then folders, then files
+			// First, sort by level (calculated from path depth with backslash separator)
+			const aLevel = a.path ? a.path.split('\\').length : 0;
+			const bLevel = b.path ? b.path.split('\\').length : 0;
+			if (aLevel !== bLevel) {
+				return aLevel - bLevel;
+			}
+
+			// Then drive first, then folders, then files
 			const typeOrder = { drive: 0, folder: 1, file: 2 };
 			const aOrder = typeOrder[a.data.type] ?? 3;
 			const bOrder = typeOrder[b.data.type] ?? 3;
@@ -75,13 +139,17 @@
 		searchText = '';
 
 		if (example === 'filesystem') {
-			data = fileSystemData;
-			treePathSeparator = '\\';
+			treePathSeparator = '\\';        // Set separator FIRST
 			expandLevel = 5;
+			data = fileSystemData;           // Set data LAST to trigger effect with correct separator
+		} else if (example === 'large') {
+			treePathSeparator = '.';         // Set separator FIRST
+			expandLevel = 2; // Only show levels 1-2 initially
+			data = generateLargeDataset(2000); // Set data LAST
 		} else {
-			data = sampleData;
-			treePathSeparator = '.';
+			treePathSeparator = '.';         // Set separator FIRST
 			expandLevel = 2;
+			data = sampleData;               // Set data LAST
 		}
 	}
 
@@ -122,6 +190,7 @@
 						sortCallback={currentExample === 'filesystem' ? sortCallbackFileSystem : sortCallback}
 						{expandLevel}
 						{treePathSeparator}
+						isSorted={false}
 						bind:selectedNode
 						bind:searchText
 						shouldUseInternalSearchIndex={true}
@@ -179,6 +248,15 @@
 								onclick={() => switchExample('filesystem')}
 							>
 								File System
+							</button>
+							<button
+								type="button"
+								class="btn btn-sm"
+								class:btn-primary={currentExample === 'large'}
+								class:btn-outline-primary={currentExample !== 'large'}
+								onclick={() => switchExample('large')}
+							>
+								Large Dataset
 							</button>
 						</div>
 					</div>

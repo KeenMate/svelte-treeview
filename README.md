@@ -625,6 +625,28 @@ interface NodeData {
 - Second level: `"1.1"`, `"1.2"`, `"2.1"`
 - Third level: `"1.1.1"`, `"1.2.1"`, `"2.1.1"`
 
+### Sorting Requirements
+
+**Important:** For proper tree construction, your `sortCallback` must sort by **level first** to ensure parent nodes are inserted before their children:
+
+```typescript
+const sortCallback = (items: LTreeNode<T>[]) => {
+  return items.sort((a, b) => {
+    // First, sort by level (shallower levels first)
+    const aLevel = a.path.split('.').length;
+    const bLevel = b.path.split('.').length;
+    if (aLevel !== bLevel) {
+      return aLevel - bLevel;
+    }
+
+    // Then sort by your custom criteria
+    return a.data.name.localeCompare(b.data.name);
+  });
+};
+```
+
+**Why this matters:** If deeper level nodes are processed before their parents, you'll get "Could not find parent node" errors during tree construction. Level-first sorting ensures hierarchical integrity and enables progressive rendering for large datasets.
+
 ### Insert Result Information
 
 The tree provides detailed information about data insertion through the `insertResult` bindable property:

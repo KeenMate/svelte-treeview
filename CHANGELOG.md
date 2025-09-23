@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2025-09-23
+
+### Fixed
+- **Critical Sorting Bug**: Fixed default sort method to sort by level first, ensuring proper hierarchical tree construction
+  - Previously sorted by parent path first, causing level 3 nodes to be inserted before level 2 nodes
+  - Now sorts by level (depth) first, then parent path, then display value
+  - Eliminates "Could not find parent node" errors when nodes are inserted out of level order
+- **Progressive Rendering**: Fixed progressive rendering feature to work correctly with proper level-based sorting
+  - Progressive rendering now displays levels 1-2 immediately while deeper levels continue processing
+  - Improves perceived performance for large datasets by showing initial tree structure quickly
+- **TreePathSeparator Reactivity**: Fixed Tree component to properly update internal separator when `treePathSeparator` prop changes
+  - Added reactive effect to update ltree's separator property when prop changes
+  - Prevents race conditions where data is processed with wrong separator
+  - Fixes filesystem demo and other custom separator use cases
+- **Sort Functions in Examples**: Updated all demo sort functions to calculate level from path depth during sorting
+  - Home page, dev page, and filesystem examples now use path-based level calculation
+  - Ensures consistent level-first sorting across all demos and examples
+  - Prevents insertion failures in example applications
+
+### Enhanced
+- **Test Coverage**: Added comprehensive test suite for sorting functionality
+  - Tests verify level-first sorting behavior with various hierarchical data structures
+  - Validates progressive rendering scenarios and sort correctness
+  - Uses Vitest framework for fast, reliable testing
+
+### Changed
+- **Default Sort Algorithm**: Updated `_defaultSort` method to prioritize level over parent path for hierarchical correctness
+- **Example Sort Functions**: All demo applications now use level-first sorting for consistent behavior
+
 ## [4.0.1] - 2025-01-23
 
 ### Fixed

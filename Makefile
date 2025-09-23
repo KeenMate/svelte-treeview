@@ -1,4 +1,4 @@
-.PHONY: setup dev install build build-showcase test test-watch publish publish-dry docker-build docker-start docker-stop docker-restart
+.PHONY: setup dev install build build-showcase test test-watch package publish publish-dry docker-build docker-start docker-stop docker-restart
 
 setup: install
 
@@ -19,6 +19,9 @@ test:
 
 test-watch:
 	npm run test
+
+package:
+	npm run prepack
 
 publish:
 	npm publish

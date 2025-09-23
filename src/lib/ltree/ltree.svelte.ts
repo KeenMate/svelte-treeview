@@ -200,6 +200,7 @@ export function createLTree<T>(
 
 			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
 			let successfulCount: number = 0;
+			let hasRenderedExpandLevel = false;
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
@@ -216,6 +217,26 @@ export function createLTree<T>(
 						flatTreeNodes.push(node);
 						itemsToIndex.push({ node, index: realIndex });
 						realIndex++;
+					}
+
+					// Progressive rendering: emit changes when we complete expandLevel
+					if (!noEmitChanges && !hasRenderedExpandLevel && _expandLevel && node.level && node.level <= _expandLevel) {
+						// Check if this might be the last node at expandLevel by looking ahead
+						const remainingNodes = mappedData.slice(index + 1);
+						const hasMoreAtExpandLevel = remainingNodes.some(futureNode => {
+							const futureLevel = futureNode.level || getLevel(futureNode.path, this.treePathSeparator);
+							return futureLevel <= _expandLevel;
+						});
+
+						if (!hasMoreAtExpandLevel) {
+							// We've processed all nodes up to expandLevel - render now!
+							hasRenderedExpandLevel = true;
+							this._emitTreeChanged();
+
+							if (this.shouldDisplayDebugInformation) {
+								console.log(`[Tree ${_treeId}] Progressive render: Displayed levels 1-${_expandLevel} (${successfulCount} nodes processed so far)`);
+							}
+						}
 					}
 				}
 			});
@@ -243,8 +264,21 @@ export function createLTree<T>(
 				indexer.addToQueue(itemsToIndex);
 			}
 
+			// Final render (only if we haven't already rendered progressively)
 			if (!noEmitChanges) {
-				this._emitTreeChanged();
+				if (hasRenderedExpandLevel) {
+					// We already rendered expandLevel, now render the complete tree
+					this._emitTreeChanged();
+					if (this.shouldDisplayDebugInformation) {
+						console.log(`[Tree ${_treeId}] Final render: Complete tree with all ${successfulCount} nodes`);
+					}
+				} else {
+					// No progressive rendering occurred, render everything at once
+					this._emitTreeChanged();
+					if (this.shouldDisplayDebugInformation) {
+						console.log(`[Tree ${_treeId}] Single render: All ${successfulCount} nodes (no expandLevel or progressive render conditions met)`);
+					}
+				}
 			}
 
 			performance.mark('insert-end');
@@ -572,19 +606,22 @@ export function createLTree<T>(
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
 			return items.sort((a, b) => {
+				// First, sort by level (shallower levels first)
+				const aLevel = a.level || 0;
+				const bLevel = b.level || 0;
+				if (aLevel !== bLevel) {
+					return aLevel - bLevel;
+				}
+
+				// Then sort by parent path
 				if (a.parentPath !== b.parentPath) {
 					if (a.parentPath === '') return -1;
 					if (b.parentPath === '') return 1;
 					return a.parentPath.localeCompare(b.parentPath);
 				}
-				// console.log(
-				// 	'a.name, b.name, comparison',
-				// 	self.getNodeDisplayValue(a),
-				// 	self.getNodeDisplayValue(b),
-				// 	self.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b))
-				// );
 
-				return self.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b));
+				// Finally sort by display value
+				return self.getNodeDisplayValue(a).localeCompare(self.getNodeDisplayValue(b));
 			});
 		},
 

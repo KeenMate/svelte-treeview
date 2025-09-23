@@ -226,8 +226,6 @@
 		console.log("Tree treePathSeparator:", treePathSeparator)
 
 	// svelte-ignore non_reactive_update
-	// let trie: Ltree<T> | null = null
-	// svelte-ignore non_reactive_update
 	const tree: Ltree<T> = createLTree<T>(
 		idMember,
 		pathMember,
@@ -259,6 +257,11 @@
 			sortCallback
 		}
 	);
+
+	// Update tree separator when prop changes
+	$effect(() => {
+		tree.treePathSeparator = treePathSeparator;
+	});
 
 	setContext('Ltree', tree);
 
