@@ -158,10 +158,10 @@ export function createLTree<T>(
 				node.path = _pathMember ? row[_pathMember] : undefined;
 
 				if (shouldCalculateParentPath) {
-					node.parentPath = getParentPath(node.path);
+					node.parentPath = getParentPath(node.path, this.treePathSeparator);
 				} else node.parentPath = row[_parentPathMember];
 
-				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath));
+				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath, this.treePathSeparator), 0, 1, this.treePathSeparator);
 
 				if (!shouldCalculateLevel) node.level = row[_levelMember];
 				else node.level = getLevel(node.path, this.treePathSeparator);
@@ -284,7 +284,7 @@ export function createLTree<T>(
 			}
 
 			const newSegment =
-				segmentPrefix + getPathSegments(getRelativePath(newNode?.path, parentPath));
+				segmentPrefix + getPathSegments(getRelativePath(newNode?.path, parentPath, this.treePathSeparator), 0, 1, this.treePathSeparator);
 
 			if (!parentNode.children.hasOwnProperty(newSegment)) {
 				parentNode.children[newSegment] = newNode;

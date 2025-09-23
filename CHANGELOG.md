@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0-rc.09] - 2025-01-09
+## [4.0.1] - 2025-01-23
+
+### Fixed
+- **treePathSeparator Propagation**: Fixed helper functions (`getParentPath`, `getRelativePath`, `getPathSegments`) to properly use the configured `treePathSeparator` instead of hardcoded "." separator
+  - All path manipulation functions now respect the custom separator setting
+  - Ensures consistent path handling throughout the tree operations when using custom separators like "/"
+  - Fixed `getRelativePath` to use `pathSeparator.length` instead of assuming single character
+  - Fixed `getLevel` to properly count segments with multi-character separators
+
+### Added
+- **Test Suite**: Added comprehensive test coverage for ltree helper functions
+  - 24 test cases covering single-character, multi-character, and edge case separators
+  - Vitest testing framework integration with `npm run test` and `make test` commands
+  - Tests validate proper handling of separators like `"::"`, `"->>"`, `"<|>"` and complex edge cases
+
+## [4.0.0] - 2025-01-09
 
 ### Added
 - **Complete Showcase Site Redesign**: Comprehensive overhaul of the documentation and demo site
