@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.1] - 2025-09-24
+
+### Enhanced
+- **Debug Context Menu Positioning**: Improved debug context menu to position relative to tree element instead of viewport
+  - Debug menu now appears 200px right and 100px down from each tree's top-left corner
+  - Supports multiple trees on same page with individual positioning
+  - Enhanced debug logging to include tree ID and calculated position coordinates
+  - Better for CSS development when tree is not at top-left of viewport
+- **Debug Context Menu Robustness**: Enhanced debug mode to work with single-node trees
+  - Uses second node when available, falls back to first node for single-node trees
+  - More flexible node selection for debug menu display
+  - Improved reliability for development scenarios
+
+### Fixed
+- **Debug Mode State Management**: Fixed context menu interference between debug mode and normal right-click menus
+  - Added `isDebugMenuActive` state tracking to prevent debug logic from hiding user-triggered menus
+  - Normal right-click context menus now work properly when debug mode is disabled
+  - Proper cleanup of debug state when switching between modes
+- **Debug Mode Requirements**: Relaxed debug context menu requirements to support edge cases
+  - Changed minimum tree length requirement from `> 1` to `> 0` for better compatibility
+  - Debug mode now works with any non-empty tree structure
+
+## [4.2.0] - 2025-09-24
+
+### Added
+- **Context Menu System**: Comprehensive context menu functionality with two implementation approaches
+  - **Callback-based Context Menus**: New `contextMenuCallback` prop that accepts a function `(node: LTreeNode<T>) => ContextMenuItem[]`
+  - **ContextMenuItem Interface**: New interface with `icon`, `title`, `isDisabled`, `callback`, and `isDivider` properties
+  - **Position Offset Configuration**: New `contextMenuXOffset` (default: 8px) and `contextMenuYOffset` (default: 0px) props for cursor clearance
+  - **Debug Mode**: New `shouldDisplayContextMenuInDebugMode` prop for persistent context menu display at fixed position (200px, 100px)
+  - **Snippet-based Support**: Maintains backward compatibility with existing `{#snippet contextMenu(node, closeMenu)}` approach
+- **Enhanced Context Menu UX**:
+  - Auto-close on scroll events (mouse wheel, scrollbar, touch, programmatic)
+  - Auto-close on outside clicks
+  - Support for disabled menu items with visual feedback
+  - Support for menu dividers for visual organization
+  - Rich icon support for menu items
+- **Development Tools**: New `/dev/context-menu` page with comprehensive examples
+  - Basic file system context menu example with conditional actions
+  - Advanced server management example with status-based and type-specific menus
+  - Real-time offset configuration testing
+  - Interactive demonstration of all context menu features
+  - Debug context menu mode with `shouldDisplayContextMenuInDebugMode` for easy styling development
+  - Navigation link added to main layout for easy access
+
+### Enhanced
+- **CSS Styling**: Added comprehensive context menu styles in `main.scss`
+  - `.ltree-context-menu`, `.ltree-context-menu-item`, `.ltree-context-menu-icon`, `.ltree-context-menu-divider` classes
+  - Support for disabled states with `.ltree-context-menu-item-disabled`
+  - Flexible layout with proper hover effects and visual hierarchy
+- **Type Safety**: Full TypeScript support for all context menu features
+- **Documentation**: Comprehensive README and CLAUDE.md updates covering both implementation approaches
+
+### Fixed
+- **Context Menu Scroll Behavior**: Fixed issue where context menu remained visible when scrolling
+  - Added scroll event listeners with capture phase to catch all scroll events
+  - Added wheel event listeners for mouse wheel scrolling
+  - Context menu now properly closes on any scroll interaction
+
+## [4.1.1] - 2025-09-23
+
+### Fixed
+- **TreePathSeparator Default Value**: Fixed `treePathSeparator` parameter to properly default to '.' when not provided to Tree.svelte
+  - Previously, when `treePathSeparator` was undefined, the reactive effect would override the ltree's internal default
+  - Now defaults to '.' in the parameter destructuring, ensuring consistent behavior
+
 ## [4.1.0] - 2025-09-23
 
 ### Fixed

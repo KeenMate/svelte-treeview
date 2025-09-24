@@ -6,7 +6,8 @@
 
 	const navItems = [
 		{ href: '/', label: 'Home', icon: '🏠' },
-		{ href: '/dev', label: 'Development', icon: '⚙️' }
+		{ href: '/dev', label: 'Development', icon: '⚙️' },
+		{ href: '/dev/context-menu', label: 'Context Menu', icon: '📋' }
 	];
 </script>
 

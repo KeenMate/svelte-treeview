@@ -12,7 +12,7 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 - **Drag & Drop**: Built-in drag and drop support with validation and visual feedback
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
-- **Context Menus**: Right-click context menus with customizable actions
+- **Context Menus**: Dynamic right-click menus with callback-based generation, icons, disabled states
 - **Visual Customization**: Extensive styling options and icon customization
 - **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - **Accessibility**: Built with accessibility in mind
@@ -258,6 +258,104 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
 </div>
 ```
 
+### With Context Menus
+
+The tree supports context menus with two approaches: callback-based (recommended) and snippet-based.
+
+#### Callback-Based Context Menus
+
+```svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+  import type { ContextMenuItem } from '@keenmate/svelte-treeview';
+
+  const data = [
+    { path: '1', name: 'Documents', type: 'folder', canEdit: true, canDelete: true },
+    { path: '1.1', name: 'report.pdf', type: 'file', canEdit: true, canDelete: false },
+    { path: '2', name: 'Images', type: 'folder', canEdit: false, canDelete: true }
+  ];
+
+  function createContextMenu(node): ContextMenuItem[] {
+    const items: ContextMenuItem[] = [];
+
+    // Always available
+    items.push({
+      icon: '📂',
+      title: 'Open',
+      callback: () => alert(`Opening ${node.data.name}`)
+    });
+
+    // Conditional actions based on node data
+    if (node.data.canEdit) {
+      items.push({
+        icon: '✏️',
+        title: 'Edit',
+        callback: () => alert(`Editing ${node.data.name}`)
+      });
+    }
+
+    if (node.data.canDelete) {
+      items.push({
+        icon: '🗑️',
+        title: 'Delete',
+        callback: () => confirm(`Delete ${node.data.name}?`) && alert('Deleted!')
+      });
+    }
+
+    // Divider
+    items.push({ isDivider: true });
+
+    // Disabled item example
+    items.push({
+      icon: '🔒',
+      title: 'Restricted Action',
+      isDisabled: true,
+      callback: () => {}
+    });
+
+    return items;
+  }
+</script>
+
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+  contextMenuCallback={createContextMenu}
+  contextMenuXOffset={8}
+  contextMenuYOffset={0}
+/>
+```
+
+#### Snippet-Based Context Menus
+
+```svelte
+<Tree
+  {data}
+  idMember="path"
+  pathMember="path"
+>
+  {#snippet contextMenu(node, closeMenu)}
+    <div class="context-menu-item" onclick={() => { alert(`Open ${node.data.name}`); closeMenu(); }}>
+      📂 Open
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick={() => { alert(`Delete ${node.data.name}`); closeMenu(); }}>
+      🗑️ Delete
+    </div>
+  {/snippet}
+</Tree>
+```
+
+#### Context Menu Features
+
+- **Dynamic menus**: Generate menu items based on node properties
+- **Icons and dividers**: Visual organization and identification
+- **Disabled states**: Context-sensitive menu availability
+- **Position offset**: `contextMenuXOffset`/`contextMenuYOffset` for cursor clearance
+- **Auto-close**: Closes on scroll, click outside, or programmatically
+- **Type safety**: Full TypeScript support with `ContextMenuItem` interface
+
 ## 🎨 Styling and Customization
 
 The component comes with default styles that provide a clean, modern look. You can customize it extensively:
@@ -414,6 +512,7 @@ Without both requirements, no search indexing will occur.
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging for tree operations and async search indexing |
+| `shouldDisplayContextMenuInDebugMode` | `boolean` | `false` | Display persistent context menu at fixed position for styling development |
 
 #### Event Handler Properties
 | Prop | Type | Default | Description |
@@ -598,7 +697,7 @@ Custom template for rendering node content.
 ```
 
 #### contextMenu
-Custom context menu template.
+Custom context menu template (snippet-based approach).
 
 ```svelte
 {#snippet contextMenu(node, closeMenu)}
@@ -607,6 +706,53 @@ Custom context menu template.
   </button>
 {/snippet}
 ```
+
+### Context Menu Properties
+
+#### contextMenuCallback
+Function that generates context menu items dynamically.
+
+```typescript
+contextMenuCallback: (node: LTreeNode<T>) => ContextMenuItem[]
+```
+
+Where `ContextMenuItem` is:
+```typescript
+interface ContextMenuItem {
+  icon?: string;        // Optional icon (emoji or text)
+  title: string;        // Menu item text
+  isDisabled?: boolean; // Whether item is disabled
+  callback: () => void; // Action to perform
+  isDivider?: boolean;  // Render as divider instead of item
+}
+```
+
+#### contextMenuXOffset
+Horizontal offset from cursor position (default: 8px).
+
+#### contextMenuYOffset
+Vertical offset from cursor position (default: 0px).
+
+#### shouldDisplayContextMenuInDebugMode
+When enabled, displays a persistent context menu at a fixed position for styling development (default: false).
+
+```svelte
+<Tree
+  {data}
+  contextMenuCallback={createContextMenu}
+  shouldDisplayContextMenuInDebugMode={true}
+  shouldDisplayDebugInformation={true}
+  contextMenuXOffset={10}
+  contextMenuYOffset={5}
+/>
+```
+
+**Debug Mode Features:**
+- Shows context menu for the second node (or first if only one exists)
+- Positions menu 200px right and 100px down from tree's top-left corner
+- Persistent display - no need to right-click repeatedly
+- Perfect for CSS styling and position testing
+- Works with both callback-based and snippet-based context menus
 
 ## 🏗️ Data Structure
 

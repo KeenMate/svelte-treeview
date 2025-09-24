@@ -3,7 +3,7 @@
 	import Node from './Node.svelte';
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
-	import { type Ltree, type InsertArrayResult } from '../ltree/types.js';
+	import { type Ltree, type InsertArrayResult, type ContextMenuItem } from '../ltree/types.js';
 	import { setContext, tick } from 'svelte';
 
 	// Context menu state
@@ -62,12 +62,14 @@
 		indexerBatchSize?: number | null | undefined;
 		indexerTimeout?: number | null | undefined;
 		shouldDisplayDebugInformation?: boolean;
+		shouldDisplayContextMenuInDebugMode?: boolean;
 
 		// EVENTS
 		onNodeClicked?: (node: LTreeNode<T>) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDrop?: (node: LTreeNode<T>, draggedNode: LTreeNode<T>, event: DragEvent) => void;
+		contextMenuCallback?: (node: LTreeNode<T>) => ContextMenuItem[];
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
@@ -78,11 +80,13 @@
 		leafIconClass?: string | null | undefined;
 		scrollHighlightTimeout?: number | null | undefined;
 		scrollHighlightClass?: string | null | undefined;
+		contextMenuXOffset?: number | null | undefined;
+		contextMenuYOffset?: number | null | undefined;
 	}
 
 	let {
 		treeId,
-		treePathSeparator,
+		treePathSeparator = '.',
 
 		// MAPPINGS
 		idMember,
@@ -125,12 +129,14 @@
 		indexerBatchSize = 25,
 		indexerTimeout = 50,
 		shouldDisplayDebugInformation = false,
+		shouldDisplayContextMenuInDebugMode = false,
 
 		// EVENTS
 		onNodeClicked,
 		onNodeDragStart,
 		onNodeDragOver,
 		onNodeDrop,
+		contextMenuCallback,
 
 		// VISUALS
 		bodyClass,
@@ -140,7 +146,9 @@
 		selectedNodeClass,
 		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
-		scrollHighlightClass = 'ltree-scroll-highlight'
+		scrollHighlightClass = 'ltree-scroll-highlight',
+		contextMenuXOffset = 8,
+		contextMenuYOffset = 0
 	}: Props = $props();
 
 	export async function expandNodes(nodePath: string) {
@@ -305,20 +313,22 @@
 	}
 
 	function _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
-		if (!contextMenu) {
+		if (!contextMenu && !contextMenuCallback) {
 			return;
 		}
 
 		event.preventDefault();
 		contextMenuNode = node;
-		contextMenuX = event.clientX;
-		contextMenuY = event.clientY;
+		contextMenuX = event.clientX + contextMenuXOffset;
+		contextMenuY = event.clientY + contextMenuYOffset;
 		contextMenuVisible = true;
+		isDebugMenuActive = false; // This is a user-triggered menu, not debug menu
 	}
 
 	function closeContextMenu() {
 		contextMenuVisible = false;
 		contextMenuNode = null;
+		isDebugMenuActive = false;
 	}
 
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
@@ -388,8 +398,8 @@
 		}
 	}
 
-	// Add global event listener for document clicks
-	$effect.root(() => {
+	// Add global event listener for document clicks and scroll events
+	$effect(() => {
 		if (contextMenuVisible) {
 			const handleGlobalClick = (event: MouseEvent) => {
 				const target = event.target as Element;
@@ -398,18 +408,63 @@
 				}
 			};
 
+			const handleGlobalScroll = (event?: Event) => {
+				if (shouldDisplayDebugInformation) {
+					console.log(`[Tree ${treeId}] Scroll/wheel event detected, closing context menu`, event?.type);
+				}
+				closeContextMenu();
+			};
+
+			// Add scroll listeners to both window and document to catch all scroll events
 			document.addEventListener('click', handleGlobalClick);
 			document.addEventListener('contextmenu', handleGlobalClick);
+			window.addEventListener('scroll', handleGlobalScroll, true);
+			document.addEventListener('scroll', handleGlobalScroll, true);
+
+			// Also listen for wheel events which might not trigger scroll
+			window.addEventListener('wheel', handleGlobalScroll, { passive: true });
 
 			return () => {
 				document.removeEventListener('click', handleGlobalClick);
 				document.removeEventListener('contextmenu', handleGlobalClick);
+				window.removeEventListener('scroll', handleGlobalScroll, true);
+				document.removeEventListener('scroll', handleGlobalScroll, true);
+				window.removeEventListener('wheel', handleGlobalScroll);
 			};
+		}
+	});
+
+	// Debug context menu - show context menu on second node for styling development
+	let isDebugMenuActive = $state(false);
+	let treeContainerRef: HTMLDivElement;
+
+	$effect(() => {
+		if (shouldDisplayContextMenuInDebugMode && (contextMenu || contextMenuCallback) && tree?.tree && tree.tree.length > 0) {
+			// Use the first available node for the context menu data
+			const targetNode = tree.tree.length > 1 ? tree.tree[1] : tree.tree[0];
+			if (targetNode && treeContainerRef) {
+				// Position the context menu relative to the tree container
+				const treeRect = treeContainerRef.getBoundingClientRect();
+				contextMenuNode = targetNode;
+				contextMenuX = treeRect.left + 200; // 200px from tree's left edge
+				contextMenuY = treeRect.top + 100;  // 100px from tree's top edge
+				contextMenuVisible = true;
+				isDebugMenuActive = true;
+
+				if (shouldDisplayDebugInformation) {
+					console.log(`[Tree ${treeId}] Debug context menu displayed for node:`, targetNode.data, `at position (${contextMenuX}, ${contextMenuY})`);
+				}
+			}
+		} else if (!shouldDisplayContextMenuInDebugMode && isDebugMenuActive) {
+			// Only hide the context menu if it was opened by debug mode
+			contextMenuVisible = false;
+			contextMenuNode = null;
+			isDebugMenuActive = false;
 		}
 	});
 </script>
 
-<div>
+<div bind:this={treeContainerRef}>
 	{#if shouldDisplayDebugInformation}
 		<div class="ltree-debug-info">
 			<details>
@@ -471,9 +526,29 @@
 	{@render treeFooter?.()}
 
 	<!-- Context Menu -->
-	{#if contextMenuVisible && contextMenu && contextMenuNode}
+	{#if contextMenuVisible && contextMenuNode}
 		<div class="ltree-context-menu" style="left: {contextMenuX}px; top: {contextMenuY}px;">
-			{@render contextMenu(contextMenuNode, closeContextMenu)}
+			{#if contextMenuCallback}
+				{@const menuItems = contextMenuCallback(contextMenuNode)}
+				{#each menuItems as item}
+					{#if item.isDivider}
+						<div class="ltree-context-menu-divider"></div>
+					{:else}
+						<div
+							class="ltree-context-menu-item"
+							class:ltree-context-menu-item-disabled={item.isDisabled}
+							onclick={() => !item.isDisabled && item.callback()}
+						>
+							{#if item.icon}
+								<span class="ltree-context-menu-icon">{item.icon}</span>
+							{/if}
+							{item.title}
+						</div>
+					{/if}
+				{/each}
+			{:else if contextMenu}
+				{@render contextMenu(contextMenuNode, closeContextMenu)}
+			{/if}
 		</div>
 	{/if}
 </div>

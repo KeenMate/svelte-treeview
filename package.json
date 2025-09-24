@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "4.1.0",
+	"version": "4.2.1",
 	"scripts": {
 		"dev": "vite dev --port 17777",
 		"build": "vite build && npm run prepack",
@@ -78,6 +78,7 @@
 		"drag-drop",
 		"search",
 		"flexsearch",
+		"context-menu",
 		"component",
 		"ui"
 	],

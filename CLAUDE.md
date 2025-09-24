@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.0.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.2.1 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -39,6 +39,14 @@ interface Ltree<T> {
   getNodeByPath(path: string): LTreeNode<T>|null;
   filterNodes(searchText: string): void;
 }
+
+interface ContextMenuItem {
+  icon?: string;
+  title: string;
+  isDisabled?: boolean;
+  callback: () => void;
+  isDivider?: boolean;
+}
 ```
 
 TREE_PROPS_REQUIRED:
@@ -55,6 +63,10 @@ TREE_PROPS_KEY:
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
 - treePathSeparator: string (default ".")
+- contextMenuCallback: (node: LTreeNode<T>) => ContextMenuItem[]
+- contextMenuXOffset: number (default 8px)
+- contextMenuYOffset: number (default 0px)
+- shouldDisplayContextMenuInDebugMode: boolean (default false)
 
 PUBLIC_METHODS:
 - expandNodes(path), collapseNodes(path), expandAll(), collapseAll()
@@ -76,6 +88,7 @@ STYLING:
 - CSS variables for theming
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
 - Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow
+- Context menu classes: ltree-context-menu, ltree-context-menu-item, ltree-context-menu-divider
 
 CONSTRAINTS:
 - Svelte 5 only (uses runes)
@@ -83,4 +96,13 @@ CONSTRAINTS:
 - Search needs shouldUseInternalSearchIndex + searchValueMember/callback
 - Segments internally prefixed 'x' for ordering
 
-RECENT: v4.0.0 stable release with enhanced search, visual drag feedback, customizable scroll highlighting, and improved error handling
+CONTEXT_MENU:
+- Two approaches: snippet-based and callback-based
+- Callback: contextMenuCallback(node) returns ContextMenuItem[]
+- Position offset: contextMenuXOffset/YOffset for cursor clearance
+- Debug mode: shouldDisplayContextMenuInDebugMode shows menu at tree-relative position (200px right, 100px down)
+- Auto-close: closes on scroll, click outside, or programmatically
+- Features: icons, disabled states, dividers, conditional menus
+- Dev page: /dev/context-menu with examples and debug controls
+
+RECENT: v4.2.1 with enhanced context menu system - tree-relative debug positioning, improved state management, and comprehensive dev examples

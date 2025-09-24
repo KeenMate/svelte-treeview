@@ -3,6 +3,14 @@ import type { LTreeNode } from './ltree-node.svelte';
 
 export type Tuple<T, U> = [T, U];
 
+export interface ContextMenuItem {
+	icon?: string;
+	title: string;
+	isDisabled?: boolean;
+	callback: () => void;
+	isDivider?: boolean;
+}
+
 export interface InsertArrayResult<T> {
 	successful: number;
 	failed: Array<{
