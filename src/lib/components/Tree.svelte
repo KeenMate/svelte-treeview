@@ -69,7 +69,7 @@
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDrop?: (node: LTreeNode<T>, draggedNode: LTreeNode<T>, event: DragEvent) => void;
-		contextMenuCallback?: (node: LTreeNode<T>) => ContextMenuItem[];
+		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuItem[];
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
@@ -176,6 +176,13 @@
 		searchOptions?: SearchOptions
 	): LTreeNode<T>[] {
 		return tree?.searchNodes(searchText, searchOptions) || [];
+	}
+
+	// svelte-ignore non_reactive_update
+	export function closeContextMenu() {
+		contextMenuVisible = false;
+		contextMenuNode = null;
+		isDebugMenuActive = false;
 	}
 
 	export async function scrollToPath(
@@ -325,11 +332,6 @@
 		isDebugMenuActive = false; // This is a user-triggered menu, not debug menu
 	}
 
-	function closeContextMenu() {
-		contextMenuVisible = false;
-		contextMenuNode = null;
-		isDebugMenuActive = false;
-	}
 
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
 		draggedNode = node;
@@ -529,15 +531,23 @@
 	{#if contextMenuVisible && contextMenuNode}
 		<div class="ltree-context-menu" style="left: {contextMenuX}px; top: {contextMenuY}px;">
 			{#if contextMenuCallback}
-				{@const menuItems = contextMenuCallback(contextMenuNode)}
+				{@const menuItems = contextMenuCallback(contextMenuNode, closeContextMenu)}
 				{#each menuItems as item}
 					{#if item.isDivider}
 						<div class="ltree-context-menu-divider"></div>
 					{:else}
 						<div
-							class="ltree-context-menu-item"
+							class="ltree-context-menu-item {item.className || ''}"
 							class:ltree-context-menu-item-disabled={item.isDisabled}
-							onclick={() => !item.isDisabled && item.callback()}
+							onclick={async () => {
+								if (!item.isDisabled) {
+									try {
+										await item.callback();
+									} catch (error) {
+										console.error('Context menu callback error:', error);
+									}
+								}
+							}}
 						>
 							{#if item.icon}
 								<span class="ltree-context-menu-icon">{item.icon}</span>

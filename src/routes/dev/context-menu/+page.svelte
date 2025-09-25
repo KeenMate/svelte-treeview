@@ -62,14 +62,17 @@
 		console.log('Node clicked:', node);
 	}
 
-	function createContextMenu(node: any): ContextMenuItem[] {
+	function createContextMenu(node: any, closeMenuCallback: () => void): ContextMenuItem[] {
 		const menuItems: ContextMenuItem[] = [];
 
 		// Open action - always available
 		menuItems.push({
 			icon: '📂',
 			title: 'Open',
-			callback: () => alert(`Opening: ${node.data.name}`)
+			callback: () => {
+				alert(`Opening: ${node.data.name}`);
+				closeMenuCallback(); // Close menu after action
+			}
 		});
 
 		// Edit action - conditional
@@ -77,7 +80,10 @@
 			menuItems.push({
 				icon: '✏️',
 				title: 'Edit',
-				callback: () => alert(`Editing: ${node.data.name}`)
+				callback: () => {
+					alert(`Editing: ${node.data.name}`);
+					closeMenuCallback();
+				}
 			});
 		}
 
@@ -86,10 +92,13 @@
 			menuItems.push({
 				icon: '🗑️',
 				title: 'Delete',
+				className: 'text-danger', // Bootstrap class for red text
 				callback: () => {
 					if (confirm(`Delete "${node.data.name}"?`)) {
 						alert(`Deleted: ${node.data.name}`);
+						closeMenuCallback(); // Close after successful action
 					}
+					// Note: Don't close if user cancelled - let them try again or click elsewhere
 				}
 			});
 		}
@@ -97,11 +106,16 @@
 		// Divider
 		menuItems.push({ isDivider: true } as ContextMenuItem);
 
-		// Copy action - always available
+		// Copy action - always available (async example)
 		menuItems.push({
 			icon: '📋',
 			title: 'Copy',
-			callback: () => alert(`Copied: ${node.data.name}`)
+			callback: async () => {
+				// Simulate async operation
+				await new Promise(resolve => setTimeout(resolve, 1000));
+				alert(`Copied: ${node.data.name}`);
+				closeMenuCallback(); // Close after async operation completes
+			}
 		});
 
 		// New folder/file actions - only for folders and projects
@@ -111,11 +125,29 @@
 			menuItems.push({
 				icon: '📁',
 				title: 'New Folder',
-				callback: () => {
+				callback: async () => {
 					const name = prompt('New folder name:');
 					if (name) {
-						alert(`Creating new folder "${name}" in ${node.data.name}`);
+						try {
+							// Simulate async API call
+							await new Promise((resolve, reject) => {
+								setTimeout(() => {
+									// Simulate occasional failure
+									if (Math.random() > 0.8) {
+										reject(new Error('Server error: Failed to create folder'));
+									} else {
+										resolve(null);
+									}
+								}, 800);
+							});
+							alert(`Successfully created folder "${name}" in ${node.data.name}`);
+							closeMenuCallback(); // Close on success
+						} catch (error) {
+							alert(`Failed to create folder: ${error.message}`);
+							// Menu stays open on error so user can try again
+						}
 					}
+					// Don't close if user cancelled
 				}
 			});
 
@@ -145,7 +177,7 @@
 	}
 
 	// Advanced context menu callback - demonstrates more complex scenarios
-	function createAdvancedContextMenu(node: any): ContextMenuItem[] {
+	function createAdvancedContextMenu(node: any, closeMenuCallback: () => void): ContextMenuItem[] {
 		const menuItems: ContextMenuItem[] = [];
 
 		// Status-based actions
@@ -154,7 +186,10 @@
 				icon: '🔴',
 				title: 'Stop',
 				isDisabled: !node.data.canStop,
-				callback: () => alert(`Stopping ${node.data.name}`)
+				callback: () => {
+					alert(`Stopping ${node.data.name}`);
+					closeMenuCallback();
+				}
 			});
 
 			if (node.data.canRestart) {
@@ -202,7 +237,18 @@
 			menuItems.push({
 				icon: '💾',
 				title: 'Backup',
-				callback: () => alert(`Creating backup of ${node.data.name}`)
+				callback: async () => {
+					try {
+						// Simulate long-running backup operation
+						alert(`Starting backup of ${node.data.name}...`);
+						await new Promise(resolve => setTimeout(resolve, 2000));
+						alert(`Backup completed successfully for ${node.data.name}`);
+						closeMenuCallback(); // Close after successful backup
+					} catch (error) {
+						alert(`Backup failed: ${error.message}`);
+						// Menu stays open so user can retry
+					}
+				}
 			});
 
 			menuItems.push({

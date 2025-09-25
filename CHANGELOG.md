@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.1] - 2025-09-25
+
+### Enhanced
+- **Async Callback Support**: Context menu callbacks now fully support async operations
+  - Updated `callback: () => void | Promise<void>` signature in `ContextMenuItem` interface
+  - Added automatic error handling for async callbacks with try/catch wrapper
+  - Menu item clicks properly await async operations before completing
+  - Errors in async callbacks are logged to console for debugging
+- **Robust Error Handling**: Async callback failures don't break menu functionality
+  - Failed async operations are caught and logged automatically
+  - Developers can implement custom error handling within their callbacks
+  - Menu stays open on errors, allowing users to retry actions
+- **Enhanced Dev Examples**: Added comprehensive async callback demonstrations
+  - Copy action with simulated network delay
+  - New folder creation with error simulation (20% failure rate)
+  - Database backup with long-running operation simulation
+  - Shows patterns for success/failure handling and conditional menu closing
+
+### Documentation
+- **Async Patterns**: Examples showing proper async callback implementation
+- **Error Handling**: Best practices for managing async operation failures
+- **Menu Control**: Demonstrated conditional closing based on operation success/failure
+
+## [4.3.0] - 2025-09-25
+
+### Added
+- **Enhanced Context Menu Control**: Context menu callback now receives `closeMenuCallback` parameter for programmatic menu control
+  - `contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuItem[]`
+  - Developers can now control when/if context menu closes after menu item actions
+  - Enables conditional closing patterns (e.g., don't close on cancel, only on success)
+  - Public `closeContextMenu()` method exported for external control
+- **Context Menu Item Styling**: New `className?: string` property in `ContextMenuItem` interface
+  - Apply custom CSS classes to individual menu items for styling
+  - Supports multiple classes (space-separated strings)
+  - Example: `className: 'text-danger fw-bold'` for destructive actions
+- **Enhanced Dev Examples**: Updated context menu examples to demonstrate new features
+  - Conditional menu closing patterns for different action types
+  - CSS class styling demonstrations with Bootstrap classes
+  - Improved UX patterns showing when to close vs keep menu open
+
+### Enhanced
+- **Flexible Menu Behavior**: Context menu now supports various interaction patterns
+  - Immediate close after action completion
+  - Conditional close based on user confirmation
+  - Persistent menu for multi-step operations
+  - Custom styling per menu item type
+
 ## [4.2.1] - 2025-09-24
 
 ### Enhanced

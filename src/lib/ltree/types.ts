@@ -7,8 +7,9 @@ export interface ContextMenuItem {
 	icon?: string;
 	title: string;
 	isDisabled?: boolean;
-	callback: () => void;
+	callback: () => void | Promise<void>;
 	isDivider?: boolean;
+	className?: string;
 }
 
 export interface InsertArrayResult<T> {
