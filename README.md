@@ -554,6 +554,7 @@ Without both requirements, no search indexing will occur.
 | `filterNodes` | `searchText: string, searchOptions?: SearchOptions` | Filter the tree display using internal search index with optional FlexSearch options |
 | `searchNodes` | `searchText: string \| null \| undefined, searchOptions?: SearchOptions` | Search nodes using internal search index and return matching nodes with optional FlexSearch options |
 | `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
+| `update` | `updates: Partial<Props>` | Programmatically update component props from external JavaScript |
 
 #### ScrollToPath Options
 
@@ -630,6 +631,43 @@ if (isIndexing) {
   console.log(`Search indexing in progress: ${pendingIndexCount} nodes pending`);
 }
 ```
+
+#### External Updates (Vanilla JavaScript)
+
+The `update()` method allows you to programmatically update component props from external JavaScript code (outside of Svelte's reactivity system). This is particularly useful for HTML/JavaScript integration or dynamic configuration from non-Svelte code.
+
+```javascript
+// Get reference to the tree component
+const treeElement = document.querySelector('#my-tree');
+
+// Update multiple props at once
+treeElement.update({
+  searchText: 'Production',
+  expandLevel: 3,
+  shouldDisplayDebugInformation: true,
+  data: newDataArray,
+  contextMenuXOffset: 10
+});
+
+// Update single prop
+treeElement.update({ searchText: 'new search' });
+
+// Update data and configuration
+treeElement.update({
+  data: fetchedData,
+  expandLevel: 5,
+  selectedNodeClass: 'custom-selected'
+});
+```
+
+**Updatable Properties:**
+All Tree props can be updated except snippets/templates, including:
+- Data and state: `data`, `searchText`, `selectedNode`, `expandLevel`
+- Members: `idMember`, `pathMember`, `displayValueMember`, `searchValueMember`
+- Callbacks: `sortCallback`, `getDisplayValueCallback`, `onNodeClicked`, etc.
+- Visual: `bodyClass`, `selectedNodeClass`, `expandIconClass`, etc.
+- Context menu: `contextMenuCallback`, `contextMenuXOffset`, `contextMenuYOffset`
+- Behavior: `shouldToggleOnNodeClick`, `shouldUseInternalSearchIndex`, etc.
 
 ### Debug Information
 

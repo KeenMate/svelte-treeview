@@ -16,8 +16,6 @@
 	let draggedNode: LTreeNode<any> | null = $state.raw(null);
 
 	interface Props {
-		trieId?: string | null | undefined;
-
 		// MAPPINGS
 		idMember: string;
 		pathMember: string;
@@ -235,6 +233,102 @@
 		return true;
 	}
 
+	// External update method for HTML/JavaScript usage
+	export function update(
+		updates: Partial<
+			Pick<
+				Props,
+				| "treeId"
+				| "treePathSeparator"
+				| "idMember"
+				| "pathMember"
+				| "parentPathMember"
+				| "levelMember"
+				| "hasChildrenMember"
+				| "isExpandedMember"
+				| "isSelectedMember"
+				| "isDraggableMember"
+				| "isDropAllowedMember"
+				| "displayValueMember"
+				| "getDisplayValueCallback"
+				| "searchValueMember"
+				| "getSearchValueCallback"
+				| "isSorted"
+				| "sortCallback"
+				| "data"
+				| "selectedNode"
+				| "expandLevel"
+				| "shouldToggleOnNodeClick"
+				| "shouldUseInternalSearchIndex"
+				| "initializeIndexCallback"
+				| "searchText"
+				| "indexerBatchSize"
+				| "indexerTimeout"
+				| "shouldDisplayDebugInformation"
+				| "shouldDisplayContextMenuInDebugMode"
+				| "onNodeClicked"
+				| "onNodeDragStart"
+				| "onNodeDragOver"
+				| "onNodeDrop"
+				| "contextMenuCallback"
+				| "bodyClass"
+				| "expandIconClass"
+				| "collapseIconClass"
+				| "leafIconClass"
+				| "selectedNodeClass"
+				| "dragOverNodeClass"
+				| "scrollHighlightTimeout"
+				| "scrollHighlightClass"
+				| "contextMenuXOffset"
+				| "contextMenuYOffset"
+			>
+		>
+	) {
+		if (updates.treeId !== undefined) treeId = updates.treeId;
+		if (updates.treePathSeparator !== undefined) treePathSeparator = updates.treePathSeparator;
+		if (updates.idMember !== undefined) idMember = updates.idMember;
+		if (updates.pathMember !== undefined) pathMember = updates.pathMember;
+		if (updates.parentPathMember !== undefined) parentPathMember = updates.parentPathMember;
+		if (updates.levelMember !== undefined) levelMember = updates.levelMember;
+		if (updates.hasChildrenMember !== undefined) hasChildrenMember = updates.hasChildrenMember;
+		if (updates.isExpandedMember !== undefined) isExpandedMember = updates.isExpandedMember;
+		if (updates.isSelectedMember !== undefined) isSelectedMember = updates.isSelectedMember;
+		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
+		if (updates.isDropAllowedMember !== undefined) isDropAllowedMember = updates.isDropAllowedMember;
+		if (updates.displayValueMember !== undefined) displayValueMember = updates.displayValueMember;
+		if (updates.getDisplayValueCallback !== undefined) getDisplayValueCallback = updates.getDisplayValueCallback;
+		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
+		if (updates.getSearchValueCallback !== undefined) getSearchValueCallback = updates.getSearchValueCallback;
+		if (updates.isSorted !== undefined) isSorted = updates.isSorted;
+		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;
+		if (updates.data !== undefined) data = updates.data;
+		if (updates.selectedNode !== undefined) selectedNode = updates.selectedNode;
+		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
+		if (updates.shouldToggleOnNodeClick !== undefined) shouldToggleOnNodeClick = updates.shouldToggleOnNodeClick;
+		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
+		if (updates.initializeIndexCallback !== undefined) initializeIndexCallback = updates.initializeIndexCallback;
+		if (updates.searchText !== undefined) searchText = updates.searchText;
+		if (updates.indexerBatchSize !== undefined) indexerBatchSize = updates.indexerBatchSize;
+		if (updates.indexerTimeout !== undefined) indexerTimeout = updates.indexerTimeout;
+		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
+		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
+		if (updates.onNodeClicked !== undefined) onNodeClicked = updates.onNodeClicked;
+		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
+		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
+		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
+		if (updates.contextMenuCallback !== undefined) contextMenuCallback = updates.contextMenuCallback;
+		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
+		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
+		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
+		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
+		if (updates.selectedNodeClass !== undefined) selectedNodeClass = updates.selectedNodeClass;
+		if (updates.dragOverNodeClass !== undefined) dragOverNodeClass = updates.dragOverNodeClass;
+		if (updates.scrollHighlightTimeout !== undefined) scrollHighlightTimeout = updates.scrollHighlightTimeout;
+		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
+		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
+		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
+	}
+
 	treeId = treeId || generateTreeId();
 
 	if (shouldDisplayDebugInformation)
@@ -290,7 +384,7 @@
 		}
 	});
 
-	// $inspect("trie change tracker", trie?.changeTracker?.toString());
+	// $inspect("tree change tracker", tree?.changeTracker?.toString());
 
 	function generateTreeId(): string {
 		return `${Date.now()}${Math.floor(Math.random() * 10000)}`;

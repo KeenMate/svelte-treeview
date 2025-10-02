@@ -48,7 +48,7 @@
 		isDraggedNode = false,
 	}: Props = $props()
 
-	const trie = getContext<Ltree<T>>("Ltree")
+	const tree = getContext<Ltree<T>>("Ltree")
 
 	// Drag over state
 	let isDraggedOver = $state(false);
@@ -63,7 +63,7 @@
 	function toggleExpanded() {
 		if (node.hasChildren) {
 			node.isExpanded = !node.isExpanded
-			trie.refresh()
+			tree.refresh()
 		}
 	}
 
@@ -155,7 +155,7 @@
 			{#if children}
 				{@render children(node)}
 			{:else}
-				{trie.getNodeDisplayValue(node)}
+				{tree.getNodeDisplayValue(node)}
 			{/if}
 		</div>
 	</div>

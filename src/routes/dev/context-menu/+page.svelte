@@ -305,6 +305,7 @@
 						idMember="id"
 						pathMember="path"
 						displayValueMember="name"
+						searchValueMember="name"
 						{sortCallback}
 						expandLevel={3}
 						treePathSeparator="."
@@ -496,6 +497,7 @@
 						idMember="id"
 						pathMember="path"
 						displayValueMember="name"
+						searchValueMember="name"
 						{sortCallback}
 						expandLevel={3}
 						treePathSeparator="."

@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.2.1 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.4.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -72,6 +72,7 @@ PUBLIC_METHODS:
 - expandNodes(path), collapseNodes(path), expandAll(), collapseAll()
 - searchNodes(searchText) - search nodes using internal index and return matching nodes
 - scrollToPath(path, options)
+- update(updates: Partial<Props>) - programmatically update props from vanilla JavaScript
 
 EVENTS: 
 - onNodeClicked(node)
@@ -105,4 +106,10 @@ CONTEXT_MENU:
 - Features: icons, disabled states, dividers, conditional menus
 - Dev page: /dev/context-menu with examples and debug controls
 
-RECENT: v4.2.1 with enhanced context menu system - tree-relative debug positioning, improved state management, and comprehensive dev examples
+EXTERNAL_UPDATE:
+- update() method for vanilla JS integration
+- Accepts partial Props object (excluding snippets)
+- Example: tree.update({ searchText: 'query', data: newData, expandLevel: 3 })
+- All props updatable: data, searchText, callbacks, members, visuals, behavior
+
+RECENT: v4.4.0 - Added update() method for external JavaScript prop updates, fixed search in context-menu dev page, cleaned up internal "trie" references to "tree"

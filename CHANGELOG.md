@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] - 2025-10-02
+
+### Added
+- **External Update Method**: New `update()` method for programmatic prop updates from vanilla JavaScript
+  - Allows external code to update component props without Svelte reactivity
+  - Accepts partial object with any Tree props (excluding snippets/templates)
+  - Useful for HTML/JavaScript integration and dynamic configuration
+  - Example: `tree.update({ searchText: 'query', expandLevel: 3, data: newData })`
+
+### Fixed
+- **Search Functionality**: Fixed search filtering in context-menu dev page
+  - Added missing `searchValueMember="name"` prop to enable proper search indexing
+  - Search now correctly filters nodes by name instead of filtering everything out
+
+### Changed
+- **Code Cleanup**: Renamed internal "trie" references to "tree" for consistency
+  - Updated variable names in Tree.svelte, Node.svelte, and ltree-demo.ts
+  - Removed "trie" from package.json keywords
+  - Improved code readability and naming consistency throughout codebase
+
 ## [4.3.1] - 2025-09-25
 
 ### Enhanced
