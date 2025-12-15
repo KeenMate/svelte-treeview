@@ -30,6 +30,8 @@ export function createLTree<T>(
 	_searchValueMember?: string | null | undefined,
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
+	_orderMember?: string | null | undefined,
+
 	_treeId?: string,
 	_treePathSeparator?: string | null | undefined,
 
@@ -110,6 +112,7 @@ export function createLTree<T>(
 
 		searchValueMember: _searchValueMember,
 		getSearchValueCallback: _getSearchValueCallback,
+		orderMember: _orderMember,
 		isSorted: false,
 
 		// Properties for filtering
@@ -149,6 +152,11 @@ export function createLTree<T>(
 			// Clear any pending indexing from previous calls
 			indexer?.clearQueue();
 			flatTreeNodes = [];
+
+			// Clear existing tree data - reset root children
+			root.children = {};
+			nodeCount = 0;
+			maxLevel = 0;
 
 			performance.mark('conversion-start');
 			let mappedData = data.map((row, index) => {
@@ -604,6 +612,466 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 		},
 
+		/**
+		 * Get direct children of a node at the given path
+		 * @param parentPath - Path to parent node (empty string for root)
+		 * @returns Array of child nodes
+		 */
+		getChildren(parentPath: string): LTreeNode<T>[] {
+			const parent = this.getNodeByPath(parentPath);
+			if (!parent) return [];
+			return Object.values(parent.children);
+		},
+
+		/**
+		 * Get siblings of a node (including the node itself)
+		 * @param path - Path to the node
+		 * @returns Array of sibling nodes (nodes with same parent)
+		 */
+		getSiblings(path: string): LTreeNode<T>[] {
+			const node = this.getNodeByPath(path);
+			if (!node) return [];
+
+			// Get parent and return all its children
+			const parentPath = node.parentPath || '';
+			return this.getChildren(parentPath);
+		},
+
+		/**
+		 * Re-sort siblings under a parent path using sortCallback or default sort
+		 * This reorders the children object to reflect updated order values
+		 * @param parentPath - Path to parent node (empty string for root)
+		 */
+		refreshSiblings(parentPath: string): void {
+			const parent = parentPath ? this.getNodeByPath(parentPath) : root;
+			if (!parent) return;
+
+			// Get current children as array
+			const children = Object.values(parent.children) as LTreeNode<T>[];
+			if (children.length === 0) return;
+
+			// Sort using sortCallback or default sort
+			let sorted: LTreeNode<T>[];
+			if (this.sortCallback) {
+				sorted = this.sortCallback(children);
+			} else {
+				// Use a simplified sort for siblings only (all same level/parent)
+				sorted = [...children].sort((a, b) => {
+					// If orderMember is provided, use it
+					if (this.orderMember && a.data && b.data) {
+						const aOrder = a.data[this.orderMember] ?? 0;
+						const bOrder = b.data[this.orderMember] ?? 0;
+						if (aOrder !== bOrder) {
+							return aOrder - bOrder;
+						}
+					}
+					// Fall back to display value
+					return this.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b));
+				});
+			}
+
+			// Rebuild children object in sorted order
+			const newChildren: Record<string, LTreeNode<T>> = {};
+			sorted.forEach(child => {
+				const segment = segmentPrefix + child.pathSegment;
+				newChildren[segment] = child;
+			});
+			parent.children = newChildren;
+
+			if (this.shouldDisplayDebugInformation) {
+				console.log(`[Tree ${_treeId}] refreshSiblings: Re-sorted ${sorted.length} children under "${parentPath || 'root'}":`,
+					sorted.map(s => ({ path: s.path, sortOrder: s.data?.[this.orderMember as keyof T] }))
+				);
+			}
+
+			this._emitTreeChanged();
+		},
+
+		/**
+		 * Refresh a single node and optionally its descendants
+		 * Useful after modifying node data externally
+		 * @param path - Path to the node to refresh
+		 */
+		refreshNode(path: string): void {
+			// For now, just trigger a tree change
+			// Future optimization: only re-render the specific subtree
+			this._emitTreeChanged();
+		},
+
+		/**
+		 * Move a node to a new location in the tree
+		 * @param sourcePath - Path of the node to move
+		 * @param targetPath - Path of the target node
+		 * @param position - Where to place relative to target: 'above', 'below', or 'child'
+		 * @returns Object with success status and optional error message
+		 */
+		moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string } {
+			// Find source node
+			const sourceNode = this.getNodeByPath(sourcePath);
+			if (!sourceNode) {
+				return { success: false, error: `Source node not found: ${sourcePath}` };
+			}
+
+			// Find target node
+			const targetNode = this.getNodeByPath(targetPath);
+			if (!targetNode) {
+				return { success: false, error: `Target node not found: ${targetPath}` };
+			}
+
+			// Prevent moving a node into itself or its descendants
+			if (targetPath.startsWith(sourcePath + this.treePathSeparator) || targetPath === sourcePath) {
+				return { success: false, error: 'Cannot move a node into itself or its descendants' };
+			}
+
+			// Get source's current parent
+			const sourceParentPath = sourceNode.parentPath || '';
+			const sourceParent = sourceParentPath ? this.getNodeByPath(sourceParentPath) : root;
+			if (!sourceParent) {
+				return { success: false, error: `Source parent not found: ${sourceParentPath}` };
+			}
+
+			// Remove source from current parent
+			const sourceSegment = segmentPrefix + sourceNode.pathSegment;
+			delete sourceParent.children[sourceSegment];
+
+			// Update source parent's hasChildren
+			if (Object.keys(sourceParent.children).length === 0) {
+				sourceParent.hasChildren = false;
+			}
+
+			// Calculate new parent and path
+			let newParentPath: string;
+			let newParent: LTreeNode<T>;
+
+			if (position === 'child') {
+				// Insert as child of target
+				newParentPath = targetPath;
+				newParent = targetNode;
+			} else {
+				// Insert as sibling (above or below)
+				newParentPath = targetNode.parentPath || '';
+				newParent = newParentPath ? this.getNodeByPath(newParentPath)! : root;
+			}
+
+			// Generate new path segment (use source's original segment if unique)
+			let newSegment = sourceNode.pathSegment;
+
+			// Check if a node with this segment already exists in the new parent (excluding source node itself)
+			const existingChild = newParent.children[segmentPrefix + newSegment];
+			if (existingChild && existingChild !== sourceNode) {
+				// Segment collision - generate a unique segment
+				// Try using the source's ID first, then fall back to timestamp
+				const sourceId = sourceNode.id?.toString();
+				if (sourceId && !newParent.children[segmentPrefix + sourceId]) {
+					newSegment = sourceId;
+				} else {
+					// Generate unique segment with timestamp
+					newSegment = `${newSegment}_${Date.now()}`;
+				}
+			}
+
+			const newPath = newParentPath ? `${newParentPath}${this.treePathSeparator}${newSegment}` : newSegment;
+
+			// Update source node's path and parentPath
+			const oldPath = sourceNode.path;
+			sourceNode.path = newPath;
+			sourceNode.pathSegment = newSegment;
+			sourceNode.parentPath = newParentPath || null;
+			sourceNode.level = getLevel(newPath, this.treePathSeparator);
+
+			// Update the data object's path if pathMember is defined
+			if (this.pathMember && sourceNode.data) {
+				(sourceNode.data as any)[this.pathMember] = newPath;
+			}
+
+			// Update all descendants' paths recursively
+			this._updateDescendantPaths(sourceNode, oldPath, newPath);
+
+			// Insert into new parent
+			newParent.children[segmentPrefix + newSegment] = sourceNode;
+			newParent.hasChildren = true;
+
+			// If orderMember is defined and position is above/below, calculate order
+			if (this.orderMember && position !== 'child' && sourceNode.data) {
+				const siblings = Object.values(newParent.children) as LTreeNode<T>[];
+				const targetOrder = targetNode.data?.[this.orderMember] ?? 0;
+
+				if (position === 'above') {
+					// Find order value just below target
+					const siblingOrders = siblings
+						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
+						.map(s => s.data![this.orderMember] as number)
+						.filter(o => o < targetOrder)
+						.sort((a, b) => b - a);
+					const belowOrder = siblingOrders[0] ?? targetOrder - 20;
+					(sourceNode.data as any)[this.orderMember] = Math.floor((belowOrder + targetOrder) / 2);
+				} else {
+					// Find order value just above target
+					const siblingOrders = siblings
+						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
+						.map(s => s.data![this.orderMember] as number)
+						.filter(o => o > targetOrder)
+						.sort((a, b) => a - b);
+					const aboveOrder = siblingOrders[0] ?? targetOrder + 20;
+					(sourceNode.data as any)[this.orderMember] = Math.floor((targetOrder + aboveOrder) / 2);
+				}
+			}
+
+			// Re-sort siblings if needed
+			this.refreshSiblings(newParentPath);
+
+			return { success: true };
+		},
+
+		/**
+		 * Helper to recursively update descendant paths after a move
+		 */
+		_updateDescendantPaths(node: LTreeNode<T>, oldBasePath: string, newBasePath: string): void {
+			for (const child of Object.values(node.children) as LTreeNode<T>[]) {
+				// Save the old path BEFORE updating, for correct recursive calculation
+				const oldChildPath = child.path;
+
+				// Calculate new path by replacing the old base with new base
+				const relativePath = oldChildPath.substring(oldBasePath.length);
+				const newChildPath = newBasePath + relativePath;
+
+				child.path = newChildPath;
+				child.parentPath = node.path;
+				child.level = getLevel(newChildPath, this.treePathSeparator);
+
+				// Update the data object's path if pathMember is defined
+				if (this.pathMember && child.data) {
+					(child.data as any)[this.pathMember] = newChildPath;
+				}
+
+				// Recurse into children using the OLD child path as base
+				this._updateDescendantPaths(child, oldChildPath, newChildPath);
+			}
+		},
+
+		/**
+		 * Remove a node from the tree
+		 * @param path - Path of the node to remove
+		 * @param includeDescendants - If true, removes all descendants (default: true)
+		 * @returns Object with success status and the removed node
+		 */
+		removeNode(path: string, includeDescendants: boolean = true): { success: boolean; node?: LTreeNode<T>; error?: string } {
+			const node = this.getNodeByPath(path);
+			if (!node) {
+				return { success: false, error: `Node not found: ${path}` };
+			}
+
+			// Get parent
+			const parentPath = node.parentPath || '';
+			const parent = parentPath ? this.getNodeByPath(parentPath) : root;
+			if (!parent) {
+				return { success: false, error: `Parent not found: ${parentPath}` };
+			}
+
+			// Remove from parent
+			const segment = segmentPrefix + node.pathSegment;
+			delete parent.children[segment];
+
+			// Update parent's hasChildren
+			if (Object.keys(parent.children).length === 0) {
+				parent.hasChildren = false;
+			}
+
+			// Update node count
+			if (includeDescendants) {
+				const countDescendants = (n: LTreeNode<T>): number => {
+					let count = 1;
+					for (const child of Object.values(n.children)) {
+						count += countDescendants(child);
+					}
+					return count;
+				};
+				nodeCount -= countDescendants(node);
+			} else {
+				nodeCount--;
+			}
+
+			this._emitTreeChanged();
+			return { success: true, node };
+		},
+
+		/**
+		 * Add a new node to the tree
+		 * @param parentPath - Path of the parent (empty string for root)
+		 * @param data - The data object for the new node
+		 * @param pathSegment - Optional path segment (auto-generated if not provided)
+		 * @returns Object with success status and the created node
+		 */
+		addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string } {
+			const parent = parentPath ? this.getNodeByPath(parentPath) : root;
+			if (!parent && parentPath) {
+				return { success: false, error: `Parent not found: ${parentPath}` };
+			}
+
+			// Generate path segment if not provided
+			if (!pathSegment) {
+				// Use ID from data if available, otherwise generate a unique one
+				const id = _idMember && data ? (data as any)[_idMember] : undefined;
+				pathSegment = id?.toString() || `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+			}
+
+			// Calculate full path
+			const newPath = parentPath ? `${parentPath}${this.treePathSeparator}${pathSegment}` : pathSegment;
+
+			// Check if path already exists
+			if (this.getNodeByPath(newPath)) {
+				return { success: false, error: `Node already exists at path: ${newPath}` };
+			}
+
+			// Create the node
+			const newNode = createLTreeNode<T>();
+			newNode.treeId = _treeId;
+			newNode.id = _idMember && data ? (data as any)[_idMember] : undefined;
+			newNode.path = newPath;
+			newNode.pathSegment = pathSegment;
+			newNode.parentPath = parentPath || null;
+			newNode.level = getLevel(newPath, this.treePathSeparator);
+			newNode.data = data;
+			newNode.isExpanded = _expandLevel ? newNode.level! <= _expandLevel : false;
+			newNode.hasChildren = false;
+
+			// Update path in data if pathMember is defined
+			if (_pathMember && data) {
+				(data as any)[_pathMember] = newPath;
+			}
+
+			// Add to parent
+			const targetParent = parent || root;
+			targetParent.children[segmentPrefix + pathSegment] = newNode;
+			targetParent.hasChildren = true;
+
+			// Update statistics
+			nodeCount++;
+			maxLevel = Math.max(maxLevel, newNode.level || 0);
+
+			// Add to flat tree for search indexing
+			flatTreeNodes.push(newNode);
+
+			// Re-sort siblings to place new node in correct position
+			this.refreshSiblings(parentPath);
+
+			if (this.shouldDisplayDebugInformation) {
+				const siblings = Object.values(targetParent.children) as LTreeNode<T>[];
+				console.log(`[Tree ${_treeId}] addNode: Added "${newPath}" to "${parentPath || 'root'}". Siblings after sort:`,
+					siblings.map(s => ({ path: s.path, sortOrder: s.data?.[this.orderMember as keyof T] }))
+				);
+			}
+
+			this._emitTreeChanged();
+			return { success: true, node: newNode };
+		},
+
+		/**
+		 * Update an existing node's data
+		 * @param path - Path of the node to update
+		 * @param dataUpdates - Partial data to merge into existing node data
+		 * @returns Object with success status and the updated node
+		 */
+		updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string } {
+			const node = this.getNodeByPath(path);
+			if (!node) {
+				return { success: false, error: `Node not found: ${path}` };
+			}
+			if (!node.data) {
+				return { success: false, error: `Node has no data: ${path}` };
+			}
+
+			// Check if orderMember is being updated (will need re-sort)
+			const orderMemberUpdated = this.orderMember && this.orderMember in dataUpdates;
+
+			if (this.shouldDisplayDebugInformation) {
+				console.log(`[Tree ${_treeId}] updateNode: "${path}" updating:`, dataUpdates);
+			}
+
+			// Merge updates into existing data
+			node.data = { ...node.data, ...dataUpdates };
+
+			// Re-index for search if needed
+			if (indexer && _shouldUseInternalSearchIndex) {
+				const flatIndex = flatTreeNodes.indexOf(node);
+				if (flatIndex !== -1) {
+					indexer.addItem({ node, index: flatIndex });
+				}
+			}
+
+			// Re-sort siblings if order was updated
+			if (orderMemberUpdated) {
+				this.refreshSiblings(node.parentPath || '');
+			}
+
+			this._emitTreeChanged();
+			return { success: true, node };
+		},
+
+		/**
+		 * Apply multiple changes to the tree in a single batch
+		 * @param changes - Array of create/update/delete operations
+		 * @returns Object with count of successful operations and array of failures
+		 */
+		applyChanges(changes: import('./types').TreeChange<T>[]): import('./types').ApplyChangesResult {
+			const failures: Array<{ index: number; operation: string; path: string; error: string }> = [];
+			let successCount = 0;
+
+			for (let i = 0; i < changes.length; i++) {
+				const change = changes[i];
+				let result: { success: boolean; error?: string };
+
+				switch (change.operation) {
+					case 'create':
+						result = this.addNode(change.parentPath, change.data, change.pathSegment);
+						if (result.success) {
+							successCount++;
+						} else {
+							failures.push({
+								index: i,
+								operation: change.operation,
+								path: change.parentPath,
+								error: result.error || 'Unknown error'
+							});
+						}
+						break;
+					case 'update':
+						result = this.updateNode(change.path, change.data);
+						if (result.success) {
+							successCount++;
+						} else {
+							failures.push({
+								index: i,
+								operation: change.operation,
+								path: change.path,
+								error: result.error || 'Unknown error'
+							});
+						}
+						break;
+					case 'delete':
+						result = this.removeNode(change.path);
+						if (result.success) {
+							successCount++;
+						} else {
+							failures.push({
+								index: i,
+								operation: change.operation,
+								path: change.path,
+								error: result.error || 'Unknown error'
+							});
+						}
+						break;
+				}
+			}
+
+			// Single emission after all changes
+			if (successCount > 0) {
+				this._emitTreeChanged();
+			}
+
+			return { successful: successCount, failed: failures };
+		},
+
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
 			return items.sort((a, b) => {
 				// First, sort by level (shallower levels first)
@@ -618,6 +1086,15 @@ export function createLTree<T>(
 					if (a.parentPath === '') return -1;
 					if (b.parentPath === '') return 1;
 					return a.parentPath.localeCompare(b.parentPath);
+				}
+
+				// If orderMember is provided, use it for sibling ordering
+				if (self.orderMember && a.data && b.data) {
+					const aOrder = a.data[self.orderMember] ?? 0;
+					const bOrder = b.data[self.orderMember] ?? 0;
+					if (aOrder !== bOrder) {
+						return aOrder - bOrder;
+					}
 				}
 
 				// Finally sort by display value

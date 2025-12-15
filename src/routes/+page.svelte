@@ -1,88 +1,134 @@
-<script lang="ts">
-	import { Tree } from '$lib';
+<script>
+	import { onMount } from 'svelte';
 
-	// Simple development data
-	let sampleData = [
-		{ id: '1', path: '1', name: 'Root Item 1' },
-		{ id: '2', path: '1.1', name: 'Child 1.1' },
-		{ id: '3', path: '1.2', name: 'Child 1.2' },
-		{ id: '4', path: '1.1.1', name: 'Grandchild 1.1.1' },
-		{ id: '5', path: '2', name: 'Root Item 2' },
-		{ id: '6', path: '2.1', name: 'Child 2.1' }
+	const version = 'v4.5.0';
+
+	const examples = [
+		{
+			href: '/examples/basic',
+			icon: '🌲',
+			title: 'Basic Examples',
+			description: 'Get started with tree rendering, expand/collapse controls, and node selection. Perfect for understanding the fundamentals.',
+			features: [
+				'Simple tree with sample data',
+				'Expand level control',
+				'Node selection and events',
+				'Scroll to path demo'
+			]
+		},
+		{
+			href: '/examples/drag-drop',
+			icon: '🎯',
+			title: 'Drag & Drop',
+			description: 'Desktop and mobile drag and drop support. Move nodes between trees with touch-friendly long-press activation.',
+			features: [
+				'Two trees side-by-side for drag between',
+				'Touch drag with long-press (300ms)',
+				'Empty tree drop placeholder',
+				'onNodeDrop callback handling'
+			]
+		},
+		{
+			href: '/examples/context-menu',
+			icon: '📋',
+			title: 'Context Menu',
+			description: 'Right-click context menus with callbacks, icons, disabled states, and dividers. Build dynamic menus based on node properties.',
+			features: [
+				'Callback-based context menu',
+				'Dynamic menu items per node',
+				'Icons, disabled states, dividers',
+				'Debug mode positioning'
+			]
+		},
+		{
+			href: '/examples/search',
+			icon: '🔍',
+			title: 'Search & Filter',
+			description: 'Internal search index for fast searching. Use searchNodes() for querying or filterNodes() for live filtering.',
+			features: [
+				'Internal search index demo',
+				'searchNodes() vs filterNodes()',
+				'Custom search value member',
+				'Real-time filtering'
+			]
+		},
+		{
+			href: '/examples/theming',
+			icon: '🎨',
+			title: 'Theming',
+			description: 'Customize the tree appearance with CSS variables. Selection styles, drag-over effects, and custom icons.',
+			features: [
+				'CSS variable reference table',
+				'Custom styling examples',
+				'Selection and drag-over styles',
+				'Icon customization'
+			]
+		},
+		{
+			href: '/examples/data',
+			icon: '📊',
+			title: 'Data Structures',
+			description: 'Understand the path-based data structure, custom separators, and insert result validation.',
+			features: [
+				'Path-based data structure',
+				'Custom path separators',
+				'Insert result validation',
+				'Failed nodes handling'
+			]
+		},
+		{
+			href: '/examples/tree-editor',
+			icon: '✏️',
+			title: 'Tree Editor',
+			description: 'Build interactive tree editors with add, move, and remove operations. Full drag-and-drop support with sibling ordering.',
+			features: [
+				'Add nodes programmatically',
+				'Move nodes (above/below/child)',
+				'Remove nodes with descendants',
+				'orderMember for sibling ordering'
+			]
+		}
 	];
 
-	let selectedNode = $state(null);
-	let searchText = $state('');
-
-	function sortCallback(items: any[]) {
-		return items.sort((a, b) => {
-			// First, sort by level (calculated from path depth)
-			const aLevel = a.path ? a.path.split('.').length : 0;
-			const bLevel = b.path ? b.path.split('.').length : 0;
-			if (aLevel !== bLevel) {
-				return aLevel - bLevel;
-			}
-
-			// Then sort alphabetically by name
-			return a.data.name.localeCompare(b.data.name);
-		});
-	}
+	onMount(() => {
+		document.body.classList.add('landing-body');
+		return () => {
+			document.body.classList.remove('landing-body');
+		};
+	});
 </script>
 
-<div class="container-fluid p-4">
-	<h1>Svelte Treeview Development</h1>
-	<p class="text-muted">Simple development page for testing the treeview component.</p>
+<svelte:head>
+	<title>Svelte Treeview Examples</title>
+</svelte:head>
 
-	<div class="row mt-4">
-		<div class="col-md-6">
-			<h3>Tree Component</h3>
-			<div class="border p-3 rounded">
-				<Tree
-					data={sampleData}
-					idMember="id"
-					pathMember="path"
-					{sortCallback}
-					bind:selectedNode
-					bind:searchText
-					expandLevel={2}
-					shouldUseInternalSearchIndex={true}
-					shouldDisplayDebugInformation={false}
-				>
-					{#snippet nodeTemplate(node)}
-						<div class="d-flex align-items-center">
-							<span>{node.data.name}</span>
-						</div>
-					{/snippet}
-				</Tree>
-			</div>
-		</div>
+<div class="container-landing">
+	<header class="landing-header">
+		<h1>🌲 Svelte Treeview</h1>
+		<p class="subtitle">Interactive examples showcasing features and capabilities</p>
+		<span class="version-badge">{version}</span>
+	</header>
 
-		<div class="col-md-6">
-			<h3>Controls</h3>
-
-			<div class="mb-3">
-				<label class="form-label">Search</label>
-				<input
-					type="text"
-					class="form-control"
-					bind:value={searchText}
-					placeholder="Search nodes..."
-				>
-			</div>
-
-			<div class="mb-3">
-				<h5>Selected Node</h5>
-				{#if selectedNode}
-					<pre class="bg-light p-2 rounded"><code>{JSON.stringify(selectedNode, null, 2)}</code></pre>
-				{:else}
-					<p class="text-muted">No node selected</p>
-				{/if}
-			</div>
-
-			<div class="mb-3">
-				<h5>Sample Data Structure</h5>
-				<pre class="bg-light p-2 rounded small"><code>{JSON.stringify(sampleData, null, 2)}</code></pre>
-			</div>
-		</div>
+	<div class="cards-grid">
+		{#each examples as example}
+			<a href={example.href} class="landing-card">
+				<div class="card-icon">{example.icon}</div>
+				<h2 class="card-title">{example.title}</h2>
+				<p class="card-description">{example.description}</p>
+				<ul class="card-features">
+					{#each example.features as feature}
+						<li>{feature}</li>
+					{/each}
+				</ul>
+			</a>
+		{/each}
 	</div>
+
+	<footer class="landing-footer">
+		<p>
+			Created by <a href="https://github.com/keenmate" target="_blank">KeenMate</a> |
+			<a href="https://github.com/nicenicenice/svelte-treeview" target="_blank">GitHub</a> |
+			<a href="https://www.npmjs.com/package/@keenmate/svelte-treeview" target="_blank">npm</a>
+		</p>
+	</footer>
 </div>

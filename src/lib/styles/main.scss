@@ -22,6 +22,37 @@ $tree-node-path-font-size: 12px !default;
 $tree-node-path-color: #6c757d !default;
 $tree-children-margin-top: 2px !default;
 
+// Drop Zone Variables
+$drop-zone-border-radius: 0 !default;
+
+// Above zone (soft sage green)
+$drop-zone-above-bg: rgba(134, 179, 152, 0.25) !default;
+$drop-zone-above-color: rgba(62, 89, 72, 0.7) !default;
+$drop-zone-above-active-bg: rgba(134, 179, 152, 0.85) !default;
+$drop-zone-above-active-color: rgb(32, 54, 40) !default;
+$drop-zone-above-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4) !default;
+
+// Below zone (soft peach/coral)
+$drop-zone-below-bg: rgba(242, 182, 158, 0.25) !default;
+$drop-zone-below-color: rgba(120, 70, 50, 0.7) !default;
+$drop-zone-below-active-bg: rgba(242, 182, 158, 0.85) !default;
+$drop-zone-below-active-color: rgb(80, 45, 30) !default;
+$drop-zone-below-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4) !default;
+
+// Child zone (soft lavender)
+$drop-zone-child-bg: rgba(167, 155, 198, 0.25) !default;
+$drop-zone-child-color: rgba(72, 62, 98, 0.7) !default;
+$drop-zone-child-active-bg: rgba(167, 155, 198, 0.85) !default;
+$drop-zone-child-active-color: rgb(45, 38, 62) !default;
+$drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4) !default;
+
+// Border glow drop indicators (for glow mode)
+$drop-glow-above-color: rgba(134, 179, 152, 0.8) !default;
+$drop-glow-below-color: rgba(242, 182, 158, 0.8) !default;
+$drop-glow-child-color: rgba(167, 155, 198, 0.8) !default;
+$drop-glow-child-bg: rgba(167, 155, 198, 0.15) !default;
+$drop-glow-size: 3px !default;
+
 // Color variables for selected states and drag/drop
 $primary-color: #0d6efd !default;
 $primary-color-rgb: 13, 110, 253 !default;
@@ -49,6 +80,8 @@ $body-color: #212529 !default;
 // Tree Component Styles
 .ltree-tree {
 	font-family: $tree-node-font-family;
+	overflow: visible !important; // Allow drop zones to extend outside
+	position: relative;
 
 	// Empty state
 	.ltree-empty-state {
@@ -56,16 +89,29 @@ $body-color: #212529 !default;
 		color: $tree-node-path-color;
 		padding: 1rem;
 		text-align: center;
+		min-height: 60px; // Ensure minimum drop target size for drag events
 	}
+}
+
+// Ensure all tree ancestors allow overflow for drop zones
+.ltree-tree,
+.ltree-node,
+.ltree-node-row,
+.ltree-children {
+	overflow: visible !important;
 }
 
 .ltree-node {
 	font-family: $tree-node-font-family;
 	font-size: $tree-node-font-size;
+	position: relative; // Required for absolutely positioned drop zones
+	overflow: visible; // Allow drop zones to extend outside
 
 	.ltree-node-row {
 		display: flex;
 		align-items: center;
+		overflow: visible; // Allow drop zones to extend outside
+		position: relative; // Required for zone positioning
 	}
 
 	.ltree-node-content {
@@ -73,12 +119,41 @@ $body-color: #212529 !default;
 		align-items: center;
 		padding: $tree-node-content-padding;
 		border-radius: $tree-node-content-border-radius;
-		transition: background-color 0.2s;
+		transition: background-color 0.2s, box-shadow 0.15s ease;
 		flex: 1;
-		position: relative;
+		position: relative; // Required for drop zone positioning
+		overflow: visible; // IMPORTANT: Allow drop zones to extend outside
+
+		// Prevent text selection during touch drag
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
 
 		&:hover {
 			background-color: $tree-node-hover-bg;
+		}
+
+		// Border glow drop indicators (glow mode)
+		&.ltree-glow-above {
+			border-radius: 0;
+			box-shadow:
+				inset 0 $drop-glow-size 0 0 $drop-glow-above-color,
+				0 -4px 12px -2px $drop-glow-above-color;
+		}
+
+		&.ltree-glow-below {
+			border-radius: 0;
+			box-shadow:
+				inset 0 (-$drop-glow-size) 0 0 $drop-glow-below-color,
+				0 4px 12px -2px $drop-glow-below-color;
+		}
+
+		&.ltree-glow-child {
+			border-radius: 0;
+			box-shadow:
+				inset (-$drop-glow-size) 0 0 0 $drop-glow-child-color,
+				4px 0 12px -2px $drop-glow-child-color;
+			background-color: $drop-glow-child-bg;
 		}
 	}
 
@@ -234,6 +309,50 @@ $body-color: #212529 !default;
 	transition:
 		opacity 0.2s,
 		transform 0.2s;
+}
+
+// Copy operation cursor (when Ctrl+drag with allowCopy enabled)
+.ltree-drop-copy {
+	cursor: copy !important;
+}
+
+// Touch drag ghost element (for mobile drag and drop)
+.ltree-touch-ghost {
+	position: fixed;
+	transform: translate(-50%, -50%);
+	padding: 8px 12px;
+	background: var(--tree-ghost-bg, rgba(59, 130, 246, 0.9));
+	color: var(--tree-ghost-color, white);
+	border-radius: 4px;
+	font-size: 14px;
+	font-family: $tree-node-font-family;
+	pointer-events: none;
+	z-index: 10000;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	white-space: nowrap;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+// Drop placeholder for empty trees
+.ltree-drop-placeholder {
+	border: 2px dashed var(--ltree-primary) !important;
+	background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
+	border-radius: 8px;
+	min-height: 60px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.ltree-drop-placeholder-content {
+	color: var(--ltree-primary);
+	font-size: 14px;
+	font-weight: 500;
+	padding: 16px;
+	text-align: center;
 }
 
 .ltree-node-content {
@@ -405,6 +524,226 @@ $body-color: #212529 !default;
 		color: var(--ltree-danger);
 
 		z-index: 1;
+	}
+}
+
+// Drop Zone Container - wraps all zones with CSS variable for start position
+.ltree-drop-zones {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none; // Let children handle pointer events
+	overflow: visible;
+}
+
+// Drop Zone Base Styles
+.ltree-drop-zone {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px 12px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+	pointer-events: auto;
+	z-index: 1000;
+	transition: all 0.15s ease;
+	border-radius: $drop-zone-border-radius;
+
+	// Above zone (green)
+	&.ltree-drop-above {
+		background: $drop-zone-above-bg;
+		color: $drop-zone-above-color;
+
+		&.ltree-drop-zone-active {
+			background: $drop-zone-above-active-bg;
+			color: $drop-zone-above-active-color;
+			box-shadow: $drop-zone-above-active-shadow;
+		}
+	}
+
+	// Below zone (yellow)
+	&.ltree-drop-below {
+		background: $drop-zone-below-bg;
+		color: $drop-zone-below-color;
+
+		&.ltree-drop-zone-active {
+			background: $drop-zone-below-active-bg;
+			color: $drop-zone-below-active-color;
+			box-shadow: $drop-zone-below-active-shadow;
+		}
+	}
+
+	// Child zone (blue)
+	&.ltree-drop-child {
+		background: $drop-zone-child-bg;
+		color: $drop-zone-child-color;
+
+		&.ltree-drop-zone-active {
+			background: $drop-zone-child-active-bg;
+			color: $drop-zone-child-active-color;
+			box-shadow: $drop-zone-child-active-shadow;
+		}
+	}
+}
+
+// Layout: "around" - Above on top, Below/Child on bottom (default)
+.ltree-drop-zones-around {
+	.ltree-drop-above {
+		top: 0;
+		left: var(--drop-zone-start, 33%);
+		right: 0;
+		transform: translateY(-100%);
+		// border-radius: 4px 4px 0 0;
+	}
+
+	.ltree-drop-below {
+		bottom: 0;
+		left: var(--drop-zone-start, 33%);
+		// Middle third of available space
+		right: calc((100% - var(--drop-zone-start, 33%)) / 2);
+		transform: translateY(100%);
+		// border-radius: 0 0 0 4px;
+	}
+
+	.ltree-drop-child {
+		bottom: 0;
+		// Start at middle of available space
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
+		right: 0;
+		transform: translateY(100%);
+		// border-radius: 0 0 4px 0;
+	}
+}
+
+// Layout: "above" - All 3 zones in a row above the node
+.ltree-drop-zones-above {
+	.ltree-drop-above,
+	.ltree-drop-below,
+	.ltree-drop-child {
+		top: 0;
+		transform: translateY(-100%);
+	}
+
+	.ltree-drop-above {
+		left: var(--drop-zone-start, 33%);
+		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
+		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+	}
+
+	.ltree-drop-below {
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
+		right: calc((100% - var(--drop-zone-start, 33%)) / 3);
+		border-radius: 0;
+	}
+
+	.ltree-drop-child {
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
+		right: 0;
+		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+	}
+}
+
+// Layout: "below" - All 3 zones in a row below the node
+.ltree-drop-zones-below {
+	.ltree-drop-above,
+	.ltree-drop-below,
+	.ltree-drop-child {
+		bottom: 0;
+		transform: translateY(100%);
+	}
+
+	.ltree-drop-above {
+		left: var(--drop-zone-start, 33%);
+		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
+		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+	}
+
+	.ltree-drop-below {
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
+		right: calc((100% - var(--drop-zone-start, 33%)) / 3);
+		border-radius: 0;
+	}
+
+	.ltree-drop-child {
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
+		right: 0;
+		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+	}
+}
+
+// Layout: "wave" - Zones stacked vertically (above/child/below)
+.ltree-drop-zones-wave {
+	.ltree-drop-above,
+	.ltree-drop-below,
+	.ltree-drop-child {
+		left: var(--drop-zone-start, 33%);
+		right: auto;
+		width: var(--drop-zone-max-width, 120px);
+		max-width: var(--drop-zone-max-width, 120px);
+		height: auto;
+		transform: none;
+	}
+
+	.ltree-drop-above {
+		top: 0;
+		bottom: auto;
+		transform: translateY(-100%);
+		border-radius: $drop-zone-border-radius $drop-zone-border-radius 0 0;
+	}
+
+	.ltree-drop-child {
+		top: 0;
+		bottom: 0;
+		border-radius: 0;
+	}
+
+	.ltree-drop-below {
+		top: auto;
+		bottom: 0;
+		transform: translateY(100%);
+		border-radius: 0 0 $drop-zone-border-radius $drop-zone-border-radius;
+	}
+}
+
+// Layout: "wave2" - Diagonal wave pattern
+// Above and Below are offset 7% to the left, Child stays at dropZoneStart
+.ltree-drop-zones-wave2 {
+	.ltree-drop-above,
+	.ltree-drop-below,
+	.ltree-drop-child {
+		right: auto;
+		width: var(--drop-zone-max-width, 120px);
+		max-width: var(--drop-zone-max-width, 120px);
+		height: auto;
+	}
+
+	.ltree-drop-above {
+		left: calc(var(--drop-zone-start, 33%) - 7%);
+		top: 10%;
+		bottom: auto;
+		height: 80%; // Match Child zone height
+		transform: translateY(-100%);
+		border-radius: $drop-zone-border-radius $drop-zone-border-radius 0 0;
+	}
+
+	.ltree-drop-child {
+		left: var(--drop-zone-start, 33%);
+		top: 10%;
+		bottom: 10%;
+		border-radius: 0;
+	}
+
+	.ltree-drop-below {
+		left: calc(var(--drop-zone-start, 33%) - 7%);
+		top: auto;
+		bottom: 10%;
+		height: 80%; // Match Child zone height
+		transform: translateY(100%);
+		border-radius: 0 0 $drop-zone-border-radius $drop-zone-border-radius;
 	}
 }
 

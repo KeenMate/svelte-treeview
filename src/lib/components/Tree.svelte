@@ -3,7 +3,7 @@
 	import Node from './Node.svelte';
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
-	import { type Ltree, type InsertArrayResult, type ContextMenuItem } from '../ltree/types.js';
+	import { type Ltree, type InsertArrayResult, type ContextMenuItem, type DropPosition, type DragDropMode, type DropOperation } from '../ltree/types.js';
 	import { setContext, tick } from 'svelte';
 
 	// Context menu state
@@ -14,6 +14,30 @@
 
 	// Drag and drop state
 	let draggedNode: LTreeNode<any> | null = $state.raw(null);
+
+	// Touch drag state for mobile support
+	let touchDragState = $state<{
+		node: LTreeNode<any> | null;
+		startX: number;
+		startY: number;
+		isDragging: boolean;
+		ghostElement: HTMLElement | null;
+		currentDropTarget: LTreeNode<any> | null;
+	}>({ node: null, startX: 0, startY: 0, isDragging: false, ghostElement: null, currentDropTarget: null });
+
+	let touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Drop placeholder state for empty trees
+	let isDropPlaceholderActive = $state(false);
+
+	// Advanced drag state for position indicators
+	let isDragInProgress = $state(false);
+	let hoveredNodeForDrop = $state<LTreeNode<any> | null>(null);
+	let activeDropPosition = $state<DropPosition | null>(null);
+	let currentDropOperation = $state<DropOperation>('move');
+
+	// Flag to skip insertArray during internal mutations (addNode, moveNode, removeNode)
+	let _skipInsertArray = false;
 
 	interface Props {
 		// MAPPINGS
@@ -34,6 +58,9 @@
 		searchValueMember?: string | null | undefined;
 		getSearchValueCallback?: (node: LTreeNode<T>) => string;
 
+		// For sibling ordering in drag-drop (above/below positioning)
+		orderMember?: string | null | undefined;
+
 		treeId?: string | null | undefined;
 		treePathSeparator?: string | null | undefined;
 		sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
@@ -50,6 +77,7 @@
 		treeFooter?: any;
 		noDataFound?: any;
 		contextMenu?: any;
+		dropPlaceholder?: any;
 
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
@@ -62,11 +90,25 @@
 		shouldDisplayDebugInformation?: boolean;
 		shouldDisplayContextMenuInDebugMode?: boolean;
 
+		// DRAG AND DROP
+		dragDropMode?: DragDropMode;
+		dropZoneMode?: 'floating' | 'glow'; // 'floating' = original floating zones, 'glow' = border glow indicators
+		dropZoneLayout?: 'around' | 'above' | 'below' | 'wave' | 'wave2';
+		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
+		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
+		allowCopy?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
+
 		// EVENTS
 		onNodeClicked?: (node: LTreeNode<T>) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDrop?: (node: LTreeNode<T>, draggedNode: LTreeNode<T>, event: DragEvent) => void;
+		/**
+		 * Called before a drop is processed. Return false to cancel the drop.
+		 * Return { position, operation } to override the drop position or operation.
+		 * Return true or undefined to proceed normally.
+		 */
+		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void;
+		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
 		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuItem[];
 
 		// VISUALS
@@ -102,6 +144,7 @@
 		getDisplayValueCallback,
 		searchValueMember,
 		getSearchValueCallback,
+		orderMember,
 		isSorted,
 		sortCallback,
 
@@ -116,6 +159,7 @@
 		treeFooter = undefined,
 		noDataFound = undefined,
 		contextMenu = undefined,
+		dropPlaceholder = undefined,
 
 		// BEHAVIOUR
 		expandLevel = 2,
@@ -129,10 +173,19 @@
 		shouldDisplayDebugInformation = false,
 		shouldDisplayContextMenuInDebugMode = false,
 
+		// DRAG AND DROP
+		dragDropMode = 'both',
+		dropZoneMode = 'glow',
+		dropZoneLayout = 'around',
+		dropZoneStart = 33,
+		dropZoneMaxWidth = 120,
+		allowCopy = false,
+
 		// EVENTS
 		onNodeClicked,
 		onNodeDragStart,
 		onNodeDragOver,
+		beforeDropCallback,
 		onNodeDrop,
 		contextMenuCallback,
 
@@ -174,6 +227,65 @@
 		searchOptions?: SearchOptions
 	): LTreeNode<T>[] {
 		return tree?.searchNodes(searchText, searchOptions) || [];
+	}
+
+	// Tree editor helper methods
+	export function getChildren(parentPath: string): LTreeNode<T>[] {
+		return tree?.getChildren(parentPath) || [];
+	}
+
+	export function getSiblings(path: string): LTreeNode<T>[] {
+		return tree?.getSiblings(path) || [];
+	}
+
+	export function refreshSiblings(parentPath: string): void {
+		tree?.refreshSiblings(parentPath);
+	}
+
+	export function refreshNode(path: string): void {
+		tree?.refreshNode(path);
+	}
+
+	export function getNodeByPath(path: string): LTreeNode<T> | null {
+		return tree?.getNodeByPath(path) || null;
+	}
+
+	// Tree editor mutation methods
+	// These set _skipInsertArray to prevent the data effect from re-running insertArray
+	// since these methods already update the tree structure directly
+	export function moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string } {
+		_skipInsertArray = true;
+		const result = tree?.moveNode(sourcePath, targetPath, position) || { success: false, error: 'Tree not initialized' };
+		console.log('[Tree] moveNode completed:', result, '- skipInsertArray set');
+		return result;
+	}
+
+	export function removeNode(path: string, includeDescendants: boolean = true): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		_skipInsertArray = true;
+		const result = tree?.removeNode(path, includeDescendants) || { success: false, error: 'Tree not initialized' };
+		console.log('[Tree] removeNode completed:', result, '- skipInsertArray set');
+		return result;
+	}
+
+	export function addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		_skipInsertArray = true;
+		const result = tree?.addNode(parentPath, data, pathSegment) || { success: false, error: 'Tree not initialized' };
+		console.log('[Tree] addNode completed:', result, '- skipInsertArray set');
+		return result;
+	}
+
+	export function updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		_skipInsertArray = true;
+		const result = tree?.updateNode(path, dataUpdates) || { success: false, error: 'Tree not initialized' };
+		console.log('[Tree] updateNode completed:', result, '- skipInsertArray set');
+		return result;
+	}
+
+	export function applyChanges(changes: import('../ltree/types').TreeChange<T>[]): import('../ltree/types').ApplyChangesResult {
+		_skipInsertArray = true;
+		const result = tree?.applyChanges(changes) || { successful: 0, failed: [] };
+		console.log('[Tree] applyChanges completed:', result, '- skipInsertArray set');
+		return result;
 	}
 
 	// svelte-ignore non_reactive_update
@@ -253,6 +365,7 @@
 				| "getDisplayValueCallback"
 				| "searchValueMember"
 				| "getSearchValueCallback"
+				| "orderMember"
 				| "isSorted"
 				| "sortCallback"
 				| "data"
@@ -269,8 +382,11 @@
 				| "onNodeClicked"
 				| "onNodeDragStart"
 				| "onNodeDragOver"
+				| "beforeDropCallback"
 				| "onNodeDrop"
 				| "contextMenuCallback"
+				| "dragDropMode"
+				| "dropZoneMode"
 				| "bodyClass"
 				| "expandIconClass"
 				| "collapseIconClass"
@@ -299,6 +415,7 @@
 		if (updates.getDisplayValueCallback !== undefined) getDisplayValueCallback = updates.getDisplayValueCallback;
 		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
 		if (updates.getSearchValueCallback !== undefined) getSearchValueCallback = updates.getSearchValueCallback;
+		if (updates.orderMember !== undefined) orderMember = updates.orderMember;
 		if (updates.isSorted !== undefined) isSorted = updates.isSorted;
 		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;
 		if (updates.data !== undefined) data = updates.data;
@@ -315,8 +432,11 @@
 		if (updates.onNodeClicked !== undefined) onNodeClicked = updates.onNodeClicked;
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
+		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
 		if (updates.contextMenuCallback !== undefined) contextMenuCallback = updates.contextMenuCallback;
+		if (updates.dragDropMode !== undefined) dragDropMode = updates.dragDropMode;
+		if (updates.dropZoneMode !== undefined) dropZoneMode = updates.dropZoneMode;
 		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
 		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
@@ -351,6 +471,7 @@
 		getDisplayValueCallback,
 		searchValueMember,
 		getSearchValueCallback,
+		orderMember,
 		treeId,
 		treePathSeparator,
 
@@ -380,6 +501,12 @@
 
 	$effect(() => {
 		if (tree && data) {
+			if (_skipInsertArray) {
+				console.log('[Tree] Skipping insertArray due to internal mutation');
+				_skipInsertArray = false; // Reset for next time
+				return;
+			}
+			console.log('[Tree] Running insertArray with', data.length, 'items');
 			insertResult = tree.insertArray(data);
 		}
 	});
@@ -427,40 +554,156 @@
 	}
 
 
+	// Check if drop is allowed based on dragDropMode
+	function isDropAllowedByMode(draggedNodeTreeId: string | undefined): boolean {
+		if (dragDropMode === 'none') return false;
+
+		const isSameTree = draggedNodeTreeId === treeId;
+
+		if (dragDropMode === 'self' && !isSameTree) return false;
+		if (dragDropMode === 'cross' && isSameTree) return false;
+
+		return true;
+	}
+
+	// Calculate drop position based on mouse Y relative to node
+	function calculateDropPosition(event: DragEvent | MouseEvent, element: Element): DropPosition {
+		const rect = element.getBoundingClientRect();
+		const y = event.clientY - rect.top;
+		const height = rect.height;
+
+		if (y < height * 0.25) return 'above';
+		if (y > height * 0.75) return 'below';
+		return 'child';
+	}
+
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
 		draggedNode = node;
+		isDragInProgress = true;
 		onNodeDragStart?.(node, event);
+	}
 
-		// Set drag effect and data
-		// if (event.dataTransfer) {
-		// 	event.dataTransfer.effectAllowed = "move";
-		// 	event.dataTransfer.setData("text/plain", node.path);
-		// }
+	function _onNodeDragEnd(event: DragEvent) {
+		isDragInProgress = false;
+		draggedNode = null;
+		hoveredNodeForDrop = null;
+		activeDropPosition = null;
+		isDropPlaceholderActive = false;
+		currentDropOperation = 'move';
+	}
+
+	/**
+	 * Helper to handle beforeDropCallback and onNodeDrop callbacks
+	 * Returns true if drop was processed, false if cancelled
+	 *
+	 * Same-tree moves are auto-handled by default - the library calls moveNode() internally.
+	 * onNodeDrop is still called for notification/logging purposes.
+	 */
+	function _handleDrop(dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent): boolean {
+		// Determine operation based on Ctrl key and allowCopy setting
+		// Touch events always use 'move' (no Ctrl key on mobile)
+		let operation: DropOperation = 'move';
+		if (allowCopy && event instanceof DragEvent && event.ctrlKey) {
+			operation = 'copy';
+		}
+
+		// Call beforeDropCallback if provided
+		if (beforeDropCallback) {
+			const result = beforeDropCallback(dropNode, draggedNode, position, event, operation);
+			if (result === false) {
+				// Drop cancelled
+				return false;
+			}
+			if (result && typeof result === 'object') {
+				// Position and/or operation override
+				if ('position' in result && result.position) {
+					position = result.position;
+				}
+				if ('operation' in result && result.operation) {
+					operation = result.operation;
+				}
+			}
+		}
+
+		// AUTO-HANDLE: Same-tree move operations
+		const isSameTreeDrag = draggedNode.treeId === treeId;
+		if (isSameTreeDrag && operation === 'move' && dropNode) {
+			const result = moveNode(draggedNode.path, dropNode.path, position);
+			if (shouldDisplayDebugInformation) {
+				console.log('[Tree] Auto-moved node:', result);
+			}
+			// Still call onNodeDrop for notification/logging
+			onNodeDrop?.(dropNode, draggedNode, position, event, operation);
+			return result.success;
+		}
+
+		// Cross-tree drags or copy operations - user handles in onNodeDrop
+		onNodeDrop?.(dropNode, draggedNode, position, event, operation);
+		return true;
 	}
 
 	function _onNodeDragOver(node: LTreeNode<T>, event: DragEvent) {
-		if (node.treeId !== treeId) {
-			console.warn('Updating draggedNode to node from a different tree');
-			draggedNode = node;
-		} // this is for cases when we drag node from one tree to another
+		// For cross-tree drag, draggedNode might be null in THIS tree - parse from dataTransfer
+		let effectiveDraggedNode = draggedNode;
+		let isCrossTreeDrag = false;
+		if (!effectiveDraggedNode && event.dataTransfer?.types.includes("application/svelte-treeview")) {
+			isCrossTreeDrag = true;
+			// Cross-tree drag - try to get node info from dataTransfer
+			try {
+				const data = event.dataTransfer.getData("application/svelte-treeview");
+				if (data) {
+					effectiveDraggedNode = JSON.parse(data);
+				}
+			} catch (e) {
+				// getData might fail during dragover in some browsers, that's ok
+			}
+			// Even if we can't get the data, we know a drag is in progress
+			isDragInProgress = true;
+		}
 
-		// 		console.log(
-		// 			"🚀 ~ _onNodeDragOver ~ draggedNode:",
-		// treeId,
-		// 			draggedNode,
-		// 			$state.snapshot(draggedNode),
-		// 			node,
-		// 			event
-		// 		);
-		if (draggedNode && $state.snapshot(draggedNode) !== node) {
+		// Check if drop is allowed by mode
+		// For cross-tree drags, we allow if mode is 'both' or 'cross', regardless of whether we could parse the node
+		const dropAllowed = isCrossTreeDrag
+			? (dragDropMode === 'both' || dragDropMode === 'cross')
+			: isDropAllowedByMode(effectiveDraggedNode?.treeId);
+
+		if (!dropAllowed) {
+			console.log('[Tree] Drop not allowed:', { treeId, dragDropMode, isCrossTreeDrag, effectiveDraggedNodeTreeId: effectiveDraggedNode?.treeId });
+			return;
+		}
+
+		// Set hoveredNodeForDrop if:
+		// 1. We have drag data AND it's a different node (or from different tree), OR
+		// 2. We know a drag is in progress (cross-tree where we can't read data yet)
+		const isValidDrop = effectiveDraggedNode
+			? (isCrossTreeDrag || effectiveDraggedNode.path !== node.path)
+			: isDragInProgress; // For cross-tree, trust isDragInProgress
+
+		if (isValidDrop) {
 			event.preventDefault();
+
+			// Update hovered node and calculate position
+			hoveredNodeForDrop = node;
+			const nodeElement = (event.target as Element).closest('.ltree-node-content');
+			if (nodeElement) {
+				activeDropPosition = calculateDropPosition(event, nodeElement);
+			}
+
+			// Update current operation based on Ctrl key
+			currentDropOperation = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
+
 			onNodeDragOver?.(node, event);
 
-			// Set visual feedback
+			// Set visual feedback based on operation
 			if (event.dataTransfer) {
-				event.dataTransfer.dropEffect = 'move';
+				event.dataTransfer.dropEffect = currentDropOperation;
 			}
 		}
+	}
+
+	function _onNodeDragLeave(node: LTreeNode<T>, event: DragEvent) {
+		// Don't clear hoveredNodeForDrop here - let dragover on other nodes handle it
+		// This prevents the zones from flickering when moving between nodes
 	}
 
 	function _onNodeDrop(node: LTreeNode<T>, event: DragEvent) {
@@ -472,16 +715,331 @@
 			);
 		event.preventDefault();
 
+		let isCrossTreeDrag = false;
 		if (!draggedNode) {
-			draggedNode = JSON.parse(event.dataTransfer?.getData('application/svelte-treeview'));
+			const data = event.dataTransfer?.getData('application/svelte-treeview');
+			if (data) {
+				draggedNode = JSON.parse(data);
+				isCrossTreeDrag = draggedNode?.treeId !== treeId;
+			}
 		}
 
-		if (draggedNode && draggedNode !== node) {
-			onNodeDrop?.(node, draggedNode, event);
+		// Check if drop is allowed by mode
+		const dropAllowed = isCrossTreeDrag
+			? (dragDropMode === 'both' || dragDropMode === 'cross')
+			: isDropAllowedByMode(draggedNode?.treeId);
+
+		if (!dropAllowed) {
+			_onNodeDragEnd(event);
+			return;
+		}
+
+		// For cross-tree, always allow; for same-tree, check it's not the same node
+		if (draggedNode && (isCrossTreeDrag || draggedNode !== node)) {
+			// Use the calculated position, default to 'child'
+			const position = activeDropPosition || 'child';
+			_handleDrop(node, draggedNode, position, event);
 		}
 
 		// Reset drag state
+		_onNodeDragEnd(event);
+	}
+
+	// Zone drop handler - receives explicit position from drop zone panels
+	function _onZoneDrop(node: LTreeNode<T>, position: DropPosition, event: DragEvent) {
+		if (shouldDisplayDebugInformation)
+			console.log('🎯 ~ _onZoneDrop ~ position:', position, 'node:', node.path);
+
+		event.preventDefault();
+
+		let isCrossTreeDrag = false;
+		if (!draggedNode) {
+			const data = event.dataTransfer?.getData('application/svelte-treeview');
+			if (data) {
+				draggedNode = JSON.parse(data);
+				isCrossTreeDrag = draggedNode?.treeId !== treeId;
+			}
+		}
+
+		if (!draggedNode) {
+			_onNodeDragEnd(event);
+			return;
+		}
+
+		// Check if drop is allowed by mode
+		const dropAllowed = isCrossTreeDrag
+			? (dragDropMode === 'both' || dragDropMode === 'cross')
+			: isDropAllowedByMode(draggedNode?.treeId);
+
+		if (!dropAllowed) {
+			_onNodeDragEnd(event);
+			return;
+		}
+
+		// For cross-tree, always allow; for same-tree, check it's not the same node
+		if (isCrossTreeDrag || draggedNode !== node) {
+			_handleDrop(node, draggedNode, position, event);
+		}
+
+		// Reset drag state
+		_onNodeDragEnd(event);
+	}
+
+	// Touch drag handlers for mobile support
+	function _onTouchStart(node: LTreeNode<any>, event: TouchEvent) {
+		if (!node?.isDraggable) return;
+
+		const touch = event.touches[0];
+		touchDragState = {
+			node,
+			startX: touch.clientX,
+			startY: touch.clientY,
+			isDragging: false,
+			ghostElement: null,
+			currentDropTarget: null
+		};
+
+		// Start long-press timer (300ms)
+		touchTimer = setTimeout(() => {
+			touchDragState.isDragging = true;
+			draggedNode = node;
+			createGhostElement(node, touch.clientX, touch.clientY);
+			navigator.vibrate?.(50); // Haptic feedback
+		}, 300);
+	}
+
+	function _onTouchMove(node: LTreeNode<any>, event: TouchEvent) {
+		if (!touchDragState.node) return;
+
+		const touch = event.touches[0];
+
+		if (!touchDragState.isDragging) {
+			// Check if moved too much before long-press completed - cancel drag
+			const dx = Math.abs(touch.clientX - touchDragState.startX);
+			const dy = Math.abs(touch.clientY - touchDragState.startY);
+			if (dx > 10 || dy > 10) {
+				if (touchTimer) clearTimeout(touchTimer);
+				touchDragState = { node: null, startX: 0, startY: 0, isDragging: false, ghostElement: null, currentDropTarget: null };
+			}
+			return;
+		}
+
+		event.preventDefault(); // Prevent scroll during drag
+
+		// Move ghost element
+		if (touchDragState.ghostElement) {
+			touchDragState.ghostElement.style.left = `${touch.clientX}px`;
+			touchDragState.ghostElement.style.top = `${touch.clientY}px`;
+		}
+
+		// Find drop target under touch point (hide ghost temporarily to not interfere)
+		if (touchDragState.ghostElement) {
+			touchDragState.ghostElement.style.pointerEvents = 'none';
+		}
+		const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+		if (touchDragState.ghostElement) {
+			touchDragState.ghostElement.style.pointerEvents = '';
+		}
+
+		// Update drop target highlighting
+		updateDropTarget(elementUnderTouch);
+	}
+
+	function _onTouchEnd(node: LTreeNode<any>, event: TouchEvent) {
+		if (touchTimer) clearTimeout(touchTimer);
+
+		if (touchDragState.isDragging && draggedNode) {
+			const touch = event.changedTouches[0];
+
+			// Hide ghost to find element underneath
+			if (touchDragState.ghostElement) {
+				touchDragState.ghostElement.style.display = 'none';
+			}
+
+			const dropElement = document.elementFromPoint(touch.clientX, touch.clientY);
+			const dropNode = findNodeFromElement(dropElement);
+
+			// Check if dropping on empty tree placeholder
+			const placeholder = dropElement?.closest('.ltree-empty-state');
+			const rootDropZone = dropElement?.closest('.ltree-root-drop-zone');
+			if ((placeholder || rootDropZone) && !dropNode) {
+				// Dropping on empty tree or root drop zone
+				_handleDrop(null, draggedNode, 'child', event);
+			} else if (dropNode && dropNode !== draggedNode && dropNode.isDropAllowed) {
+				// For touch, default to 'child' since we don't track position during touch
+				_handleDrop(dropNode, draggedNode, 'child', event);
+			}
+
+			// Clean up ghost element
+			removeGhostElement();
+			clearDropTargetHighlight();
+		}
+
+		// Reset state
+		touchDragState = { node: null, startX: 0, startY: 0, isDragging: false, ghostElement: null, currentDropTarget: null };
 		draggedNode = null;
+		isDropPlaceholderActive = false;
+	}
+
+	function createGhostElement(node: LTreeNode<any>, x: number, y: number) {
+		const ghost = document.createElement('div');
+		ghost.className = 'ltree-touch-ghost';
+		ghost.textContent = tree.getNodeDisplayValue(node);
+		ghost.style.left = `${x}px`;
+		ghost.style.top = `${y}px`;
+		document.body.appendChild(ghost);
+		touchDragState.ghostElement = ghost;
+	}
+
+	function removeGhostElement() {
+		if (touchDragState.ghostElement) {
+			touchDragState.ghostElement.remove();
+			touchDragState.ghostElement = null;
+		}
+	}
+
+	function findNodeFromElement(element: Element | null): LTreeNode<any> | null {
+		if (!element) return null;
+
+		const nodeElement = element.closest('.ltree-node');
+		if (!nodeElement) return null;
+
+		const path = nodeElement.getAttribute('data-tree-path');
+		if (!path) return null;
+
+		return tree.getNodeByPath(path);
+	}
+
+	function updateDropTarget(element: Element | null) {
+		const newTarget = findNodeFromElement(element);
+
+		// Clear previous highlight
+		if (touchDragState.currentDropTarget && touchDragState.currentDropTarget !== newTarget) {
+			const prevElement = document.querySelector(`[data-tree-path="${touchDragState.currentDropTarget.path}"] .ltree-node-content`);
+			prevElement?.classList.remove(dragOverNodeClass || 'ltree-dragover-highlight');
+		}
+
+		// Check if we're over an empty tree placeholder
+		const placeholder = element?.closest('.ltree-empty-state');
+		if (placeholder && !newTarget) {
+			// We're over an empty tree's drop zone
+			isDropPlaceholderActive = true;
+			touchDragState.currentDropTarget = null;
+			return;
+		} else {
+			// Clear placeholder state if we're not over it
+			isDropPlaceholderActive = false;
+		}
+
+		// Add highlight to new target
+		if (newTarget && newTarget !== draggedNode && newTarget.isDropAllowed) {
+			const targetElement = document.querySelector(`[data-tree-path="${newTarget.path}"] .ltree-node-content`);
+			targetElement?.classList.add(dragOverNodeClass || 'ltree-dragover-highlight');
+			touchDragState.currentDropTarget = newTarget;
+		} else {
+			touchDragState.currentDropTarget = null;
+		}
+	}
+
+	function clearDropTargetHighlight() {
+		if (touchDragState.currentDropTarget) {
+			const element = document.querySelector(`[data-tree-path="${touchDragState.currentDropTarget.path}"] .ltree-node-content`);
+			element?.classList.remove(dragOverNodeClass || 'ltree-dragover-highlight');
+		}
+	}
+
+	// Empty tree drop handlers
+	function handleEmptyTreeDragOver(event: DragEvent) {
+		console.log('[EmptyTree] dragover/dragenter fired', {
+			types: event.dataTransfer?.types,
+			hasTreeviewType: event.dataTransfer?.types.includes("application/svelte-treeview"),
+			isDropPlaceholderActive,
+			treeId
+		});
+		if (event.dataTransfer?.types.includes("application/svelte-treeview")) {
+			event.preventDefault();
+			isDropPlaceholderActive = true;
+			console.log('[EmptyTree] isDropPlaceholderActive set to true');
+			if (event.dataTransfer) {
+				event.dataTransfer.dropEffect = 'move';
+			}
+		}
+	}
+
+	function handleEmptyTreeDragLeave(event: DragEvent) {
+		// Only deactivate if truly leaving the element
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		const x = event.clientX;
+		const y = event.clientY;
+
+		console.log('[EmptyTree] dragleave fired', {
+			x, y,
+			rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
+			isOutside: x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom,
+			treeId
+		});
+
+		if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+			isDropPlaceholderActive = false;
+			console.log('[EmptyTree] isDropPlaceholderActive set to false (left element)');
+		}
+	}
+
+	function handleEmptyTreeDrop(event: DragEvent) {
+		console.log('[EmptyTree] drop fired', {
+			types: event.dataTransfer?.types,
+			data: event.dataTransfer?.getData('application/svelte-treeview'),
+			treeId
+		});
+		event.preventDefault();
+		isDropPlaceholderActive = false;
+
+		const draggedNodeData = event.dataTransfer?.getData('application/svelte-treeview');
+		if (draggedNodeData) {
+			const droppedNode = JSON.parse(draggedNodeData);
+			console.log('[EmptyTree] calling _handleDrop with', { droppedNode });
+			// Call onNodeDrop with null as dropNode to indicate "root level drop"
+			_handleDrop(null, droppedNode, 'child', event);
+		} else {
+			console.log('[EmptyTree] no draggedNodeData found!');
+		}
+		_onNodeDragEnd(event);
+	}
+
+	function handleEmptyTreeTouchEnd(event: TouchEvent) {
+		console.log('[EmptyTree] touchend fired', {
+			draggedNode,
+			isDropPlaceholderActive,
+			treeId
+		});
+		// Check if touch drag was active and we have a dragged node
+		if (draggedNode && isDropPlaceholderActive) {
+			_handleDrop(null, draggedNode, 'child', event);
+			isDropPlaceholderActive = false;
+		}
+	}
+
+	// Tree-level dragenter for cross-tree drag detection
+	function handleTreeDragEnter(event: DragEvent) {
+		if (event.dataTransfer?.types.includes("application/svelte-treeview")) {
+			isDragInProgress = true;
+		}
+	}
+
+	function handleTreeDragLeave(event: DragEvent) {
+		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+		const x = event.clientX;
+		const y = event.clientY;
+
+		// Only reset if truly leaving the tree container
+		if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
+			// Don't reset isDragInProgress if we're the source tree
+			if (draggedNode?.treeId !== treeId) {
+				isDragInProgress = false;
+				hoveredNodeForDrop = null;
+				activeDropPosition = null;
+			}
+		}
 	}
 
 	// Close context menu when clicking outside
@@ -560,7 +1118,13 @@
 	});
 </script>
 
-<div bind:this={treeContainerRef}>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	bind:this={treeContainerRef}
+	ondragenter={handleTreeDragEnter}
+	ondragleave={handleTreeDragLeave}
+	ondragend={_onNodeDragEnd}
+>
 	{#if shouldDisplayDebugInformation}
 		<div class="ltree-debug-info">
 			<details>
@@ -597,24 +1161,77 @@
 							onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
 							onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}
 							onNodeDragOver={(node, event) => _onNodeDragOver(node, event)}
+							onNodeDragLeave={(node, event) => _onNodeDragLeave(node, event)}
 							onNodeDrop={(node, event) => _onNodeDrop(node, event)}
+							onZoneDrop={(node, position, event) => _onZoneDrop(node, position, event)}
+							onTouchDragStart={(node, event) => _onTouchStart(node, event)}
+							onTouchDragMove={(node, event) => _onTouchMove(node, event)}
+							onTouchDragEnd={(node, event) => _onTouchEnd(node, event)}
 							{expandIconClass}
 							{collapseIconClass}
 							{leafIconClass}
 							{selectedNodeClass}
 							{dragOverNodeClass}
-							isDraggedNode={draggedNode === node}
+							isDraggedNode={draggedNode?.path === node.path}
+							{isDragInProgress}
+							hoveredNodeForDropPath={hoveredNodeForDrop?.path}
+							{activeDropPosition}
+							{dropZoneMode}
+							{dropZoneLayout}
+							{dropZoneStart}
+							{dropZoneMaxWidth}
+							dropOperation={currentDropOperation}
 						/>
 					{:else}
-						<div class="ltree-empty-state">
-							{@render noDataFound?.()}
+						<!-- Empty state when tree has no items -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							class="ltree-empty-state"
+							class:ltree-drop-placeholder={isDropPlaceholderActive}
+							ondragenter={handleEmptyTreeDragOver}
+							ondragover={handleEmptyTreeDragOver}
+							ondragleave={handleEmptyTreeDragLeave}
+							ondrop={handleEmptyTreeDrop}
+							ontouchend={handleEmptyTreeTouchEnd}
+						>
+							{#if isDropPlaceholderActive}
+								{#if dropPlaceholder}
+									{@render dropPlaceholder()}
+								{:else}
+									<div class="ltree-drop-placeholder-content">
+										Drop here to add
+									</div>
+								{/if}
+							{:else}
+								{@render noDataFound?.()}
+							{/if}
 						</div>
 					{/each}
 				</div>
 			{/key}
 		{:else}
-			<div class="ltree-empty-state">
-				{@render noDataFound?.()}
+			<!-- Empty tree drop zone -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="ltree-empty-state"
+				class:ltree-drop-placeholder={isDropPlaceholderActive}
+				ondragenter={handleEmptyTreeDragOver}
+				ondragover={handleEmptyTreeDragOver}
+				ondragleave={handleEmptyTreeDragLeave}
+				ondrop={handleEmptyTreeDrop}
+				ontouchend={handleEmptyTreeTouchEnd}
+			>
+				{#if isDropPlaceholderActive}
+					{#if dropPlaceholder}
+						{@render dropPlaceholder()}
+					{:else}
+						<div class="ltree-drop-placeholder-content">
+							Drop here to add
+						</div>
+					{/if}
+				{:else}
+					{@render noDataFound?.()}
+				{/if}
 			</div>
 		{/if}
 	</div>

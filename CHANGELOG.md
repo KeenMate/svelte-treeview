@@ -5,6 +5,127 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.5.0] - Unreleased
+
+### Added
+- **Drop Zone Layout Configuration**: New props to customize drop zone appearance and positioning
+  - `dropZoneLayout` - Controls zone arrangement with 5 layout options:
+    - `'around'` (default) - Above zone on top, Below/Child zones on bottom
+    - `'above'` - All 3 zones in a horizontal row above the node
+    - `'below'` - All 3 zones in a horizontal row below the node
+    - `'wave'` - Zones stacked vertically (above/child/below) with fixed width
+    - `'wave2'` - Diagonal wave pattern with Above/Below offset 7% to the left
+  - `dropZoneStart` - Number (0-100) controlling where zones start horizontally (default: 33%)
+  - `dropZoneMaxWidth` - Max width in pixels for wave layouts (default: 120px)
+- **New TypeScript Type**: `DropZoneLayout` type exported from `types.ts`
+- **Mobile Touch Drag and Drop**: Full touch support for drag and drop on mobile devices
+  - Long-press (300ms) to initiate drag - distinguishes from tap and scroll
+  - Visual ghost element follows finger during drag showing the dragged node
+  - Drop target highlighting using existing `dragOverNodeClass` prop
+  - Haptic feedback via `navigator.vibrate()` when drag starts (on supported devices)
+  - Automatic cancellation if finger moves >10px before long-press completes (allows normal scrolling)
+  - Works alongside existing desktop HTML5 drag and drop - same `onNodeDrop` callback for both
+- **Drop Placeholder for Empty Trees**: When dragging nodes to an empty tree, a drop zone placeholder appears
+  - Shows visual drop target in empty trees during drag operations
+  - Works with both desktop (HTML5 DnD) and touch drag
+  - Customizable via `dropPlaceholder` snippet prop for custom content
+  - `onNodeDrop` callback receives `null` as `dropNode` for root-level drops into empty trees
+- **Drop Position Indicators**: Visual indicators showing exactly where dropped items will be placed
+  - Three drop positions per node: `'above'` (sibling before), `'child'` (as child), `'below'` (sibling after)
+  - Absolutely positioned indicators on right half of node to prevent layout shifts
+  - Position calculated from mouse Y: top 25% = above, middle 50% = child, bottom 25% = below
+  - New CSS classes: `.ltree-drop-indicators`, `.ltree-drop-above`, `.ltree-drop-child`, `.ltree-drop-below`
+- **Root Drop Zone**: Drop zone that appears at bottom of non-empty trees during drag
+  - Allows dropping items as root-level nodes in trees that already have content
+  - New CSS class: `.ltree-root-drop-zone`
+- **Drag Drop Mode Control**: New `dragDropMode` prop to control allowed drag operations
+  - `'none'` - Drag and drop disabled
+  - `'self'` - Only within same tree
+  - `'cross'` - Only between different trees
+  - `'both'` - Both self and cross-tree (default)
+- **Sibling Order Support**: New `orderMember` prop for explicit sibling ordering
+  - Specifies which field in user data contains the sort order value
+  - Used by default sort to order siblings within the same parent
+  - Required for proper above/below positioning in drag-drop tree editors
+  - Example: `orderMember="sortOrder"` with data like `{ path: '1.1', name: 'A', sortOrder: 10 }`
+- **Tree Editor Helper Methods**: New methods for building tree editors
+  - `getChildren(parentPath)` - Get direct children of a node
+  - `getSiblings(path)` - Get all siblings of a node (including itself)
+  - `getNodeByPath(path)` - Get a node by its path
+  - `refreshSiblings(parentPath)` - Re-sort children of a parent using orderMember
+  - `refreshNode(path)` - Trigger re-render for a specific node
+- **Tree Editor Mutation Methods**: New methods for modifying tree structure
+  - `addNode(parentPath, data, pathSegment?)` - Add a new node to the tree
+  - `moveNode(sourcePath, targetPath, position)` - Move a node with full subtree to a new location
+    - Supports 'above', 'below', and 'child' positions
+    - Automatically updates paths of all descendants
+    - Calculates order values when orderMember is set
+  - `removeNode(path, includeDescendants?)` - Remove a node from the tree
+- **Example Pages**: New `/examples` route with interactive demos (same look-and-feel as web-multiselect)
+  - Landing page with feature cards linking to 7 example sections
+  - Basic Examples: tree rendering, expand level control, scroll to path, programmatic expand/collapse
+  - Drag & Drop: two-tree drag demo, touch drag instructions, drop placeholder customization
+  - Context Menu: callback-based menus, dynamic items, icons, disabled states, dividers
+  - Search & Filter: live filtering with `searchText`, `searchNodes()` query method
+  - Theming: CSS variable reference, theme examples (default, purple, dark, green)
+  - Data Structures: path-based hierarchy, custom separators, insert result validation
+  - Tree Editor: add/move/remove nodes with drag-drop and orderMember support
+
+### Enhanced
+- **Drop Zone Styling**: Improved visual feedback during drag operations
+  - Semi-transparent zones (0.25 opacity) that become solid (0.85) when hovered
+  - Modern pastel color palette: sage green for Above, peach/coral for Below, lavender for Child
+  - Interactive controls in `/examples/drag-drop` to test all layout configurations
+- **Drop Zone SCSS Variables**: Full customization of drop zone appearance via SCSS variables
+  - `$drop-zone-border-radius` - Border radius for all zones (default: 0)
+  - Per-zone variables for backgrounds, colors, and shadows in both inactive and active states:
+    - Above: `$drop-zone-above-bg`, `$drop-zone-above-color`, `$drop-zone-above-active-bg`, `$drop-zone-above-active-color`, `$drop-zone-above-active-shadow`
+    - Below: `$drop-zone-below-bg`, `$drop-zone-below-color`, `$drop-zone-below-active-bg`, `$drop-zone-below-active-color`, `$drop-zone-below-active-shadow`
+    - Child: `$drop-zone-child-bg`, `$drop-zone-child-color`, `$drop-zone-child-active-bg`, `$drop-zone-child-active-color`, `$drop-zone-child-active-shadow`
+- **Drop Zone Positioning**: Moved drop zones from inside `.ltree-node-content` to `.ltree-node-row` level
+  - Eliminates padding-related gaps that made zones hard to reach
+  - More predictable positioning relative to the full row width
+- **Wave2 Layout Overlap**: Added 10% overlap for Above/Below zones in wave2 layout
+  - Ensures first node's Above zone and last node's Below zone are always reachable
+  - Child zone shrunk to 80% height to accommodate overlap without zone collision
+- **dropZoneStart Flexibility**: Now accepts both number (percentage) and string (any CSS value)
+  - Number: treated as percentage (e.g., `33` → `33%`)
+  - String: used as-is (e.g., `"33%"`, `"50px"`, `"3rem"`)
+- **Touch UX**: Added CSS properties to prevent text selection during touch drag
+  - `-webkit-user-select: none` and `-webkit-touch-callout: none` on node content
+- **Ghost Element Styling**: New `.ltree-touch-ghost` CSS class with customizable CSS variables
+  - `--tree-ghost-bg`: Background color (default: rgba(59, 130, 246, 0.9))
+  - `--tree-ghost-color`: Text color (default: white)
+- **Drop Placeholder Styling**: New `.ltree-drop-placeholder` and `.ltree-drop-placeholder-content` CSS classes
+
+### Fixed
+- **Empty Tree Drop Placeholder**: Fixed drop placeholder not appearing when dragging to empty trees
+  - Added missing `ondragenter` handler to empty state divs
+  - Added `min-height: 60px` to `.ltree-empty-state` to ensure drop target is always reachable
+- **Drag-Drop Demo ID/Path Mismatch**: Fixed bug where second node drop to first node didn't work on first try
+  - Root cause: `nextId++` post-increment caused id and path to use different values
+  - Fixed by extracting `const itemId = nextId++` before using in object properties
+- **Tree Data Reset**: Fixed `insertArray` not clearing existing tree data when called with new/empty data
+  - Previously, setting `data = []` would not clear the tree - existing nodes remained visible
+  - Now `insertArray` properly resets root children, nodeCount, and maxLevel before inserting
+- **Example Pages Data Insertion**: Added `isSorted={true}` to all example page Tree components
+  - Prevents "Could not find parent node" errors caused by `sortCallback` sorting data before insertion
+  - When `sortCallback` alphabetizes data, children could be inserted before parents (e.g., "AuthService" before "Services")
+  - `isSorted={true}` tells the tree to skip pre-sorting and only use `sortCallback` for display ordering
+- **Search Example Async Index**: Added note explaining that search index is built asynchronously
+  - Added Enter key support for better UX when retrying searches
+  - Users are now informed to wait a moment if no results appear immediately after page load
+- **Search Example Reactivity**: Made "Search Nodes (Query)" input reactive
+  - Added `$effect` to automatically trigger search when input changes
+  - Results now update in real-time as user types
+
+### Changed
+- **BREAKING: onNodeDrop Signature**: Callback signature updated to include drop position
+  - Before: `onNodeDrop?: (dropNode, draggedNode, event) => void`
+  - After: `onNodeDrop?: (dropNode, draggedNode, position, event) => void`
+  - `position` is `'above'`, `'below'`, or `'child'` indicating where item should be placed
+  - `dropNode` can be `null` when dropping into empty tree or root drop zone
+
 ## [4.4.0] - 2025-10-02
 
 ### Added

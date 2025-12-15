@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.4.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.5.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -89,6 +89,7 @@ STYLING:
 - CSS variables for theming
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
 - Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow
+- Touch ghost class: ltree-touch-ghost (customizable via --tree-ghost-bg, --tree-ghost-color)
 - Context menu classes: ltree-context-menu, ltree-context-menu-item, ltree-context-menu-divider
 
 CONSTRAINTS:
@@ -112,4 +113,24 @@ EXTERNAL_UPDATE:
 - Example: tree.update({ searchText: 'query', data: newData, expandLevel: 3 })
 - All props updatable: data, searchText, callbacks, members, visuals, behavior
 
-RECENT: v4.4.0 - Added update() method for external JavaScript prop updates, fixed search in context-menu dev page, cleaned up internal "trie" references to "tree"
+TOUCH_DRAG_DROP:
+- Mobile touch support for drag and drop (enabled by default)
+- Long-press (300ms) initiates drag, distinguishes from tap/scroll
+- Ghost element follows finger showing dragged node
+- Uses same onNodeDrop callback as desktop drag and drop
+- Haptic feedback on drag start (navigator.vibrate)
+- Move >10px before long-press cancels drag (allows scrolling)
+
+EXAMPLES:
+- Route: /examples (landing page with feature cards)
+- src/routes/examples/+layout.svelte - shared layout/CSS (purple gradient, cards)
+- src/routes/examples/+page.svelte - landing page
+- src/routes/examples/basic/ - tree rendering, expand level, scroll to path, programmatic control
+- src/routes/examples/drag-drop/ - two-tree drag, touch drag, drop placeholder
+- src/routes/examples/context-menu/ - callback menus, dynamic items, icons, dividers
+- src/routes/examples/search/ - searchText filtering, searchNodes() query
+- src/routes/examples/theming/ - CSS variables, theme examples
+- src/routes/examples/data/ - path structure, separators, insert results
+- Snippet name: nodeTemplate (not nodeContent)
+
+RECENT: v4.5.0 - Touch drag and drop, drop placeholder for empty trees, example pages at /examples
