@@ -1072,6 +1072,165 @@ export function createLTree<T>(
 			return { successful: successCount, failed: failures };
 		},
 
+		/**
+		 * Copy a node and all its descendants to a new location
+		 * Useful for cross-tree drag-drop operations
+		 * @param sourceNode - The node to copy (including its children)
+		 * @param targetParentPath - Path where to insert the copy (empty string for root)
+		 * @param transformData - Function to transform each node's data (e.g., assign new IDs)
+		 * @param siblingPath - Optional path of sibling to position relative to
+		 * @param position - Optional position relative to sibling ('above' or 'below')
+		 * @returns Object with success status, the created root node, and count of nodes created
+		 */
+		copyNodeWithDescendants(
+			sourceNode: LTreeNode<T>,
+			targetParentPath: string,
+			transformData: (data: T) => T,
+			siblingPath?: string,
+			position?: 'above' | 'below'
+		): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
+			if (!sourceNode.data) {
+				return { success: false, count: 0, error: 'Source node has no data' };
+			}
+
+			let totalCount = 0;
+
+			// Recursive helper function
+			const copyRecursive = (node: LTreeNode<T>, parentPath: string): LTreeNode<T> | null => {
+				if (!node.data) return null;
+
+				// Transform the data (user assigns new IDs, etc.)
+				const transformedData = transformData(node.data);
+
+				// Add the node
+				const result = this.addNode(parentPath, transformedData);
+				if (!result.success || !result.node) {
+					if (this.shouldDisplayDebugInformation) {
+						console.warn(`[Tree ${_treeId}] copyNodeWithDescendants: Failed to add node`, result.error);
+					}
+					return null;
+				}
+
+				totalCount++;
+				const newNode = result.node;
+
+				// Recursively copy children
+				if (node.children && Object.keys(node.children).length > 0) {
+					for (const child of Object.values(node.children)) {
+						copyRecursive(child, newNode.path);
+					}
+				}
+
+				return newNode;
+			};
+
+			// Start the recursive copy
+			const rootNode = copyRecursive(sourceNode, targetParentPath);
+
+			if (!rootNode) {
+				return { success: false, count: 0, error: 'Failed to copy root node' };
+			}
+
+			// Handle positioning relative to sibling if specified
+			if (siblingPath && position && rootNode.data) {
+				const siblingNode = this.getNodeByPath(siblingPath);
+				if (siblingNode && this.orderMember) {
+					// Get the parent to access siblings
+					const parent = targetParentPath ? this.getNodeByPath(targetParentPath) : root;
+					if (parent) {
+						const siblings = Object.values(parent.children) as LTreeNode<T>[];
+						const siblingOrder = siblingNode.data?.[this.orderMember] ?? 0;
+
+						if (position === 'above') {
+							// Find order value just below sibling
+							const siblingOrders = siblings
+								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
+								.map(s => s.data![this.orderMember] as number)
+								.filter(o => o < siblingOrder)
+								.sort((a, b) => b - a);
+							const belowOrder = siblingOrders[0] ?? siblingOrder - 20;
+							(rootNode.data as any)[this.orderMember] = Math.floor((belowOrder + siblingOrder) / 2);
+						} else {
+							// Find order value just above sibling
+							const siblingOrders = siblings
+								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
+								.map(s => s.data![this.orderMember] as number)
+								.filter(o => o > siblingOrder)
+								.sort((a, b) => a - b);
+							const aboveOrder = siblingOrders[0] ?? siblingOrder + 20;
+							(rootNode.data as any)[this.orderMember] = Math.floor((siblingOrder + aboveOrder) / 2);
+						}
+
+						// Re-sort siblings
+						this.refreshSiblings(targetParentPath);
+					}
+				}
+			}
+
+			if (this.shouldDisplayDebugInformation) {
+				console.log(`[Tree ${_treeId}] copyNodeWithDescendants: Copied ${totalCount} nodes to "${targetParentPath}"${siblingPath ? ` ${position} "${siblingPath}"` : ''}`);
+			}
+
+			return { success: true, rootNode, count: totalCount };
+		},
+
+		/**
+		 * Get paths of all expanded nodes
+		 * Useful for saving expanded state before a full redraw
+		 * @returns Array of paths that are currently expanded
+		 */
+		getExpandedPaths(): string[] {
+			const paths: string[] = [];
+			const traverse = (node: LTreeNode<T>) => {
+				if (node.isExpanded && node.path) {
+					paths.push(node.path);
+				}
+				for (const child of Object.values(node.children)) {
+					traverse(child);
+				}
+			};
+			traverse(root);
+			return paths;
+		},
+
+		/**
+		 * Set expanded state for given paths
+		 * Useful for restoring expanded state after a full redraw
+		 * @param paths - Array of paths to expand (all others will be collapsed)
+		 */
+		setExpandedPaths(paths: string[]): void {
+			const pathSet = new Set(paths);
+			const traverse = (node: LTreeNode<T>) => {
+				if (node.path) {
+					node.isExpanded = pathSet.has(node.path);
+				}
+				for (const child of Object.values(node.children)) {
+					traverse(child);
+				}
+			};
+			traverse(root);
+			this._emitTreeChanged();
+		},
+
+		/**
+		 * Extract all node data as a flat array
+		 * Useful for saving the entire tree state to a database
+		 * @returns Array of all node data objects
+		 */
+		getAllData(): T[] {
+			const result: T[] = [];
+			const traverse = (node: LTreeNode<T>) => {
+				if (node.data) {
+					result.push(node.data);
+				}
+				for (const child of Object.values(node.children)) {
+					traverse(child);
+				}
+			};
+			traverse(root);
+			return result;
+		},
+
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {
 			return items.sort((a, b) => {
 				// First, sort by level (shallower levels first)

@@ -43,6 +43,7 @@
 		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
 		dropOperation?: DropOperation; // Current drag operation ('move' or 'copy')
+		allowCopy?: boolean; // Whether copy operation is allowed (Ctrl+drag)
 	}
 
 	// Destructure props using Svelte 5 syntax
@@ -84,6 +85,7 @@
 		dropZoneStart = 33,
 		dropZoneMaxWidth = 120,
 		dropOperation = 'move',
+		allowCopy = false,
 	}: Props = $props()
 
 	// Compute if THIS node is the one being hovered for drop
@@ -192,7 +194,7 @@
 			}}
 			ondragstart={(e) => {
 				if (node?.isDraggable && e.dataTransfer) {
-					e.dataTransfer.effectAllowed = "move";
+					e.dataTransfer.effectAllowed = allowCopy ? "copyMove" : "move";
 					e.dataTransfer.setData(
 						"application/svelte-treeview",
 						JSON.stringify(node),
@@ -203,6 +205,10 @@
 			ondragover={(e) => {
 				if (e.dataTransfer?.types.includes("application/svelte-treeview")) {
 					e.preventDefault();
+					// Set dropEffect directly from event to avoid timing issues with prop updates
+					if (e.dataTransfer) {
+						e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
+					}
 					isDraggedOver = true;
 					// In glow mode, calculate and update the glow position
 					if (dropZoneMode === 'glow') {
@@ -224,6 +230,10 @@
 			}}
 			ondrop={(e) => {
 				e.stopPropagation();
+				// Confirm dropEffect for spec compliance
+				if (e.dataTransfer) {
+					e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
+				}
 				isDraggedOver = false;
 				// In glow mode, use the calculated glowPosition for the drop
 				if (dropZoneMode === 'glow' && glowPosition) {
@@ -254,23 +264,23 @@
 				<div
 					class="ltree-drop-zone ltree-drop-above"
 					class:ltree-drop-zone-active={hoveredZone === 'above'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; hoveredZone = 'above'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; onNodeDragOver?.(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); hoveredZone = null; onZoneDrop?.(node, 'above', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'above', e); }}
 				>↑ Above</div>
 				<div
 					class="ltree-drop-zone ltree-drop-below"
 					class:ltree-drop-zone-active={hoveredZone === 'below'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; hoveredZone = 'below'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; onNodeDragOver?.(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); hoveredZone = null; onZoneDrop?.(node, 'below', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'below', e); }}
 				>↓ Below</div>
 				<div
 					class="ltree-drop-zone ltree-drop-child"
 					class:ltree-drop-zone-active={hoveredZone === 'child'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'; hoveredZone = 'child'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; onNodeDragOver?.(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); hoveredZone = null; onZoneDrop?.(node, 'child', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'child', e); }}
 				>→ Child</div>
 			</div>
 		{/if}
@@ -307,6 +317,7 @@
 					{dropZoneStart}
 					{dropZoneMaxWidth}
 					{dropOperation}
+					{allowCopy}
 				/>
 			{/each}
 		</div>

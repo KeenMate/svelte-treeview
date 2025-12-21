@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.5.0] - Unreleased
+## [4.5.0-rc01] - 2025-12-20
 
 ### Added
 - **Drop Zone Layout Configuration**: New props to customize drop zone appearance and positioning
@@ -70,6 +70,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Theming: CSS variable reference, theme examples (default, purple, dark, green)
   - Data Structures: path-based hierarchy, custom separators, insert result validation
   - Tree Editor: add/move/remove nodes with drag-drop and orderMember support
+- **Drop Indicator Arrows**: Visual arrow indicators for glow-mode drop zones
+  - Arrows positioned at 66% of row width, centered vertically
+  - Uses Lucide SVG icons as data URIs: `arrow-big-up`, `arrow-big-down`, `arrow-big-right-dash`
+  - Child arrow rotated 45° for diagonal pointing effect
+  - Fully customizable via SCSS variables
+- **Ctrl+Drag Copy Operation**: Full support for copying nodes via Ctrl+drag
+  - `allowCopy` prop enables Ctrl+drag to copy instead of move
+  - `autoHandleCopy` prop (default: true) controls whether Tree auto-handles same-tree copies
+    - `true`: Tree creates copy with generated ID (`{id}_copy_{timestamp}`) - good for batch/offline mode
+    - `false`: User callback handles copy (for DB/API integration) - good for online/live mode
+  - Copy operations respect drop position (above/below/child) just like moves
+  - Visual feedback: `.ltree-drop-copy` class applied during copy operations
+- **Position Support for copyNodeWithDescendants**: Enhanced copy method now supports sibling positioning
+  - New optional parameters: `siblingPath` and `position` ('above' | 'below')
+  - Copies can be placed at specific positions relative to siblings
+  - Uses same `orderMember` logic as `moveNode` for consistent ordering
 
 ### Enhanced
 - **Drop Zone Styling**: Improved visual feedback during drag operations
@@ -97,6 +113,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--tree-ghost-bg`: Background color (default: rgba(59, 130, 246, 0.9))
   - `--tree-ghost-color`: Text color (default: white)
 - **Drop Placeholder Styling**: New `.ltree-drop-placeholder` and `.ltree-drop-placeholder-content` CSS classes
+- **Drop Indicator Arrow SCSS Variables**: Full customization of arrow indicators via SCSS variables
+  - `$drop-arrow-above`, `$drop-arrow-below`, `$drop-arrow-child` - SVG data URIs for each direction
+  - `$drop-arrow-size` - Arrow size (default: 24px)
+  - `$drop-arrow-position` - Horizontal position within row (default: 66%)
+  - `$drop-arrow-above-rotation`, `$drop-arrow-below-rotation`, `$drop-arrow-child-rotation` - Rotation angles
 
 ### Fixed
 - **Empty Tree Drop Placeholder**: Fixed drop placeholder not appearing when dragging to empty trees
@@ -117,7 +138,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Users are now informed to wait a moment if no results appear immediately after page load
 - **Search Example Reactivity**: Made "Search Nodes (Query)" input reactive
   - Added `$effect` to automatically trigger search when input changes
-  - Results now update in real-time as user types
+- **Glow Mode Border Radius**: Fixed border-radius appearing on glow drop indicators during drag
+  - Changed `$tree-node-content-border-radius` default from `4px` to `0`
+  - Added `!important` to `border-radius: 0` on glow classes to ensure override
+  - Removed `border-radius: 4px !important` from `.ltree-dragover-glow` class
+  - Removed `border-radius` from `.ltree-node-content` transition to prevent animation glitch
+- **Glow Mode Drop Validation**: Fixed glow showing on invalid drop targets
+  - When `dragDropMode='cross'` prevents drops, glow no longer appears on hover
+  - Cleared `hoveredNodeForDrop` state when drop validation fails
+  - Debug logging for drop rejection now gated behind `shouldDisplayDebugInformation`
+- **Glow Mode Border Radius Transition**: Fixed double border artifact on node hover during drag
+  - Added `border-radius` to transition property for smooth animation
+  - Eliminates visual conflict between base rounded corners and glow's straight corners
+- **Ctrl+Drag dropEffect Timing**: Fixed copy operation failing with `dropEffect: none`
+  - Root cause: Node's `ondragover` read stale `dropOperation` prop before Tree updated it
+  - Fix: Node now reads `event.ctrlKey` directly to calculate dropEffect immediately
+  - Also added dropEffect confirmation in `ondrop` handlers for spec compliance
+- **Missing allowCopy Prop in Recursive Node**: Fixed `allowCopy` not being passed to child nodes
+  - Caused Ctrl+drag to fail on non-root nodes since they defaulted to `allowCopy=false`
+  - Added `{allowCopy}` to recursive Node component call
 
 ### Changed
 - **BREAKING: onNodeDrop Signature**: Callback signature updated to include drop position

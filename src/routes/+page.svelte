@@ -87,6 +87,18 @@
 				'Remove nodes with descendants',
 				'orderMember for sibling ordering'
 			]
+		},
+		{
+			href: '/examples/scenarios',
+			icon: '🏢',
+			title: 'Business Scenarios',
+			description: 'Real-world tree manipulation workflows with mock database integration. Five complete scenarios from full redraws to batch operations.',
+			features: [
+				'Full redraw with state preservation',
+				'Incremental updates (recommended)',
+				'Individual CRUD with DB saves',
+				'Batch create then save with getAllData()'
+			]
 		}
 	];
 

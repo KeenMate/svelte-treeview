@@ -130,6 +130,20 @@ export interface Ltree<T> {
 	updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string };
 	applyChanges(changes: TreeChange<T>[]): ApplyChangesResult;
 
+	// Cross-tree copy method
+	copyNodeWithDescendants(
+		sourceNode: LTreeNode<T>,
+		targetParentPath: string,
+		transformData: (data: T) => T,
+		siblingPath?: string,
+		position?: 'above' | 'below'
+	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string };
+
+	// State persistence methods
+	getExpandedPaths(): string[];
+	setExpandedPaths(paths: string[]): void;
+	getAllData(): T[];
+
 	// Internal helpers
 	_updateDescendantPaths(node: LTreeNode<T>, oldBasePath: string, newBasePath: string): void;
 }

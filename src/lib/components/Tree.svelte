@@ -78,6 +78,7 @@
 		noDataFound?: any;
 		contextMenu?: any;
 		dropPlaceholder?: any;
+		loadingPlaceholder?: any;
 
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
@@ -89,6 +90,7 @@
 		indexerTimeout?: number | null | undefined;
 		shouldDisplayDebugInformation?: boolean;
 		shouldDisplayContextMenuInDebugMode?: boolean;
+		isLoading?: boolean;
 
 		// DRAG AND DROP
 		dragDropMode?: DragDropMode;
@@ -97,6 +99,7 @@
 		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
 		allowCopy?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
+		autoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
 
 		// EVENTS
 		onNodeClicked?: (node: LTreeNode<T>) => void;
@@ -160,6 +163,7 @@
 		noDataFound = undefined,
 		contextMenu = undefined,
 		dropPlaceholder = undefined,
+		loadingPlaceholder = undefined,
 
 		// BEHAVIOUR
 		expandLevel = 2,
@@ -172,6 +176,7 @@
 		indexerTimeout = 50,
 		shouldDisplayDebugInformation = false,
 		shouldDisplayContextMenuInDebugMode = false,
+		isLoading = false,
 
 		// DRAG AND DROP
 		dragDropMode = 'both',
@@ -180,6 +185,7 @@
 		dropZoneStart = 33,
 		dropZoneMaxWidth = 120,
 		allowCopy = false,
+		autoHandleCopy = true,
 
 		// EVENTS
 		onNodeClicked,
@@ -252,40 +258,66 @@
 
 	// Tree editor mutation methods
 	// These set _skipInsertArray to prevent the data effect from re-running insertArray
-	// since these methods already update the tree structure directly
+	// since these methods already update the tree structure directly.
+	// We use tick() to reset the flag - if user updates data prop synchronously,
+	// the effect runs before tick resolves and sees the flag. Otherwise tick resets it.
 	export function moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string } {
 		_skipInsertArray = true;
 		const result = tree?.moveNode(sourcePath, targetPath, position) || { success: false, error: 'Tree not initialized' };
-		console.log('[Tree] moveNode completed:', result, '- skipInsertArray set');
+		tick().then(() => { _skipInsertArray = false; });
 		return result;
 	}
 
 	export function removeNode(path: string, includeDescendants: boolean = true): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		_skipInsertArray = true;
 		const result = tree?.removeNode(path, includeDescendants) || { success: false, error: 'Tree not initialized' };
-		console.log('[Tree] removeNode completed:', result, '- skipInsertArray set');
+		tick().then(() => { _skipInsertArray = false; });
 		return result;
 	}
 
 	export function addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		_skipInsertArray = true;
 		const result = tree?.addNode(parentPath, data, pathSegment) || { success: false, error: 'Tree not initialized' };
-		console.log('[Tree] addNode completed:', result, '- skipInsertArray set');
+		tick().then(() => { _skipInsertArray = false; });
 		return result;
 	}
 
 	export function updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		_skipInsertArray = true;
 		const result = tree?.updateNode(path, dataUpdates) || { success: false, error: 'Tree not initialized' };
-		console.log('[Tree] updateNode completed:', result, '- skipInsertArray set');
+		tick().then(() => { _skipInsertArray = false; });
 		return result;
 	}
 
 	export function applyChanges(changes: import('../ltree/types').TreeChange<T>[]): import('../ltree/types').ApplyChangesResult {
 		_skipInsertArray = true;
 		const result = tree?.applyChanges(changes) || { successful: 0, failed: [] };
-		console.log('[Tree] applyChanges completed:', result, '- skipInsertArray set');
+		tick().then(() => { _skipInsertArray = false; });
 		return result;
+	}
+
+	export function copyNodeWithDescendants(
+		sourceNode: LTreeNode<T>,
+		targetParentPath: string,
+		transformData: (data: T) => T
+	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
+		_skipInsertArray = true;
+		const result = tree?.copyNodeWithDescendants(sourceNode, targetParentPath, transformData) || { success: false, count: 0, error: 'Tree not initialized' };
+		tick().then(() => { _skipInsertArray = false; });
+		return result;
+	}
+
+	// State persistence methods
+	export function getExpandedPaths(): string[] {
+		return tree?.getExpandedPaths() || [];
+	}
+
+	export function setExpandedPaths(paths: string[]): void {
+		tree?.setExpandedPaths(paths);
+	}
+
+	export function getAllData(): T[] {
+		return tree?.getAllData() || [];
 	}
 
 	// svelte-ignore non_reactive_update
@@ -578,12 +610,18 @@
 	}
 
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
+		if (shouldDisplayDebugInformation) {
+			console.log('[Tree] _onNodeDragStart - node:', node.path, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy);
+		}
 		draggedNode = node;
 		isDragInProgress = true;
 		onNodeDragStart?.(node, event);
 	}
 
 	function _onNodeDragEnd(event: DragEvent) {
+		if (shouldDisplayDebugInformation) {
+			console.log('[Tree] _onNodeDragEnd - dropEffect:', event.dataTransfer?.dropEffect, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy, 'operation:', currentDropOperation);
+		}
 		isDragInProgress = false;
 		draggedNode = null;
 		hoveredNodeForDrop = null;
@@ -603,8 +641,19 @@
 		// Determine operation based on Ctrl key and allowCopy setting
 		// Touch events always use 'move' (no Ctrl key on mobile)
 		let operation: DropOperation = 'move';
-		if (allowCopy && event instanceof DragEvent && event.ctrlKey) {
+		const isDragEvent = event instanceof DragEvent;
+		const ctrlKey = isDragEvent ? event.ctrlKey : false;
+
+		if (shouldDisplayDebugInformation) {
+			console.log('[Tree] _handleDrop - allowCopy:', allowCopy, 'isDragEvent:', isDragEvent, 'ctrlKey:', ctrlKey);
+		}
+
+		if (allowCopy && isDragEvent && ctrlKey) {
 			operation = 'copy';
+		}
+
+		if (shouldDisplayDebugInformation) {
+			console.log('[Tree] _handleDrop - operation:', operation);
 		}
 
 		// Call beforeDropCallback if provided
@@ -637,7 +686,34 @@
 			return result.success;
 		}
 
-		// Cross-tree drags or copy operations - user handles in onNodeDrop
+		// AUTO-HANDLE: Same-tree copy operations (if enabled)
+		if (isSameTreeDrag && operation === 'copy' && dropNode && autoHandleCopy) {
+			// Calculate target parent and sibling based on position
+			const targetParentPath = position === 'child' ? dropNode.path : (dropNode.parentPath || '');
+			const siblingPath = position !== 'child' ? dropNode.path : undefined;
+			const copyPosition = position !== 'child' ? position : undefined;
+
+			// Copy with a transform that generates new IDs
+			const result = tree.copyNodeWithDescendants(
+				draggedNode,
+				targetParentPath,
+				(data) => ({
+					...data,
+					// Generate new ID - user can override via beforeDropCallback if needed
+					[tree.idMember || 'id']: `${(data as any)[tree.idMember || 'id']}_copy_${Date.now()}`
+				}),
+				siblingPath,
+				copyPosition
+			);
+			if (shouldDisplayDebugInformation) {
+				console.log('[Tree] Auto-copied node:', result);
+			}
+			// Still call onNodeDrop for notification/logging
+			onNodeDrop?.(dropNode, draggedNode, position, event, operation);
+			return result.success;
+		}
+
+		// Cross-tree drags - user handles in onNodeDrop
 		onNodeDrop?.(dropNode, draggedNode, position, event, operation);
 		return true;
 	}
@@ -668,7 +744,10 @@
 			: isDropAllowedByMode(effectiveDraggedNode?.treeId);
 
 		if (!dropAllowed) {
-			console.log('[Tree] Drop not allowed:', { treeId, dragDropMode, isCrossTreeDrag, effectiveDraggedNodeTreeId: effectiveDraggedNode?.treeId });
+			if (shouldDisplayDebugInformation) {
+				console.log('[Tree] Drop not allowed:', { treeId, dragDropMode, isCrossTreeDrag, effectiveDraggedNodeTreeId: effectiveDraggedNode?.treeId });
+			}
+			hoveredNodeForDrop = null;  // Clear hover to prevent glow on invalid targets
 			return;
 		}
 
@@ -690,7 +769,11 @@
 			}
 
 			// Update current operation based on Ctrl key
+			const prevOperation = currentDropOperation;
 			currentDropOperation = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
+			if (shouldDisplayDebugInformation && prevOperation !== currentDropOperation) {
+				console.log('[Tree] _onNodeDragOver - operation changed:', prevOperation, '->', currentDropOperation, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy);
+			}
 
 			onNodeDragOver?.(node, event);
 
@@ -1120,6 +1203,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
+	class="ltree-container"
 	bind:this={treeContainerRef}
 	ondragenter={handleTreeDragEnter}
 	ondragleave={handleTreeDragLeave}
@@ -1148,6 +1232,17 @@
 	{/if}
 
 	{@render treeHeader?.()}
+
+	{#if isLoading}
+		<div class="ltree-loading-overlay">
+			{#if loadingPlaceholder}
+				{@render loadingPlaceholder()}
+			{:else}
+				<div class="ltree-loading-spinner"></div>
+			{/if}
+		</div>
+	{/if}
+
 	<div class:bodyClass>
 		{#if tree?.root}
 			{#key tree.changeTracker}
@@ -1181,6 +1276,7 @@
 							{dropZoneStart}
 							{dropZoneMaxWidth}
 							dropOperation={currentDropOperation}
+							{allowCopy}
 						/>
 					{:else}
 						<!-- Empty state when tree has no items -->

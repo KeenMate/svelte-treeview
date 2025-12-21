@@ -7,12 +7,13 @@ This document provides a comprehensive analysis of all node manipulation feature
 1. [Overview](#overview)
 2. [Node CRUD Operations](#node-crud-operations)
 3. [Helper Methods](#helper-methods)
-4. [Drag-and-Drop Pipeline](#drag-and-drop-pipeline)
-5. [Touch Drag Support](#touch-drag-support)
-6. [Empty Tree Drops](#empty-tree-drops)
-7. [Auto-handling of Same-Tree Moves](#auto-handling-of-same-tree-moves)
-8. [Callback Signatures](#callback-signatures)
-9. [Usage Examples](#usage-examples)
+4. [State Persistence Methods](#state-persistence-methods)
+5. [Drag-and-Drop Pipeline](#drag-and-drop-pipeline)
+6. [Touch Drag Support](#touch-drag-support)
+7. [Empty Tree Drops](#empty-tree-drops)
+8. [Auto-handling of Same-Tree Moves](#auto-handling-of-same-tree-moves)
+9. [Callback Signatures](#callback-signatures)
+10. [Usage Examples](#usage-examples)
 
 ---
 
@@ -199,6 +200,53 @@ interface ApplyChangesResult {
 
 ---
 
+### copyNodeWithDescendants() - Copy Node with Children
+
+**Location:** `ltree.svelte.ts:1083-1135`, exposed in `Tree.svelte:291-300`
+
+```typescript
+copyNodeWithDescendants(
+  sourceNode: LTreeNode<T>,
+  targetParentPath: string,
+  transformData: (data: T) => T
+): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string }
+```
+
+**Parameters:**
+- `sourceNode` - The node to copy (including all descendants)
+- `targetParentPath` - Path where to insert the copy (`""` for root)
+- `transformData` - Function to transform each node's data (assign new IDs, etc.)
+
+**What happens when you call copyNodeWithDescendants():**
+
+1. Validates source node has data
+2. Calls `transformData()` on source node's data
+3. Calls `addNode()` to create the root copy
+4. For each child in `sourceNode.children`:
+   - Recursively calls itself with child and new parent path
+5. Returns total count of nodes created
+
+**Use case:** Cross-tree drag-drop where you want to copy entire hierarchies:
+
+```typescript
+// In your onNodeDrop handler
+const result = targetTreeRef.copyNodeWithDescendants(
+  draggedNode,
+  dropNode?.path || '',
+  (data) => ({
+    ...data,
+    id: generateNewId(),  // Assign new ID
+    path: ''              // Will be set by addNode
+  })
+);
+
+if (result.success) {
+  console.log(`Copied ${result.count} nodes`);
+}
+```
+
+---
+
 ## Helper Methods
 
 ### refreshSiblings() - Re-sort Siblings
@@ -255,6 +303,112 @@ Recursively updates all descendant paths after a move operation:
 | `getNodeByPath` | `(path: string) => LTreeNode<T> \| null` | Find node by path |
 | `getChildren` | `(parentPath: string) => LTreeNode<T>[]` | Get direct children |
 | `getSiblings` | `(path: string) => LTreeNode<T>[]` | Get sibling nodes |
+
+---
+
+## State Persistence Methods
+
+These methods help with scenarios where you need to preserve tree state across full redraws or extract data for saving.
+
+### getExpandedPaths() - Get Expanded State
+
+**Location:** `ltree.svelte.ts:1142-1154`, exposed in `Tree.svelte:305-307`
+
+```typescript
+getExpandedPaths(): string[]
+```
+
+**Returns:** Array of paths for all currently expanded nodes.
+
+**Use case:** Save expanded state before a full tree redraw.
+
+```typescript
+// Before updating data
+const expandedPaths = treeRef.getExpandedPaths();
+console.log('Expanded:', expandedPaths);
+// ['1', '1.2', '2', '2.1.3']
+```
+
+---
+
+### setExpandedPaths() - Restore Expanded State
+
+**Location:** `ltree.svelte.ts:1161-1173`, exposed in `Tree.svelte:309-311`
+
+```typescript
+setExpandedPaths(paths: string[]): void
+```
+
+**Parameters:**
+- `paths` - Array of paths to expand (all other nodes will be collapsed)
+
+**Use case:** Restore expanded state after a full tree redraw.
+
+```typescript
+// After data update and tick()
+await tick();
+treeRef.setExpandedPaths(expandedPaths);
+```
+
+**How it works:**
+1. Creates a Set from the paths array
+2. Traverses entire tree
+3. Sets `isExpanded = true` for nodes in set, `false` for others
+4. Emits tree change
+
+---
+
+### getAllData() - Extract All Node Data
+
+**Location:** `ltree.svelte.ts:1180-1192`, exposed in `Tree.svelte:313-315`
+
+```typescript
+getAllData(): T[]
+```
+
+**Returns:** Flat array of all node data objects.
+
+**Use case:** Extract entire tree structure for saving to database.
+
+```typescript
+// Build tree structure
+treeRef.addNode('', { id: 1, name: 'Root' });
+treeRef.addNode('1', { id: 2, name: 'Child' });
+
+// Extract for saving
+const allData = treeRef.getAllData();
+await saveToDatabase(allData);
+```
+
+---
+
+### State Persistence Example
+
+Here's a complete example showing how to preserve expanded state across a full redraw:
+
+```typescript
+let treeRef: Tree<MyData>;
+let expandedPaths: string[] = [];
+
+async function reloadFromDatabase() {
+  // 1. Save current expanded state
+  expandedPaths = treeRef.getExpandedPaths();
+  console.log('Saved expanded state:', expandedPaths);
+
+  // 2. Fetch fresh data from database
+  const freshData = await fetchFromDatabase();
+
+  // 3. Update tree data (triggers full redraw via insertArray)
+  data = freshData;
+
+  // 4. Wait for DOM update
+  await tick();
+
+  // 5. Restore expanded state
+  treeRef.setExpandedPaths(expandedPaths);
+  console.log('Restored expanded state');
+}
+```
 
 ---
 
@@ -592,6 +746,35 @@ treeRef.refreshSiblings('1');
 
 ---
 
+## Internal Mutation Mechanism
+
+### The `_skipInsertArray` Flag
+
+When you pass `data` to the Tree component, an effect watches for changes and calls `insertArray()` to rebuild the tree. However, mutation methods like `addNode()`, `moveNode()`, etc. modify the tree directly without needing a full rebuild.
+
+**Problem:** If the effect runs after an internal mutation, it would rebuild the tree unnecessarily.
+
+**Solution:** Mutation methods set `_skipInsertArray = true` before operating, and use `tick()` to reset it:
+
+```typescript
+export function addNode(parentPath, data) {
+  _skipInsertArray = true;  // Prevent effect from rebuilding
+  const result = tree.addNode(parentPath, data);
+  tick().then(() => { _skipInsertArray = false; });  // Reset after microtask
+  return result;
+}
+```
+
+**How it works:**
+1. Mutation sets flag `true`
+2. If user updates `data` prop synchronously → effect runs, sees flag, skips, resets
+3. If user doesn't update `data` → `tick()` resolves, resets flag
+4. Next `data` change triggers normal rebuild
+
+**Important:** Internal mutations don't require updating the external `data` array - the tree is the source of truth. The `_skipInsertArray` mechanism ensures both patterns work correctly.
+
+---
+
 ## Internal State Variables
 
 | Variable | Type | Purpose |
@@ -603,6 +786,7 @@ treeRef.refreshSiblings('1');
 | `currentDropOperation` | `DropOperation` | 'move' or 'copy' |
 | `isDropPlaceholderActive` | `boolean` | Empty tree drop zone |
 | `touchDragState` | `object` | Mobile drag tracking |
+| `_skipInsertArray` | `boolean` | Skip data effect after mutations |
 
 ---
 
@@ -620,8 +804,11 @@ treeRef.refreshSiblings('1');
 
 ## Version
 
-This documentation reflects `@keenmate/svelte-treeview` v4.5.0+ with:
+This documentation reflects `@keenmate/svelte-treeview` v4.6.0+ with:
 - Auto-handling of same-tree moves
 - Move vs copy operation support (Ctrl+drag)
 - Touch drag support with ghost element
 - Glow and floating drop zone modes
+- `copyNodeWithDescendants()` for cross-tree hierarchy copies
+- `_skipInsertArray` mechanism with `tick()` reset for reliable internal mutations
+- State persistence methods: `getExpandedPaths()`, `setExpandedPaths()`, `getAllData()`

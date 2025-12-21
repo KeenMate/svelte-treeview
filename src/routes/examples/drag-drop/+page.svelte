@@ -77,59 +77,6 @@
 		});
 	}
 
-	// Calculate sortOrder for a new node based on position relative to target
-	function calculateSortOrder(
-		siblings: LTreeNode<FileItem>[],
-		targetNode: LTreeNode<FileItem>,
-		position: 'above' | 'below' | 'child'
-	): number {
-		if (position === 'child') {
-			// First child - use base value
-			return 10;
-		}
-
-		const targetOrder = targetNode.data?.sortOrder ?? 0;
-		const targetIndex = siblings.findIndex(s => s.path === targetNode.path);
-
-		if (position === 'above') {
-			// Get the node before target (if any)
-			const prevNode = targetIndex > 0 ? siblings[targetIndex - 1] : null;
-			const prevOrder = prevNode?.data?.sortOrder ?? 0;
-			// Place between prev and target
-			return Math.floor((prevOrder + targetOrder) / 2);
-		} else {
-			// position === 'below'
-			// Get the node after target (if any)
-			const nextNode = targetIndex < siblings.length - 1 ? siblings[targetIndex + 1] : null;
-			const nextOrder = nextNode?.data?.sortOrder ?? targetOrder + 20;
-			// Place between target and next
-			return Math.floor((targetOrder + nextOrder) / 2);
-		}
-	}
-
-	// Renumber siblings when sortOrders collide or get too close
-	function renumberSiblings(parentPath: string | null): void {
-		// Get all nodes with this parent from targetData
-		const siblings = targetData.filter(item => {
-			const itemParent = item.path.includes('.')
-				? item.path.substring(0, item.path.lastIndexOf('.'))
-				: null;
-			return itemParent === parentPath;
-		});
-
-		// Sort by current sortOrder
-		siblings.sort((a, b) => a.sortOrder - b.sortOrder);
-
-		// Renumber with gaps of 10
-		siblings.forEach((sibling, index) => {
-			sibling.sortOrder = (index + 1) * 10;
-		});
-
-		// Trigger reactivity
-		targetData = [...targetData];
-		addLog(`Renumbered ${siblings.length} siblings under "${parentPath || 'root'}"`);
-	}
-
 	function addLog(message: string) {
 		activityLog = [...activityLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
@@ -139,171 +86,61 @@
 	}
 
 	function handleTargetDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
-		// Same-tree moves are auto-handled by the library - just log it
+		// Same-tree operations are auto-handled by the library - just log
 		const isSameTreeDrag = draggedNode.treeId === 'target-tree';
-		if (isSameTreeDrag && operation === 'move') {
-			addLog(`[MOVE] Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
+		if (isSameTreeDrag) {
+			addLog(`[${operation.toUpperCase()}] ${operation === 'move' ? 'Moved' : 'Copied'} "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
 			return;
 		}
 
-		// Cross-tree drags or copy operations - create new node
-		const itemId = nextId++;
-		let newSortOrder: number;
+		// Cross-tree drags - use copyNodeWithDescendants to include children
+		// Calculate parent path and sibling for positioning
+		let parentPath: string;
+		let siblingPath: string | undefined;
+		let copyPosition: 'above' | 'below' | undefined;
 
 		if (dropNode === null) {
-			// Dropped on empty tree placeholder - calculate based on existing roots
-			const rootNodes = targetData.filter(d => !d.path.includes('.'));
-			const maxOrder = rootNodes.length > 0
-				? Math.max(...rootNodes.map(n => n.sortOrder))
-				: 0;
-			newSortOrder = maxOrder + 10;
-
-			const newItem: FileItem = {
-				id: itemId,
-				path: String(itemId),
-				name: draggedNode.data?.name || 'Unknown',
-				icon: draggedNode.data?.icon || '📄',
-				sortOrder: newSortOrder
-			};
-
-			// INCREMENTAL: Use applyChanges instead of modifying targetData
-			const createChange = { operation: 'create' as const, parentPath: '', data: newItem };
-			console.log('[applyChanges] Creating root node:', createChange);
-			const result = targetTreeRef.applyChanges([createChange]);
-			addLog(`[${operation.toUpperCase()}] Added to root (order: ${newSortOrder}) - ${result.successful} ops`);
-
-			// Keep local data in sync (won't trigger rebuild due to _skipInsertArray)
-			targetData = [...targetData, newItem];
+			// Dropped on empty tree placeholder - add to root
+			parentPath = '';
+		} else if (position === 'child') {
+			// Drop as child of target node
+			parentPath = dropNode.path;
 		} else {
-			// Get siblings at target level using tree ref
-			const siblings = targetTreeRef?.getSiblings(dropNode.path) ?? [];
-			const targetIndex = siblings.findIndex(s => s.path === dropNode.path);
+			// Drop as sibling (above/below) - use target's parent
+			parentPath = dropNode.parentPath || '';
+			siblingPath = dropNode.path;
+			copyPosition = position as 'above' | 'below';
+		}
 
-			// Calculate path based on position
-			let parentPath: string | null;
-			if (position === 'child') {
-				parentPath = dropNode.path;
-			} else {
-				parentPath = dropNode.parentPath;
-			}
+		// Copy the node and all its descendants with new IDs
+		const result = targetTreeRef.copyNodeWithDescendants(
+			draggedNode,
+			parentPath,
+			(data: FileItem) => ({
+				...data,
+				id: nextId++,
+				path: '', // Will be assigned by addNode
+				sortOrder: data.sortOrder || 10
+			}),
+			siblingPath,
+			copyPosition
+		);
 
-			// Calculate sortOrder and handle collisions with incremental updates
-			if (position === 'above') {
-				const prevSibling = targetIndex > 0 ? siblings[targetIndex - 1] : null;
-				const prevOrder = prevSibling?.data?.sortOrder ?? 0;
-				const targetOrder = dropNode.data?.sortOrder ?? 10;
-				newSortOrder = Math.floor((prevOrder + targetOrder) / 2);
-
-				// If collision, shift siblings from target onwards INCREMENTALLY
-				if (newSortOrder === targetOrder || newSortOrder === prevOrder) {
-					newSortOrder = targetOrder;
-					const siblingsToUpdate = siblings.slice(targetIndex);
-					const updates = siblingsToUpdate.map((s, idx) => ({
-						operation: 'update' as const,
-						path: s.path,
-						data: { sortOrder: targetOrder + (idx + 1) * 10 }
-					}));
-					console.log('[applyChanges] Shifting siblings (above):', updates);
-					const shiftResult = targetTreeRef.applyChanges(updates);
-					addLog(`[Incremental] Shifted ${shiftResult.successful} siblings down`);
-
-					// Update local data to match
-					siblingsToUpdate.forEach((s, idx) => {
-						const item = targetData.find(d => d.path === s.path);
-						if (item) item.sortOrder = targetOrder + (idx + 1) * 10;
-					});
-				}
-			} else if (position === 'below') {
-				const nextSibling = targetIndex < siblings.length - 1 ? siblings[targetIndex + 1] : null;
-				const targetOrder = dropNode.data?.sortOrder ?? 0;
-				const nextOrder = nextSibling?.data?.sortOrder ?? targetOrder + 20;
-				newSortOrder = Math.floor((targetOrder + nextOrder) / 2);
-
-				// If collision, shift siblings from next onwards INCREMENTALLY
-				if (newSortOrder === targetOrder || newSortOrder === nextOrder) {
-					newSortOrder = targetOrder + 10;
-					const siblingsToUpdate = siblings.slice(targetIndex + 1);
-					if (siblingsToUpdate.length > 0) {
-						const updates = siblingsToUpdate.map((s, idx) => ({
-							operation: 'update' as const,
-							path: s.path,
-							data: { sortOrder: newSortOrder + (idx + 1) * 10 }
-						}));
-						console.log('[applyChanges] Shifting siblings (below):', updates);
-						const shiftResult = targetTreeRef.applyChanges(updates);
-						addLog(`[Incremental] Shifted ${shiftResult.successful} siblings down`);
-
-						// Update local data to match
-						siblingsToUpdate.forEach((s, idx) => {
-							const item = targetData.find(d => d.path === s.path);
-							if (item) item.sortOrder = newSortOrder + (idx + 1) * 10;
-						});
-					}
-				}
-			} else {
-				// position === 'child'
-				const children = targetTreeRef.getChildren(dropNode.path);
-				newSortOrder = children.length > 0
-					? Math.max(...children.map(c => c.data?.sortOrder || 0)) + 10
-					: 10;
-			}
-
-			const newItem: FileItem = {
-				id: itemId,
-				path: parentPath ? `${parentPath}.${itemId}` : String(itemId),
-				name: draggedNode.data?.name || 'Unknown',
-				icon: draggedNode.data?.icon || '📄',
-				sortOrder: newSortOrder
-			};
-
-			// INCREMENTAL: Add node without full tree rebuild
-			const createChange = { operation: 'create' as const, parentPath: parentPath || '', data: newItem };
-			console.log('[applyChanges] Creating node:', createChange);
-			const result = targetTreeRef.applyChanges([createChange]);
-			addLog(`[${operation.toUpperCase()}] Added ${position} "${dropNode.data?.name}" (order: ${newSortOrder}) - ${result.successful} ops`);
-
-			// Keep local data in sync
-			targetData = [...targetData, newItem];
+		if (result.success) {
+			addLog(`[CROSS-TREE] Copied ${result.count} node(s) to "${parentPath || 'root'}"${siblingPath ? ` ${copyPosition} "${siblingPath}"` : ''}`);
+		} else {
+			addLog(`Error: ${result.error}`);
 		}
 	}
 
 	function handleSourceDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
-		// Handle drops within source tree - move or copy based on operation
+		// Same-tree moves and copies are auto-handled by the library - just log
 		if (!dropNode) {
 			addLog(`Cannot drop at root level in source tree`);
 			return;
 		}
 
-		if (operation === 'move') {
-			// Use moveNode to actually reorganize the tree
-			const result = sourceTreeRef.moveNode(
-				draggedNode.path,
-				dropNode.path,
-				position as 'above' | 'below' | 'child'
-			);
-
-			if (result.success) {
-				addLog(`Moved: "${draggedNode.data?.name}" ${position} "${dropNode.data?.name}"`);
-			} else {
-				addLog(`Error: ${result.error}`);
-			}
-		} else {
-			// Copy - create new node with cloned data
-			const parentPath = position === 'child' ? dropNode.path : (dropNode.parentPath || '');
-			const newData: FileItem = {
-				...draggedNode.data!,
-				id: nextId++,
-				path: '', // Will be set by addNode
-				name: `${draggedNode.data?.name} (copy)`
-			};
-			const result = sourceTreeRef.addNode(parentPath, newData);
-
-			if (result.success) {
-				addLog(`Copied: "${draggedNode.data?.name}" ${position} "${dropNode.data?.name}"`);
-			} else {
-				addLog(`Error: ${result.error}`);
-			}
-		}
+		addLog(`[${operation.toUpperCase()}] ${operation === 'move' ? 'Moved' : 'Copied'} "${draggedNode.data?.name}" ${position} "${dropNode.data?.name}"`);
 	}
 
 	function clearTarget() {
