@@ -1,6 +1,7 @@
 import type { Index } from 'flexsearch';
 import type { LTreeNode } from './ltree-node.svelte.js';
 import { isNotEmptyString } from '../helpers/string-helpers.js';
+import { indexLogger } from '../logger.js';
 
 export class Indexer<T> {
 	private treeId: string;
@@ -9,7 +10,6 @@ export class Indexer<T> {
 	private searchIndex: Index;
 	private isProcessing: boolean = false;
 	private shouldCalculateSearchValue: boolean;
-	private shouldDisplayDebugInformation: boolean;
 
 	private searchValueMember?: string | null | undefined;
 	private getSearchValueCallback?: (node: LTreeNode<T>) => string;
@@ -32,12 +32,10 @@ export class Indexer<T> {
 		this.searchIndex = searchIndex;
 		this.batchSize = batchSize;
 		this.shouldCalculateSearchValue = shouldCalculateSearchValue;
-		this.shouldDisplayDebugInformation = shouldDisplayDebugInformation;
 		this.searchValueMember = searchValueMember;
 		this.getSearchValueCallback = getSearchValueCallback;
 
-		if (this.shouldDisplayDebugInformation)
-			console.log(`[Tree ${this.treeId}] Indexer initialized with batch size: ${batchSize}`);
+		indexLogger.debug(`[${this.treeId}] Initialized with batch size: ${batchSize}`);
 	}
 
 	// Add items to the processing queue
@@ -45,10 +43,7 @@ export class Indexer<T> {
 		this.processingQueue.push(...items);
 		this.totalItemsAdded += items.length;
 
-		if (this.shouldDisplayDebugInformation)
-			console.log(
-				`[Tree ${this.treeId}] Added ${items.length} items to indexing queue. Queue size: ${this.processingQueue.length}`
-			);
+		indexLogger.debug(`[${this.treeId}] Added ${items.length} items to queue. Queue size: ${this.processingQueue.length}`);
 
 		// Start processing if not already running
 		if (!this.isProcessing) {
@@ -78,8 +73,7 @@ export class Indexer<T> {
 	// Update batch size dynamically
 	setBatchSize(newBatchSize: number): void {
 		this.batchSize = newBatchSize;
-		if (this.shouldDisplayDebugInformation)
-			console.log(`[Tree ${this.treeId}] Batch size updated to: ${this.batchSize}`);
+		indexLogger.debug(`[${this.treeId}] Batch size updated to: ${this.batchSize}`);
 	}
 
 	// Start the processing loop
@@ -89,10 +83,7 @@ export class Indexer<T> {
 		}
 
 		this.isProcessing = true;
-		if (this.shouldDisplayDebugInformation)
-			console.log(
-				`[Tree ${this.treeId}] Starting indexing. Queue size: ${this.processingQueue.length}`
-			);
+		indexLogger.debug(`[${this.treeId}] Starting indexing. Queue size: ${this.processingQueue.length}`);
 
 		this.processNextBatch();
 	}
@@ -107,11 +98,9 @@ export class Indexer<T> {
 		const startTime = performance.now();
 		let itemsProcessedInBatch = 0;
 		const isTimeout = deadline.didTimeout;
+		const maxBatchTime = 16; // Max 16ms per batch to stay under one frame
 
-		if (this.shouldDisplayDebugInformation)
-			console.log(
-				`[Tree ${this.treeId}] Processing batch: timeout=${isTimeout}, timeRemaining=${deadline.timeRemaining()}ms, queueSize=${this.processingQueue.length}`
-			);
+		indexLogger.trace(`[${this.treeId}] Batch start: timeout=${isTimeout}, timeRemaining=${deadline.timeRemaining().toFixed(1)}ms, queueSize=${this.processingQueue.length}`);
 
 		// Determine how many items to process
 		let maxItemsInBatch: number;
@@ -130,6 +119,13 @@ export class Indexer<T> {
 			itemsProcessedInBatch < maxItemsInBatch &&
 			((!isTimeout && deadline.timeRemaining() > 1) || isTimeout)
 		) {
+			// Hard time limit to prevent long-running callbacks
+			const elapsed = performance.now() - startTime;
+			if (elapsed > maxBatchTime) {
+				indexLogger.trace(`[${this.treeId}] Time limit hit after ${elapsed.toFixed(2)}ms, processed ${itemsProcessedInBatch} items`);
+				break;
+			}
+
 			const item = this.processingQueue.shift()!;
 			this.indexItem(item);
 			itemsProcessedInBatch++;
@@ -142,10 +138,7 @@ export class Indexer<T> {
 		}
 
 		const batchTime = performance.now() - startTime;
-		if (this.shouldDisplayDebugInformation)
-			console.log(
-				`[Tree ${this.treeId}] Batch completed: indexed ${itemsProcessedInBatch} items in ${batchTime.toFixed(2)}ms`
-			);
+		indexLogger.trace(`[${this.treeId}] Batch end: ${itemsProcessedInBatch} items in ${batchTime.toFixed(2)}ms`);
 
 		// Report progress
 		if (this.onProgressCallback) {
@@ -169,16 +162,20 @@ export class Indexer<T> {
 			? this.searchValueMember && item.node.data[this.searchValueMember]?.toString()
 			: this.getSearchValueCallback && this.getSearchValueCallback(item.node);
 
-		if (isNotEmptyString(searchValue)) this.searchIndex!.add(item.index, searchValue);
+		if (isNotEmptyString(searchValue)) {
+			const addStart = performance.now();
+			this.searchIndex!.add(item.index, searchValue);
+			const addTime = performance.now() - addStart;
+			if (addTime > 5) {
+				indexLogger.warn(`[${this.treeId}] Slow FlexSearch.add(): ${addTime.toFixed(2)}ms for index ${item.index}`);
+			}
+		}
 	}
 
 	// Finish processing
 	private finishProcessing(): void {
 		this.isProcessing = false;
-		if (this.shouldDisplayDebugInformation)
-			console.log(
-				`[Tree ${this.treeId}] Indexing completed! Processed ${this.totalItemsProcessed} items total.`
-			);
+		indexLogger.info(`[${this.treeId}] Indexing complete. Processed ${this.totalItemsProcessed} items.`);
 
 		if (this.onCompleteCallback) {
 			this.onCompleteCallback();
@@ -208,8 +205,7 @@ export class Indexer<T> {
 		this.isProcessing = false;
 		this.totalItemsAdded = 0;
 		this.totalItemsProcessed = 0;
-		if (this.shouldDisplayDebugInformation)
-			console.log(`[Tree ${this.treeId}] Indexing queue cleared`);
+		indexLogger.debug(`[${this.treeId}] Queue cleared`);
 	}
 
 	// Check if indexer is busy

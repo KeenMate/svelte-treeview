@@ -1,0 +1,499 @@
+/* =============================================================================
+   SHARED STYLES FOR SVELTE-TREEVIEW EXAMPLES
+   Based on web-grid examples-shared.css
+   ============================================================================= */
+
+/* Base reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Body and layout */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    padding: 2rem;
+    background: #f7fafc;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Header styling */
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+.back-link {
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.back-link:hover {
+    opacity: 1;
+}
+
+/* Card/Section styles */
+.card,
+.example-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card h2,
+.example-section h2 {
+    margin-bottom: 1rem;
+    color: #2d3748;
+    font-size: 1.5rem;
+}
+
+.card h3,
+.example-section h3 {
+    margin-bottom: 0.75rem;
+    color: #4a5568;
+    font-size: 1.25rem;
+}
+
+.card p,
+.example-section p {
+    margin-bottom: 1rem;
+    color: #666;
+}
+
+/* Description text */
+.description {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+/* Form styling */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label,
+.demo-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #666;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.controls input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.controls input[type="text"],
+.controls input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.controls select {
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+/* Demo areas */
+.demo-area {
+    margin-bottom: 1.5rem;
+}
+
+/* Tree container */
+.tree-container {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 200px;
+    background: white;
+}
+
+.tree-container-tall {
+    min-height: 400px;
+    max-height: 500px;
+    overflow-x: visible;
+    overflow-y: auto;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* Side-by-side trees */
+.trees-side-by-side {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+/* Output display */
+.output {
+    margin-top: 1rem;
+}
+
+.output-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+}
+
+.output pre,
+pre {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    border: 1px solid #e2e8f0;
+}
+
+/* Code blocks */
+.code-block {
+    margin: 1.5rem 0;
+}
+
+.code-block pre {
+    background: #2d3748;
+    color: #e2e8f0;
+    padding: 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+/* Inline code */
+code {
+    background: #edf2f7;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #667eea;
+    font-family: 'Courier New', monospace;
+}
+
+/* Notes/Info boxes */
+.note {
+    background: #edf2f7;
+    padding: 1rem;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+    margin: 1rem 0;
+}
+
+.note.warning {
+    background: #fef3c7;
+    border-left-color: #f59e0b;
+}
+
+.note-title {
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.note ul {
+    margin-left: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.note li {
+    margin-bottom: 0.5rem;
+}
+
+/* Grid layouts */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+/* Typography */
+h2 {
+    color: #2d3748;
+    margin-bottom: 1rem;
+}
+
+h3 {
+    color: #4a5568;
+    margin-bottom: 0.75rem;
+}
+
+ul {
+    line-height: 1.8;
+}
+
+li {
+    color: #4a5568;
+}
+
+/* Links */
+a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Buttons */
+button {
+    cursor: pointer;
+}
+
+.btn {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.btn:hover {
+    background: #5a67d8;
+}
+
+.btn.secondary,
+.btn-secondary {
+    background: #6b7280;
+}
+
+.btn.secondary:hover,
+.btn-secondary:hover {
+    background: #4b5563;
+}
+
+/* Table styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th,
+td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    background: #f7fafc;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+td code {
+    background: #edf2f7;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: #718096;
+    font-size: 0.875rem;
+}
+
+footer a {
+    color: #667eea;
+}
+
+/* =============================================================================
+   LANDING PAGE STYLES (index)
+   ============================================================================= */
+
+body.landing-body {
+    background: #f0f2f5;
+    min-height: 100vh;
+    padding: 2rem;
+}
+
+.page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 2.5rem 3rem;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.header-card h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.header-card .subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0 0 1rem 0;
+}
+
+.version-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.35rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.card-link {
+    background: white;
+    border-radius: 12px;
+    padding: 1.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.card-link:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    text-decoration: none;
+}
+
+.card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #1a202c;
+}
+
+.card-description {
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.badge {
+    display: inline-block;
+    background: #f56565;
+    color: white;
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+    text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    body {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+
+    .grid,
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .trees-side-by-side {
+        grid-template-columns: 1fr;
+    }
+
+    .card,
+    .example-section {
+        padding: 1.5rem;
+    }
+
+    .header-card {
+        padding: 1.5rem 2rem;
+    }
+
+    .header-card h1 {
+        font-size: 2rem;
+    }
+}

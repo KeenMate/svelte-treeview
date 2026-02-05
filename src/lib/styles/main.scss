@@ -842,3 +842,12 @@ $body-color: #212529 !default;
 		transform: rotate(360deg);
 	}
 }
+
+// Progressive rendering loading indicator
+.ltree-loading-more {
+	padding: 4px 8px;
+	margin-left: var(--tree-node-indent-per-level, 0.5rem);
+	font-size: 12px;
+	color: var(--ltree-loading-color, #718096);
+	font-style: italic;
+}

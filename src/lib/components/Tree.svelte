@@ -5,6 +5,11 @@
 	import { createLTree } from '../ltree/ltree.svelte.js';
 	import { type Ltree, type InsertArrayResult, type ContextMenuItem, type DropPosition, type DragDropMode, type DropOperation } from '../ltree/types.js';
 	import { setContext, tick } from 'svelte';
+	import { createRenderCoordinator, type RenderCoordinator, type RenderStats } from './RenderCoordinator.svelte.js';
+	import { uiLogger, dragLogger } from '../logger.js';
+
+	// Register global API for runtime logging control
+	import '../global-api.js';
 
 	// Context menu state
 	let contextMenuVisible = $state(false);
@@ -92,6 +97,14 @@
 		shouldDisplayContextMenuInDebugMode?: boolean;
 		isLoading?: boolean;
 
+		// Progressive rendering - render children in batches to avoid UI freeze
+		progressiveRender?: boolean;
+		renderBatchSize?: number;
+		isRendering?: boolean; // Bindable: true while progressive rendering is active
+		onRenderStart?: () => void;
+		onRenderProgress?: (stats: RenderStats) => void;
+		onRenderComplete?: (stats: RenderStats) => void;
+
 		// DRAG AND DROP
 		dragDropMode?: DragDropMode;
 		dropZoneMode?: 'floating' | 'glow'; // 'floating' = original floating zones, 'glow' = border glow indicators
@@ -177,6 +190,14 @@
 		shouldDisplayDebugInformation = false,
 		shouldDisplayContextMenuInDebugMode = false,
 		isLoading = false,
+
+		// Progressive rendering
+		progressiveRender = false,
+		renderBatchSize = 50,
+		isRendering = $bindable(false),
+		onRenderStart,
+		onRenderProgress,
+		onRenderComplete,
 
 		// DRAG AND DROP
 		dragDropMode = 'both',
@@ -527,6 +548,26 @@
 
 	setContext('Ltree', tree);
 
+	// Create and provide render coordinator for progressive rendering
+	// Process only 2 nodes per frame - each node renders renderBatchSize children
+	// This prevents too many reactive updates per frame
+	const renderCoordinator = progressiveRender ? createRenderCoordinator(2, {
+		onStart: () => {
+			isRendering = true;
+			onRenderStart?.();
+		},
+		onProgress: (stats) => {
+			onRenderProgress?.(stats);
+		},
+		onComplete: (stats) => {
+			isRendering = false;
+			onRenderComplete?.(stats);
+		}
+	}) : null;
+	if (renderCoordinator) {
+		setContext('RenderCoordinator', renderCoordinator);
+	}
+
 	$effect(() => {
 		tree.filterNodes(searchText);
 	});
@@ -538,6 +579,8 @@
 				_skipInsertArray = false; // Reset for next time
 				return;
 			}
+			// Reset progressive render coordinator when data changes
+			renderCoordinator?.reset();
 			console.log('[Tree] Running insertArray with', data.length, 'items');
 			insertResult = tree.insertArray(data);
 		}
@@ -555,6 +598,7 @@
 			closeContextMenu();
 		}
 
+		const previousPath = selectedNode?.path;
 		if (selectedNode) {
 			const previousNode = tree.getNodeByPath(selectedNode.path);
 			if (previousNode) {
@@ -564,6 +608,12 @@
 
 		node.isSelected = true;
 		selectedNode = node;
+
+		uiLogger.debug(`Node selected: ${node.path}`, {
+			previousPath,
+			newPath: node.path,
+			id: node.id
+		});
 
 		onNodeClicked?.(node);
 
@@ -577,6 +627,7 @@
 			return;
 		}
 
+		uiLogger.debug(`Context menu opened: ${node.path}`);
 		event.preventDefault();
 		contextMenuNode = node;
 		contextMenuX = event.clientX + contextMenuXOffset;
@@ -610,18 +661,21 @@
 	}
 
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
-		if (shouldDisplayDebugInformation) {
-			console.log('[Tree] _onNodeDragStart - node:', node.path, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy);
-		}
+		dragLogger.debug(`Drag started: ${node.path}`, {
+			ctrlKey: event.ctrlKey,
+			allowCopy,
+			treeId
+		});
 		draggedNode = node;
 		isDragInProgress = true;
 		onNodeDragStart?.(node, event);
 	}
 
 	function _onNodeDragEnd(event: DragEvent) {
-		if (shouldDisplayDebugInformation) {
-			console.log('[Tree] _onNodeDragEnd - dropEffect:', event.dataTransfer?.dropEffect, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy, 'operation:', currentDropOperation);
-		}
+		dragLogger.debug('Drag ended', {
+			dropEffect: event.dataTransfer?.dropEffect,
+			operation: currentDropOperation
+		});
 		isDragInProgress = false;
 		draggedNode = null;
 		hoveredNodeForDrop = null;
@@ -644,17 +698,15 @@
 		const isDragEvent = event instanceof DragEvent;
 		const ctrlKey = isDragEvent ? event.ctrlKey : false;
 
-		if (shouldDisplayDebugInformation) {
-			console.log('[Tree] _handleDrop - allowCopy:', allowCopy, 'isDragEvent:', isDragEvent, 'ctrlKey:', ctrlKey);
-		}
-
 		if (allowCopy && isDragEvent && ctrlKey) {
 			operation = 'copy';
 		}
 
-		if (shouldDisplayDebugInformation) {
-			console.log('[Tree] _handleDrop - operation:', operation);
-		}
+		dragLogger.info(`Drop: ${draggedNode.path} -> ${dropNode?.path ?? 'empty tree'}`, {
+			position,
+			operation,
+			isCrossTree: draggedNode.treeId !== treeId
+		});
 
 		// Call beforeDropCallback if provided
 		if (beforeDropCallback) {
@@ -886,6 +938,7 @@
 		touchTimer = setTimeout(() => {
 			touchDragState.isDragging = true;
 			draggedNode = node;
+			dragLogger.debug(`Touch drag started: ${node.path}`);
 			createGhostElement(node, touch.clientX, touch.clientY);
 			navigator.vibrate?.(50); // Haptic feedback
 		}, 300);
@@ -947,10 +1000,14 @@
 			const rootDropZone = dropElement?.closest('.ltree-root-drop-zone');
 			if ((placeholder || rootDropZone) && !dropNode) {
 				// Dropping on empty tree or root drop zone
+				dragLogger.debug(`Touch drag ended: ${draggedNode.path} -> empty tree`);
 				_handleDrop(null, draggedNode, 'child', event);
 			} else if (dropNode && dropNode !== draggedNode && dropNode.isDropAllowed) {
 				// For touch, default to 'child' since we don't track position during touch
+				dragLogger.debug(`Touch drag ended: ${draggedNode.path} -> ${dropNode.path}`);
 				_handleDrop(dropNode, draggedNode, 'child', event);
+			} else {
+				dragLogger.debug(`Touch drag cancelled: ${draggedNode.path}`);
 			}
 
 			// Clean up ghost element
@@ -1252,6 +1309,8 @@
 							{node}
 							children={nodeTemplate}
 							{shouldToggleOnNodeClick}
+							{progressiveRender}
+							{renderBatchSize}
 							onNodeClicked={(node) => _onNodeClicked(node)}
 							onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
 							onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}

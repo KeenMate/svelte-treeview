@@ -86,6 +86,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New optional parameters: `siblingPath` and `position` ('above' | 'below')
   - Copies can be placed at specific positions relative to siblings
   - Uses same `orderMember` logic as `moveNode` for consistent ordering
+- **Logging Infrastructure**: Categorized logging using vendored loglevel library
+  - Six log categories: `LTREE:INIT`, `LTREE:DATA`, `LTREE:RENDER`, `LTREE:INDEX`, `LTREE:DRAG`, `LTREE:UI`
+  - Color-coded console output with timestamps for easy debugging
+  - Disabled by default (silent mode) for production
+  - Exported utilities: `enableLogging()`, `disableLogging()`, `setLogLevel()`, `setCategoryLevel()`
+  - UI logging: node clicks, expand/collapse, selection changes, context menu
+  - Drag logging: drag start/end, drop operations, touch drag events
+  - Render logging: progressive rendering frame stats
+  - Index logging: async search indexing progress
+  - New `/dev/logging` demo page for testing log levels and categories
+- **Global Runtime API**: `window.components['svelte-treeview']` for browser console access
+  - `config` - Package info (name, version, author, license, repository, homepage) read from package.json at build time
+  - `version()` - Returns current version string
+  - `logging.enableLogging()` / `logging.disableLogging()` - Toggle all logging
+  - `logging.setLogLevel(level)` - Set level for all categories
+  - `logging.setCategoryLevel(category, level)` - Set level for specific category
+  - `logging.getCategories()` - List available log categories
 
 ### Enhanced
 - **Drop Zone Styling**: Improved visual feedback during drag operations

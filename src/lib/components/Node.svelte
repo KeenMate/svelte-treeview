@@ -1,8 +1,10 @@
 <script lang="ts" generics="T">
 	import {type LTreeNode} from "../ltree/ltree-node.svelte.js"
 	import Node from "./Node.svelte"
-	import {getContext, type Snippet} from "svelte"
+	import {getContext, onDestroy, type Snippet} from "svelte"
 	import type {Ltree, DropPosition, DropOperation} from "../ltree/types.js"
+	import type {RenderCoordinator} from "./RenderCoordinator.svelte.js"
+	import { uiLogger } from "../logger.js"
 
 	// Define component props interface
 	interface Props {
@@ -23,6 +25,10 @@
 
 		// BEHAVIOUR
 		shouldToggleOnNodeClick?: boolean | null | undefined;
+
+		// Progressive rendering
+		progressiveRender?: boolean;
+		renderBatchSize?: number;
 
 		// VISUALS
 		expandIconClass?: string | null | undefined;
@@ -66,6 +72,10 @@
 		// BEHAVIOUR
 		shouldToggleOnNodeClick = true,
 
+		// Progressive rendering
+		progressiveRender = false,
+		renderBatchSize = 50,
+
 		// VISUALS
 		expandIconClass = "ltree-icon-expand",
 		collapseIconClass = "ltree-icon-collapse",
@@ -97,6 +107,7 @@
 	)
 
 	const tree = getContext<Ltree<T>>("Ltree")
+	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
 
 	// Drag over state
 	let isDraggedOver = $state(false);
@@ -128,20 +139,99 @@
 	}
 
 	// Convert reactive statements to derived values
+	const childrenArray = $derived(Object.values(node?.children || []))
 	const childrenWithData = $derived(Object.values(node?.children || []))
 	const hasChildren = $derived(node?.hasChildren || false)
 	const indentStyle = $derived(
 		`margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
 	)
 
+	// Progressive rendering state
+	let renderedCount = $state(0);
+	let unregisterFromCoordinator: (() => void) | null = null;
+	let lastExpandedState = false;
+	let lastChildrenLength = 0;
+
+	// Get the children to render (all or progressive slice)
+	const childrenToRender = $derived(
+		progressiveRender && renderCoordinator
+			? childrenArray.slice(0, renderedCount)
+			: childrenArray
+	);
+	const hasMoreToRender = $derived(
+		progressiveRender && renderCoordinator && renderedCount < childrenArray.length
+	);
+
+	// Handle expansion state changes - use coordinator for progressive rendering
+	// Only react to isExpanded changes, not renderedCount changes
+	$effect(() => {
+		const isExpanded = node?.isExpanded ?? false;
+		const childCount = childrenArray.length;
+		const shouldRenderProgressively = progressiveRender && renderCoordinator && childCount > 0;
+
+		// Only act on actual state changes
+		if (isExpanded !== lastExpandedState || childCount !== lastChildrenLength) {
+			lastExpandedState = isExpanded;
+			lastChildrenLength = childCount;
+
+			if (isExpanded && shouldRenderProgressively) {
+				// Clean up any existing registration first
+				if (unregisterFromCoordinator) {
+					unregisterFromCoordinator();
+					unregisterFromCoordinator = null;
+				}
+
+				// If this node was already fully rendered (component recreated after changeTracker update),
+				// render all children immediately instead of progressive rendering
+				if (renderCoordinator.isCompleted(node.path)) {
+					renderedCount = childCount;
+					return;
+				}
+
+				// Start with first batch immediately
+				renderedCount = Math.min(renderBatchSize, childCount);
+
+				// Register with coordinator if there are more children to render
+				if (renderedCount < childCount) {
+					unregisterFromCoordinator = renderCoordinator.register(node.path, () => {
+						// Render a batch of children per callback invocation
+						if (renderedCount < childCount) {
+							renderedCount = Math.min(renderedCount + renderBatchSize, childCount);
+							return renderedCount < childCount; // Return true if more work needed
+						}
+						return false;
+					});
+				}
+			} else if (!isExpanded) {
+				// Clean up when collapsed
+				if (unregisterFromCoordinator) {
+					unregisterFromCoordinator();
+					unregisterFromCoordinator = null;
+				}
+				renderedCount = 0;
+			}
+		}
+	});
+
+	// Clean up on component destroy
+	onDestroy(() => {
+		if (unregisterFromCoordinator) {
+			unregisterFromCoordinator();
+			unregisterFromCoordinator = null;
+		}
+	});
+
 	function toggleExpanded() {
 		if (node.hasChildren) {
-			node.isExpanded = !node.isExpanded
+			const newState = !node.isExpanded
+			uiLogger.debug(`${newState ? 'Expanding' : 'Collapsing'} node: ${node.path}`)
+			node.isExpanded = newState
 			tree.refresh()
 		}
 	}
 
 	function _onNodeClicked() {
+		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
 		onNodeClicked?.(node)
 		if (shouldToggleOnNodeClick) {
 			toggleExpanded()
@@ -288,7 +378,7 @@
 
 	{#if node?.isExpanded && node?.hasChildren}
 		<div class="ltree-children">
-			{#each Object.values(node?.children) as item (item.id)}
+			{#each childrenToRender as item (item.id)}
 				<Node
 					node={item}
 					{children}
@@ -303,6 +393,8 @@
 					{onTouchDragStart}
 					{onTouchDragMove}
 					{onTouchDragEnd}
+					{progressiveRender}
+					{renderBatchSize}
 					{expandIconClass}
 					{collapseIconClass}
 					{leafIconClass}
@@ -320,6 +412,11 @@
 					{allowCopy}
 				/>
 			{/each}
+			{#if hasMoreToRender}
+				<div class="ltree-loading-more">
+					Loading... ({renderedCount}/{childrenArray.length})
+				</div>
+			{/if}
 		</div>
 	{/if}
 </div>
