@@ -1,13 +1,14 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "4.5.0-rc01",
+	"version": "4.5.0",
 	"scripts": {
 		"dev": "vite dev --port 17777",
 		"build": "vite build && npm run prepack",
 		"build:showcase": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"prepack": "svelte-kit sync && svelte-package && sass src/lib/styles.scss dist/styles.css && publint",
+		"generate-constants": "node scripts/generate-constants.js",
+		"prepack": "npm run generate-constants && svelte-kit sync && svelte-package && sass src/lib/styles.scss dist/styles.css && publint",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test": "vitest",

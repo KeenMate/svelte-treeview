@@ -236,6 +236,7 @@
 				</div>
 				<div class="card-body">
 					<div class="mb-3">
+						<!-- svelte-ignore a11y_label_has_associated_control -->
 						<label class="form-label">Example</label>
 						<div class="btn-group w-100" role="group">
 							<button
@@ -269,8 +270,9 @@
 					</div>
 
 					<div class="mb-3">
-						<label class="form-label">Search</label>
+						<label class="form-label" for="dev-search">Search</label>
 						<input
+							id="dev-search"
 							type="text"
 							class="form-control form-control-sm"
 							bind:value={searchText}
@@ -279,8 +281,8 @@
 					</div>
 
 					<div class="mb-3">
-						<label class="form-label">Path Separator</label>
-						<select class="form-select form-select-sm" bind:value={treePathSeparator}>
+						<label class="form-label" for="dev-separator">Path Separator</label>
+						<select id="dev-separator" class="form-select form-select-sm" bind:value={treePathSeparator}>
 							<option value=".">Dot (.)</option>
 							<option value="/">Slash (/)</option>
 							<option value="\\">Backslash (\)</option>
@@ -289,8 +291,9 @@
 					</div>
 
 					<div class="mb-3">
-						<label class="form-label">Expand Level</label>
+						<label class="form-label" for="dev-expand-level">Expand Level</label>
 						<input
+							id="dev-expand-level"
 							type="number"
 							class="form-control form-control-sm"
 							bind:value={expandLevel}

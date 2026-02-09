@@ -11,13 +11,22 @@ import {
     LOGGING_CATEGORIES
 } from './logger';
 
-// Type declarations for build-time constants (injected by Vite)
-declare const __VERSION__: string;
-declare const __PACKAGE_NAME__: string;
-declare const __AUTHOR__: string;
-declare const __LICENSE__: string;
-declare const __REPOSITORY__: string;
-declare const __HOMEPAGE__: string;
+import {
+    enablePerfLogging,
+    disablePerfLogging,
+    setPerfThreshold,
+    isPerfLoggingEnabled
+} from './perf-logger';
+
+// Import generated constants (created by scripts/generate-constants.js)
+import {
+    VERSION,
+    PACKAGE_NAME,
+    AUTHOR,
+    LICENSE,
+    REPOSITORY,
+    HOMEPAGE
+} from './constants.generated';
 
 // Global API interface
 export interface GlobalTreeviewAPI {
@@ -37,6 +46,12 @@ export interface GlobalTreeviewAPI {
         setCategoryLevel: (category: string, level: string) => void;
         getCategories: () => string[];
     };
+    perf: {
+        enable: () => void;
+        disable: () => void;
+        setThreshold: (ms: number) => void;
+        isEnabled: () => boolean;
+    };
 }
 
 // Declare global namespace
@@ -52,14 +67,14 @@ declare global {
 if (typeof window !== 'undefined') {
     window.components = window.components || {};
     window.components['svelte-treeview'] = {
-        version: () => __VERSION__,
+        version: () => VERSION,
         config: {
-            name: __PACKAGE_NAME__,
-            version: __VERSION__,
-            author: __AUTHOR__,
-            license: __LICENSE__,
-            repository: __REPOSITORY__,
-            homepage: __HOMEPAGE__
+            name: PACKAGE_NAME,
+            version: VERSION,
+            author: AUTHOR,
+            license: LICENSE,
+            repository: REPOSITORY,
+            homepage: HOMEPAGE
         },
         logging: {
             enableLogging,
@@ -67,6 +82,12 @@ if (typeof window !== 'undefined') {
             setLogLevel,
             setCategoryLevel,
             getCategories: () => [...LOGGING_CATEGORIES]
+        },
+        perf: {
+            enable: enablePerfLogging,
+            disable: disablePerfLogging,
+            setThreshold: setPerfThreshold,
+            isEnabled: isPerfLoggingEnabled
         }
     };
 }

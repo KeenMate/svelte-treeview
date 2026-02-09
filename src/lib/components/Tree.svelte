@@ -350,12 +350,19 @@
 
 	export async function scrollToPath(
 		path: string,
-		options?: { expand?: boolean; highlight?: boolean; scrollOptions?: ScrollIntoViewOptions }
+		options?: {
+			expand?: boolean;
+			highlight?: boolean;
+			scrollOptions?: ScrollIntoViewOptions;
+			/** Scroll only within the nearest scrollable container (prevents page scroll) */
+			containerScroll?: boolean;
+		}
 	): Promise<boolean> {
 		const {
 			expand = true,
 			highlight = true,
-			scrollOptions = { behavior: 'smooth', block: 'center' }
+			scrollOptions = { behavior: 'smooth', block: 'center' },
+			containerScroll = false
 		} = options || {};
 
 		// First, find the node to get its ID
@@ -370,14 +377,12 @@
 			tree.expandNodes(path);
 			tree.refresh();
 			await tick();
-			// Wait for DOM update
-			// await new Promise((resolve) => setTimeout(resolve, 100));
 		}
 
 		// Find the DOM element using the generated ID
 		const elementId = `${treeId}-${node.id}`;
 		const element = document.getElementById(elementId);
-		const contentDiv = element.querySelector('.ltree-node-content');
+		const contentDiv = element?.querySelector('.ltree-node-content') as HTMLElement | null;
 
 		if (!contentDiv) {
 			console.warn(`[Tree ${treeId}] DOM element not found for node ID: ${elementId}`);
@@ -385,7 +390,21 @@
 		}
 
 		// Scroll to the element
-		contentDiv.scrollIntoView(scrollOptions);
+		if (containerScroll) {
+			// Find nearest scrollable ancestor and scroll within it only
+			const container = findScrollableAncestor(contentDiv);
+			if (container) {
+				const containerRect = container.getBoundingClientRect();
+				const elementRect = contentDiv.getBoundingClientRect();
+				const scrollTop = container.scrollTop + (elementRect.top - containerRect.top) - (containerRect.height / 2) + (elementRect.height / 2);
+				container.scrollTo({
+					top: scrollTop,
+					behavior: scrollOptions?.behavior || 'smooth'
+				});
+			}
+		} else {
+			contentDiv.scrollIntoView(scrollOptions);
+		}
 
 		// Highlight the node temporarily if requested
 		if (highlight && scrollHighlightClass) {
@@ -396,6 +415,20 @@
 		}
 
 		return true;
+	}
+
+	/** Find the nearest scrollable ancestor element */
+	function findScrollableAncestor(element: HTMLElement): HTMLElement | null {
+		let parent = element.parentElement;
+		while (parent) {
+			const style = getComputedStyle(parent);
+			const overflowY = style.overflowY;
+			if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+				return parent;
+			}
+			parent = parent.parentElement;
+		}
+		return null;
 	}
 
 	// External update method for HTML/JavaScript usage
@@ -1405,8 +1438,20 @@
 						<div
 							class="ltree-context-menu-item {item.className || ''}"
 							class:ltree-context-menu-item-disabled={item.isDisabled}
+							role="menuitem"
+							tabindex={item.isDisabled ? -1 : 0}
 							onclick={async () => {
 								if (!item.isDisabled) {
+									try {
+										await item.callback();
+									} catch (error) {
+										console.error('Context menu callback error:', error);
+									}
+								}
+							}}
+							onkeydown={async (e) => {
+								if ((e.key === 'Enter' || e.key === ' ') && !item.isDisabled) {
+									e.preventDefault();
 									try {
 										await item.callback();
 									} catch (error) {

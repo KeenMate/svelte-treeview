@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.5.0-rc01] - 2025-12-20
+## [4.5.0] - 2026-02-09
 
 ### Added
 - **Drop Zone Layout Configuration**: New props to customize drop zone appearance and positioning
@@ -96,6 +96,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Render logging: progressive rendering frame stats
   - Index logging: async search indexing progress
   - New `/dev/logging` demo page for testing log levels and categories
+- **Performance Logging**: Dedicated performance measurement utilities
+  - Measures key operations: `insertArray` (conversion/sort/insert phases), `filterNodes`, `expandAll`, `collapseAll`
+  - Output includes duration, item count, per-item time, and items/sec throughput
+  - Summary view showing breakdown by phase with percentages
+  - Configurable threshold to only log operations slower than X ms
+  - Exported utilities: `enablePerfLogging()`, `disablePerfLogging()`, `setPerfThreshold(ms)`
+  - Browser console access: `window.components['svelte-treeview'].perf.enable()`
+  - Purple color-coded output for easy identification
 - **Global Runtime API**: `window.components['svelte-treeview']` for browser console access
   - `config` - Package info (name, version, author, license, repository, homepage) read from package.json at build time
   - `version()` - Returns current version string
@@ -103,6 +111,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `logging.setLogLevel(level)` - Set level for all categories
   - `logging.setCategoryLevel(category, level)` - Set level for specific category
   - `logging.getCategories()` - List available log categories
+- **Container-Scoped Scrolling**: New `containerScroll` option for `scrollToPath()`
+  - `scrollToPath(path, { containerScroll: true })` scrolls only within the nearest scrollable ancestor
+  - Prevents page-level scrolling when tree is inside a scrollable container
+  - Automatically finds the scrollable parent element (overflow: auto/scroll)
+  - Useful for search result navigation without disrupting page position
 
 ### Enhanced
 - **Drop Zone Styling**: Improved visual feedback during drag operations
@@ -135,6 +148,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `$drop-arrow-size` - Arrow size (default: 24px)
   - `$drop-arrow-position` - Horizontal position within row (default: 66%)
   - `$drop-arrow-above-rotation`, `$drop-arrow-below-rotation`, `$drop-arrow-child-rotation` - Rotation angles
+- **Search Example Page Redesign**: Merged filter and search cards into unified search experience
+  - Single search input with live filtering and result navigation
+  - Prev/Next buttons to traverse search results with wrap-around
+  - Result counter showing "X of Y" position indicator
+  - Keyboard navigation: Enter = next result, Shift+Enter = previous
+  - Clickable result list with active item highlighting
+  - Auto-scroll to first result when searching
 
 ### Fixed
 - **Empty Tree Drop Placeholder**: Fixed drop placeholder not appearing when dragging to empty trees
@@ -157,7 +177,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `$effect` to automatically trigger search when input changes
 - **Glow Mode Border Radius**: Fixed border-radius appearing on glow drop indicators during drag
   - Changed `$tree-node-content-border-radius` default from `4px` to `0`
-  - Added `!important` to `border-radius: 0` on glow classes to ensure override
+- **Search Example Documentation**: Fixed incorrect prop name in search configuration table
+  - Changed `searchValueCallback` → `getSearchValueCallback` (correct prop name)
+  - Fixed callback signature from `(item: T) => string` to `(node: LTreeNode<T>) => string`
+- **LTreeNode Type Export**: Added `LTreeNode` re-export from `types.ts`
+  - Fixes import errors when using `import type { LTreeNode } from '$lib/ltree/types'`
+- **Search Example Endless Loop**: Fixed `$effect` causing infinite loop on search
+  - Used Svelte's `untrack()` to prevent reactive state updates from re-triggering the effect
+  - Effect now only reacts to `searchText` changes, not internal state mutations
+- **Search Example Container Scroll**: Fixed prev/next navigation scrolling the entire page
+  - Now uses `scrollToPath(path, { containerScroll: true })` for container-scoped scrolling
+- **Critical Performance Bug in insertArray**: Fixed O(n²) algorithm causing 85+ second load times
+  - Progressive render check was iterating all remaining nodes for every node at expandLevel
+  - With 17,000 nodes this caused ~145 million iterations instead of ~34,000
+  - Fix: Pre-compute last expandLevel index once, then use simple index comparison
+  - Result: Load time reduced from 85+ seconds to under 1 second
+- **Global API Constants**: Fixed `__PACKAGE_NAME__ is not defined` error when using library in other projects
+  - Vite `define` constants only work during dev, not when library is built with `svelte-package`
+  - Added `scripts/generate-constants.js` to bake package.json values into `constants.generated.ts`
+
+### Important - Svelte 5 Performance
+
+**Use `$state.raw()` for large datasets passed to Tree component**
+
+When passing large arrays (1000+ items) to the Tree component, use `$state.raw()` instead of `$state()` to avoid severe performance degradation:
+
+```typescript
+// SLOW - Svelte deeply proxies all 8000+ objects, causing 5000x slowdown
+let treeNodes = $state<TreeNode[]>([])
+treeNodes = response.data  // Each item becomes a Proxy
+
+// FAST - Array is reactive but items remain plain objects
+let treeNodes = $state.raw<TreeNode[]>([])
+treeNodes = response.data  // Items stay as plain objects
+```
+
+**Why this matters:**
+- `$state()` creates deep proxies - every nested object becomes a Proxy
+- Tree's `insertArray()` accesses multiple properties on each data item
+- With 8000 items × ~10 property accesses = 80,000 proxy operations
+- Proxy overhead: ~2.2ms per item vs ~0.0004ms for plain objects (5,500x slower)
+
+**Symptoms of this issue:**
+- Tree takes 15-90+ seconds to render with thousands of items
+- Console shows `[Violation] 'message' handler took XXXXms`
+- Same data loads instantly in isolated test environment
+
+**The fix does NOT affect reactivity** - changes to `treeNodes` array itself still trigger updates. Only the individual items inside lose deep reactivity, which Tree doesn't need.
+  - Build now runs `npm run generate-constants` before `svelte-package`
+- **Glow Mode Border Radius**: Added `!important` to `border-radius: 0` on glow classes to ensure override
   - Removed `border-radius: 4px !important` from `.ltree-dragover-glow` class
   - Removed `border-radius` from `.ltree-node-content` transition to prevent animation glitch
 - **Glow Mode Drop Validation**: Fixed glow showing on invalid drop targets

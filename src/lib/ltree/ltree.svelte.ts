@@ -13,6 +13,7 @@ import {
 import type { Ltree, Tuple, InsertArrayResult } from './types.js';
 import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
+import { perfStart, perfEnd, perfSummary } from '../perf-logger.js';
 
 export function createLTree<T>(
 	_idMember: string,
@@ -158,7 +159,8 @@ export function createLTree<T>(
 			nodeCount = 0;
 			maxLevel = 0;
 
-			performance.mark('conversion-start');
+			perfStart(`[${_treeId}] insertArray:conversion`);
+
 			let mappedData = data.map((row, index) => {
 				const node = createLTreeNode<T>();
 				node.treeId = _treeId;
@@ -186,12 +188,12 @@ export function createLTree<T>(
 				node.data = row;
 				return node;
 			});
-			performance.mark('conversion-end');
+			const conversionTime = perfEnd(`[${_treeId}] insertArray:conversion`, data.length);
 
 			if (this.shouldDisplayDebugInformation)
 				console.log(`[Tree ${_treeId}] Mapped data before sort`, mappedData);
 
-			performance.mark('sort-start');
+			perfStart(`[${_treeId}] insertArray:sort`);
 			if (!this.isSorted) {
 				if (this.sortCallback) mappedData = this.sortCallback(mappedData);
 				else mappedData = this._defaultSort(this, mappedData);
@@ -199,9 +201,9 @@ export function createLTree<T>(
 
 			if (this.shouldDisplayDebugInformation)
 				console.log(`[Tree ${_treeId}] Mapped data after sort`, mappedData);
-			performance.mark('sort-end');
+			const sortTime = perfEnd(`[${_treeId}] insertArray:sort`, data.length);
 
-			performance.mark('insert-start');
+			perfStart(`[${_treeId}] insertArray:insert`);
 
 			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [];
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
@@ -209,6 +211,18 @@ export function createLTree<T>(
 			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
 			let successfulCount: number = 0;
 			let hasRenderedExpandLevel = false;
+
+			// Pre-compute the last index at expandLevel to avoid O(n²) lookup
+			let lastExpandLevelIndex = -1;
+			if (_expandLevel && !noEmitChanges) {
+				for (let i = mappedData.length - 1; i >= 0; i--) {
+					const nodeLevel = mappedData[i].level || getLevel(mappedData[i].path, this.treePathSeparator);
+					if (nodeLevel <= _expandLevel) {
+						lastExpandLevelIndex = i;
+						break;
+					}
+				}
+			}
 
 			mappedData.forEach((node, index) => {
 				const result = this.insertTreeNode(node.parentPath, node, true);
@@ -228,22 +242,13 @@ export function createLTree<T>(
 					}
 
 					// Progressive rendering: emit changes when we complete expandLevel
-					if (!noEmitChanges && !hasRenderedExpandLevel && _expandLevel && node.level && node.level <= _expandLevel) {
-						// Check if this might be the last node at expandLevel by looking ahead
-						const remainingNodes = mappedData.slice(index + 1);
-						const hasMoreAtExpandLevel = remainingNodes.some(futureNode => {
-							const futureLevel = futureNode.level || getLevel(futureNode.path, this.treePathSeparator);
-							return futureLevel <= _expandLevel;
-						});
+					if (!noEmitChanges && !hasRenderedExpandLevel && _expandLevel && index === lastExpandLevelIndex) {
+						// We've processed all nodes up to expandLevel - render now!
+						hasRenderedExpandLevel = true;
+						this._emitTreeChanged();
 
-						if (!hasMoreAtExpandLevel) {
-							// We've processed all nodes up to expandLevel - render now!
-							hasRenderedExpandLevel = true;
-							this._emitTreeChanged();
-
-							if (this.shouldDisplayDebugInformation) {
-								console.log(`[Tree ${_treeId}] Progressive render: Displayed levels 1-${_expandLevel} (${successfulCount} nodes processed so far)`);
-							}
+						if (this.shouldDisplayDebugInformation) {
+							console.log(`[Tree ${_treeId}] Progressive render: Displayed levels 1-${_expandLevel} (${successfulCount} nodes processed so far)`);
 						}
 					}
 				}
@@ -289,20 +294,14 @@ export function createLTree<T>(
 				}
 			}
 
-			performance.mark('insert-end');
+			const insertTime = perfEnd(`[${_treeId}] insertArray:insert`, data.length);
 
-			performance.measure('sort-duration', 'sort-start', 'sort-end');
-			performance.measure('conversion-duration', 'conversion-start', 'conversion-end');
-			performance.measure('insert-duration', 'insert-start', 'insert-end');
-
-			let measure = performance.getEntriesByName('sort-duration')[0];
-			console.log(`[Tree ${_treeId}] Sort took: ${measure.duration}ms`);
-
-			measure = performance.getEntriesByName('conversion-duration')[0];
-			console.log(`[Tree ${_treeId}] Conversion took: ${measure.duration}ms`);
-
-			measure = performance.getEntriesByName('insert-duration')[0];
-			console.log(`[Tree ${_treeId}] Insert took: ${measure.duration}ms`);
+			// Log performance summary
+			perfSummary(_treeId, {
+				'Conversion': conversionTime,
+				'Sort': sortTime,
+				'Insert': insertTime
+			}, data.length);
 
 			return {
 				successful: successfulCount,
@@ -368,8 +367,10 @@ export function createLTree<T>(
 				return;
 			}
 
+			perfStart(`[${_treeId}] filterNodes:search`);
 			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
 			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
+			perfEnd(`[${_treeId}] filterNodes:search`, resultIndices.length);
 
 			if (this.shouldDisplayDebugInformation)
 				console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices, foundPaths);
@@ -401,6 +402,7 @@ export function createLTree<T>(
 		},
 
 		createFilteredTree(targetPaths: string[]): void {
+			perfStart(`[${_treeId}] createFilteredTree`);
 			filteredRoot.children = {};
 			filteredTree = null;
 			// isFiltered = false;
@@ -476,6 +478,8 @@ export function createLTree<T>(
 			this.isFiltered = true;
 			this._emitTreeChanged();
 
+			perfEnd(`[${_treeId}] createFilteredTree`, rootNodes.length);
+
 			if (this.shouldDisplayDebugInformation)
 				console.log(`[Tree ${_treeId}] Created filtered tree with`, rootNodes.length, 'root nodes');
 		},
@@ -488,21 +492,25 @@ export function createLTree<T>(
 		},
 
 		expandAll(nodePath: string | null | undefined): void {
+			perfStart(`[${_treeId}] expandAll`);
 			if (isEmptyString(nodePath))
 				flatTreeNodes.forEach((row) => {
 					row.isExpanded = true;
 				});
 
 			this._emitTreeChanged();
+			perfEnd(`[${_treeId}] expandAll`, flatTreeNodes.length);
 		},
 
 		collapseAll(nodePath?: string | null | undefined): void {
+			perfStart(`[${_treeId}] collapseAll`);
 			if (isEmptyString(nodePath))
 				flatTreeNodes.forEach((row) => {
 					row.isExpanded = false;
 				});
 
 			this._emitTreeChanged();
+			perfEnd(`[${_treeId}] collapseAll`, flatTreeNodes.length);
 		},
 
 		insert: function (path: string, data: T, noEmitChanges: boolean = false): void {

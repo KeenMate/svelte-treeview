@@ -60,6 +60,28 @@ If using Vite, Webpack, or similar, you can import the SCSS:
 import '@keenmate/svelte-treeview/styles.scss';
 ```
 
+## ⚠️ Performance Warning: Use `$state.raw()` for Large Datasets
+
+> [!WARNING]
+> **When passing large arrays (1000+ items) to the Tree component, use `$state.raw()` instead of `$state()` to avoid severe performance issues.**
+
+Svelte 5's `$state()` creates deep proxies for all nested objects. With thousands of items, this causes massive overhead during tree operations.
+
+```typescript
+// ❌ SLOW - Each item becomes a Proxy (5000x slower with large datasets)
+let treeData = $state<TreeNode[]>([])
+
+// ✅ FAST - Items remain plain objects
+let treeData = $state.raw<TreeNode[]>([])
+```
+
+**Symptoms of this issue:**
+- Tree takes 15-90+ seconds to render with thousands of items
+- Console shows `[Violation] 'message' handler took XXXXms`
+- Same data loads instantly in isolated test
+
+The array itself remains reactive - only individual items lose deep reactivity (which Tree doesn't need).
+
 ## 🎯 Quick Start
 
 ```svelte
@@ -899,9 +921,22 @@ The component is optimized for large datasets:
 - **Async Search Indexing**: Uses `requestIdleCallback` for non-blocking search index building
 - **Accurate Search Results**: Search index only includes successfully inserted nodes, ensuring results match visible tree structure
 - **Consistent Visual Hierarchy**: Optimized CSS-based indentation prevents exponential spacing growth
-- **Virtual Scrolling**: (Coming soon)
-- **Lazy Loading**: (Coming soon)
 - **Search Indexing**: Uses FlexSearch for fast search operations
+
+### v4.5 Performance Improvements
+
+**Optimized `insertArray` algorithm** - Fixed O(n²) bottleneck that caused 85+ second load times with large datasets. Now loads 17,000+ nodes in under 100ms.
+
+**Performance Logging** - Built-in performance measurement for debugging:
+```typescript
+import { enablePerfLogging } from '@keenmate/svelte-treeview';
+enablePerfLogging();
+
+// Or from browser console:
+window.components['svelte-treeview'].perf.enable()
+```
+
+**Important**: See the [$state.raw() warning](#%EF%B8%8F-performance-warning-use-stateraw-for-large-datasets) above - using `$state()` instead of `$state.raw()` for tree data can cause 5,000x slowdown!
 
 ## 🤝 Contributing
 

@@ -1,6 +1,9 @@
 import type { Index, SearchOptions } from 'flexsearch';
 import type { LTreeNode } from './ltree-node.svelte';
 
+// Re-export LTreeNode for convenience
+export type { LTreeNode } from './ltree-node.svelte';
+
 export type Tuple<T, U> = [T, U];
 
 // Drag and drop types

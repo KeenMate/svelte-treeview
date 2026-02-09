@@ -71,7 +71,8 @@ TREE_PROPS_KEY:
 PUBLIC_METHODS:
 - expandNodes(path), collapseNodes(path), expandAll(), collapseAll()
 - searchNodes(searchText) - search nodes using internal index and return matching nodes
-- scrollToPath(path, options)
+- scrollToPath(path, options) - options: { expand?, highlight?, scrollOptions?, containerScroll? }
+  - containerScroll: true scrolls only within nearest scrollable ancestor (prevents page scroll)
 - update(updates: Partial<Props>) - programmatically update props from vanilla JavaScript
 
 EVENTS: 

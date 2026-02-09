@@ -465,6 +465,47 @@ body.landing-body {
     text-transform: uppercase;
 }
 
+/* Performance logging styles */
+.perf-card {
+    border-left: 4px solid #a855f7;
+}
+
+.status {
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.status.enabled {
+    color: #10b981;
+}
+
+.threshold-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.threshold-control label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.threshold-control input[type="number"] {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: #9ca3af;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     body {
