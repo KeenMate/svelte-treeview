@@ -7,6 +7,7 @@
 	import { setContext, tick } from 'svelte';
 	import { createRenderCoordinator, type RenderCoordinator, type RenderStats } from './RenderCoordinator.svelte.js';
 	import { uiLogger, dragLogger } from '../logger.js';
+	import { perfStart, perfEnd } from '../perf-logger.js';
 
 	// Register global API for runtime logging control
 	import '../global-api.js';
@@ -351,15 +352,20 @@
 	export async function scrollToPath(
 		path: string,
 		options?: {
+			/** Expand ancestors to make the node visible (default: true) */
 			expand?: boolean;
+			/** Also expand the target node itself to show its children (default: false for performance) */
+			expandTarget?: boolean;
 			highlight?: boolean;
 			scrollOptions?: ScrollIntoViewOptions;
 			/** Scroll only within the nearest scrollable container (prevents page scroll) */
 			containerScroll?: boolean;
 		}
 	): Promise<boolean> {
+		perfStart(`[${treeId}] scrollToPath`);
 		const {
 			expand = true,
+			expandTarget = false,
 			highlight = true,
 			scrollOptions = { behavior: 'smooth', block: 'center' },
 			containerScroll = false
@@ -369,13 +375,22 @@
 		const node = tree.getNodeByPath(path);
 		if (!node || !node.id) {
 			console.warn(`[Tree ${treeId}] Node not found for path: ${path}`);
+			perfEnd(`[${treeId}] scrollToPath`);
 			return false;
 		}
 
-		// Expand the path if requested
-		if (expand) {
+		// Expand ancestors to make the node visible
+		// The target node's visibility depends on its parent being expanded, not on its own isExpanded state
+		if (expand && node.parentPath) {
+			tree.expandNodes(node.parentPath);
+		}
+
+		// Optionally expand the target node itself (shows its children, but triggers re-render if not already expanded)
+		if (expandTarget) {
 			tree.expandNodes(path);
-			tree.refresh();
+		}
+
+		if (expand || expandTarget) {
 			await tick();
 		}
 
@@ -386,6 +401,7 @@
 
 		if (!contentDiv) {
 			console.warn(`[Tree ${treeId}] DOM element not found for node ID: ${elementId}`);
+			perfEnd(`[${treeId}] scrollToPath`);
 			return false;
 		}
 
@@ -414,6 +430,7 @@
 			}, scrollHighlightTimeout);
 		}
 
+		perfEnd(`[${treeId}] scrollToPath`);
 		return true;
 	}
 

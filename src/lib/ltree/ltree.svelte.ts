@@ -539,7 +539,9 @@ export function createLTree<T>(
 		},
 
 		expandNodes: function (path: string, noEmitChanges: boolean = false) {
+			perfStart(`[${_treeId}] expandNodes`);
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : root;
+			let hasChanges = false;
 
 			const segments = path.split(this.treePathSeparator);
 			for (let i = 0; i < segments.length; i++) {
@@ -547,19 +549,27 @@ export function createLTree<T>(
 
 				if (node.children.hasOwnProperty(segment)) {
 					node = node.children[segment];
-					node.isExpanded = true;
+					// Only mark as changed if actually changing from collapsed to expanded
+					if (!node.isExpanded) {
+						node.isExpanded = true;
+						hasChanges = true;
+					}
 				}
 			}
 
-			if (!noEmitChanges) {
+			// Only emit changes if something actually changed
+			if (!noEmitChanges && hasChanges) {
+				console.log(`[Tree ${_treeId}] expandNodes triggering re-render for path: ${path}`);
 				this._emitTreeChanged();
 			}
 
+			perfEnd(`[${_treeId}] expandNodes`);
 			return this; // Return the API object for chaining
 		},
 
 		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : this.root;
+			let hasChanges = false;
 
 			const segments = path.split(this.treePathSeparator);
 			for (let i = 0; i < segments.length; i++) {
@@ -567,11 +577,16 @@ export function createLTree<T>(
 
 				if (node.children.hasOwnProperty(segment)) {
 					node = node.children[segment];
-					node.isExpanded = false;
+					// Only mark as changed if actually changing from expanded to collapsed
+					if (node.isExpanded) {
+						node.isExpanded = false;
+						hasChanges = true;
+					}
 				}
 			}
 
-			if (!noEmitChanges) {
+			// Only emit changes if something actually changed
+			if (!noEmitChanges && hasChanges) {
 				this._emitTreeChanged();
 			}
 
