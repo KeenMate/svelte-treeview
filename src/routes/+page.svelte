@@ -53,6 +53,13 @@
 			description: 'Real-world workflows with mock database integration and batch operations.'
 		},
 		{
+			href: '/examples/performance',
+			icon: '⚡',
+			title: 'Performance Test',
+			badge: 'new',
+			description: 'Compare recursive vs flat rendering modes with configurable node counts.'
+		},
+		{
 			href: '/dev/json-loader',
 			icon: '🔧',
 			title: 'JSON Loader',
