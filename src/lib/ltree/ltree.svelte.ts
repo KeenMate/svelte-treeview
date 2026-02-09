@@ -132,6 +132,47 @@ export function createLTree<T>(
 			return Object.values(root.children);
 		},
 
+		/**
+		 * Returns a flat array of all visible nodes in render order (depth-first).
+		 * A node is visible if all its ancestors are expanded.
+		 * This is optimized for flat/centralized rendering without recursion.
+		 *
+		 * Note: This getter depends on changeTracker to ensure reactivity when
+		 * nodes are expanded/collapsed or the tree structure changes.
+		 */
+		get visibleFlatNodes(): LTreeNode<T>[] {
+			// Explicitly read changeTracker to create reactive dependency
+			// This ensures the getter re-runs when _emitTreeChanged() is called
+			const _tracker = changeTracker;
+
+			const startRoot = this.isFiltered ? filteredRoot : root;
+			if (!startRoot?.children || !_tracker) {
+				return [];
+			}
+
+			const result: LTreeNode<T>[] = [];
+			const self = this;
+
+			function traverse(node: LTreeNode<T>) {
+				// Get children and optionally sort them
+				let children = Object.values(node.children);
+				if (self.isSorted && children.length > 0) {
+					children = self.sortCallback(children);
+				}
+
+				for (const child of children) {
+					result.push(child);
+					// Only traverse into children if this node is expanded
+					if (child.isExpanded && child.hasChildren) {
+						traverse(child);
+					}
+				}
+			}
+
+			traverse(startRoot);
+			return result;
+		},
+
 		get statistics() {
 			const filteredNodeCount = isFiltered ? filteredTree?.length || 0 : 0;
 			const indexerStatus = indexer?.getStatus() || { isProcessing: false, queueSize: 0 };

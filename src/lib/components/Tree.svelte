@@ -106,6 +106,17 @@
 		onRenderProgress?: (stats: RenderStats) => void;
 		onRenderComplete?: (stats: RenderStats) => void;
 
+		/**
+		 * Use flat/centralized rendering instead of recursive node rendering.
+		 * This significantly improves performance for large trees by:
+		 * - Removing the {#key changeTracker} block that destroys all nodes on any change
+		 * - Using a single flat loop instead of recursive component instantiation
+		 * - Allowing Svelte's keyed {#each} to efficiently diff only changed nodes
+		 */
+		useFlatRendering?: boolean;
+		/** Indentation per level in flat rendering mode (CSS value, default: '1.5rem') */
+		flatIndentSize?: string;
+
 		// DRAG AND DROP
 		dragDropMode?: DragDropMode;
 		dropZoneMode?: 'floating' | 'glow'; // 'floating' = original floating zones, 'glow' = border glow indicators
@@ -199,6 +210,10 @@
 		onRenderStart,
 		onRenderProgress,
 		onRenderComplete,
+
+		// Flat rendering mode
+		useFlatRendering = false,
+		flatIndentSize = '1.5rem',
 
 		// DRAG AND DROP
 		dragDropMode = 'both',
@@ -1352,15 +1367,15 @@
 
 	<div class:bodyClass>
 		{#if tree?.root}
-			{#key tree.changeTracker}
-				<div class="ltree-tree">
-					{#each tree.tree as node (node.id)}
+			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
+			{#if useFlatRendering}
+				<div class="ltree-tree ltree-flat-mode">
+					{#each tree.visibleFlatNodes as node (node.id)}
 						<Node
 							{node}
 							children={nodeTemplate}
 							{shouldToggleOnNodeClick}
-							{progressiveRender}
-							{renderBatchSize}
+							progressiveRender={false}
 							onNodeClicked={(node) => _onNodeClicked(node)}
 							onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
 							onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}
@@ -1386,6 +1401,8 @@
 							{dropZoneMaxWidth}
 							dropOperation={currentDropOperation}
 							{allowCopy}
+							flatMode={true}
+							{flatIndentSize}
 						/>
 					{:else}
 						<!-- Empty state when tree has no items -->
@@ -1413,7 +1430,71 @@
 						</div>
 					{/each}
 				</div>
-			{/key}
+			{:else}
+				<!-- Recursive rendering mode: uses {#key} block for forced re-renders -->
+				{#key tree.changeTracker}
+					<div class="ltree-tree">
+						{#each tree.tree as node (node.id)}
+							<Node
+								{node}
+								children={nodeTemplate}
+								{shouldToggleOnNodeClick}
+								{progressiveRender}
+								{renderBatchSize}
+								onNodeClicked={(node) => _onNodeClicked(node)}
+								onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
+								onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}
+								onNodeDragOver={(node, event) => _onNodeDragOver(node, event)}
+								onNodeDragLeave={(node, event) => _onNodeDragLeave(node, event)}
+								onNodeDrop={(node, event) => _onNodeDrop(node, event)}
+								onZoneDrop={(node, position, event) => _onZoneDrop(node, position, event)}
+								onTouchDragStart={(node, event) => _onTouchStart(node, event)}
+								onTouchDragMove={(node, event) => _onTouchMove(node, event)}
+								onTouchDragEnd={(node, event) => _onTouchEnd(node, event)}
+								{expandIconClass}
+								{collapseIconClass}
+								{leafIconClass}
+								{selectedNodeClass}
+								{dragOverNodeClass}
+								isDraggedNode={draggedNode?.path === node.path}
+								{isDragInProgress}
+								hoveredNodeForDropPath={hoveredNodeForDrop?.path}
+								{activeDropPosition}
+								{dropZoneMode}
+								{dropZoneLayout}
+								{dropZoneStart}
+								{dropZoneMaxWidth}
+								dropOperation={currentDropOperation}
+								{allowCopy}
+							/>
+						{:else}
+							<!-- Empty state when tree has no items -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="ltree-empty-state"
+								class:ltree-drop-placeholder={isDropPlaceholderActive}
+								ondragenter={handleEmptyTreeDragOver}
+								ondragover={handleEmptyTreeDragOver}
+								ondragleave={handleEmptyTreeDragLeave}
+								ondrop={handleEmptyTreeDrop}
+								ontouchend={handleEmptyTreeTouchEnd}
+							>
+								{#if isDropPlaceholderActive}
+									{#if dropPlaceholder}
+										{@render dropPlaceholder()}
+									{:else}
+										<div class="ltree-drop-placeholder-content">
+											Drop here to add
+										</div>
+									{/if}
+								{:else}
+									{@render noDataFound?.()}
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/key}
+			{/if}
 		{:else}
 			<!-- Empty tree drop zone -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->

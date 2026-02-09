@@ -50,6 +50,10 @@
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
 		dropOperation?: DropOperation; // Current drag operation ('move' or 'copy')
 		allowCopy?: boolean; // Whether copy operation is allowed (Ctrl+drag)
+
+		// Flat rendering mode
+		flatMode?: boolean; // When true, don't render children (Tree handles flat rendering)
+		flatIndentSize?: string; // CSS value for per-level indentation in flat mode
 	}
 
 	// Destructure props using Svelte 5 syntax
@@ -96,6 +100,10 @@
 		dropZoneMaxWidth = 120,
 		dropOperation = 'move',
 		allowCopy = false,
+
+		// Flat rendering mode
+		flatMode = false,
+		flatIndentSize = '1.5rem',
 	}: Props = $props()
 
 	// Compute if THIS node is the one being hovered for drop
@@ -143,7 +151,9 @@
 	const childrenWithData = $derived(Object.values(node?.children || []))
 	const hasChildren = $derived(node?.hasChildren || false)
 	const indentStyle = $derived(
-		`margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
+		flatMode
+			? `margin-left: calc(${(node?.level || 1) - 1} * ${flatIndentSize})`
+			: `margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
 	)
 
 	// Progressive rendering state
@@ -376,7 +386,8 @@
 		{/if}
 	</div>
 
-	{#if node?.isExpanded && node?.hasChildren}
+	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->
+	{#if !flatMode && node?.isExpanded && node?.hasChildren}
 		<div class="ltree-children">
 			{#each childrenToRender as item (item.id)}
 				<Node

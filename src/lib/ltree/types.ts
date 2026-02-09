@@ -85,6 +85,8 @@ export interface Ltree<T> {
 
 	// Methods
 	get tree(): LTreeNode<T>[];
+	/** Flat array of all visible nodes in render order (depth-first, respects isExpanded) */
+	get visibleFlatNodes(): LTreeNode<T>[];
 	get statistics(): { nodeCount: number; maxLevel: number };
 
 	insertArray(data: T[]): InsertArrayResult<T>;
