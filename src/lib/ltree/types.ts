@@ -1,13 +1,10 @@
 import type { Index, SearchOptions } from 'flexsearch';
-import type { LTreeNode } from './ltree-node.svelte';
+import type { LTreeNode, DropPosition } from './ltree-node.svelte';
 
-// Re-export LTreeNode for convenience
-export type { LTreeNode } from './ltree-node.svelte';
+// Re-export LTreeNode and DropPosition for convenience
+export type { LTreeNode, DropPosition } from './ltree-node.svelte';
 
 export type Tuple<T, U> = [T, U];
-
-// Drag and drop types
-export type DropPosition = 'above' | 'below' | 'child';
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type DropZoneLayout = 'around' | 'above' | 'below' | 'wave' | 'wave2';
 export type DropOperation = 'move' | 'copy';
@@ -80,8 +77,13 @@ export interface Ltree<T> {
 	isSelectableMember: string | null | undefined;
 	isDraggableMember: string | null | undefined;
 	isDropAllowedMember: string | null | undefined;
+	allowedDropPositionsMember: string | null | undefined;
+	getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 
 	shouldDisplayDebugInformation: boolean | null | undefined;
+
+	// Method to get allowed drop positions (uses callback or member)
+	getNodeAllowedDropPositions(node: LTreeNode<T>): DropPosition[] | null | undefined;
 
 	// Methods
 	get tree(): LTreeNode<T>[];

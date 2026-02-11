@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, DropOperation } from '$lib/ltree/types';
+	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types';
 
 	type FileItem = {
 		id: number;
@@ -9,6 +9,11 @@
 		name: string;
 		icon: string;
 		sortOrder: number;
+	};
+
+	// Extended type with allowedDropPositions for restricted drop demo
+	type RestrictedFileItem = FileItem & {
+		allowedDropPositions?: DropPosition[];
 	};
 
 	// Source tree data with sortOrder for reorganization
@@ -175,6 +180,43 @@
 	function clearLog() {
 		activityLog = [];
 	}
+
+	// === Restricted Drop Positions Demo ===
+	// Data with allowedDropPositions to restrict where nodes can be dropped
+	let restrictedData = $state<RestrictedFileItem[]>([
+		// Trash folder: only accepts drops as children (can't drop above/below)
+		{ id: 101, path: '1', name: '🗑️ Trash', icon: '', sortOrder: 10, allowedDropPositions: ['child'] },
+		{ id: 102, path: '1.1', name: 'Deleted Item 1', icon: '📄', sortOrder: 10 },
+		{ id: 103, path: '1.2', name: 'Deleted Item 2', icon: '📄', sortOrder: 20 },
+
+		// Regular folder: all drop positions allowed (default)
+		{ id: 104, path: '2', name: '📁 Projects', icon: '', sortOrder: 20 },
+		{ id: 105, path: '2.1', name: 'Project A', icon: '📂', sortOrder: 10 },
+		{ id: 106, path: '2.2', name: 'Project B', icon: '📂', sortOrder: 20 },
+
+		// Files: only accept drops above/below (can't drop INTO a file)
+		{ id: 107, path: '3', name: '📄 Readme.md', icon: '', sortOrder: 30, allowedDropPositions: ['above', 'below'] },
+		{ id: 108, path: '4', name: '📄 Config.json', icon: '', sortOrder: 40, allowedDropPositions: ['above', 'below'] },
+
+		// Source items to drag
+		{ id: 109, path: '5', name: '📁 Source Items', icon: '', sortOrder: 50 },
+		{ id: 110, path: '5.1', name: 'Drag me!', icon: '🔵', sortOrder: 10 },
+		{ id: 111, path: '5.2', name: 'Drag me too!', icon: '🟢', sortOrder: 20 },
+	]);
+
+	let restrictedTreeRef: Tree<RestrictedFileItem>;
+	let restrictedLog = $state<string[]>([]);
+
+	function addRestrictedLog(message: string) {
+		restrictedLog = [...restrictedLog.slice(-4), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+
+	function handleRestrictedDrop(dropNode: LTreeNode<RestrictedFileItem> | null, draggedNode: LTreeNode<RestrictedFileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
+		const positionLabel = dropNode?.data?.allowedDropPositions?.length === 1
+			? `(only ${dropNode.data.allowedDropPositions[0]} allowed)`
+			: '';
+		addRestrictedLog(`Dropped "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}" ${positionLabel}`);
+	}
 </script>
 
 <svelte:head>
@@ -307,6 +349,78 @@
 				<pre>{activityLog.join('\n')}</pre>
 			</div>
 		{/if}
+	</div>
+
+	<!-- Restricted Drop Positions Demo -->
+	<div class="card">
+		<h2>Restricted Drop Positions</h2>
+		<p class="description">
+			Control which drop positions are valid per node using <code>allowedDropPositions</code>.
+			Try dragging items to different targets:
+		</p>
+
+		<div class="note">
+			<p class="note-title">Node Types</p>
+			<ul>
+				<li><strong>🗑️ Trash</strong> - Only accepts <code>child</code> drops (drop INTO, not above/below)</li>
+				<li><strong>📁 Projects</strong> - All positions allowed (default behavior)</li>
+				<li><strong>📄 Files</strong> - Only <code>above</code> and <code>below</code> (can't drop INTO a file)</li>
+			</ul>
+		</div>
+
+		<div class="tree-container tree-container-tall">
+			<Tree
+				bind:this={restrictedTreeRef}
+				treeId="restricted-tree"
+				data={restrictedData}
+				idMember="id"
+				pathMember="path"
+				orderMember="sortOrder"
+				allowedDropPositionsMember="allowedDropPositions"
+				sortCallback={sortByOrder}
+				isSorted={true}
+				expandLevel={3}
+				onNodeDrop={handleRestrictedDrop}
+				{dropZoneMode}
+				{dropZoneLayout}
+			>
+				{#snippet nodeTemplate(node)}
+					<span>{node.data?.icon} {node.data?.name}</span>
+					{#if node.data?.allowedDropPositions}
+						<small style="color: #888; margin-left: 0.5rem; font-size: 0.7em;">
+							({node.data.allowedDropPositions.join('/')})
+						</small>
+					{/if}
+				{/snippet}
+			</Tree>
+		</div>
+
+		{#if restrictedLog.length > 0}
+			<div class="output">
+				<p class="output-label">Activity Log:</p>
+				<pre>{restrictedLog.join('\n')}</pre>
+			</div>
+		{/if}
+
+		<div class="code-block">
+			<pre>{`// Define allowed drop positions per node
+const data = [
+  // Trash: only accept drops as children
+  { id: 1, name: '🗑️ Trash', allowedDropPositions: ['child'] },
+
+  // Regular folder: all positions (default)
+  { id: 2, name: '📁 Projects' },
+
+  // Files: can't drop INTO them
+  { id: 3, name: '📄 Readme.md', allowedDropPositions: ['above', 'below'] },
+];
+
+<Tree
+  data={data}
+  allowedDropPositionsMember="allowedDropPositions"
+  ...
+/>`}</pre>
+		</div>
 	</div>
 
 	<!-- Touch Drag Instructions -->

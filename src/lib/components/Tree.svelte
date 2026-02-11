@@ -94,6 +94,8 @@
 		isSelectedMember?: string | null | undefined;
 		isDraggableMember?: string | null | undefined;
 		isDropAllowedMember?: string | null | undefined;
+		allowedDropPositionsMember?: string | null | undefined;
+		getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 		hasChildrenMember?: string | null | undefined;
 		isSorted?: boolean | null | undefined;
 
@@ -208,6 +210,8 @@
 		isSelectedMember,
 		isDraggableMember,
 		isDropAllowedMember,
+		allowedDropPositionsMember,
+		getAllowedDropPositionsCallback,
 
 		displayValueMember,
 		getDisplayValueCallback,
@@ -636,11 +640,13 @@
 		isSelectedMember,
 		isDraggableMember,
 		isDropAllowedMember,
+		allowedDropPositionsMember,
 
 		displayValueMember,
 		getDisplayValueCallback,
 		searchValueMember,
 		getSearchValueCallback,
+		getAllowedDropPositionsCallback,
 		orderMember,
 		treeId,
 		treePathSeparator,

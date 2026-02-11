@@ -40,7 +40,8 @@ export class Indexer<T> {
 
 	// Add items to the processing queue
 	addToQueue(items: { node: LTreeNode<T>; index: number }[]): void {
-		this.processingQueue.push(...items);
+		// Use concat instead of push(...items) to avoid stack overflow with large arrays
+		this.processingQueue = this.processingQueue.concat(items);
 		this.totalItemsAdded += items.length;
 
 		indexLogger.debug(`[${this.treeId}] Added ${items.length} items to queue. Queue size: ${this.processingQueue.length}`);

@@ -89,24 +89,63 @@
 	// Track glow position for glow mode
 	let glowPosition = $state<'above' | 'below' | 'child' | null>(null);
 
+	// Get allowed drop positions for this node (empty/undefined = all allowed)
+	// Uses tree.getNodeAllowedDropPositions which checks callback > member > node property
+	const allowedPositions = $derived(tree.getNodeAllowedDropPositions(node));
+
+	// Check if a position is allowed for this node
+	function isPositionAllowed(position: DropPosition): boolean {
+		if (!allowedPositions || allowedPositions.length === 0) {
+			return true; // All positions allowed by default
+		}
+		return allowedPositions.includes(position);
+	}
+
 	// Calculate glow position based on mouse position in the node row
-	function calculateGlowPosition(event: DragEvent, element: HTMLElement): 'above' | 'below' | 'child' {
+	// Respects allowedDropPositions - snaps to nearest allowed position
+	function calculateGlowPosition(event: DragEvent, element: HTMLElement): 'above' | 'below' | 'child' | null {
 		const rect = element.getBoundingClientRect();
 		const x = event.clientX - rect.left;
 		const y = event.clientY - rect.top;
 		const width = rect.width;
 		const height = rect.height;
 
-		// Right half = child
+		// Calculate the ideal position based on mouse position
+		let idealPosition: DropPosition;
 		if (x > width / 2) {
-			return 'child';
+			idealPosition = 'child';
+		} else if (y < height / 2) {
+			idealPosition = 'above';
+		} else {
+			idealPosition = 'below';
 		}
-		// Left half, top 50% = above
-		if (y < height / 2) {
-			return 'above';
+
+		// If no restrictions, return the ideal position
+		if (!allowedPositions || allowedPositions.length === 0) {
+			return idealPosition;
 		}
-		// Left half, bottom 50% = below
-		return 'below';
+
+		// If the ideal position is allowed, use it
+		if (allowedPositions.includes(idealPosition)) {
+			return idealPosition;
+		}
+
+		// Otherwise, snap to the nearest allowed position
+		// Priority: if only one position allowed, use that
+		if (allowedPositions.length === 1) {
+			return allowedPositions[0];
+		}
+
+		// Multiple positions allowed but not the ideal one
+		// For above/below: pick based on Y position
+		// For child: pick based on what's available
+		if (allowedPositions.includes('above') && allowedPositions.includes('below')) {
+			// Both above and below allowed, pick based on Y
+			return y < height / 2 ? 'above' : 'below';
+		}
+
+		// Return the first allowed position
+		return allowedPositions[0];
 	}
 
 	// Convert reactive statements to derived values
@@ -244,9 +283,9 @@
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
 			class:ltree-draggable={node?.isDraggable}
-			class:ltree-glow-above={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'above'}
-			class:ltree-glow-below={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'below'}
-			class:ltree-glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child'}
+			class:ltree-glow-above={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'above' && isPositionAllowed('above')}
+			class:ltree-glow-below={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'below' && isPositionAllowed('below')}
+			class:ltree-glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child' && isPositionAllowed('child')}
 			class:ltree-drop-copy={isDragInProgress && isHoveredForDrop && dropOperation === 'copy'}
 			draggable={node?.isDraggable}
 			onclick={(e) => {
@@ -320,33 +359,39 @@
 		</div>
 
 		<!-- Drop zones: positioned relative to .ltree-node-row (outside content to avoid padding issues) -->
-		<!-- Only render floating drop zones when in 'floating' mode -->
+		<!-- Only render floating drop zones when in 'floating' mode, filtered by allowedDropPositions -->
 		{#if dropZoneMode === 'floating' && isDragInProgress && isHoveredForDrop}
 			<div
 				class="ltree-drop-zones ltree-drop-zones-{dropZoneLayout}"
 				style="--drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {dropZoneMaxWidth}px;"
 			>
-				<div
-					class="ltree-drop-zone ltree-drop-above"
-					class:ltree-drop-zone-active={hoveredZone === 'above'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; callbacks.onNodeDragOver(node, e); }}
-					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'above', e); }}
-				>↑ Above</div>
-				<div
-					class="ltree-drop-zone ltree-drop-below"
-					class:ltree-drop-zone-active={hoveredZone === 'below'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; callbacks.onNodeDragOver(node, e); }}
-					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'below', e); }}
-				>↓ Below</div>
-				<div
-					class="ltree-drop-zone ltree-drop-child"
-					class:ltree-drop-zone-active={hoveredZone === 'child'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; callbacks.onNodeDragOver(node, e); }}
-					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'child', e); }}
-				>→ Child</div>
+				{#if isPositionAllowed('above')}
+					<div
+						class="ltree-drop-zone ltree-drop-above"
+						class:ltree-drop-zone-active={hoveredZone === 'above'}
+						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; callbacks.onNodeDragOver(node, e); }}
+						ondragleave={() => { hoveredZone = null; }}
+						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'above', e); }}
+					>↑ Above</div>
+				{/if}
+				{#if isPositionAllowed('below')}
+					<div
+						class="ltree-drop-zone ltree-drop-below"
+						class:ltree-drop-zone-active={hoveredZone === 'below'}
+						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; callbacks.onNodeDragOver(node, e); }}
+						ondragleave={() => { hoveredZone = null; }}
+						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'below', e); }}
+					>↓ Below</div>
+				{/if}
+				{#if isPositionAllowed('child')}
+					<div
+						class="ltree-drop-zone ltree-drop-child"
+						class:ltree-drop-zone-active={hoveredZone === 'child'}
+						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; callbacks.onNodeDragOver(node, e); }}
+						ondragleave={() => { hoveredZone = null; }}
+						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'child', e); }}
+					>→ Child</div>
+				{/if}
 			</div>
 		{/if}
 	</div>

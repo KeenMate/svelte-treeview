@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.6.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.7.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -134,4 +134,12 @@ EXAMPLES:
 - src/routes/examples/data/ - path structure, separators, insert results
 - Snippet name: nodeTemplate (not nodeContent)
 
-RECENT: v4.6.0 - Progressive flat rendering, async beforeDropCallback, context-based callbacks
+DRAG_DROP_POSITIONS:
+- DropPosition type: 'above' | 'below' | 'child'
+- allowedDropPositionsMember: string property mapping for server data
+- getAllowedDropPositionsCallback: (node) => DropPosition[] | null for dynamic logic
+- Glow mode: snaps to nearest allowed position
+- Floating mode: only shows allowed position buttons
+- undefined/empty = all positions allowed (default)
+
+RECENT: v4.7.0 - Per-node drop position restrictions (allowedDropPositionsMember, getAllowedDropPositionsCallback)

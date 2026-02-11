@@ -1,4 +1,5 @@
 export type NodeId = string | number;
+export type DropPosition = 'above' | 'below' | 'child';
 
 export enum VisualState {
 	indeterminate = "indeterminate",
@@ -23,6 +24,7 @@ export interface LTreeNode<T> {
 
 	isDraggable: boolean;
 	isDropAllowed: boolean;
+	allowedDropPositions: DropPosition[] | null | undefined;
 
 	isInsertAllowed: boolean;
 	isNestAllowed: boolean;
@@ -52,6 +54,7 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		priority: undefined,
 		isDraggable: true,
 		isDropAllowed: true,
+		allowedDropPositions: undefined,
 		isInsertAllowed: true,
 		isNestAllowed: true,
 		isCheckboxVisible: false,

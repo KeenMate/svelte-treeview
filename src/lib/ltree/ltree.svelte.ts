@@ -25,11 +25,14 @@ export function createLTree<T>(
 	_isSelectableMember?: string | null | undefined,
 	_isDraggableMember?: string | null | undefined,
 	_isDropAllowedMember?: string | null | undefined,
+	_allowedDropPositionsMember?: string | null | undefined,
 	_displayValueMember?: string | null | undefined,
 	_getDisplayValueCallback?: (node: LTreeNode<T>) => string,
 
 	_searchValueMember?: string | null | undefined,
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
+
+	_getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('./types').DropPosition[] | null | undefined,
 
 	_orderMember?: string | null | undefined,
 
@@ -51,6 +54,7 @@ export function createLTree<T>(
 	let shouldCalculateIsSelectable: boolean = isEmptyString(_isSelectableMember);
 	let shouldCalculateIsDraggable: boolean = isEmptyString(_isDraggableMember);
 	let shouldCalculateIsDropAllowed: boolean = isEmptyString(_isDropAllowedMember);
+	let shouldCalculateAllowedDropPositions: boolean = isEmptyString(_allowedDropPositionsMember);
 	let shouldCalculateDisplayValue: boolean = isEmptyString(_displayValueMember);
 	let shouldCalculateSearchValue: boolean = isEmptyString(_searchValueMember);
 
@@ -111,12 +115,14 @@ export function createLTree<T>(
 		isSelectableMember: _isSelectableMember,
 		isDraggableMember: _isDraggableMember,
 		isDropAllowedMember: _isDropAllowedMember,
+		allowedDropPositionsMember: _allowedDropPositionsMember,
 		hasChildrenMember: _hasChildrenMember,
 		displayValueMember: _displayValueMember,
 		getDisplayValueCallback: _getDisplayValueCallback,
 
 		searchValueMember: _searchValueMember,
 		getSearchValueCallback: _getSearchValueCallback,
+		getAllowedDropPositionsCallback: _getAllowedDropPositionsCallback,
 		orderMember: _orderMember,
 		isSorted: false,
 
@@ -244,6 +250,7 @@ export function createLTree<T>(
 				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
 				if (!shouldCalculateIsDraggable) node.isDraggable = row[_isDraggableMember];
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = row[_isDropAllowedMember];
+				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = row[_allowedDropPositionsMember];
 
 				if (!shouldCalculateHasChildren) node.hasChildren = row[_hasChildrenMember];
 
@@ -691,6 +698,19 @@ export function createLTree<T>(
 			if (this.getSearchValueCallback) return this.getSearchValueCallback(node);
 
 			return '[N/A]';
+		},
+
+		getNodeAllowedDropPositions(node: LTreeNode<T>): import('./types').DropPosition[] | null | undefined {
+			// Priority: callback > member > node property
+			if (this.getAllowedDropPositionsCallback) {
+				return this.getAllowedDropPositionsCallback(node);
+			}
+
+			if (!shouldCalculateAllowedDropPositions && node.data) {
+				return node.data[_allowedDropPositionsMember];
+			}
+
+			return node.allowedDropPositions;
 		},
 
 		refresh(): void {

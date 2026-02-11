@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.0] - 2026-02-11
+
+### Added
+- **Per-Node Drop Position Restrictions**: New feature to control which drop positions are allowed per node
+  - `allowedDropPositionsMember` - Property name mapping for static data (e.g., from server)
+  - `getAllowedDropPositionsCallback` - Callback for dynamic position logic based on node type
+  - `DropPosition` type exported: `'above' | 'below' | 'child'`
+  - Example use cases:
+    - Trash folder: `['child']` only (can drop INTO, not above/below)
+    - Files: `['above', 'below']` only (can't drop INTO a file)
+    - Folders: `undefined` or `[]` (all positions allowed - default)
+  - Works with both glow mode (snaps to nearest allowed position) and floating mode (only shows allowed zones)
+  - Backwards compatible: `undefined`/empty array = all positions allowed
+
+### Example Usage
+```typescript
+// Callback approach (dynamic logic)
+function getAllowedDropPositionsCallback(node: LTreeNode<T>): DropPosition[] | null {
+  if (node.data?.type === 'file') return ['above', 'below'];
+  if (node.data?.type === 'trash') return ['child'];
+  return undefined; // all positions allowed
+}
+
+// Member approach (server data)
+const data = [
+  { path: '1', name: 'Trash', allowedDropPositions: ['child'] },
+  { path: '2', name: 'Document.pdf', allowedDropPositions: ['above', 'below'] },
+  { path: '3', name: 'Projects' }, // all positions (default)
+];
+```
+
 ## [4.6.0] - 2026-02-11
 
 ### Added

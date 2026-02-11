@@ -2,7 +2,22 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
-## 📢 New in v4.6: Progressive Flat Rendering
+## 📢 New in v4.7: Per-Node Drop Position Restrictions
+
+> [!NOTE]
+> **You can now restrict which drop positions (above/below/child) are allowed per node.**
+
+Use `getAllowedDropPositionsCallback` for dynamic logic or `allowedDropPositionsMember` for server data:
+```typescript
+// Files can only have siblings, trash only accepts children
+function getAllowedDropPositions(node) {
+  if (node.data?.type === 'file') return ['above', 'below'];
+  if (node.data?.type === 'trash') return ['child'];
+  return undefined; // all positions allowed (default)
+}
+```
+
+## 📢 v4.6: Progressive Flat Rendering
 
 > [!NOTE]
 > **The tree now uses progressive flat rendering by default for significantly improved performance.**
@@ -309,6 +324,45 @@ When using `dropZoneMode="floating"` (default), users can choose where to drop:
 - **Below**: Insert as sibling after the target node
 - **Child**: Insert as child of the target node
 
+#### Per-Node Drop Position Restrictions
+
+You can restrict which drop positions are allowed per node. This is useful for:
+- **Trash/Recycle Bin**: Only allow dropping INTO (child), not above/below
+- **Files**: Only allow above/below (can't drop INTO a file)
+- **Folders**: Allow all positions (default)
+
+```svelte
+<script lang="ts">
+  import { Tree, type DropPosition, type LTreeNode } from '@keenmate/svelte-treeview';
+
+  // Dynamic callback approach
+  function getAllowedDropPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
+    if (node.data?.type === 'file') return ['above', 'below'];
+    if (node.data?.type === 'trash') return ['child'];
+    return undefined; // all positions allowed
+  }
+</script>
+
+<Tree
+  {data}
+  getAllowedDropPositionsCallback={getAllowedDropPositions}
+/>
+```
+
+Or use the member approach for server-side data:
+```svelte
+<Tree
+  {data}
+  allowedDropPositionsMember="allowedDropPositions"
+/>
+
+<!-- Where data items have: { allowedDropPositions: ['child'] } -->
+```
+
+When restrictions are applied:
+- **Glow mode**: Snaps to the nearest allowed position
+- **Floating mode**: Only renders buttons for allowed positions
+
 #### Async Drop Validation
 
 Use `beforeDropCallback` to validate or modify drops, including async operations like confirmation dialogs:
@@ -599,6 +653,7 @@ The component includes several pre-built classes for styling selected nodes:
 | `isSelectedMember` | `string \| null` | `null` | Property name for selected state |
 | `isDraggableMember` | `string \| null` | `null` | Property name for draggable state |
 | `isDropAllowedMember` | `string \| null` | `null` | Property name for drop allowed state |
+| `allowedDropPositionsMember` | `string \| null` | `null` | Property name for allowed drop positions array |
 | `hasChildrenMember` | `string \| null` | `null` | Property name for children existence |
 | `isSorted` | `boolean \| null` | `null` | Whether items should be sorted |
 
@@ -653,6 +708,7 @@ Without both requirements, no search indexing will occur.
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
+| `getAllowedDropPositionsCallback` | `(node) => DropPosition[] \| null` | `undefined` | Callback returning allowed drop positions per node |
 | `beforeDropCallback` | `(dropNode, draggedNode, position, event, operation) => boolean \| { position?, operation? } \| Promise<...>` | `undefined` | Async-capable callback to validate/modify drops before they happen |
 | `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is 'above', 'below', or 'child'. Operation is 'move' or 'copy' |
 
