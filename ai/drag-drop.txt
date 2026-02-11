@@ -1,0 +1,387 @@
+DRAG AND DROP
+=============
+
+CRITICAL: Full drag and drop support with position control
+- Three drop positions: above, below, child
+- Same-tree and cross-tree moves
+- Touch support for mobile
+- Copy operations with Ctrl+drag
+- Async validation with beforeDropCallback
+- Per-node drop position restrictions
+
+BASIC DRAG AND DROP
+-------------------
+<script>
+  function handleDrop(dropNode, draggedNode, position, event, operation) {
+    console.log(`Dropped ${draggedNode.data.name}`);
+    console.log(`Position: ${position}`);  // 'above', 'below', 'child'
+    console.log(`Target: ${dropNode?.data.name}`);
+    console.log(`Operation: ${operation}`);  // 'move' or 'copy'
+  }
+</script>
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  dragOverNodeClass="ltree-dragover-glow"
+  onNodeDrop={handleDrop}
+/>
+
+DROP POSITIONS
+--------------
+Three positions available when dropping:
+
+'above'  - Insert as sibling BEFORE the target node
+'below'  - Insert as sibling AFTER the target node
+'child'  - Insert as CHILD of the target node
+
+The position is calculated based on mouse Y position:
+- Top 25% of node → 'above'
+- Middle 50% of node → 'child'
+- Bottom 25% of node → 'below'
+
+DROP ZONE MODES
+---------------
+Two visual modes for drop zones:
+
+// Glow mode (default) - border/shadow indicators
+<Tree dropZoneMode="glow" dragOverNodeClass="ltree-dragover-glow" />
+
+// Floating mode - popup buttons
+<Tree dropZoneMode="floating" />
+
+Glow mode classes:
+- ltree-glow-above - top border glow
+- ltree-glow-below - bottom border glow
+- ltree-glow-child - full border glow
+
+DROP ZONE LAYOUTS (Floating Mode)
+---------------------------------
+<Tree
+  dropZoneMode="floating"
+  dropZoneLayout="around"     <!-- Default: above on top, below/child on bottom -->
+  dropZoneStart={33}          <!-- Start position (percentage) -->
+/>
+
+Layout options:
+- 'around' - Above on top, Below/Child on bottom
+- 'above' - All 3 zones in row above node
+- 'below' - All 3 zones in row below node
+- 'wave' - Stacked vertically
+- 'wave2' - Diagonal wave pattern
+
+DROP POSITION RESTRICTIONS
+--------------------------
+CRITICAL: Restrict which positions are allowed per node
+
+Use case examples:
+- Trash folder: only 'child' (drop INTO, not around)
+- Files: only 'above'/'below' (can't drop INTO a file)
+- Folders: all positions (default)
+
+Method 1: Callback (dynamic logic)
+
+<Tree
+  getAllowedDropPositionsCallback={(node) => {
+    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'trash') return ['child'];
+    return undefined;  // all positions allowed
+  }}
+/>
+
+Method 2: Member property (server data)
+
+const data = [
+  { path: '1', name: 'Trash', allowedDropPositions: ['child'] },
+  { path: '2', name: 'File.txt', allowedDropPositions: ['above', 'below'] },
+  { path: '3', name: 'Folder' }  // undefined = all positions
+];
+
+<Tree allowedDropPositionsMember="allowedDropPositions" />
+
+Behavior when restricted:
+- Glow mode: snaps to nearest allowed position
+- Floating mode: only shows buttons for allowed positions
+
+DRAG DROP MODE
+--------------
+Control which drag operations are allowed:
+
+<Tree dragDropMode="both" />  <!-- Default: self and cross-tree -->
+
+Options:
+- 'none' - Drag and drop disabled
+- 'self' - Only within same tree
+- 'cross' - Only between different trees
+- 'both' - Both self and cross-tree
+
+SAME-TREE MOVE (Auto-handled)
+-----------------------------
+When dropping within the same tree, the move is auto-handled:
+
+<Tree
+  {data}
+  orderMember="sortOrder"
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+    // Move already happened! This is for notification only.
+    console.log(`Moved ${draggedNode.data.name} ${position} ${dropNode.data.name}`);
+  }}
+/>
+
+IMPORTANT: Set orderMember for proper sibling ordering
+
+CROSS-TREE DRAG
+---------------
+<script>
+  let leftData = $state.raw([...]);
+  let rightData = $state.raw([...]);
+
+  function handleLeftDrop(dropNode, draggedNode, position, event, operation) {
+    // Handle item coming from right tree
+  }
+
+  function handleRightDrop(dropNode, draggedNode, position, event, operation) {
+    // Handle item coming from left tree
+  }
+</script>
+
+<Tree data={leftData} treeId="left" onNodeDrop={handleLeftDrop} />
+<Tree data={rightData} treeId="right" onNodeDrop={handleRightDrop} />
+
+ASYNC DROP VALIDATION
+---------------------
+Use beforeDropCallback for validation or modification:
+
+<script>
+  async function beforeDrop(dropNode, draggedNode, position, event, operation) {
+    // Cancel the drop
+    if (draggedNode.data.locked) {
+      return false;
+    }
+
+    // Show confirmation dialog
+    if (position === 'child' && !dropNode.data.isFolder) {
+      const confirmed = await showConfirmDialog('Convert to folder?');
+      if (!confirmed) return false;
+    }
+
+    // Modify position
+    if (position === 'child' && dropNode.data.type === 'file') {
+      return { position: 'below' };
+    }
+
+    // Proceed normally
+    return true;
+  }
+</script>
+
+<Tree beforeDropCallback={beforeDrop} onNodeDrop={handleDrop} />
+
+Return values:
+- false → Cancel the drop
+- true / undefined → Proceed normally
+- { position: 'above' } → Override position
+- { operation: 'copy' } → Override operation
+- Promise<...> → Async validation
+
+COPY OPERATION (Ctrl+Drag)
+--------------------------
+Enable copying with Ctrl+drag:
+
+<Tree
+  allowCopy={true}
+  autoHandleCopy={true}  <!-- Default: auto-creates copy -->
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+    if (operation === 'copy') {
+      console.log('Copied node');
+    } else {
+      console.log('Moved node');
+    }
+  }}
+/>
+
+autoHandleCopy options:
+- true: Tree creates copy with generated ID (good for batch/offline)
+- false: Your callback handles copy (good for DB/API integration)
+
+DRAGGABLE CONFIGURATION
+-----------------------
+Control which nodes can be dragged:
+
+// All nodes draggable (default)
+<Tree />
+
+// Using member property
+const data = [
+  { path: '1', name: 'Draggable', isDraggable: true },
+  { path: '2', name: 'Fixed', isDraggable: false }
+];
+
+<Tree isDraggableMember="isDraggable" />
+
+DROP ALLOWED CONFIGURATION
+--------------------------
+Control which nodes accept drops:
+
+// Using member property
+const data = [
+  { path: '1', name: 'Can receive drops', isDropAllowed: true },
+  { path: '2', name: 'Cannot receive drops', isDropAllowed: false }
+];
+
+<Tree isDropAllowedMember="isDropAllowed" />
+
+ORDER MEMBER (SIBLING ORDERING)
+-------------------------------
+CRITICAL: For proper above/below positioning
+
+const data = [
+  { path: '1.1', name: 'First', sortOrder: 10 },
+  { path: '1.2', name: 'Second', sortOrder: 20 },
+  { path: '1.3', name: 'Third', sortOrder: 30 }
+];
+
+<Tree orderMember="sortOrder" />
+
+When moving nodes:
+- Tree auto-calculates new order values
+- Inserts between adjacent values
+- Uses midpoint: (10 + 20) / 2 = 15
+
+ROOT DROP ZONE
+--------------
+Drop zone at bottom for adding root-level items:
+
+When dragging, a root drop zone appears at tree bottom
+- Dropping there adds item as root node
+- dropNode is null in callback
+
+<Tree
+  onNodeDrop={(dropNode, draggedNode, position, event) => {
+    if (dropNode === null) {
+      console.log('Dropped at root level');
+    }
+  }}
+/>
+
+EMPTY TREE DROP
+---------------
+Custom placeholder for empty trees:
+
+<Tree {data}>
+  {#snippet dropPlaceholder()}
+    <div class="drop-here">
+      Drop items here to start
+    </div>
+  {/snippet}
+</Tree>
+
+When dropping to empty tree:
+- dropNode is null
+- position is 'child'
+
+TOUCH DRAG SUPPORT
+------------------
+Enabled by default on touch devices:
+
+- Long-press (300ms) initiates drag
+- Distinguishes from tap and scroll
+- Ghost element follows finger
+- Haptic feedback on supported devices
+- Move >10px before long-press cancels (allows scrolling)
+
+Same callback as desktop:
+<Tree onNodeDrop={handleDrop} />
+
+DRAG EVENTS
+-----------
+<Tree
+  onNodeDragStart={(node, event) => {
+    console.log('Started dragging:', node.data.name);
+  }}
+  onNodeDragOver={(node, event) => {
+    console.log('Dragging over:', node.data.name);
+  }}
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+    console.log('Dropped');
+  }}
+/>
+
+VISUAL FEEDBACK CLASSES
+-----------------------
+Drag-over styling:
+
+<Tree dragOverNodeClass="ltree-dragover-glow" />
+
+Built-in classes:
+- ltree-dragover-highlight - Dashed border
+- ltree-dragover-glow - Shadow glow effect
+
+Copy operation class:
+- ltree-drop-copy - Applied during Ctrl+drag
+
+PROGRAMMATIC MOVE
+-----------------
+Move nodes programmatically:
+
+<script>
+  let treeRef;
+
+  function moveUp(nodePath) {
+    const siblings = treeRef.getSiblings(nodePath);
+    const index = siblings.findIndex(s => s.path === nodePath);
+    if (index > 0) {
+      treeRef.moveNode(nodePath, siblings[index - 1].path, 'above');
+    }
+  }
+</script>
+
+<Tree bind:this={treeRef} />
+
+COMMON PATTERNS
+---------------
+File manager:
+<Tree
+  dragDropMode="self"
+  orderMember="sortOrder"
+  getAllowedDropPositionsCallback={(node) =>
+    node.data.type === 'file' ? ['above', 'below'] : undefined
+  }
+  onNodeDrop={handleDrop}
+/>
+
+Two-tree transfer:
+<Tree data={available} treeId="available" dragDropMode="cross" />
+<Tree data={selected} treeId="selected" dragDropMode="cross" />
+
+With confirmation:
+<Tree
+  beforeDropCallback={async (drop, drag, pos) => {
+    return await confirm(`Move ${drag.data.name}?`);
+  }}
+/>
+
+DEBUGGING
+---------
+Enable drag logging:
+
+import { setCategoryLevel } from '@keenmate/svelte-treeview';
+setCategoryLevel('LTREE:DRAG', 'debug');
+
+Debug panel:
+<Tree shouldDisplayDebugInformation={true} />
+// Shows currently dragged node
+
+BEST PRACTICES
+--------------
+✅ Set orderMember for sibling ordering
+✅ Use beforeDropCallback for validation
+✅ Handle cross-tree drops explicitly
+✅ Use getAllowedDropPositionsCallback for restrictions
+✅ Provide visual feedback (dragOverNodeClass)
+
+❌ Don't forget orderMember (causes position issues)
+❌ Don't modify data in beforeDropCallback (use onNodeDrop)
+❌ Don't assume same-tree vs cross-tree without checking
+❌ Don't block UI in sync beforeDropCallback

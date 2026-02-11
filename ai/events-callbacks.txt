@@ -1,0 +1,382 @@
+EVENTS AND CALLBACKS
+====================
+
+CRITICAL: Event-driven architecture
+- Callbacks for user interactions
+- Callbacks for data transformation
+- Callbacks for drag and drop
+- All callbacks receive LTreeNode<T>
+
+NODE CLICK
+----------
+<Tree
+  onNodeClicked={(node) => {
+    console.log('Clicked:', node.data.name);
+    console.log('Path:', node.path);
+    console.log('Level:', node.level);
+  }}
+/>
+
+Toggle on click (default: true):
+<Tree shouldToggleOnNodeClick={false} />
+
+When false, clicks only select, don't expand/collapse.
+
+DRAG EVENTS
+-----------
+<Tree
+  onNodeDragStart={(node, event) => {
+    console.log('Started dragging:', node.data.name);
+    // Can modify event.dataTransfer here
+  }}
+
+  onNodeDragOver={(node, event) => {
+    console.log('Dragging over:', node.data.name);
+  }}
+
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+    console.log('Dropped:', draggedNode.data.name);
+    console.log('Target:', dropNode?.data.name);
+    console.log('Position:', position);  // 'above', 'below', 'child'
+    console.log('Operation:', operation);  // 'move', 'copy'
+  }}
+/>
+
+BEFORE DROP CALLBACK
+--------------------
+Validate or modify drops before they happen:
+
+<Tree
+  beforeDropCallback={async (dropNode, draggedNode, position, event, operation) => {
+    // Cancel the drop
+    if (draggedNode.data.locked) {
+      return false;
+    }
+
+    // Show confirmation
+    if (!await confirm('Are you sure?')) {
+      return false;
+    }
+
+    // Modify position
+    if (position === 'child' && dropNode.data.type === 'file') {
+      return { position: 'below' };
+    }
+
+    // Modify operation
+    if (event.shiftKey) {
+      return { operation: 'copy' };
+    }
+
+    // Proceed normally
+    return true;
+  }}
+/>
+
+Return values:
+- false → Cancel drop
+- true / undefined → Proceed normally
+- { position: 'above'|'below'|'child' } → Override position
+- { operation: 'move'|'copy' } → Override operation
+- { position, operation } → Override both
+- Promise<...> → Async validation
+
+DISPLAY VALUE CALLBACK
+----------------------
+Compute display text dynamically:
+
+<Tree
+  getDisplayValueCallback={(node) => {
+    const item = node.data;
+    return `${item.firstName} ${item.lastName}`;
+  }}
+/>
+
+Complex example:
+<Tree
+  getDisplayValueCallback={(node) => {
+    const item = node.data;
+    const count = item.children?.length || 0;
+    const suffix = count > 0 ? ` (${count})` : '';
+    return `${item.name}${suffix}`;
+  }}
+/>
+
+SEARCH VALUE CALLBACK
+---------------------
+Control what text gets indexed for search:
+
+<Tree
+  getSearchValueCallback={(node) => {
+    const item = node.data;
+    return `${item.name} ${item.email} ${item.tags.join(' ')}`;
+  }}
+/>
+
+ALLOWED DROP POSITIONS CALLBACK
+-------------------------------
+Control which drop positions are allowed per node:
+
+<Tree
+  getAllowedDropPositionsCallback={(node) => {
+    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'trash') return ['child'];
+    return undefined;  // all positions
+  }}
+/>
+
+CONTEXT MENU CALLBACK
+---------------------
+Generate context menu items dynamically:
+
+<Tree
+  contextMenuCallback={(node, closeMenuCallback) => {
+    return [
+      {
+        icon: '📂',
+        title: 'Open',
+        callback: () => {
+          openItem(node.data);
+          closeMenuCallback();
+        }
+      },
+      { isDivider: true },
+      {
+        icon: '🗑️',
+        title: 'Delete',
+        isDisabled: node.data.isProtected,
+        callback: async () => {
+          if (await confirmDelete()) {
+            deleteItem(node.data);
+            closeMenuCallback();
+          }
+        }
+      }
+    ];
+  }}
+/>
+
+SORT CALLBACK
+-------------
+Custom sorting for tree display:
+
+<Tree
+  sortCallback={(nodes) => {
+    return nodes.sort((a, b) => {
+      // Sort by level first (required for proper tree construction)
+      const aLevel = a.path.split('.').length;
+      const bLevel = b.path.split('.').length;
+      if (aLevel !== bLevel) return aLevel - bLevel;
+
+      // Then by your criteria
+      return a.data.name.localeCompare(b.data.name);
+    });
+  }}
+/>
+
+INITIALIZE INDEX CALLBACK
+-------------------------
+Custom FlexSearch index configuration:
+
+<Tree
+  initializeIndexCallback={() => {
+    return new Index({
+      tokenize: 'forward',
+      resolution: 9,
+      cache: true
+    });
+  }}
+/>
+
+BINDING VS CALLBACK
+-------------------
+Bindable props (two-way):
+- searchText
+- selectedNode
+- insertResult
+
+Callback props (one-way notification):
+- onNodeClicked
+- onNodeDrop
+- onNodeDragStart
+- onNodeDragOver
+
+Example combining both:
+
+<script>
+  let selectedNode = $state(null);
+
+  function handleClick(node) {
+    // Called in addition to selectedNode update
+    console.log('Clicked:', node.path);
+    analytics.track('node_click', { path: node.path });
+  }
+</script>
+
+<Tree
+  bind:selectedNode
+  onNodeClicked={handleClick}
+/>
+
+CALLBACK SIGNATURES
+-------------------
+onNodeClicked:
+(node: LTreeNode<T>) => void
+
+onNodeDragStart:
+(node: LTreeNode<T>, event: DragEvent) => void
+
+onNodeDragOver:
+(node: LTreeNode<T>, event: DragEvent) => void
+
+onNodeDrop:
+(
+  dropNode: LTreeNode<T> | null,
+  draggedNode: LTreeNode<T>,
+  position: 'above' | 'below' | 'child',
+  event: DragEvent,
+  operation: 'move' | 'copy'
+) => void
+
+beforeDropCallback:
+(
+  dropNode: LTreeNode<T> | null,
+  draggedNode: LTreeNode<T>,
+  position: 'above' | 'below' | 'child',
+  event: DragEvent,
+  operation: 'move' | 'copy'
+) => boolean | { position?, operation? } | Promise<...>
+
+getDisplayValueCallback:
+(node: LTreeNode<T>) => string
+
+getSearchValueCallback:
+(node: LTreeNode<T>) => string
+
+getAllowedDropPositionsCallback:
+(node: LTreeNode<T>) => DropPosition[] | null | undefined
+
+contextMenuCallback:
+(node: LTreeNode<T>, closeMenu: () => void) => ContextMenuItem[]
+
+sortCallback:
+(nodes: LTreeNode<T>[]) => LTreeNode<T>[]
+
+initializeIndexCallback:
+() => Index
+
+ASYNC CALLBACKS
+---------------
+These callbacks support async/Promise:
+
+- beforeDropCallback (awaited before drop)
+- contextMenuCallback item callbacks (individual actions)
+
+Example async beforeDropCallback:
+beforeDropCallback={async (drop, drag, pos) => {
+  const allowed = await checkPermission(drag.data);
+  return allowed;
+}}
+
+Example async context menu:
+{
+  title: 'Save',
+  callback: async () => {
+    await saveToServer();
+    closeMenu();
+  }
+}
+
+ERROR HANDLING
+--------------
+Handle errors in async callbacks:
+
+beforeDropCallback={async (drop, drag, pos) => {
+  try {
+    await validateMove(drag, drop);
+    return true;
+  } catch (error) {
+    showError(error.message);
+    return false;
+  }
+}}
+
+Context menu with error handling:
+{
+  title: 'Delete',
+  callback: async () => {
+    try {
+      await deleteItem(node.data);
+      closeMenu();
+    } catch (error) {
+      showError('Failed to delete');
+      // Menu stays open
+    }
+  }
+}
+
+CALLBACK PRIORITY
+-----------------
+When both member and callback are set, callback wins:
+
+getDisplayValueCallback > displayValueMember
+
+<Tree
+  displayValueMember="name"  // Ignored
+  getDisplayValueCallback={(n) => n.data.title}  // Used
+/>
+
+COMMON PATTERNS
+---------------
+Selection tracking:
+<script>
+  let history = $state([]);
+</script>
+
+<Tree
+  onNodeClicked={(node) => {
+    history = [...history, node.path];
+  }}
+/>
+
+Prevent certain drops:
+<Tree
+  beforeDropCallback={(drop, drag) => {
+    // Prevent dropping folders into files
+    if (drag.data.type === 'folder' && drop?.data.type === 'file') {
+      showError('Cannot drop folder into file');
+      return false;
+    }
+    return true;
+  }}
+/>
+
+Analytics integration:
+<Tree
+  onNodeClicked={(node) => {
+    analytics.track('tree_click', {
+      path: node.path,
+      type: node.data.type
+    });
+  }}
+  onNodeDrop={(drop, drag, pos) => {
+    analytics.track('tree_drop', {
+      from: drag.path,
+      to: drop?.path,
+      position: pos
+    });
+  }}
+/>
+
+BEST PRACTICES
+--------------
+✅ Use callbacks for side effects (logging, analytics)
+✅ Use bindings for state synchronization
+✅ Handle errors in async callbacks
+✅ Return early from beforeDropCallback for validation
+✅ Close context menu after successful action
+
+❌ Don't modify node data directly in callbacks
+❌ Don't do heavy computation in callbacks
+❌ Don't forget error handling in async callbacks
+❌ Don't block UI with sync operations

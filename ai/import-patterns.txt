@@ -1,0 +1,271 @@
+IMPORT PATTERNS
+===============
+
+CRITICAL: Always import styles along with the component
+- Component has no embedded styles
+- Styles must be imported separately
+- Both CSS and SCSS versions available
+
+BASIC IMPORT
+------------
+// Component import
+import { Tree } from '@keenmate/svelte-treeview';
+
+// Style import (pick one)
+import '@keenmate/svelte-treeview/styles.css';   // Compiled CSS
+import '@keenmate/svelte-treeview/styles.scss';  // SCSS source
+
+COMPONENT EXPORTS
+-----------------
+Named exports from the package:
+
+// Main component
+import { Tree } from '@keenmate/svelte-treeview';
+
+// Types
+import type {
+  LTreeNode,
+  Ltree,
+  ContextMenuItem,
+  DropPosition,
+  InsertArrayResult,
+  NodeCallbacks,
+  NodeConfig
+} from '@keenmate/svelte-treeview';
+
+// Logging utilities
+import {
+  enableLogging,
+  disableLogging,
+  setLogLevel,
+  setCategoryLevel,
+  enablePerfLogging,
+  disablePerfLogging,
+  setPerfThreshold
+} from '@keenmate/svelte-treeview';
+
+STYLE IMPORTS
+-------------
+Option 1: In JavaScript entry point
+// main.ts or main.js
+import '@keenmate/svelte-treeview/styles.css';
+
+Option 2: In root layout (SvelteKit)
+// +layout.svelte
+<script>
+  import '@keenmate/svelte-treeview/styles.css';
+</script>
+
+Option 3: In component file
+// MyComponent.svelte
+<script>
+  import { Tree } from '@keenmate/svelte-treeview';
+  import '@keenmate/svelte-treeview/styles.css';
+</script>
+
+Option 4: In Svelte style block (SCSS only)
+<style lang="scss">
+  @import '@keenmate/svelte-treeview/styles.scss';
+</style>
+
+SCSS CUSTOMIZATION
+------------------
+Override variables before importing:
+
+<style lang="scss">
+  // Override variables
+  $tree-node-indent-per-level: 1.5rem;
+  $ltree-primary: #6366f1;
+
+  // Then import
+  @import '@keenmate/svelte-treeview/styles.scss';
+</style>
+
+TYPE IMPORTS
+------------
+Import types for TypeScript:
+
+import type { LTreeNode } from '@keenmate/svelte-treeview';
+
+interface MyItem {
+  id: string;
+  path: string;
+  name: string;
+}
+
+let selectedNode: LTreeNode<MyItem> | null = $state(null);
+
+Full type imports:
+
+import type {
+  LTreeNode,           // Tree node interface
+  Ltree,               // Tree instance interface
+  ContextMenuItem,     // Context menu item
+  DropPosition,        // 'above' | 'below' | 'child'
+  InsertArrayResult,   // Insert operation result
+  NodeCallbacks,       // Event callback types
+  NodeConfig           // Node configuration types
+} from '@keenmate/svelte-treeview';
+
+LOGGING IMPORTS
+---------------
+Debug and performance logging:
+
+// Enable all logging
+import { enableLogging } from '@keenmate/svelte-treeview';
+enableLogging();
+
+// Category-specific logging
+import { setCategoryLevel } from '@keenmate/svelte-treeview';
+setCategoryLevel('LTREE:DRAG', 'debug');
+setCategoryLevel('LTREE:RENDER', 'debug');
+
+// Performance logging
+import { enablePerfLogging, setPerfThreshold } from '@keenmate/svelte-treeview';
+enablePerfLogging();
+setPerfThreshold(100); // Only log operations > 100ms
+
+Log categories:
+- LTREE:INIT - Initialization
+- LTREE:DATA - Data operations
+- LTREE:RENDER - Rendering
+- LTREE:INDEX - Search indexing
+- LTREE:DRAG - Drag and drop
+- LTREE:UI - User interactions
+
+GLOBAL API
+----------
+Access from browser console:
+
+// Check version
+window.components['svelte-treeview'].version()
+
+// Enable logging from console
+window.components['svelte-treeview'].logging.enableLogging()
+
+// Performance logging
+window.components['svelte-treeview'].perf.enable()
+
+// Get package info
+window.components['svelte-treeview'].config
+
+SVELTEKIT IMPORT
+----------------
+// +page.svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+  import type { LTreeNode } from '@keenmate/svelte-treeview';
+
+  interface Item {
+    id: string;
+    path: string;
+    name: string;
+  }
+
+  let data: Item[] = $state([]);
+  let selectedNode: LTreeNode<Item> | null = $state(null);
+</script>
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:selectedNode
+/>
+
+// +layout.svelte (for global styles)
+<script>
+  import '@keenmate/svelte-treeview/styles.css';
+</script>
+
+<slot />
+
+VITE + SVELTE IMPORT
+--------------------
+// main.ts
+import './app.css'
+import '@keenmate/svelte-treeview/styles.css';
+import App from './App.svelte'
+
+const app = new App({
+  target: document.getElementById('app')!,
+})
+
+export default app
+
+// App.svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+</script>
+
+DYNAMIC IMPORT
+--------------
+For code splitting:
+
+<script>
+  import { onMount } from 'svelte';
+
+  let Tree;
+
+  onMount(async () => {
+    const module = await import('@keenmate/svelte-treeview');
+    Tree = module.Tree;
+
+    // Import styles dynamically
+    await import('@keenmate/svelte-treeview/styles.css');
+  });
+</script>
+
+{#if Tree}
+  <svelte:component this={Tree} {data} ... />
+{/if}
+
+PACKAGE STRUCTURE
+-----------------
+@keenmate/svelte-treeview/
+├── dist/
+│   ├── index.js          # Main entry (ESM)
+│   ├── index.d.ts        # TypeScript declarations
+│   ├── styles.css        # Compiled CSS
+│   └── styles.scss       # SCSS source
+└── package.json
+
+PEER DEPENDENCIES
+-----------------
+Required:
+- svelte: ^5.0.0
+
+Optional:
+- flexsearch: ^0.8.205 (for search functionality)
+
+If using search features:
+npm install flexsearch
+
+TROUBLESHOOTING
+---------------
+"Module not found" error:
+✅ npm install @keenmate/svelte-treeview
+✅ Check node_modules exists
+
+"Tree is not defined":
+✅ import { Tree } from '@keenmate/svelte-treeview';
+❌ import Tree from '@keenmate/svelte-treeview';
+
+No styles showing:
+✅ import '@keenmate/svelte-treeview/styles.css';
+✅ Check import is actually executed
+
+TypeScript errors:
+✅ import type { LTreeNode } from '@keenmate/svelte-treeview';
+✅ Check tsconfig.json has proper module resolution
+
+BEST PRACTICES
+--------------
+✅ Import styles once at app root level
+✅ Use type imports for TypeScript
+✅ Use named exports (not default)
+✅ Import logging utilities only in development
+
+❌ Don't import styles multiple times
+❌ Don't use default imports
+❌ Don't forget peer dependencies

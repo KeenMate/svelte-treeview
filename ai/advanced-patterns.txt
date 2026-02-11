@@ -1,0 +1,506 @@
+ADVANCED PATTERNS
+=================
+
+Complex use cases and integration patterns for the tree component.
+
+EXTERNAL UPDATE API
+-------------------
+Update props from vanilla JavaScript:
+
+// Get reference to tree
+const treeElement = document.querySelector('#my-tree');
+
+// Update multiple props
+treeElement.update({
+  searchText: 'query',
+  expandLevel: 3,
+  data: newData
+});
+
+// Update single prop
+treeElement.update({ searchText: '' });
+
+All props updatable except snippets:
+- data, searchText, selectedNode, expandLevel
+- Members: idMember, pathMember, displayValueMember
+- Callbacks: sortCallback, onNodeClicked, etc.
+- Visual: bodyClass, selectedNodeClass, etc.
+
+LAZY LOADING CHILDREN
+---------------------
+Load children on demand:
+
+<script>
+  let data = $state.raw([
+    { id: '1', path: '1', name: 'Folder', hasChildren: true }
+  ]);
+
+  async function handleClick(node) {
+    if (node.data.hasChildren && !node.hasChildren) {
+      // Fetch children from server
+      const children = await fetchChildren(node.path);
+
+      // Add to data
+      data = [...data, ...children];
+
+      // Expand the node
+      treeRef.expandNodes(node.path);
+    }
+  }
+</script>
+
+<Tree
+  {data}
+  hasChildrenMember="hasChildren"
+  onNodeClicked={handleClick}
+/>
+
+VIRTUALIZED TREE (EXTERNAL)
+---------------------------
+For extremely large trees (50,000+ nodes), implement external virtualization:
+
+<script>
+  import { VirtualList } from 'svelte-virtual-list';
+
+  let flatNodes = $derived(getFlatVisibleNodes(treeData));
+
+  function getFlatVisibleNodes(data) {
+    // Flatten tree respecting expanded state
+    const result = [];
+    function traverse(nodes, level) {
+      for (const node of nodes) {
+        result.push({ ...node, level });
+        if (node.isExpanded && node.children) {
+          traverse(node.children, level + 1);
+        }
+      }
+    }
+    traverse(data, 0);
+    return result;
+  }
+</script>
+
+<VirtualList items={flatNodes} let:item>
+  <div style="padding-left: {item.level * 20}px">
+    {item.name}
+  </div>
+</VirtualList>
+
+MULTI-SELECT MODE
+-----------------
+Implement checkbox-based multi-selection:
+
+<script>
+  let selectedPaths = $state(new Set());
+
+  function toggleSelection(node) {
+    const newSet = new Set(selectedPaths);
+    if (newSet.has(node.path)) {
+      newSet.delete(node.path);
+    } else {
+      newSet.add(node.path);
+    }
+    selectedPaths = newSet;
+  }
+
+  function isSelected(path) {
+    return selectedPaths.has(path);
+  }
+</script>
+
+<Tree {data}>
+  {#snippet nodeTemplate(node)}
+    <label>
+      <input
+        type="checkbox"
+        checked={isSelected(node.path)}
+        onchange={() => toggleSelection(node)}
+      />
+      {node.data.name}
+    </label>
+  {/snippet}
+</Tree>
+
+KEYBOARD NAVIGATION
+-------------------
+Add keyboard support:
+
+<script>
+  let selectedNode = $state(null);
+  let treeRef;
+
+  function handleKeydown(e) {
+    if (!selectedNode) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        selectNext();
+        break;
+      case 'ArrowUp':
+        selectPrevious();
+        break;
+      case 'ArrowRight':
+        treeRef.expandNodes(selectedNode.path);
+        break;
+      case 'ArrowLeft':
+        treeRef.collapseNodes(selectedNode.path);
+        break;
+      case 'Enter':
+        activateNode(selectedNode);
+        break;
+    }
+  }
+
+  function selectNext() {
+    const flat = treeRef.ltree.flatTreeNodes;
+    const idx = flat.findIndex(n => n.path === selectedNode.path);
+    if (idx < flat.length - 1) {
+      selectedNode = flat[idx + 1];
+      treeRef.scrollToPath(selectedNode.path);
+    }
+  }
+</script>
+
+<div onkeydown={handleKeydown} tabindex="0">
+  <Tree bind:this={treeRef} bind:selectedNode />
+</div>
+
+UNDO/REDO SYSTEM
+----------------
+Track operations for undo:
+
+<script>
+  let history = $state([]);
+  let historyIndex = $state(-1);
+
+  function execute(operation, undoOperation) {
+    operation();
+
+    // Clear redo stack
+    history = history.slice(0, historyIndex + 1);
+    history = [...history, { redo: operation, undo: undoOperation }];
+    historyIndex = history.length - 1;
+  }
+
+  function undo() {
+    if (historyIndex >= 0) {
+      history[historyIndex].undo();
+      historyIndex--;
+    }
+  }
+
+  function redo() {
+    if (historyIndex < history.length - 1) {
+      historyIndex++;
+      history[historyIndex].redo();
+    }
+  }
+
+  // Example: tracked add
+  function addNode(parentPath, nodeData) {
+    let addedPath;
+
+    execute(
+      () => {
+        const result = treeRef.addNode(parentPath, nodeData);
+        addedPath = result.node?.path;
+      },
+      () => {
+        if (addedPath) treeRef.removeNode(addedPath);
+      }
+    );
+  }
+</script>
+
+REAL-TIME SYNC
+--------------
+Sync with WebSocket/server:
+
+<script>
+  import { onMount } from 'svelte';
+
+  let data = $state.raw([]);
+
+  onMount(() => {
+    const ws = new WebSocket('ws://server/tree');
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      switch (message.type) {
+        case 'add':
+          data = [...data, message.node];
+          break;
+        case 'remove':
+          data = data.filter(d => !d.path.startsWith(message.path));
+          break;
+        case 'update':
+          data = data.map(d =>
+            d.path === message.path ? { ...d, ...message.changes } : d
+          );
+          break;
+        case 'full':
+          data = message.nodes;
+          break;
+      }
+    };
+
+    return () => ws.close();
+  });
+</script>
+
+FILTERED EXTERNAL VIEW
+----------------------
+Keep full data but show filtered view:
+
+<script>
+  let allData = $state.raw([]);
+  let filter = $state('all');
+
+  let filteredData = $derived(() => {
+    if (filter === 'all') return allData;
+    return allData.filter(item => item.type === filter);
+  });
+</script>
+
+<select bind:value={filter}>
+  <option value="all">All</option>
+  <option value="folder">Folders</option>
+  <option value="file">Files</option>
+</select>
+
+<Tree data={filteredData} ... />
+
+Note: This loses hierarchy for filtered items. Better to use internal search.
+
+DRAG BETWEEN MULTIPLE TREES
+---------------------------
+<script>
+  let sourceData = $state.raw([...]);
+  let targetData = $state.raw([...]);
+
+  function handleSourceDrop(dropNode, draggedNode, position, event, operation) {
+    // Item dropped back to source
+    if (draggedNode.data.sourceTree === 'source') {
+      // Handle internal move
+    }
+  }
+
+  function handleTargetDrop(dropNode, draggedNode, position, event, operation) {
+    // Item dropped to target from source
+    if (draggedNode.data.sourceTree === 'source') {
+      // Remove from source
+      sourceData = sourceData.filter(d => d.path !== draggedNode.path);
+
+      // Add to target
+      const newItem = {
+        ...draggedNode.data,
+        path: calculateNewPath(dropNode, position),
+        sourceTree: 'target'
+      };
+      targetData = [...targetData, newItem];
+    }
+  }
+</script>
+
+<Tree
+  data={sourceData}
+  treeId="source"
+  dragDropMode="cross"
+  onNodeDrop={handleSourceDrop}
+/>
+
+<Tree
+  data={targetData}
+  treeId="target"
+  dragDropMode="both"
+  onNodeDrop={handleTargetDrop}
+/>
+
+FORM INTEGRATION
+----------------
+Use tree as form input:
+
+<script>
+  let selectedPaths = $state([]);
+
+  function handleSubmit(e) {
+    const formData = new FormData(e.target);
+    formData.set('selectedNodes', JSON.stringify(selectedPaths));
+    // Submit form
+  }
+</script>
+
+<form onsubmit={handleSubmit}>
+  <input type="hidden" name="selectedNodes" value={JSON.stringify(selectedPaths)} />
+
+  <Tree {data}>
+    {#snippet nodeTemplate(node)}
+      <label>
+        <input
+          type="checkbox"
+          checked={selectedPaths.includes(node.path)}
+          onchange={(e) => {
+            if (e.target.checked) {
+              selectedPaths = [...selectedPaths, node.path];
+            } else {
+              selectedPaths = selectedPaths.filter(p => p !== node.path);
+            }
+          }}
+        />
+        {node.data.name}
+      </label>
+    {/snippet}
+  </Tree>
+
+  <button type="submit">Submit</button>
+</form>
+
+BREADCRUMB NAVIGATION
+---------------------
+<script>
+  let selectedNode = $state(null);
+
+  let breadcrumbs = $derived(() => {
+    if (!selectedNode) return [];
+
+    const crumbs = [];
+    let currentPath = selectedNode.path;
+
+    while (currentPath) {
+      const node = treeRef.getNodeByPath(currentPath);
+      if (node) crumbs.unshift(node);
+      currentPath = node?.parentPath;
+    }
+
+    return crumbs;
+  });
+
+  function navigateTo(node) {
+    selectedNode = node;
+    treeRef.scrollToPath(node.path, { expand: true, highlight: true });
+  }
+</script>
+
+<nav class="breadcrumbs">
+  {#each breadcrumbs as crumb, i}
+    {#if i > 0} / {/if}
+    <button onclick={() => navigateTo(crumb)}>
+      {crumb.data?.name}
+    </button>
+  {/each}
+</nav>
+
+<Tree bind:this={treeRef} bind:selectedNode />
+
+PERMISSION-BASED ACTIONS
+------------------------
+<script>
+  const permissions = {
+    canEdit: true,
+    canDelete: false,
+    canCreate: true
+  };
+
+  function createContextMenu(node) {
+    const items = [];
+
+    items.push({
+      icon: '📂',
+      title: 'Open',
+      callback: () => openItem(node)
+    });
+
+    if (permissions.canEdit) {
+      items.push({
+        icon: '✏️',
+        title: 'Edit',
+        callback: () => editItem(node)
+      });
+    }
+
+    if (permissions.canCreate && node.data.type === 'folder') {
+      items.push({
+        icon: '➕',
+        title: 'New Item',
+        callback: () => createItem(node)
+      });
+    }
+
+    if (permissions.canDelete) {
+      items.push({ isDivider: true });
+      items.push({
+        icon: '🗑️',
+        title: 'Delete',
+        callback: () => deleteItem(node)
+      });
+    }
+
+    return items;
+  }
+</script>
+
+TREE DIFF/COMPARE
+-----------------
+Compare two tree states:
+
+<script>
+  function diffTrees(oldData, newData) {
+    const oldPaths = new Set(oldData.map(d => d.path));
+    const newPaths = new Set(newData.map(d => d.path));
+
+    const added = newData.filter(d => !oldPaths.has(d.path));
+    const removed = oldData.filter(d => !newPaths.has(d.path));
+    const modified = newData.filter(d => {
+      const old = oldData.find(o => o.path === d.path);
+      return old && JSON.stringify(old) !== JSON.stringify(d);
+    });
+
+    return { added, removed, modified };
+  }
+</script>
+
+SSR CONSIDERATIONS
+------------------
+Tree works with SSR (SvelteKit):
+
+// +page.svelte
+<script>
+  import { Tree } from '@keenmate/svelte-treeview';
+  import { browser } from '$app/environment';
+
+  export let data;  // From +page.server.ts
+</script>
+
+{#if browser}
+  <Tree data={data.items} ... />
+{:else}
+  <div class="tree-placeholder">Loading tree...</div>
+{/if}
+
+Or with onMount:
+
+<script>
+  import { onMount } from 'svelte';
+
+  let mounted = $state(false);
+  onMount(() => { mounted = true; });
+</script>
+
+{#if mounted}
+  <Tree ... />
+{/if}
+
+BEST PRACTICES
+--------------
+✅ Use $state.raw() for large datasets
+✅ Debounce expensive operations
+✅ Handle async operations properly
+✅ Implement undo for destructive actions
+✅ Use WebSocket for real-time updates
+✅ Consider SSR implications
+
+❌ Don't block UI with sync operations
+❌ Don't forget error handling
+❌ Don't implement virtual scroll unless needed (50K+ nodes)
+❌ Don't mutate data directly

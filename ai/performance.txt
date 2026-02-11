@@ -1,0 +1,297 @@
+PERFORMANCE
+===========
+
+CRITICAL: Use $state.raw() for large datasets
+- Svelte 5's $state() creates deep proxies
+- With 1000+ items, this causes massive slowdown
+- $state.raw() avoids proxy overhead
+
+$STATE.RAW() REQUIREMENT
+------------------------
+❌ SLOW - 5000x slower with large datasets:
+let treeData = $state<TreeNode[]>([]);
+
+✅ FAST - Items remain plain objects:
+let treeData = $state.raw<TreeNode[]>([]);
+
+Why it matters:
+- $state() creates Proxy for every nested object
+- Tree's insertArray() accesses multiple properties per item
+- 8000 items × 10 properties = 80,000 proxy operations
+- Proxy overhead: ~2.2ms per item vs ~0.0004ms plain
+
+Symptoms of wrong usage:
+- Tree takes 15-90+ seconds to render
+- Console shows "[Violation] 'message' handler took XXXXms"
+- Same data loads instantly in isolated test
+
+The fix does NOT affect reactivity:
+- Array changes still trigger updates
+- Only individual items lose deep reactivity
+- Tree doesn't need deep item reactivity
+
+FLAT RENDERING MODE
+-------------------
+Default mode (v4.6+) - significantly faster:
+
+<Tree useFlatRendering={true} />  <!-- Default -->
+
+Flat mode benefits:
+- Single {#each} loop instead of recursive components
+- ~12x faster initial render (300ms → 25ms for 5500 nodes)
+- Better memory usage
+
+Legacy recursive mode:
+<Tree useFlatRendering={false} />
+
+Use recursive mode only if:
+- Very small trees (<100 nodes)
+- Need {#key changeTracker} behavior
+
+PROGRESSIVE RENDERING
+---------------------
+Renders nodes in batches to prevent UI freeze:
+
+<Tree
+  progressiveRender={true}    <!-- Default -->
+  initialBatchSize={20}       <!-- First batch (instant) -->
+  maxBatchSize={500}          <!-- Maximum batch size -->
+/>
+
+Exponential batching:
+- First batch: 20 nodes (instant feedback)
+- Second batch: 40 nodes
+- Third batch: 80 nodes
+- Doubles until maxBatchSize (500)
+
+Result: UI stays responsive during large tree loads
+
+ASYNC SEARCH INDEXING
+---------------------
+Search indexing uses requestIdleCallback:
+
+<Tree
+  shouldUseInternalSearchIndex={true}
+  indexerBatchSize={25}   <!-- Nodes per idle callback -->
+  indexerTimeout={50}     <!-- Max wait before forcing -->
+/>
+
+Benefits:
+- Tree renders immediately
+- Indexing runs during browser idle time
+- Large datasets don't freeze UI
+
+Check indexing status:
+const stats = treeRef.statistics;
+console.log('Indexing:', stats.isIndexing);
+console.log('Pending:', stats.pendingIndexCount);
+
+SORTING PERFORMANCE
+-------------------
+Level-first sorting is critical:
+
+// REQUIRED: Sort by level first
+sortCallback={(nodes) => {
+  return nodes.sort((a, b) => {
+    const aLevel = a.path.split('.').length;
+    const bLevel = b.path.split('.').length;
+    if (aLevel !== bLevel) return aLevel - bLevel;
+    return a.data.name.localeCompare(b.data.name);
+  });
+}}
+
+For pre-sorted data (skip internal sort):
+<Tree isSorted={true} />
+
+PERFORMANCE LOGGING
+-------------------
+Enable performance measurements:
+
+import { enablePerfLogging, setPerfThreshold } from '@keenmate/svelte-treeview';
+
+enablePerfLogging();
+setPerfThreshold(100);  // Only log operations > 100ms
+
+Or from browser console:
+window.components['svelte-treeview'].perf.enable()
+
+Logged operations:
+- insertArray (conversion/sort/insert phases)
+- filterNodes
+- expandAll
+- collapseAll
+
+Output includes:
+- Duration
+- Item count
+- Per-item time
+- Items/sec throughput
+
+CATEGORY LOGGING
+----------------
+import { setCategoryLevel } from '@keenmate/svelte-treeview';
+
+// Enable specific categories
+setCategoryLevel('LTREE:RENDER', 'debug');
+setCategoryLevel('LTREE:DATA', 'debug');
+
+Categories:
+- LTREE:INIT - Initialization
+- LTREE:DATA - Data operations
+- LTREE:RENDER - Rendering
+- LTREE:INDEX - Search indexing
+- LTREE:DRAG - Drag and drop
+- LTREE:UI - User interactions
+
+BENCHMARKS
+----------
+Typical performance (5500 nodes):
+
+| Operation | Time |
+|-----------|------|
+| Initial render (flat) | ~25ms |
+| Initial render (recursive) | ~300ms |
+| Expand/collapse | ~100-150ms |
+| Search filtering | <50ms |
+| insertArray | <100ms |
+
+MEMORY OPTIMIZATION
+-------------------
+For very large datasets (10,000+ nodes):
+
+1. Use $state.raw():
+let data = $state.raw<Item[]>([]);
+
+2. Enable progressive render:
+<Tree progressiveRender={true} />
+
+3. Limit initial expand:
+<Tree expandLevel={1} />
+
+4. Consider virtual scrolling (if needed):
+- Tree doesn't have built-in virtual scroll
+- For 50,000+ nodes, consider pagination
+
+AVOID O(n²) PATTERNS
+--------------------
+In sortCallback, avoid:
+
+❌ nodes.forEach(n => {
+  const siblings = nodes.filter(s => s.parentPath === n.parentPath);
+});
+
+✅ Pre-compute:
+const siblingMap = new Map();
+nodes.forEach(n => {
+  const parent = n.parentPath || '';
+  if (!siblingMap.has(parent)) siblingMap.set(parent, []);
+  siblingMap.get(parent).push(n);
+});
+
+BATCH DATA UPDATES
+------------------
+Instead of multiple small updates:
+
+❌ for (const item of items) {
+  data = [...data, item];  // Re-renders each time
+}
+
+✅ data = [...data, ...items];  // Single re-render
+
+EXPAND/COLLAPSE OPTIMIZATION
+----------------------------
+For large trees, be specific:
+
+// Slow: expands ALL nodes
+treeRef.expandAll();
+
+// Fast: expand specific subtree
+treeRef.expandAll('1.2');  // Only under 1.2
+
+// Fast: expand to level
+<Tree expandLevel={2} />
+
+SEARCH OPTIMIZATION
+-------------------
+Debounce search input:
+
+let inputValue = $state('');
+let searchText = $state('');
+let timer;
+
+function handleInput(e) {
+  inputValue = e.target.value;
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    searchText = inputValue;
+  }, 300);
+}
+
+Simplify search value callback:
+
+// Avoid heavy computation
+❌ getSearchValueCallback={(node) => {
+  return expensiveOperation(node.data);
+}}
+
+// Keep it simple
+✅ getSearchValueCallback={(node) => {
+  return `${node.data.name} ${node.data.email}`;
+}}
+
+DEBUG MODE OVERHEAD
+-------------------
+Disable in production:
+
+<Tree shouldDisplayDebugInformation={false} />
+
+Debug mode adds:
+- Statistics calculations
+- Console logging
+- Debug panel rendering
+
+COMMON PERFORMANCE ISSUES
+-------------------------
+Issue: Tree takes forever to render
+Fix: Use $state.raw() instead of $state()
+
+Issue: UI freezes during load
+Fix: Enable progressiveRender={true}
+
+Issue: Slow search
+Fix: Simplify getSearchValueCallback, use debouncing
+
+Issue: Slow sorting
+Fix: Avoid O(n²) patterns, use isSorted={true} for pre-sorted data
+
+Issue: Memory issues with huge datasets
+Fix: Limit expandLevel, consider pagination
+
+PROFILING
+---------
+Use browser DevTools:
+
+1. Performance tab → Record
+2. Load tree or perform operation
+3. Look for long tasks
+
+Common bottlenecks:
+- Proxy access (use $state.raw())
+- Recursive component creation (use flat mode)
+- Search indexing (runs async, wait for completion)
+
+BEST PRACTICES
+--------------
+✅ Use $state.raw() for 1000+ items
+✅ Keep progressiveRender={true}
+✅ Keep useFlatRendering={true}
+✅ Limit expandLevel for large trees
+✅ Debounce search input
+✅ Use isSorted={true} for pre-sorted data
+✅ Profile before optimizing
+
+❌ Don't use $state() for large datasets
+❌ Don't disable progressive rendering
+❌ Don't expand all levels for large trees
+❌ Don't do heavy computation in callbacks
+❌ Don't block UI with sync operations

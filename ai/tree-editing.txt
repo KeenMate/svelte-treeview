@@ -1,0 +1,378 @@
+TREE EDITING
+============
+
+CRITICAL: Built-in methods for programmatic tree editing
+- addNode: Add new nodes
+- moveNode: Move nodes with subtrees
+- removeNode: Delete nodes
+- Automatic path management
+
+ADD NODE
+--------
+<script>
+  let treeRef;
+
+  function addChild(parentPath) {
+    const result = treeRef.addNode(
+      parentPath,  // Parent path (empty string = root)
+      {
+        id: Date.now().toString(),
+        path: '',  // Will be auto-calculated
+        name: 'New Item',
+        sortOrder: 100
+      }
+    );
+
+    if (result.success) {
+      console.log('Added node:', result.node);
+      console.log('New path:', result.node.path);
+    } else {
+      console.log('Failed:', result.error);
+    }
+  }
+</script>
+
+<Tree bind:this={treeRef} {data} ... />
+<button onclick={() => addChild('1.2')}>Add to 1.2</button>
+<button onclick={() => addChild('')}>Add to Root</button>
+
+addNode signature:
+addNode(parentPath: string, data: T, pathSegment?: string)
+
+- parentPath: Where to add (empty = root)
+- data: Your data object (path auto-calculated)
+- pathSegment: Optional custom segment (otherwise auto-generated)
+
+Returns: { success: boolean, node?: LTreeNode<T>, error?: string }
+
+MOVE NODE
+---------
+<script>
+  function moveNode(sourcePath, targetPath, position) {
+    const result = treeRef.moveNode(sourcePath, targetPath, position);
+
+    if (result.success) {
+      console.log('Moved to:', result.newPath);
+    }
+  }
+</script>
+
+<button onclick={() => moveNode('1.2', '2.1', 'above')}>
+  Move 1.2 above 2.1
+</button>
+
+<button onclick={() => moveNode('1.2', '2', 'child')}>
+  Move 1.2 as child of 2
+</button>
+
+moveNode signature:
+moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child')
+
+- sourcePath: Node to move (includes all descendants)
+- targetPath: Target node
+- position: Where relative to target
+
+Positions:
+- 'above': Insert as sibling before target
+- 'below': Insert as sibling after target
+- 'child': Insert as child of target
+
+REMOVE NODE
+-----------
+<script>
+  function deleteNode(path) {
+    const result = treeRef.removeNode(path, true);
+
+    if (result.success) {
+      console.log('Removed:', result.removedCount, 'nodes');
+    }
+  }
+</script>
+
+<button onclick={() => deleteNode('1.2')}>Delete 1.2</button>
+
+removeNode signature:
+removeNode(path: string, includeDescendants?: boolean)
+
+- path: Node to remove
+- includeDescendants: Remove children too (default: true)
+
+Returns: { success: boolean, removedCount: number, error?: string }
+
+ORDER MEMBER
+------------
+CRITICAL: For proper sibling ordering, set orderMember
+
+<Tree orderMember="sortOrder" ... />
+
+const data = [
+  { path: '1.1', name: 'First', sortOrder: 10 },
+  { path: '1.2', name: 'Second', sortOrder: 20 },
+  { path: '1.3', name: 'Third', sortOrder: 30 }
+];
+
+When moving nodes with orderMember:
+- Tree auto-calculates new order values
+- Uses midpoint between adjacent values
+- Example: Moving between 10 and 20 → sortOrder = 15
+
+HELPER METHODS
+--------------
+Get node by path:
+const node = treeRef.getNodeByPath('1.2.3');
+console.log(node?.data.name);
+
+Get children of a node:
+const children = treeRef.getChildren('1.2');
+console.log('Children count:', children.length);
+
+Get siblings (including self):
+const siblings = treeRef.getSiblings('1.2.3');
+const index = siblings.findIndex(s => s.path === '1.2.3');
+
+Refresh siblings (re-sort):
+treeRef.refreshSiblings('1.2');  // Parent path
+
+Refresh specific node:
+treeRef.refreshNode('1.2.3');
+
+MOVE UP/DOWN
+------------
+<script>
+  function moveUp(nodePath) {
+    const siblings = treeRef.getSiblings(nodePath);
+    const index = siblings.findIndex(s => s.path === nodePath);
+
+    if (index > 0) {
+      treeRef.moveNode(nodePath, siblings[index - 1].path, 'above');
+    }
+  }
+
+  function moveDown(nodePath) {
+    const siblings = treeRef.getSiblings(nodePath);
+    const index = siblings.findIndex(s => s.path === nodePath);
+
+    if (index < siblings.length - 1) {
+      treeRef.moveNode(nodePath, siblings[index + 1].path, 'below');
+    }
+  }
+</script>
+
+COPY NODE
+---------
+<script>
+  function copyNode(sourcePath, targetPath, position) {
+    const result = treeRef.copyNodeWithDescendants(
+      sourcePath,
+      targetPath,
+      position
+    );
+
+    if (result.success) {
+      console.log('Copied to:', result.newPath);
+    }
+  }
+</script>
+
+copyNodeWithDescendants signature:
+copyNodeWithDescendants(
+  sourcePath: string,
+  targetParentPath?: string,
+  siblingPath?: string,
+  position?: 'above' | 'below'
+)
+
+NEW ITEM WORKFLOW
+-----------------
+Complete workflow for adding items:
+
+<script>
+  let treeRef;
+  let selectedNode = $state(null);
+
+  function addSibling() {
+    if (!selectedNode) return;
+
+    const parentPath = selectedNode.parentPath || '';
+    const result = treeRef.addNode(parentPath, {
+      id: crypto.randomUUID(),
+      path: '',
+      name: 'New Sibling',
+      sortOrder: Date.now()
+    });
+
+    if (result.success) {
+      // Select the new node
+      selectedNode = result.node;
+      // Optionally scroll to it
+      treeRef.scrollToPath(result.node.path);
+    }
+  }
+
+  function addChild() {
+    if (!selectedNode) return;
+
+    const result = treeRef.addNode(selectedNode.path, {
+      id: crypto.randomUUID(),
+      path: '',
+      name: 'New Child',
+      sortOrder: Date.now()
+    });
+
+    if (result.success) {
+      // Expand parent to show new child
+      treeRef.expandNodes(selectedNode.path);
+      // Select the new node
+      selectedNode = result.node;
+    }
+  }
+
+  function deleteSelected() {
+    if (!selectedNode) return;
+
+    if (confirm(`Delete ${selectedNode.data.name}?`)) {
+      const parentPath = selectedNode.parentPath;
+      treeRef.removeNode(selectedNode.path);
+      selectedNode = null;
+    }
+  }
+</script>
+
+<Tree bind:this={treeRef} bind:selectedNode />
+
+<button onclick={addSibling} disabled={!selectedNode}>Add Sibling</button>
+<button onclick={addChild} disabled={!selectedNode}>Add Child</button>
+<button onclick={deleteSelected} disabled={!selectedNode}>Delete</button>
+
+INLINE EDITING
+--------------
+Edit node name inline:
+
+<script>
+  let editingPath = $state(null);
+  let editValue = $state('');
+
+  function startEdit(node) {
+    editingPath = node.path;
+    editValue = node.data.name;
+  }
+
+  function saveEdit() {
+    if (editingPath) {
+      // Update your data
+      data = data.map(item =>
+        item.path === editingPath
+          ? { ...item, name: editValue }
+          : item
+      );
+      editingPath = null;
+    }
+  }
+</script>
+
+<Tree {data}>
+  {#snippet nodeTemplate(node)}
+    {#if editingPath === node.path}
+      <input
+        bind:value={editValue}
+        onblur={saveEdit}
+        onkeydown={(e) => e.key === 'Enter' && saveEdit()}
+        autofocus
+      />
+    {:else}
+      <span ondblclick={() => startEdit(node)}>
+        {node.data.name}
+      </span>
+    {/if}
+  {/snippet}
+</Tree>
+
+BATCH OPERATIONS
+----------------
+Multiple operations at once:
+
+<script>
+  function batchUpdate() {
+    // Disable reactivity during batch
+    const operations = [
+      () => treeRef.addNode('1', { name: 'Item A' }),
+      () => treeRef.addNode('1', { name: 'Item B' }),
+      () => treeRef.moveNode('2.1', '1', 'child')
+    ];
+
+    operations.forEach(op => op());
+
+    // Refresh after batch
+    treeRef.refreshSiblings('1');
+  }
+</script>
+
+UNDO/REDO SUPPORT
+-----------------
+Track operations for undo:
+
+<script>
+  let history = $state([]);
+  let historyIndex = $state(-1);
+
+  function recordOperation(type, data, undo) {
+    // Clear redo history
+    history = history.slice(0, historyIndex + 1);
+    // Add new operation
+    history = [...history, { type, data, undo }];
+    historyIndex = history.length - 1;
+  }
+
+  function addNode(parentPath, nodeData) {
+    const result = treeRef.addNode(parentPath, nodeData);
+    if (result.success) {
+      recordOperation('add', result.node, () => {
+        treeRef.removeNode(result.node.path);
+      });
+    }
+  }
+
+  function undo() {
+    if (historyIndex >= 0) {
+      history[historyIndex].undo();
+      historyIndex--;
+    }
+  }
+</script>
+
+SYNC WITH SERVER
+----------------
+<script>
+  async function addNodeWithSync(parentPath, nodeData) {
+    // Optimistic update
+    const result = treeRef.addNode(parentPath, nodeData);
+
+    if (result.success) {
+      try {
+        // Sync to server
+        await api.createNode({
+          ...nodeData,
+          path: result.node.path
+        });
+      } catch (error) {
+        // Rollback on failure
+        treeRef.removeNode(result.node.path);
+        showError('Failed to save');
+      }
+    }
+  }
+</script>
+
+BEST PRACTICES
+--------------
+✅ Use orderMember for proper sibling ordering
+✅ Handle operation results (success/error)
+✅ Expand parent after adding child
+✅ Update selection after operations
+✅ Sync with server if needed
+✅ Consider undo/redo for complex apps
+
+❌ Don't forget to set orderMember
+❌ Don't assume operations always succeed
+❌ Don't mutate data directly (use methods)
+❌ Don't forget to refresh UI after batch operations

@@ -1,0 +1,316 @@
+BASIC SETUP
+===========
+
+CRITICAL: This is a Svelte 5 component using runes
+- Requires Svelte 5.0.0 or higher
+- Uses $state, $derived, $effect runes
+- NOT compatible with Svelte 4 or earlier
+- Works with SvelteKit, Vite, or any Svelte 5 setup
+
+INSTALLATION
+------------
+npm install @keenmate/svelte-treeview
+
+# Or yarn
+yarn add @keenmate/svelte-treeview
+
+# Or pnpm
+pnpm add @keenmate/svelte-treeview
+
+IMPORT STYLES
+-------------
+The component requires CSS to display correctly:
+
+// In your main.js/main.ts or +layout.svelte
+import '@keenmate/svelte-treeview/styles.css';
+
+// Or SCSS (if you have sass configured)
+import '@keenmate/svelte-treeview/styles.scss';
+
+MINIMAL EXAMPLE
+---------------
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+
+  const data = [
+    { id: '1', path: '1', name: 'Documents' },
+    { id: '1.1', path: '1.1', name: 'Projects' },
+    { id: '1.1.1', path: '1.1.1', name: 'Project A' },
+    { id: '2', path: '2', name: 'Pictures' }
+  ];
+</script>
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  displayValueMember="name"
+/>
+
+REQUIRED PROPS
+--------------
+These props are required for the tree to work:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| data | T[] | Array of data objects |
+| idMember | string | Property name for unique ID |
+| pathMember | string | Property name for hierarchical path |
+
+RECOMMENDED PROPS
+-----------------
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| displayValueMember | string | null | Property for display text |
+| sortCallback | function | built-in | Custom sort function |
+| expandLevel | number | 2 | Auto-expand nodes to this depth |
+
+PATH STRUCTURE
+--------------
+CRITICAL: Data must use path-based hierarchy
+
+The path defines the tree structure:
+- Root level: "1", "2", "3"
+- Second level: "1.1", "1.2", "2.1"
+- Third level: "1.1.1", "1.2.1"
+
+Parent path is derived from child path:
+- "1.2.3" → parent is "1.2"
+- "1.2" → parent is "1"
+- "1" → no parent (root)
+
+Custom separators:
+<Tree treePathSeparator="/" ... />
+// Paths: "1/2/3", "files/docs/readme"
+
+BINDING SELECTED NODE
+---------------------
+<script>
+  let selectedNode = $state(null);
+</script>
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:selectedNode
+/>
+
+{#if selectedNode}
+  <p>Selected: {selectedNode.data.name}</p>
+{/if}
+
+BINDING SEARCH TEXT
+-------------------
+<script>
+  let searchText = $state('');
+</script>
+
+<input bind:value={searchText} placeholder="Search..." />
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:searchText
+  shouldUseInternalSearchIndex={true}
+  searchValueMember="name"
+/>
+
+CUSTOM NODE TEMPLATE
+--------------------
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+>
+  {#snippet nodeTemplate(node)}
+    <div class="custom-node">
+      <span class="icon">{node.data.icon}</span>
+      <span class="name">{node.data.name}</span>
+      {#if node.data.count}
+        <span class="badge">{node.data.count}</span>
+      {/if}
+    </div>
+  {/snippet}
+</Tree>
+
+IMPORTANT: The snippet name is nodeTemplate (not nodeContent)
+
+EXPAND/COLLAPSE CONTROL
+-----------------------
+Control initial expansion:
+
+<Tree
+  {data}
+  expandLevel={3}  <!-- Expand first 3 levels -->
+/>
+
+Programmatic control:
+
+<script>
+  let treeRef;
+</script>
+
+<Tree bind:this={treeRef} {data} ... />
+
+<button onclick={() => treeRef.expandAll()}>Expand All</button>
+<button onclick={() => treeRef.collapseAll()}>Collapse All</button>
+<button onclick={() => treeRef.expandNodes('1.2')}>Expand 1.2</button>
+
+CLICK HANDLING
+--------------
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  onNodeClicked={(node) => {
+    console.log('Clicked:', node.data.name);
+    console.log('Path:', node.path);
+  }}
+/>
+
+Toggle on click (default true):
+<Tree shouldToggleOnNodeClick={false} ... />
+
+SCROLL TO NODE
+--------------
+<script>
+  let treeRef;
+
+  async function goToNode() {
+    await treeRef.scrollToPath('1.2.3', {
+      expand: true,      // Expand parents first
+      highlight: true,   // Highlight the node
+      containerScroll: true  // Scroll only within container
+    });
+  }
+</script>
+
+<Tree bind:this={treeRef} {data} ... />
+<button onclick={goToNode}>Go to 1.2.3</button>
+
+TREE STATISTICS
+---------------
+<script>
+  let treeRef;
+
+  function showStats() {
+    const stats = treeRef.statistics;
+    console.log('Total nodes:', stats.nodeCount);
+    console.log('Max depth:', stats.maxLevel);
+    console.log('Filtered:', stats.filteredNodeCount);
+    console.log('Indexing:', stats.isIndexing);
+  }
+</script>
+
+DEBUG MODE
+----------
+Enable debug panel and console logging:
+
+<Tree
+  {data}
+  shouldDisplayDebugInformation={true}
+/>
+
+Shows:
+- Tree ID
+- Node count
+- Max depth
+- Filtered count
+- Indexing status
+- Currently dragged node
+
+EMPTY STATE
+-----------
+Custom message when tree is empty:
+
+<Tree {data} ...>
+  {#snippet noDataFound()}
+    <div class="empty-state">
+      <p>No items found</p>
+      <button>Add First Item</button>
+    </div>
+  {/snippet}
+</Tree>
+
+FRAMEWORK INTEGRATION
+---------------------
+SvelteKit:
+// +page.svelte
+<script>
+  import { Tree } from '@keenmate/svelte-treeview';
+  import '@keenmate/svelte-treeview/styles.css';
+</script>
+
+Vite + Svelte:
+// App.svelte
+<script>
+  import { Tree } from '@keenmate/svelte-treeview';
+</script>
+
+// main.js
+import '@keenmate/svelte-treeview/styles.css';
+
+COMMON SETUP PATTERNS
+---------------------
+File explorer:
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  displayValueMember="name"
+  expandLevel={1}
+  treePathSeparator="/"
+/>
+
+Organization tree:
+<Tree
+  {data}
+  idMember="employeeId"
+  pathMember="orgPath"
+  displayValueMember="fullName"
+  expandLevel={3}
+/>
+
+With search and drag-drop:
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:searchText
+  shouldUseInternalSearchIndex={true}
+  searchValueMember="name"
+  dragOverNodeClass="ltree-dragover-glow"
+  onNodeDrop={handleDrop}
+/>
+
+BROWSER SUPPORT
+---------------
+Requires modern browsers:
+- Chrome/Edge 88+
+- Firefox 78+
+- Safari 14+
+
+No IE11 support (Svelte 5 requirement)
+
+CRITICAL REMINDERS
+------------------
+✅ Import styles (CSS or SCSS)
+✅ Use Svelte 5.0.0 or higher
+✅ Use path-based hierarchical data
+✅ Set idMember and pathMember
+✅ Use $state.raw() for large datasets (1000+ items)
+
+❌ Don't use with Svelte 4 or earlier
+❌ Don't forget to import styles
+❌ Don't use non-path-based data structures
+❌ Don't use $state() for large datasets (causes slowdown)
+
+NEXT STEPS
+----------
+- Custom data structure → data-handling.txt
+- Add drag and drop → drag-drop.txt
+- Add search → search-features.txt
+- Add context menu → context-menu.txt
+- Optimize performance → performance.txt

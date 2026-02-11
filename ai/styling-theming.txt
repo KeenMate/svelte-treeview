@@ -1,0 +1,354 @@
+STYLING AND THEMING
+===================
+
+CRITICAL: Styles must be imported separately
+- Component has no embedded styles
+- Import CSS or SCSS
+- Extensive CSS variables for theming
+
+IMPORT STYLES
+-------------
+// CSS (compiled)
+import '@keenmate/svelte-treeview/styles.css';
+
+// SCSS (with variable overrides)
+import '@keenmate/svelte-treeview/styles.scss';
+
+CSS VARIABLES
+-------------
+Override in your CSS:
+
+:root {
+  /* Indentation */
+  --tree-node-indent-per-level: 0.5rem;
+
+  /* Colors */
+  --ltree-primary: #0d6efd;
+  --ltree-primary-rgb: 13, 110, 253;
+  --ltree-success: #198754;
+  --ltree-success-rgb: 25, 135, 84;
+  --ltree-danger: #dc3545;
+  --ltree-danger-rgb: 220, 53, 69;
+  --ltree-light: #f8f9fa;
+  --ltree-border: #dee2e6;
+  --ltree-body-color: #212529;
+
+  /* Touch ghost */
+  --tree-ghost-bg: rgba(59, 130, 246, 0.9);
+  --tree-ghost-color: white;
+}
+
+SCSS VARIABLES
+--------------
+Override BEFORE importing:
+
+<style lang="scss">
+  // Override variables
+  $tree-node-indent-per-level: 1rem;
+  $ltree-primary: #6366f1;
+  $tree-node-font-family: 'Inter', sans-serif;
+
+  // Then import
+  @import '@keenmate/svelte-treeview/styles.scss';
+</style>
+
+Available SCSS variables:
+- $tree-node-indent-per-level
+- $tree-node-font-family
+- $tree-node-content-border-radius
+- $ltree-primary, $ltree-success, $ltree-danger
+- $drop-zone-* variables (see below)
+
+SELECTED NODE CLASSES
+---------------------
+<Tree selectedNodeClass="ltree-selected-bold" />
+
+Built-in classes:
+- ltree-selected-bold - Bold text with primary color
+- ltree-selected-border - Border and background highlight
+- ltree-selected-brackets - Decorative brackets ❯ Node ❮
+
+Custom selected style:
+.my-selected {
+  background: #e0f2fe;
+  border-left: 3px solid #0284c7;
+  font-weight: 600;
+}
+
+<Tree selectedNodeClass="my-selected" />
+
+DRAG-OVER CLASSES
+-----------------
+<Tree dragOverNodeClass="ltree-dragover-glow" />
+
+Built-in classes:
+- ltree-dragover-highlight - Dashed border with background
+- ltree-dragover-glow - Shadow glow effect
+
+Custom drag-over style:
+.my-drag-over {
+  outline: 2px dashed #3b82f6;
+  outline-offset: 2px;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+<Tree dragOverNodeClass="my-drag-over" />
+
+ICON CLASSES
+------------
+<Tree
+  expandIconClass="ltree-icon-expand"
+  collapseIconClass="ltree-icon-collapse"
+  leafIconClass="ltree-icon-leaf"
+/>
+
+Custom icons with CSS:
+.my-expand::before { content: '▶'; }
+.my-collapse::before { content: '▼'; }
+.my-leaf::before { content: '•'; }
+
+<Tree
+  expandIconClass="my-expand"
+  collapseIconClass="my-collapse"
+  leafIconClass="my-leaf"
+/>
+
+SCROLL HIGHLIGHT CLASSES
+------------------------
+<Tree
+  scrollHighlightClass="ltree-scroll-highlight"
+  scrollHighlightTimeout={4000}
+/>
+
+Built-in classes:
+- ltree-scroll-highlight - Blue background glow
+- ltree-scroll-highlight-arrow - Red arrow indicator
+
+Custom highlight:
+.my-highlight {
+  animation: pulse 0.5s ease-in-out 3;
+}
+
+@keyframes pulse {
+  0%, 100% { background: transparent; }
+  50% { background: #fef08a; }
+}
+
+<Tree scrollHighlightClass="my-highlight" />
+
+DROP ZONE STYLING
+-----------------
+SCSS variables for drop zones:
+
+// Border radius
+$drop-zone-border-radius: 4px;
+
+// Above zone
+$drop-zone-above-bg: rgba(134, 239, 172, 0.25);
+$drop-zone-above-color: #166534;
+$drop-zone-above-active-bg: rgba(134, 239, 172, 0.85);
+$drop-zone-above-active-color: #14532d;
+$drop-zone-above-active-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+
+// Below zone
+$drop-zone-below-bg: rgba(253, 186, 116, 0.25);
+$drop-zone-below-color: #9a3412;
+$drop-zone-below-active-bg: rgba(253, 186, 116, 0.85);
+$drop-zone-below-active-color: #7c2d12;
+$drop-zone-below-active-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+
+// Child zone
+$drop-zone-child-bg: rgba(196, 181, 253, 0.25);
+$drop-zone-child-color: #5b21b6;
+$drop-zone-child-active-bg: rgba(196, 181, 253, 0.85);
+$drop-zone-child-active-color: #4c1d95;
+$drop-zone-child-active-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+
+// Arrow indicators
+$drop-arrow-size: 24px;
+$drop-arrow-position: 66%;
+
+GLOW MODE STYLING
+-----------------
+CSS classes for glow indicators:
+
+.ltree-glow-above {
+  border-top: 3px solid #22c55e;
+  box-shadow: 0 -4px 8px rgba(34, 197, 94, 0.3);
+}
+
+.ltree-glow-below {
+  border-bottom: 3px solid #f97316;
+  box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
+}
+
+.ltree-glow-child {
+  border: 3px solid #8b5cf6;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+}
+
+CONTEXT MENU STYLING
+--------------------
+.ltree-context-menu {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 160px;
+}
+
+.ltree-context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  gap: 8px;
+}
+
+.ltree-context-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.ltree-context-menu-item-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ltree-context-menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+TOUCH GHOST STYLING
+-------------------
+.ltree-touch-ghost {
+  background: var(--tree-ghost-bg, rgba(59, 130, 246, 0.9));
+  color: var(--tree-ghost-color, white);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+CSS CLASS REFERENCE
+-------------------
+Tree structure:
+- .ltree-tree - Main container
+- .ltree-tree-body - Tree body
+- .ltree-node - Node container
+- .ltree-node-row - Node row wrapper
+- .ltree-node-content - Node content area
+- .ltree-toggle-icon - Expand/collapse icon
+- .ltree-children - Children container
+
+States:
+- .ltree-expanded - Expanded node
+- .ltree-collapsed - Collapsed node
+- .ltree-selected - Selected node
+- .ltree-draggable - Draggable node
+- .ltree-drag-over - Drop target during drag
+
+Drop zones:
+- .ltree-drop-zones - Drop zone container
+- .ltree-drop-zone - Individual drop zone
+- .ltree-drop-above - Above position
+- .ltree-drop-below - Below position
+- .ltree-drop-child - Child position
+- .ltree-drop-copy - Copy operation active
+
+Context menu:
+- .ltree-context-menu - Menu container
+- .ltree-context-menu-item - Menu item
+- .ltree-context-menu-icon - Item icon
+- .ltree-context-menu-divider - Divider
+
+Empty/loading:
+- .ltree-empty-state - Empty tree state
+- .ltree-drop-placeholder - Drop placeholder
+
+BODY CLASS
+----------
+<Tree bodyClass="my-tree-body" />
+
+Adds class to tree body element for scoped styling:
+
+.my-tree-body .ltree-node-content {
+  padding: 4px 8px;
+}
+
+DARK THEME EXAMPLE
+------------------
+.dark-theme {
+  --ltree-body-color: #e5e7eb;
+  --ltree-border: #374151;
+  --ltree-light: #1f2937;
+  --ltree-primary: #60a5fa;
+}
+
+.dark-theme .ltree-tree {
+  background: #111827;
+}
+
+.dark-theme .ltree-node-content:hover {
+  background: #1f2937;
+}
+
+.dark-theme .ltree-context-menu {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+INDENTATION
+-----------
+Control node indentation:
+
+:root {
+  --tree-node-indent-per-level: 1rem;
+}
+
+Each level gets this fixed indent.
+Level 1 = 1rem, Level 2 = 2rem, etc.
+
+NODE TEMPLATE STYLING
+---------------------
+<Tree {data}>
+  {#snippet nodeTemplate(node)}
+    <div class="custom-node">
+      <span class="icon">{node.data.icon}</span>
+      <span class="name">{node.data.name}</span>
+      <span class="badge">{node.data.count}</span>
+    </div>
+  {/snippet}
+</Tree>
+
+<style>
+  .custom-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .icon { font-size: 1.2em; }
+  .name { flex: 1; }
+  .badge {
+    background: #e5e7eb;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    font-size: 0.75em;
+  }
+</style>
+
+BEST PRACTICES
+--------------
+✅ Import styles at app level (once)
+✅ Use CSS variables for theming
+✅ Override SCSS variables before import
+✅ Use built-in classes when possible
+✅ Scope custom styles properly
+
+❌ Don't import styles multiple times
+❌ Don't override built-in classes globally
+❌ Don't use !important unless necessary
+❌ Don't forget to test dark mode

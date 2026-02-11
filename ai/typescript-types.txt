@@ -1,0 +1,357 @@
+TYPESCRIPT TYPES
+================
+
+CRITICAL: Full TypeScript support
+- Generic types for your data
+- All props and methods typed
+- Type exports from package
+
+BASIC TYPED USAGE
+-----------------
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+  import type { LTreeNode } from '@keenmate/svelte-treeview';
+
+  interface MyItem {
+    id: string;
+    path: string;
+    name: string;
+    type: 'file' | 'folder';
+  }
+
+  let data: MyItem[] = $state([]);
+  let selectedNode: LTreeNode<MyItem> | null = $state(null);
+</script>
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:selectedNode
+/>
+
+TYPE EXPORTS
+------------
+import type {
+  // Core types
+  LTreeNode,           // Tree node interface
+  Ltree,               // Tree instance interface
+  DropPosition,        // 'above' | 'below' | 'child'
+
+  // Context menu
+  ContextMenuItem,     // Menu item interface
+
+  // Results
+  InsertArrayResult,   // Insert operation result
+
+  // Internal (advanced)
+  NodeCallbacks,       // Event callback types
+  NodeConfig           // Node configuration
+} from '@keenmate/svelte-treeview';
+
+LTREENODE INTERFACE
+-------------------
+interface LTreeNode<T> {
+  // Path information
+  path: string;              // Full path "1.2.3"
+  pathSegment: string;       // Last segment "3"
+  parentPath: string | null; // Parent "1.2" or null
+
+  // Structure
+  level: number | null;      // Depth (0 = root)
+  children: Record<string, LTreeNode<T>>;
+  hasChildren: boolean;
+
+  // Your data
+  data: T | null;            // Original data object
+
+  // State
+  isExpanded: boolean;
+  isSelected: boolean;
+
+  // Drag and drop
+  isDraggable: boolean;
+  isDropAllowed: boolean;
+  allowedDropPositions: DropPosition[] | null | undefined;
+}
+
+DROPPOSITION TYPE
+-----------------
+type DropPosition = 'above' | 'below' | 'child';
+
+Usage:
+import type { DropPosition } from '@keenmate/svelte-treeview';
+
+function getAllowedPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
+  if (node.data?.type === 'file') {
+    return ['above', 'below'];
+  }
+  return null;  // all positions
+}
+
+CONTEXTMENUITEM INTERFACE
+-------------------------
+interface ContextMenuItem {
+  icon?: string;
+  title: string;
+  isDisabled?: boolean;
+  callback: () => void | Promise<void>;
+  isDivider?: boolean;
+  className?: string;
+}
+
+Usage:
+function createMenu(node: LTreeNode<MyItem>): ContextMenuItem[] {
+  return [
+    {
+      icon: '📂',
+      title: 'Open',
+      callback: () => openItem(node.data)
+    },
+    { isDivider: true },
+    {
+      icon: '🗑️',
+      title: 'Delete',
+      isDisabled: node.data?.isProtected,
+      callback: () => deleteItem(node.data)
+    }
+  ];
+}
+
+INSERTARRAYRESULT INTERFACE
+---------------------------
+interface InsertArrayResult<T> {
+  successful: number;
+  failed: Array<{
+    node: LTreeNode<T>;
+    originalData: T;
+    error: string;
+  }>;
+  total: number;
+}
+
+Usage:
+let insertResult: InsertArrayResult<MyItem> | undefined = $state();
+
+$effect(() => {
+  if (insertResult) {
+    console.log(`${insertResult.successful} succeeded`);
+    console.log(`${insertResult.failed.length} failed`);
+  }
+});
+
+LTREE INTERFACE
+---------------
+interface Ltree<T> {
+  // Properties
+  root: LTreeNode<T>;
+  pathSeparator: string;
+  flatTreeNodes: LTreeNode<T>[];
+  nodeCount: number;
+  maxLevel: number;
+  filteredNodeCount: number;
+
+  // Methods
+  insertArray(data: T[]): InsertArrayResult<T>;
+  getNodeByPath(path: string): LTreeNode<T> | null;
+  expandNodes(path: string): Ltree<T>;
+  collapseNodes(path: string): Ltree<T>;
+  expandAll(path?: string): void;
+  collapseAll(path?: string): void;
+  filterNodes(searchText: string): void;
+  searchNodes(searchText: string): LTreeNode<T>[];
+
+  // Callbacks
+  getNodeAllowedDropPositions(node: LTreeNode<T>): DropPosition[] | null;
+}
+
+CALLBACK TYPES
+--------------
+// Node click
+onNodeClicked?: (node: LTreeNode<T>) => void;
+
+// Drag events
+onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
+onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
+onNodeDrop?: (
+  dropNode: LTreeNode<T> | null,
+  draggedNode: LTreeNode<T>,
+  position: DropPosition,
+  event: DragEvent,
+  operation: 'move' | 'copy'
+) => void;
+
+// Validation
+beforeDropCallback?: (
+  dropNode: LTreeNode<T> | null,
+  draggedNode: LTreeNode<T>,
+  position: DropPosition,
+  event: DragEvent,
+  operation: 'move' | 'copy'
+) => boolean | { position?: DropPosition; operation?: 'move' | 'copy' } | Promise<...>;
+
+// Value getters
+getDisplayValueCallback?: (node: LTreeNode<T>) => string;
+getSearchValueCallback?: (node: LTreeNode<T>) => string;
+getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null;
+
+// Context menu
+contextMenuCallback?: (
+  node: LTreeNode<T>,
+  closeMenu: () => void
+) => ContextMenuItem[];
+
+// Sort
+sortCallback?: (nodes: LTreeNode<T>[]) => LTreeNode<T>[];
+
+GENERIC TREE REFERENCE
+----------------------
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+
+  interface MyItem {
+    id: string;
+    path: string;
+    name: string;
+  }
+
+  let treeRef: Tree<MyItem>;
+</script>
+
+<Tree bind:this={treeRef} {data} ... />
+
+<button onclick={() => {
+  // Fully typed methods
+  const node = treeRef.getNodeByPath('1.2');
+  if (node) {
+    console.log(node.data?.name);  // string | undefined
+  }
+}}>
+  Get Node
+</button>
+
+STATISTICS TYPE
+---------------
+interface Statistics {
+  nodeCount: number;
+  maxLevel: number;
+  filteredNodeCount: number;
+  isIndexing: boolean;
+  pendingIndexCount: number;
+}
+
+const stats: Statistics = treeRef.statistics;
+
+COMPLEX DATA TYPES
+------------------
+// Union types
+interface FileItem {
+  id: string;
+  path: string;
+  name: string;
+  type: 'file';
+  size: number;
+  extension: string;
+}
+
+interface FolderItem {
+  id: string;
+  path: string;
+  name: string;
+  type: 'folder';
+  childCount: number;
+}
+
+type TreeItem = FileItem | FolderItem;
+
+// Type guards
+function isFile(item: TreeItem): item is FileItem {
+  return item.type === 'file';
+}
+
+function isFolder(item: TreeItem): item is FolderItem {
+  return item.type === 'folder';
+}
+
+// Usage in callbacks
+<Tree
+  data={items as TreeItem[]}
+  getDisplayValueCallback={(node) => {
+    if (!node.data) return '';
+    if (isFile(node.data)) {
+      return `${node.data.name} (${node.data.size}KB)`;
+    }
+    return `${node.data.name} (${node.data.childCount} items)`;
+  }}
+/>
+
+STRICT NULL CHECKS
+------------------
+Handle nullable data:
+
+onNodeClicked={(node) => {
+  // node.data can be null
+  if (node.data) {
+    console.log(node.data.name);
+  }
+}}
+
+// Or with optional chaining
+onNodeClicked={(node) => {
+  console.log(node.data?.name ?? 'Unknown');
+}}
+
+TYPE NARROWING IN TEMPLATES
+---------------------------
+<Tree {data}>
+  {#snippet nodeTemplate(node)}
+    {#if node.data}
+      <span>{node.data.name}</span>
+      {#if isFolder(node.data)}
+        <span class="count">({node.data.childCount})</span>
+      {/if}
+    {/if}
+  {/snippet}
+</Tree>
+
+EXTENDING TYPES
+---------------
+// Extend base node data
+interface BaseItem {
+  id: string;
+  path: string;
+  name: string;
+}
+
+interface ExtendedItem extends BaseItem {
+  createdAt: Date;
+  updatedAt: Date;
+  metadata: Record<string, unknown>;
+}
+
+// Use extended type
+let data: ExtendedItem[] = $state.raw([]);
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  getDisplayValueCallback={(node) => {
+    const item = node.data;
+    if (!item) return '';
+    return `${item.name} (${item.createdAt.toLocaleDateString()})`;
+  }}
+/>
+
+BEST PRACTICES
+--------------
+✅ Define interface for your data type
+✅ Use type imports (import type { ... })
+✅ Handle null/undefined in callbacks
+✅ Use type guards for union types
+✅ Type tree reference with generic
+
+❌ Don't use `any` type
+❌ Don't ignore null checks on node.data
+❌ Don't cast without type guards
+❌ Don't forget generic parameter on Tree ref

@@ -1,0 +1,281 @@
+DOCUMENTATION INDEX
+===================
+
+Quick reference for finding documentation on specific topics.
+
+FILE OVERVIEW
+-------------
+basic-setup.txt          - Installation, first component, Svelte 5 requirements
+import-patterns.txt      - How to import the component, types, styles
+data-handling.txt        - Path-based hierarchy, LTree data structure
+drag-drop.txt            - Drag and drop, positions, touch support, restrictions
+search-features.txt      - FlexSearch, async indexing, filtering
+context-menu.txt         - Callback-based and snippet-based menus
+tree-editing.txt         - addNode, moveNode, removeNode methods
+styling-theming.txt      - CSS variables, SCSS, classes
+events-callbacks.txt     - Events, callbacks, handlers
+typescript-types.txt     - Types and interfaces
+performance.txt          - Flat rendering, progressive render, optimization
+advanced-patterns.txt    - Complex use cases and patterns
+
+KEYWORD INDEX
+=============
+
+A
+-
+addNode → tree-editing.txt
+allowCopy → drag-drop.txt
+allowedDropPositions → drag-drop.txt
+allowedDropPositionsMember → drag-drop.txt
+Async indexing → search-features.txt, performance.txt
+
+B
+-
+beforeDropCallback → drag-drop.txt, events-callbacks.txt
+bodyClass → styling-theming.txt
+
+C
+-
+Callbacks → events-callbacks.txt, data-handling.txt
+closeContextMenu → context-menu.txt
+collapseAll → basic-setup.txt, tree-editing.txt
+collapseIconClass → styling-theming.txt
+collapseNodes → basic-setup.txt
+Context menu → context-menu.txt
+contextMenuCallback → context-menu.txt, events-callbacks.txt
+contextMenuXOffset → context-menu.txt
+contextMenuYOffset → context-menu.txt
+Copy operation → drag-drop.txt
+CSS Variables → styling-theming.txt
+Ctrl+drag → drag-drop.txt
+
+D
+-
+data → basic-setup.txt, data-handling.txt
+displayValueMember → data-handling.txt
+Drag and drop → drag-drop.txt
+dragDropMode → drag-drop.txt
+dragOverNodeClass → styling-theming.txt, drag-drop.txt
+DropPosition → drag-drop.txt, typescript-types.txt
+dropZoneLayout → drag-drop.txt
+dropZoneMode → drag-drop.txt
+dropZoneStart → drag-drop.txt
+
+E
+-
+Events → events-callbacks.txt
+expandAll → basic-setup.txt, tree-editing.txt
+expandIconClass → styling-theming.txt
+expandLevel → basic-setup.txt, data-handling.txt
+expandNodes → basic-setup.txt
+
+F
+-
+filterNodes → search-features.txt
+Flat rendering → performance.txt
+FlexSearch → search-features.txt
+
+G
+-
+getAllowedDropPositionsCallback → drag-drop.txt
+getChildren → tree-editing.txt
+getDisplayValueCallback → data-handling.txt
+getNodeByPath → tree-editing.txt
+getSearchValueCallback → search-features.txt, data-handling.txt
+getSiblings → tree-editing.txt
+Glow mode → drag-drop.txt, styling-theming.txt
+
+H
+-
+hasChildrenMember → data-handling.txt
+Hierarchy → data-handling.txt
+
+I
+-
+idMember → data-handling.txt, basic-setup.txt
+Import → import-patterns.txt
+indexerBatchSize → search-features.txt, performance.txt
+indexerTimeout → search-features.txt
+initialBatchSize → performance.txt
+insertResult → data-handling.txt
+Installation → basic-setup.txt
+isDraggableMember → drag-drop.txt, data-handling.txt
+isDropAllowedMember → drag-drop.txt, data-handling.txt
+isExpandedMember → data-handling.txt
+isSelectedMember → data-handling.txt
+isSorted → data-handling.txt
+
+K
+-
+Keyboard → basic-setup.txt
+
+L
+-
+leafIconClass → styling-theming.txt
+levelMember → data-handling.txt
+Logging → performance.txt, advanced-patterns.txt
+LTree → data-handling.txt, typescript-types.txt
+LTreeNode → typescript-types.txt, data-handling.txt
+
+M
+-
+maxBatchSize → performance.txt
+moveNode → tree-editing.txt
+
+N
+-
+nodeTemplate → basic-setup.txt, styling-theming.txt
+
+O
+-
+onNodeClicked → events-callbacks.txt
+onNodeDragOver → events-callbacks.txt, drag-drop.txt
+onNodeDragStart → events-callbacks.txt, drag-drop.txt
+onNodeDrop → events-callbacks.txt, drag-drop.txt
+orderMember → drag-drop.txt, tree-editing.txt
+
+P
+-
+parentPathMember → data-handling.txt
+Path structure → data-handling.txt
+pathMember → data-handling.txt, basic-setup.txt
+Performance → performance.txt
+Position restrictions → drag-drop.txt
+Progressive rendering → performance.txt
+progressiveRender → performance.txt
+
+R
+-
+refreshNode → tree-editing.txt
+refreshSiblings → tree-editing.txt
+removeNode → tree-editing.txt
+Root drop zone → drag-drop.txt
+
+S
+-
+SCSS → styling-theming.txt, import-patterns.txt
+scrollHighlightClass → styling-theming.txt
+scrollHighlightTimeout → styling-theming.txt
+scrollToPath → basic-setup.txt, tree-editing.txt
+Search → search-features.txt
+searchNodes → search-features.txt
+searchText → search-features.txt, basic-setup.txt
+searchValueMember → search-features.txt, data-handling.txt
+selectedNode → basic-setup.txt, events-callbacks.txt
+selectedNodeClass → styling-theming.txt
+shouldDisplayDebugInformation → basic-setup.txt, performance.txt
+shouldToggleOnNodeClick → basic-setup.txt
+shouldUseInternalSearchIndex → search-features.txt
+Snippets → basic-setup.txt, context-menu.txt
+sortCallback → data-handling.txt, basic-setup.txt
+$state.raw() → performance.txt
+statistics → basic-setup.txt, performance.txt
+Styles → styling-theming.txt
+Svelte 5 → basic-setup.txt
+
+T
+-
+Touch drag → drag-drop.txt
+Tree → basic-setup.txt, typescript-types.txt
+treeId → basic-setup.txt
+treePathSeparator → data-handling.txt
+TypeScript → typescript-types.txt
+
+U
+-
+update() → basic-setup.txt, advanced-patterns.txt
+useFlatRendering → performance.txt
+
+COMMON QUESTIONS
+================
+
+Q: How do I get started?
+A: → basic-setup.txt
+
+Q: How do I import the component?
+A: → import-patterns.txt
+
+Q: How do I structure my hierarchical data?
+A: → data-handling.txt
+
+Q: How do I enable drag and drop?
+A: → drag-drop.txt
+
+Q: How do I restrict where items can be dropped?
+A: → drag-drop.txt (allowedDropPositions)
+
+Q: How do I add search functionality?
+A: → search-features.txt
+
+Q: How do I add a right-click context menu?
+A: → context-menu.txt
+
+Q: How do I programmatically edit the tree?
+A: → tree-editing.txt
+
+Q: How do I change colors and styles?
+A: → styling-theming.txt
+
+Q: How do I listen to selection changes?
+A: → events-callbacks.txt
+
+Q: Where are the TypeScript types?
+A: → typescript-types.txt
+
+Q: My tree is slow with thousands of items
+A: → performance.txt
+
+Q: How do I copy nodes instead of move?
+A: → drag-drop.txt (Ctrl+drag)
+
+Q: How do I implement async drop validation?
+A: → drag-drop.txt (beforeDropCallback)
+
+FEATURES BY CATEGORY
+====================
+
+GETTING STARTED
+- Installation and setup → basic-setup.txt
+- Import methods → import-patterns.txt
+- First component → basic-setup.txt
+
+DATA & STRUCTURE
+- Path-based hierarchy → data-handling.txt
+- Custom separators → data-handling.txt
+- Member properties → data-handling.txt
+- Insert results → data-handling.txt
+
+DRAG & DROP
+- Basic drag/drop → drag-drop.txt
+- Drop positions → drag-drop.txt
+- Position restrictions → drag-drop.txt
+- Touch support → drag-drop.txt
+- Copy operations → drag-drop.txt
+
+SEARCH & FILTERING
+- FlexSearch integration → search-features.txt
+- Async indexing → search-features.txt
+- Filter vs search → search-features.txt
+
+TREE EDITING
+- Add nodes → tree-editing.txt
+- Move nodes → tree-editing.txt
+- Remove nodes → tree-editing.txt
+- Order management → tree-editing.txt
+
+CUSTOMIZATION
+- CSS variables → styling-theming.txt
+- SCSS → styling-theming.txt
+- Node templates → basic-setup.txt, styling-theming.txt
+- Context menus → context-menu.txt
+
+INTEGRATION
+- Events → events-callbacks.txt
+- TypeScript → typescript-types.txt
+- External updates → advanced-patterns.txt
+
+PERFORMANCE
+- Flat rendering → performance.txt
+- Progressive render → performance.txt
+- $state.raw() → performance.txt
+- Large datasets → performance.txt

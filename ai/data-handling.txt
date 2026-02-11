@@ -1,0 +1,389 @@
+DATA HANDLING
+=============
+
+CRITICAL: Path-based hierarchical data structure
+- Each item MUST have a unique path
+- Path defines parent-child relationships
+- Parent path derived by removing last segment
+- Default separator is "." (configurable)
+
+PATH STRUCTURE
+--------------
+The path is the PRIMARY way to define tree hierarchy:
+
+Root level (no parent):
+{ path: '1' }
+{ path: '2' }
+{ path: '3' }
+
+Second level (parent is path minus last segment):
+{ path: '1.1' }  → parent is '1'
+{ path: '1.2' }  → parent is '1'
+{ path: '2.1' }  → parent is '2'
+
+Third level:
+{ path: '1.1.1' }  → parent is '1.1'
+{ path: '1.2.3' }  → parent is '1.2'
+
+MINIMAL DATA EXAMPLE
+--------------------
+const data = [
+  { id: '1', path: '1', name: 'Documents' },
+  { id: '1.1', path: '1.1', name: 'Projects' },
+  { id: '1.1.1', path: '1.1.1', name: 'Project A' },
+  { id: '1.1.2', path: '1.1.2', name: 'Project B' },
+  { id: '1.2', path: '1.2', name: 'Reports' },
+  { id: '2', path: '2', name: 'Pictures' },
+  { id: '2.1', path: '2.1', name: 'Vacation' }
+];
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  displayValueMember="name"
+/>
+
+REQUIRED MEMBERS
+----------------
+| Prop | Type | Description |
+|------|------|-------------|
+| idMember | string | Property for unique identifier |
+| pathMember | string | Property for hierarchical path |
+
+OPTIONAL MEMBERS
+----------------
+| Prop | Type | Description |
+|------|------|-------------|
+| displayValueMember | string | Property for display text |
+| parentPathMember | string | Property for parent path (usually derived) |
+| levelMember | string | Property for depth level (usually calculated) |
+| isExpandedMember | string | Property for expanded state |
+| isSelectedMember | string | Property for selected state |
+| isDraggableMember | string | Property for draggable state |
+| isDropAllowedMember | string | Property for drop allowed state |
+| hasChildrenMember | string | Property for children indicator |
+| searchValueMember | string | Property for search indexing |
+| orderMember | string | Property for sibling sort order |
+| allowedDropPositionsMember | string | Property for allowed drop positions |
+
+CUSTOM PATH SEPARATOR
+---------------------
+Default separator is "." but can be changed:
+
+// File system style paths
+<Tree
+  {data}
+  treePathSeparator="/"
+/>
+
+const data = [
+  { id: 'root', path: 'files', name: 'Files' },
+  { id: 'docs', path: 'files/documents', name: 'Documents' },
+  { id: 'readme', path: 'files/documents/readme', name: 'README.md' }
+];
+
+// Multi-character separator
+<Tree treePathSeparator="::" />
+// Paths: "root::child::grandchild"
+
+DISPLAY VALUE CALLBACK
+----------------------
+For computed display values:
+
+<Tree
+  {data}
+  getDisplayValueCallback={(node) => {
+    const item = node.data;
+    return `${item.name} (${item.count} items)`;
+  }}
+/>
+
+Or combining multiple properties:
+
+getDisplayValueCallback={(node) => {
+  return `${node.data.firstName} ${node.data.lastName}`;
+}}
+
+SEARCH VALUE CONFIGURATION
+--------------------------
+What gets indexed for search:
+
+// Simple: use a property
+<Tree searchValueMember="name" />
+
+// Complex: use callback
+<Tree
+  getSearchValueCallback={(node) => {
+    const item = node.data;
+    return `${item.name} ${item.description} ${item.tags.join(' ')}`;
+  }}
+/>
+
+SORTING DATA
+------------
+IMPORTANT: For proper tree construction, parent nodes must be inserted before children.
+
+Default sort handles this automatically, but custom sorts must maintain this:
+
+const sortCallback = (nodes) => {
+  return nodes.sort((a, b) => {
+    // FIRST: Sort by level (parents before children)
+    const aLevel = a.path.split('.').length;
+    const bLevel = b.path.split('.').length;
+    if (aLevel !== bLevel) {
+      return aLevel - bLevel;
+    }
+
+    // THEN: Sort by your criteria
+    return a.data.name.localeCompare(b.data.name);
+  });
+};
+
+<Tree {data} sortCallback={sortCallback} />
+
+Pre-sorted data (skip internal sorting):
+
+<Tree {data} isSorted={true} />
+
+DRAGGABLE/DROP CONFIGURATION
+----------------------------
+Control drag and drop per node:
+
+// Using member properties
+const data = [
+  { path: '1', name: 'Folder', isDraggable: true, isDropAllowed: true },
+  { path: '1.1', name: 'Locked Item', isDraggable: false, isDropAllowed: false }
+];
+
+<Tree
+  {data}
+  isDraggableMember="isDraggable"
+  isDropAllowedMember="isDropAllowed"
+/>
+
+DROP POSITION RESTRICTIONS
+--------------------------
+Restrict which drop positions are allowed per node:
+
+// Using member property
+const data = [
+  { path: '1', name: 'Trash', allowedDropPositions: ['child'] },
+  { path: '2', name: 'File.txt', allowedDropPositions: ['above', 'below'] },
+  { path: '3', name: 'Folder' }  // undefined = all positions
+];
+
+<Tree allowedDropPositionsMember="allowedDropPositions" />
+
+// Using callback
+<Tree
+  getAllowedDropPositionsCallback={(node) => {
+    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'trash') return ['child'];
+    return undefined;  // all positions
+  }}
+/>
+
+EXPANDED STATE
+--------------
+Control initial expanded state:
+
+// Via expandLevel prop (recommended)
+<Tree expandLevel={3} />  // Expand first 3 levels
+
+// Via data property
+const data = [
+  { path: '1', name: 'Folder', isExpanded: true },
+  { path: '1.1', name: 'Subfolder', isExpanded: false }
+];
+
+<Tree isExpandedMember="isExpanded" />
+
+INSERT RESULT
+-------------
+Track data insertion success/failure:
+
+<script>
+  let insertResult = $state();
+
+  $effect(() => {
+    if (insertResult) {
+      console.log('Successful:', insertResult.successful);
+      console.log('Failed:', insertResult.failed.length);
+
+      insertResult.failed.forEach(f => {
+        console.log(`Failed: ${f.originalData.name} - ${f.error}`);
+      });
+    }
+  });
+</script>
+
+<Tree {data} bind:insertResult />
+
+Common failure: "Could not find parent node"
+- Caused by missing parent in data
+- Or wrong sort order (child before parent)
+
+LTREENODE STRUCTURE
+-------------------
+Internal node structure (what you get in callbacks):
+
+interface LTreeNode<T> {
+  path: string;              // Full path "1.2.3"
+  pathSegment: string;       // Last segment "3"
+  parentPath: string | null; // Parent path "1.2" or null
+  level: number | null;      // Depth level (0 = root)
+  data: T | null;            // Your original data object
+  children: Record<string, LTreeNode<T>>;
+  isExpanded: boolean;
+  isSelected: boolean;
+  isDraggable: boolean;
+  isDropAllowed: boolean;
+  allowedDropPositions: DropPosition[] | null;
+  hasChildren: boolean;
+}
+
+Accessing data in callbacks:
+
+onNodeClicked={(node) => {
+  console.log('Path:', node.path);
+  console.log('Level:', node.level);
+  console.log('Name:', node.data.name);  // Your data
+  console.log('Has children:', node.hasChildren);
+}}
+
+COMPLEX DATA EXAMPLE
+--------------------
+interface Employee {
+  employeeId: string;
+  orgPath: string;
+  fullName: string;
+  email: string;
+  title: string;
+  department: string;
+  reportsTo: string;
+  isManager: boolean;
+  hireDate: Date;
+}
+
+const employees: Employee[] = [
+  {
+    employeeId: 'E001',
+    orgPath: '1',
+    fullName: 'John CEO',
+    email: 'john@company.com',
+    title: 'CEO',
+    department: 'Executive',
+    reportsTo: null,
+    isManager: true,
+    hireDate: new Date('2020-01-01')
+  },
+  // ...
+];
+
+<Tree
+  data={employees}
+  idMember="employeeId"
+  pathMember="orgPath"
+  displayValueMember="fullName"
+  searchValueMember="email"
+  getDisplayValueCallback={(node) =>
+    `${node.data.fullName} - ${node.data.title}`
+  }
+  getSearchValueCallback={(node) =>
+    `${node.data.fullName} ${node.data.email} ${node.data.department}`
+  }
+/>
+
+DYNAMIC DATA UPDATES
+--------------------
+Update entire array (triggers re-render):
+
+// Replace all data
+data = newData;
+
+// Add item
+data = [...data, newItem];
+
+// Remove item
+data = data.filter(d => d.id !== idToRemove);
+
+// Update item
+data = data.map(d =>
+  d.id === targetId ? { ...d, name: 'Updated' } : d
+);
+
+IMPORTANT: Always reassign the array for reactivity
+
+❌ data.push(newItem);  // Won't trigger update
+✅ data = [...data, newItem];  // Triggers update
+
+PRIORITY ORDER
+--------------
+When both member and callback are set, callback wins:
+
+getDisplayValueCallback > displayValueMember > default
+
+Example:
+<Tree
+  displayValueMember="name"           // Ignored
+  getDisplayValueCallback={(n) => n.data.title}  // Used
+/>
+
+COMMON DATA PATTERNS
+--------------------
+File system:
+{
+  id: 'file-123',
+  path: 'documents/projects/report.pdf',
+  name: 'report.pdf',
+  type: 'file',
+  size: 1024
+}
+
+Organization chart:
+{
+  employeeId: 'E100',
+  orgPath: '1.2.3',
+  name: 'Jane Smith',
+  title: 'Manager',
+  department: 'Engineering'
+}
+
+Category tree:
+{
+  categoryId: 5,
+  categoryPath: '1.2',
+  categoryName: 'Electronics',
+  productCount: 150
+}
+
+DEBUGGING DATA
+--------------
+Enable debug mode:
+
+<Tree shouldDisplayDebugInformation={true} />
+
+Check data in console:
+
+console.log('Data count:', data.length);
+console.log('Sample item:', data[0]);
+
+// After tree renders
+console.log('Tree stats:', treeRef.statistics);
+console.log('Insert result:', insertResult);
+
+BEST PRACTICES
+--------------
+✅ Use unique paths for each item
+✅ Ensure parent nodes exist before children
+✅ Use sortCallback that sorts by level first
+✅ Use $state.raw() for large datasets
+✅ Use callbacks for computed values
+✅ Handle insertResult errors gracefully
+
+❌ Don't use duplicate paths
+❌ Don't insert children before parents
+❌ Don't mutate data array directly
+❌ Don't use $state() for 1000+ items
+❌ Don't mix path separators in same tree

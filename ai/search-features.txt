@@ -1,0 +1,359 @@
+SEARCH FEATURES
+===============
+
+CRITICAL: Search requires explicit configuration
+- Set shouldUseInternalSearchIndex={true}
+- Provide searchValueMember OR getSearchValueCallback
+- Optional: FlexSearch for advanced search
+
+BASIC SEARCH SETUP
+------------------
+<script>
+  let searchText = $state('');
+</script>
+
+<input bind:value={searchText} placeholder="Search..." />
+
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
+  bind:searchText
+  shouldUseInternalSearchIndex={true}
+  searchValueMember="name"
+/>
+
+SEARCH VALUE CONFIGURATION
+--------------------------
+What text gets indexed for search:
+
+// Simple: use a property
+<Tree searchValueMember="name" />
+
+// Complex: use callback for computed values
+<Tree
+  getSearchValueCallback={(node) => {
+    const item = node.data;
+    return `${item.name} ${item.description} ${item.tags.join(' ')}`;
+  }}
+/>
+
+ASYNC SEARCH INDEXING
+---------------------
+IMPORTANT: Search indexing happens asynchronously
+
+- Tree renders immediately
+- Indexing runs during browser idle time
+- Uses requestIdleCallback (or setTimeout fallback)
+- Large datasets won't freeze UI
+
+Check indexing status:
+const stats = treeRef.statistics;
+console.log('Is indexing:', stats.isIndexing);
+console.log('Pending:', stats.pendingIndexCount);
+
+INDEXER CONFIGURATION
+---------------------
+<Tree
+  indexerBatchSize={25}   <!-- Nodes per batch (default: 25) -->
+  indexerTimeout={50}     <!-- Max wait time ms (default: 50) -->
+/>
+
+indexerBatchSize:
+- Lower (10-25): Smoother UI, slower indexing
+- Higher (50-100): Faster indexing, brief UI pauses
+
+indexerTimeout:
+- Lower (25-50ms): More responsive indexing
+- Higher (100-200ms): More genuine idle periods
+
+FILTER VS SEARCH
+----------------
+filterNodes() - Hides non-matching nodes in tree display
+
+searchText binding uses filterNodes internally:
+<Tree bind:searchText ... />
+
+searchNodes() - Returns matching nodes without filtering
+
+<script>
+  function search(query) {
+    const results = treeRef.searchNodes(query);
+    console.log('Found:', results.length, 'nodes');
+    return results;
+  }
+</script>
+
+FLEXSEARCH OPTIONS
+------------------
+Both methods accept FlexSearch options:
+
+// Search with options
+const results = treeRef.searchNodes('query', {
+  suggest: true,      // Enable suggestions for typos
+  limit: 10,          // Max results
+  threshold: 0.8,     // Similarity threshold
+  bool: 'and'         // AND logic for multiple terms
+});
+
+// Filter with options
+treeRef.filterNodes('query', {
+  suggest: true,
+  limit: 50
+});
+
+SEARCH RESULTS NAVIGATION
+-------------------------
+<script>
+  let searchText = $state('');
+  let results = $state([]);
+  let currentIndex = $state(0);
+  let treeRef;
+
+  $effect(() => {
+    if (searchText) {
+      results = treeRef.searchNodes(searchText);
+      currentIndex = 0;
+      if (results.length > 0) {
+        goToResult(0);
+      }
+    }
+  });
+
+  async function goToResult(index) {
+    currentIndex = index;
+    await treeRef.scrollToPath(results[index].path, {
+      expand: true,
+      highlight: true,
+      containerScroll: true
+    });
+  }
+
+  function next() {
+    const nextIndex = (currentIndex + 1) % results.length;
+    goToResult(nextIndex);
+  }
+
+  function prev() {
+    const prevIndex = (currentIndex - 1 + results.length) % results.length;
+    goToResult(prevIndex);
+  }
+</script>
+
+<input bind:value={searchText} />
+<span>{currentIndex + 1} of {results.length}</span>
+<button onclick={prev}>Prev</button>
+<button onclick={next}>Next</button>
+
+CLEAR SEARCH
+------------
+// Clear search text (shows all nodes)
+searchText = '';
+
+// Or programmatically
+treeRef.filterNodes('');
+
+CUSTOM SEARCH INDEX
+-------------------
+Initialize your own FlexSearch index:
+
+<script>
+  import { Index } from 'flexsearch';
+
+  function initializeIndex() {
+    return new Index({
+      tokenize: 'forward',
+      resolution: 9,
+      cache: true
+    });
+  }
+</script>
+
+<Tree
+  initializeIndexCallback={initializeIndex}
+  shouldUseInternalSearchIndex={true}
+  searchValueMember="name"
+/>
+
+SEARCH WITHOUT INTERNAL INDEX
+-----------------------------
+Handle search externally:
+
+<script>
+  let data = $state.raw([...]);
+  let filteredData = $state.raw([...]);
+  let searchText = $state('');
+
+  $effect(() => {
+    if (searchText) {
+      filteredData = data.filter(item =>
+        item.name.toLowerCase().includes(searchText.toLowerCase())
+      );
+    } else {
+      filteredData = data;
+    }
+  });
+</script>
+
+<input bind:value={searchText} />
+<Tree data={filteredData} ... />
+
+Note: This approach loses the tree hierarchy when filtering
+
+SEARCH HIGHLIGHT
+----------------
+Highlight matching text in node template:
+
+<Tree {data} bind:searchText>
+  {#snippet nodeTemplate(node)}
+    {@html highlightMatch(node.data.name, searchText)}
+  {/snippet}
+</Tree>
+
+<script>
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  function escapeRegex(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+</script>
+
+SEARCH DEBOUNCING
+-----------------
+Debounce search input for better performance:
+
+<script>
+  let inputValue = $state('');
+  let searchText = $state('');
+  let debounceTimer;
+
+  function handleInput(e) {
+    inputValue = e.target.value;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      searchText = inputValue;
+    }, 300);
+  }
+</script>
+
+<input value={inputValue} oninput={handleInput} />
+<Tree bind:searchText ... />
+
+SEARCH STATISTICS
+-----------------
+Track search results:
+
+const stats = treeRef.statistics;
+console.log('Total nodes:', stats.nodeCount);
+console.log('Filtered visible:', stats.filteredNodeCount);
+
+// After search
+$effect(() => {
+  if (searchText) {
+    console.log(`Showing ${stats.filteredNodeCount} of ${stats.nodeCount}`);
+  }
+});
+
+MULTIPLE SEARCH FIELDS
+----------------------
+Index multiple properties:
+
+<Tree
+  getSearchValueCallback={(node) => {
+    const item = node.data;
+    return [
+      item.name,
+      item.email,
+      item.department,
+      item.tags.join(' ')
+    ].join(' ');
+  }}
+/>
+
+SEARCH WITH EMPTY TREE
+----------------------
+Handle no results state:
+
+<Tree {data} bind:searchText>
+  {#snippet noDataFound()}
+    {#if searchText}
+      <p>No results for "{searchText}"</p>
+    {:else}
+      <p>No items available</p>
+    {/if}
+  {/snippet}
+</Tree>
+
+COMMON SEARCH PATTERNS
+----------------------
+File search:
+<Tree
+  searchValueMember="name"
+  getSearchValueCallback={(node) =>
+    `${node.data.name} ${node.data.path} ${node.data.extension}`
+  }
+/>
+
+User search:
+<Tree
+  getSearchValueCallback={(node) =>
+    `${node.data.firstName} ${node.data.lastName} ${node.data.email}`
+  }
+/>
+
+Product search:
+<Tree
+  getSearchValueCallback={(node) =>
+    `${node.data.name} ${node.data.sku} ${node.data.category} ${node.data.description}`
+  }
+/>
+
+DEBUGGING SEARCH
+----------------
+Enable search indexing logs:
+
+import { setCategoryLevel } from '@keenmate/svelte-treeview';
+setCategoryLevel('LTREE:INDEX', 'debug');
+
+// Console shows:
+// - Indexer initialization
+// - Queue management
+// - Batch processing
+// - Indexing completion
+
+Check index status:
+console.log('Stats:', treeRef.statistics);
+
+BEST PRACTICES
+--------------
+✅ Set shouldUseInternalSearchIndex={true}
+✅ Provide searchValueMember or getSearchValueCallback
+✅ Use debouncing for search input
+✅ Handle loading state during indexing
+✅ Provide feedback for no results
+
+❌ Don't search before indexing completes
+❌ Don't use heavy callbacks (slows indexing)
+❌ Don't forget to clear search
+❌ Don't rely on immediate search after data load
+
+TROUBLESHOOTING
+---------------
+Search not working:
+✅ Check shouldUseInternalSearchIndex={true}
+✅ Check searchValueMember or getSearchValueCallback is set
+✅ Wait for indexing to complete (check statistics.isIndexing)
+
+Search slow:
+✅ Reduce indexerBatchSize
+✅ Simplify getSearchValueCallback
+✅ Use $state.raw() for large datasets
+
+No results found:
+✅ Check searchValueMember matches data property
+✅ Check getSearchValueCallback returns string
+✅ Check data actually contains search term
