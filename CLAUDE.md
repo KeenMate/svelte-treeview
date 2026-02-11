@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.5.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v4.6.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -134,4 +134,4 @@ EXAMPLES:
 - src/routes/examples/data/ - path structure, separators, insert results
 - Snippet name: nodeTemplate (not nodeContent)
 
-RECENT: v4.5.0 - Touch drag and drop, drop placeholder for empty trees, example pages at /examples
+RECENT: v4.6.0 - Progressive flat rendering, async beforeDropCallback, context-based callbacks

@@ -5,6 +5,7 @@ export {default as Tree} from "./components/Tree.svelte"
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
 export type { Ltree, DropPosition, DragDropMode, DropOperation, ContextMenuItem, InsertArrayResult, TreeChange, ApplyChangesResult } from "./ltree/types"
 export type { RenderStats } from "./components/RenderCoordinator.svelte"
+export type { NodeCallbacks, NodeConfig } from "./components/Tree.svelte"
 
 // Export logging utilities
 export { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from "./logger"

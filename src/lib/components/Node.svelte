@@ -4,102 +4,73 @@
 	import {getContext, onDestroy, type Snippet} from "svelte"
 	import type {Ltree, DropPosition, DropOperation} from "../ltree/types.js"
 	import type {RenderCoordinator} from "./RenderCoordinator.svelte.js"
+	import type {NodeCallbacks, NodeConfig} from "./Tree.svelte"
 	import { uiLogger } from "../logger.js"
 
 	// Define component props interface
+	// Callbacks and config come from context, drag state comes as props
 	interface Props {
 		node: LTreeNode<T>;
 		children?: Snippet<[T]>; // Keep the general children slot for backward compatibility
-		onNodeClicked?: (node: LTreeNode<T>) => void;
-		onNodeRightClicked?: (node: LTreeNode<T>, event: MouseEvent) => void;
-		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDragLeave?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDrop?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onZoneDrop?: (node: LTreeNode<T>, position: DropPosition, event: DragEvent) => void;
-
-		// Touch drag handlers for mobile support
-		onTouchDragStart?: (node: LTreeNode<T>, event: TouchEvent) => void;
-		onTouchDragMove?: (node: LTreeNode<T>, event: TouchEvent) => void;
-		onTouchDragEnd?: (node: LTreeNode<T>, event: TouchEvent) => void;
-
-		// BEHAVIOUR
-		shouldToggleOnNodeClick?: boolean | null | undefined;
 
 		// Progressive rendering
 		progressiveRender?: boolean;
 		renderBatchSize?: number;
 
-		// VISUALS
-		expandIconClass?: string | null | undefined;
-		collapseIconClass?: string | null | undefined;
-		leafIconClass?: string | null | undefined;
-		selectedNodeClass?: string | null | undefined;
-		dragOverNodeClass?: string | null | undefined;
-		isDraggedNode?: boolean | null | undefined;
-
-		// Drag position indicators
+		// Drag state (passed as props for efficient Svelte diffing)
+		isDraggedNode?: boolean;
 		isDragInProgress?: boolean;
-		hoveredNodeForDropPath?: string | null; // Path of node being hovered for drop
+		hoveredNodeForDropPath?: string | null;
 		activeDropPosition?: DropPosition | null;
+		dropOperation?: DropOperation;
 
-		// Drop zone configuration
-		dropZoneMode?: 'floating' | 'glow'; // 'floating' = original floating zones, 'glow' = border glow indicators
-		dropZoneLayout?: 'around' | 'above' | 'below' | 'wave' | 'wave2';
-		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
-		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
-		dropOperation?: DropOperation; // Current drag operation ('move' or 'copy')
-		allowCopy?: boolean; // Whether copy operation is allowed (Ctrl+drag)
+		// Flat rendering mode
+		flatMode?: boolean; // When true, don't render children (Tree handles flat rendering)
+		flatIndentSize?: string; // CSS value for per-level indentation in flat mode
 	}
 
 	// Destructure props using Svelte 5 syntax
 	let {
 		node,
 		children = undefined,
-		onNodeClicked,
-		onNodeRightClicked,
-		onNodeDragStart,
-		onNodeDragOver,
-		onNodeDragLeave,
-		onNodeDrop,
-		onZoneDrop,
-
-		// Touch drag handlers for mobile support
-		onTouchDragStart,
-		onTouchDragMove,
-		onTouchDragEnd,
-
-		// BEHAVIOUR
-		shouldToggleOnNodeClick = true,
 
 		// Progressive rendering
 		progressiveRender = false,
 		renderBatchSize = 50,
 
-		// VISUALS
-		expandIconClass = "ltree-icon-expand",
-		collapseIconClass = "ltree-icon-collapse",
-		leafIconClass = "ltree-icon-leaf",
-		selectedNodeClass,
-		dragOverNodeClass,
+		// Drag state
 		isDraggedNode = false,
-
-		// Drag position indicators
 		isDragInProgress = false,
 		hoveredNodeForDropPath = null,
 		activeDropPosition = null,
-
-		// Drop zone configuration
-		dropZoneMode = 'glow',
-		dropZoneLayout = 'around',
-		dropZoneStart = 33,
-		dropZoneMaxWidth = 120,
 		dropOperation = 'move',
-		allowCopy = false,
+
+		// Flat rendering mode
+		flatMode = false,
+		flatIndentSize = '1.5rem',
 	}: Props = $props()
 
+	// Get stable references from context (avoids prop drilling and re-renders from inline functions)
+	const callbacks = getContext<NodeCallbacks<T>>('NodeCallbacks');
+	const config = getContext<NodeConfig>('NodeConfig');
+
+	// Destructure config for convenience (these are stable references)
+	const {
+		shouldToggleOnNodeClick,
+		expandIconClass,
+		collapseIconClass,
+		leafIconClass,
+		selectedNodeClass,
+		dragOverNodeClass,
+		dropZoneMode,
+		dropZoneLayout,
+		dropZoneStart,
+		dropZoneMaxWidth,
+		allowCopy,
+	} = config;
+
 	// Compute if THIS node is the one being hovered for drop
-	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path)
+	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
 
 	// Format dropZoneStart - number = percentage, string = as-is
 	const formattedDropZoneStart = $derived(
@@ -139,32 +110,36 @@
 	}
 
 	// Convert reactive statements to derived values
-	const childrenArray = $derived(Object.values(node?.children || []))
-	const childrenWithData = $derived(Object.values(node?.children || []))
+	// In flat mode, children rendering is handled by Tree.svelte, so we skip these computations
+	const childrenArray = $derived(!flatMode ? Object.values(node?.children || []) : [])
 	const hasChildren = $derived(node?.hasChildren || false)
 	const indentStyle = $derived(
-		`margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
+		flatMode
+			? `margin-left: calc(${(node?.level || 1) - 1} * ${flatIndentSize})`
+			: `margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
 	)
 
-	// Progressive rendering state
+	// Progressive rendering state - only used in recursive mode
 	let renderedCount = $state(0);
 	let unregisterFromCoordinator: (() => void) | null = null;
 	let lastExpandedState = false;
 	let lastChildrenLength = 0;
 
-	// Get the children to render (all or progressive slice)
+	// Get the children to render (all or progressive slice) - only used in recursive mode
 	const childrenToRender = $derived(
-		progressiveRender && renderCoordinator
+		!flatMode && progressiveRender && renderCoordinator
 			? childrenArray.slice(0, renderedCount)
 			: childrenArray
 	);
 	const hasMoreToRender = $derived(
-		progressiveRender && renderCoordinator && renderedCount < childrenArray.length
+		!flatMode && progressiveRender && renderCoordinator && renderedCount < childrenArray.length
 	);
 
 	// Handle expansion state changes - use coordinator for progressive rendering
-	// Only react to isExpanded changes, not renderedCount changes
+	// Skip entirely in flat mode since Tree.svelte handles children rendering
 	$effect(() => {
+		if (flatMode) return; // Skip in flat mode - children handled by Tree
+
 		const isExpanded = node?.isExpanded ?? false;
 		const childCount = childrenArray.length;
 		const shouldRenderProgressively = progressiveRender && renderCoordinator && childCount > 0;
@@ -232,7 +207,7 @@
 
 	function _onNodeClicked() {
 		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
-		onNodeClicked?.(node)
+		callbacks.onNodeClicked(node)
 		if (shouldToggleOnNodeClick) {
 			toggleExpanded()
 		}
@@ -280,7 +255,7 @@
 			}}
 			oncontextmenu={(e) => {
 				e.stopPropagation();
-				onNodeRightClicked?.(node, e);
+				callbacks.onNodeRightClicked(node, e);
 			}}
 			ondragstart={(e) => {
 				if (node?.isDraggable && e.dataTransfer) {
@@ -289,7 +264,7 @@
 						"application/svelte-treeview",
 						JSON.stringify(node),
 					);
-					onNodeDragStart?.(node, e);
+					callbacks.onNodeDragStart(node, e);
 				}
 			}}
 			ondragover={(e) => {
@@ -305,7 +280,7 @@
 						glowPosition = calculateGlowPosition(e, e.currentTarget as HTMLElement);
 					}
 				}
-				onNodeDragOver?.(node, e);
+				callbacks.onNodeDragOver(node, e);
 			}}
 			ondragleave={(e) => {
 				const rect = e.currentTarget.getBoundingClientRect();
@@ -315,7 +290,7 @@
 				if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
 					isDraggedOver = false;
 					glowPosition = null;
-					onNodeDragLeave?.(node, e);
+					callbacks.onNodeDragLeave(node, e);
 				}
 			}}
 			ondrop={(e) => {
@@ -327,15 +302,15 @@
 				isDraggedOver = false;
 				// In glow mode, use the calculated glowPosition for the drop
 				if (dropZoneMode === 'glow' && glowPosition) {
-					onZoneDrop?.(node, glowPosition, e);
+					callbacks.onZoneDrop(node, glowPosition, e);
 				} else {
-					onNodeDrop?.(node, e);
+					callbacks.onNodeDrop(node, e);
 				}
 				glowPosition = null;
 			}}
-			ontouchstart={(e) => onTouchDragStart?.(node, e)}
-			ontouchmove={(e) => onTouchDragMove?.(node, e)}
-			ontouchend={(e) => onTouchDragEnd?.(node, e)}
+			ontouchstart={(e) => callbacks.onTouchDragStart(node, e)}
+			ontouchmove={(e) => callbacks.onTouchDragMove(node, e)}
+			ontouchend={(e) => callbacks.onTouchDragEnd(node, e)}
 		>
 			{#if children}
 				{@render children(node)}
@@ -354,62 +329,42 @@
 				<div
 					class="ltree-drop-zone ltree-drop-above"
 					class:ltree-drop-zone-active={hoveredZone === 'above'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; callbacks.onNodeDragOver(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'above', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'above', e); }}
 				>↑ Above</div>
 				<div
 					class="ltree-drop-zone ltree-drop-below"
 					class:ltree-drop-zone-active={hoveredZone === 'below'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; callbacks.onNodeDragOver(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'below', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'below', e); }}
 				>↓ Below</div>
 				<div
 					class="ltree-drop-zone ltree-drop-child"
 					class:ltree-drop-zone-active={hoveredZone === 'child'}
-					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; onNodeDragOver?.(node, e); }}
+					ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; callbacks.onNodeDragOver(node, e); }}
 					ondragleave={() => { hoveredZone = null; }}
-					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; onZoneDrop?.(node, 'child', e); }}
+					ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'child', e); }}
 				>→ Child</div>
 			</div>
 		{/if}
 	</div>
 
-	{#if node?.isExpanded && node?.hasChildren}
+	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->
+	{#if !flatMode && node?.isExpanded && node?.hasChildren}
 		<div class="ltree-children">
 			{#each childrenToRender as item (item.id)}
 				<Node
 					node={item}
 					{children}
-					{shouldToggleOnNodeClick}
-					{onNodeClicked}
-					{onNodeRightClicked}
-					{onNodeDragStart}
-					{onNodeDragOver}
-					{onNodeDragLeave}
-					{onNodeDrop}
-					{onZoneDrop}
-					{onTouchDragStart}
-					{onTouchDragMove}
-					{onTouchDragEnd}
 					{progressiveRender}
 					{renderBatchSize}
-					{expandIconClass}
-					{collapseIconClass}
-					{leafIconClass}
-					{selectedNodeClass}
-					{dragOverNodeClass}
 					{isDraggedNode}
 					{isDragInProgress}
 					{hoveredNodeForDropPath}
 					{activeDropPosition}
-					{dropZoneMode}
-					{dropZoneLayout}
-					{dropZoneStart}
-					{dropZoneMaxWidth}
 					{dropOperation}
-					{allowCopy}
 				/>
 			{/each}
 			{#if hasMoreToRender}

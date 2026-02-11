@@ -75,6 +75,10 @@ export function createLTree<T>(
 	let filteredTree: LTreeNode<T>[] | null = null;
 	let isFiltered = false;
 
+	// Cache for visibleFlatNodes - only recompute when tree changes
+	let cachedVisibleFlatNodes: LTreeNode<T>[] = [];
+	let cachedVisibleFlatNodesTracker: Symbol | null = null;
+
 	// Async search indexing infrastructure
 	let indexer: Indexer<T> | null = null;
 
@@ -130,6 +134,64 @@ export function createLTree<T>(
 			}
 
 			return Object.values(root.children);
+		},
+
+		/**
+		 * Returns a flat array of all visible nodes in render order (depth-first).
+		 * A node is visible if all its ancestors are expanded.
+		 * This is optimized for flat/centralized rendering without recursion.
+		 *
+		 * Note: This getter depends on changeTracker to ensure reactivity when
+		 * nodes are expanded/collapsed or the tree structure changes.
+		 * Results are cached to avoid recomputation on repeated access.
+		 */
+		get visibleFlatNodes(): LTreeNode<T>[] {
+			// Explicitly read changeTracker to create reactive dependency
+			const _tracker = changeTracker;
+
+			// Return cached result if changeTracker hasn't changed
+			if (_tracker === cachedVisibleFlatNodesTracker && cachedVisibleFlatNodes.length > 0) {
+				// console.log(`[visibleFlatNodes] Cache HIT - returning ${cachedVisibleFlatNodes.length} nodes`);
+				return cachedVisibleFlatNodes;
+			}
+
+			const computeStart = performance.now();
+
+			const startRoot = this.isFiltered ? filteredRoot : root;
+			if (!startRoot?.children || !_tracker) {
+				cachedVisibleFlatNodes = [];
+				cachedVisibleFlatNodesTracker = _tracker;
+				return cachedVisibleFlatNodes;
+			}
+
+			const result: LTreeNode<T>[] = [];
+			const self = this;
+
+			function traverse(node: LTreeNode<T>) {
+				// Get children and optionally sort them
+				let children = Object.values(node.children);
+				if (self.isSorted && children.length > 0) {
+					children = self.sortCallback(children);
+				}
+
+				for (const child of children) {
+					result.push(child);
+					// Only traverse into children if this node is expanded
+					if (child.isExpanded && child.hasChildren) {
+						traverse(child);
+					}
+				}
+			}
+
+			traverse(startRoot);
+
+			const computeTime = performance.now() - computeStart;
+			console.log(`[visibleFlatNodes] Computed ${result.length} nodes in ${computeTime.toFixed(2)}ms`);
+
+			// Cache the result
+			cachedVisibleFlatNodes = result;
+			cachedVisibleFlatNodesTracker = _tracker;
+			return result;
 		},
 
 		get statistics() {
@@ -539,7 +601,9 @@ export function createLTree<T>(
 		},
 
 		expandNodes: function (path: string, noEmitChanges: boolean = false) {
+			perfStart(`[${_treeId}] expandNodes`);
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : root;
+			let hasChanges = false;
 
 			const segments = path.split(this.treePathSeparator);
 			for (let i = 0; i < segments.length; i++) {
@@ -547,19 +611,27 @@ export function createLTree<T>(
 
 				if (node.children.hasOwnProperty(segment)) {
 					node = node.children[segment];
-					node.isExpanded = true;
+					// Only mark as changed if actually changing from collapsed to expanded
+					if (!node.isExpanded) {
+						node.isExpanded = true;
+						hasChanges = true;
+					}
 				}
 			}
 
-			if (!noEmitChanges) {
+			// Only emit changes if something actually changed
+			if (!noEmitChanges && hasChanges) {
+				console.log(`[Tree ${_treeId}] expandNodes triggering re-render for path: ${path}`);
 				this._emitTreeChanged();
 			}
 
+			perfEnd(`[${_treeId}] expandNodes`);
 			return this; // Return the API object for chaining
 		},
 
 		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
 			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : this.root;
+			let hasChanges = false;
 
 			const segments = path.split(this.treePathSeparator);
 			for (let i = 0; i < segments.length; i++) {
@@ -567,11 +639,16 @@ export function createLTree<T>(
 
 				if (node.children.hasOwnProperty(segment)) {
 					node = node.children[segment];
-					node.isExpanded = false;
+					// Only mark as changed if actually changing from expanded to collapsed
+					if (node.isExpanded) {
+						node.isExpanded = false;
+						hasChanges = true;
+					}
 				}
 			}
 
-			if (!noEmitChanges) {
+			// Only emit changes if something actually changed
+			if (!noEmitChanges && hasChanges) {
 				this._emitTreeChanged();
 			}
 
@@ -779,9 +856,9 @@ export function createLTree<T>(
 			}
 
 			const newPath = newParentPath ? `${newParentPath}${this.treePathSeparator}${newSegment}` : newSegment;
+			const oldPath = sourceNode.path;
 
 			// Update source node's path and parentPath
-			const oldPath = sourceNode.path;
 			sourceNode.path = newPath;
 			sourceNode.pathSegment = newSegment;
 			sourceNode.parentPath = newParentPath || null;

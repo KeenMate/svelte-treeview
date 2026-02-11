@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 
-	const version = 'v4.5.0';
+	const version = 'v4.6.0';
 
 	const examples = [
 		{
@@ -51,6 +51,13 @@
 			icon: '🏢',
 			title: 'Business Scenarios',
 			description: 'Real-world workflows with mock database integration and batch operations.'
+		},
+		{
+			href: '/examples/performance',
+			icon: '⚡',
+			title: 'Performance Test',
+			badge: 'new',
+			description: 'Compare recursive vs flat rendering modes with configurable node counts.'
 		},
 		{
 			href: '/dev/json-loader',
