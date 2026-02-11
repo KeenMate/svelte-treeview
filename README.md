@@ -2,6 +2,8 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
+> **For AI Agents / LLMs**: Comprehensive documentation is available in the `ai/` folder with topic-specific files (basic-setup.txt, drag-drop.txt, performance.txt, etc.). Start with `ai/INDEX.txt` for navigation.
+
 ## 📢 New in v4.7: Per-Node Drop Position Restrictions
 
 > [!NOTE]
