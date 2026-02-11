@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 
-	const version = 'v4.5.0';
+	const version = 'v4.6.0';
 
 	const examples = [
 		{

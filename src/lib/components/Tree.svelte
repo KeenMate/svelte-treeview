@@ -9,6 +9,35 @@
 	import { uiLogger, dragLogger } from '../logger.js';
 	import { perfStart, perfEnd } from '../perf-logger.js';
 
+	// Context types for stable function references (prevents re-renders from inline arrow functions)
+	export interface NodeCallbacks<T> {
+		onNodeClicked: (node: LTreeNode<T>) => void;
+		onNodeRightClicked: (node: LTreeNode<T>, event: MouseEvent) => void;
+		onNodeDragStart: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDragOver: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDragLeave: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDrop: (node: LTreeNode<T>, event: DragEvent) => void;
+		onZoneDrop: (node: LTreeNode<T>, position: DropPosition, event: DragEvent) => void;
+		onTouchDragStart: (node: LTreeNode<T>, event: TouchEvent) => void;
+		onTouchDragMove: (node: LTreeNode<T>, event: TouchEvent) => void;
+		onTouchDragEnd: (node: LTreeNode<T>, event: TouchEvent) => void;
+	}
+
+	export interface NodeConfig {
+		shouldToggleOnNodeClick: boolean;
+		expandIconClass: string;
+		collapseIconClass: string;
+		leafIconClass: string;
+		selectedNodeClass: string | null | undefined;
+		dragOverNodeClass: string | null | undefined;
+		dropZoneMode: 'floating' | 'glow';
+		dropZoneLayout: 'around' | 'above' | 'below' | 'wave' | 'wave2';
+		dropZoneStart: number | string;
+		dropZoneMaxWidth: number;
+		allowCopy: boolean;
+	}
+
+
 	// Register global API for runtime logging control
 	import '../global-api.js';
 
@@ -17,6 +46,9 @@
 	let contextMenuX = $state(0);
 	let contextMenuY = $state(0);
 	let contextMenuNode: LTreeNode<T> | null = $state(null);
+
+	// Scroll highlight state - track current highlight to clear on next scroll
+	let currentHighlight: { element: HTMLElement; timeoutId: ReturnType<typeof setTimeout> } | null = null;
 
 	// Drag and drop state
 	let draggedNode: LTreeNode<any> | null = $state.raw(null);
@@ -32,6 +64,12 @@
 	}>({ node: null, startX: 0, startY: 0, isDragging: false, ghostElement: null, currentDropTarget: null });
 
 	let touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Progressive rendering for flat mode
+	// Track which node IDs we've rendered and progressively add new ones
+	let flatRenderedIds = $state<Set<string>>(new Set());
+	let flatRenderQueue = $state<string[]>([]);
+	let flatRenderAnimationFrame: number | null = null;
 
 	// Drop placeholder state for empty trees
 	let isDropPlaceholderActive = $state(false);
@@ -134,8 +172,9 @@
 		 * Called before a drop is processed. Return false to cancel the drop.
 		 * Return { position, operation } to override the drop position or operation.
 		 * Return true or undefined to proceed normally.
+		 * Can be async - return a Promise to show dialogs or perform async validation.
 		 */
-		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void;
+		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
 		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
 		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuItem[];
 
@@ -204,7 +243,7 @@
 		isLoading = false,
 
 		// Progressive rendering
-		progressiveRender = false,
+		progressiveRender = true,
 		renderBatchSize = 50,
 		isRendering = $bindable(false),
 		onRenderStart,
@@ -212,7 +251,7 @@
 		onRenderComplete,
 
 		// Flat rendering mode
-		useFlatRendering = false,
+		useFlatRendering = true,
 		flatIndentSize = '1.5rem',
 
 		// DRAG AND DROP
@@ -439,10 +478,20 @@
 
 		// Highlight the node temporarily if requested
 		if (highlight && scrollHighlightClass) {
+			// Clear previous highlight immediately (for rapid next/prev navigation)
+			if (currentHighlight) {
+				currentHighlight.element.classList.remove(scrollHighlightClass);
+				clearTimeout(currentHighlight.timeoutId);
+				currentHighlight = null;
+			}
+
 			contentDiv.classList.add(scrollHighlightClass);
-			setTimeout(() => {
+			const timeoutId = setTimeout(() => {
 				contentDiv.classList.remove(scrollHighlightClass);
+				currentHighlight = null;
 			}, scrollHighlightTimeout);
+
+			currentHighlight = { element: contentDiv, timeoutId };
 		}
 
 		perfEnd(`[${treeId}] scrollToPath`);
@@ -613,6 +662,24 @@
 
 	setContext('Ltree', tree);
 
+	// Create stable callback references to avoid inline arrow functions causing re-renders
+	// These are defined as a plain object with function references, not new functions each render
+	const nodeCallbacks: NodeCallbacks<T> = {
+		onNodeClicked: _onNodeClicked,
+		onNodeRightClicked: _onNodeRightClicked,
+		onNodeDragStart: _onNodeDragStart,
+		onNodeDragOver: _onNodeDragOver,
+		onNodeDragLeave: _onNodeDragLeave,
+		onNodeDrop: _onNodeDrop,
+		onZoneDrop: _onZoneDrop,
+		onTouchDragStart: _onTouchStart,
+		onTouchDragMove: _onTouchMove,
+		onTouchDragEnd: _onTouchEnd,
+	};
+	setContext('NodeCallbacks', nodeCallbacks);
+
+	// Note: NodeConfig is set via $effect below since it depends on reactive props
+
 	// Create and provide render coordinator for progressive rendering
 	// Process only 2 nodes per frame - each node renders renderBatchSize children
 	// This prevents too many reactive updates per frame
@@ -633,8 +700,61 @@
 		setContext('RenderCoordinator', renderCoordinator);
 	}
 
+	// Create stable config object - updated when props change
+	// Using $state.raw to avoid deep reactivity on the config object itself
+	let nodeConfig = $state.raw<NodeConfig>({
+		shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
+		expandIconClass: expandIconClass ?? 'ltree-icon-expand',
+		collapseIconClass: collapseIconClass ?? 'ltree-icon-collapse',
+		leafIconClass: leafIconClass ?? 'ltree-icon-leaf',
+		selectedNodeClass,
+		dragOverNodeClass,
+		dropZoneMode: dropZoneMode ?? 'glow',
+		dropZoneLayout: dropZoneLayout ?? 'around',
+		dropZoneStart: dropZoneStart ?? 33,
+		dropZoneMaxWidth: dropZoneMaxWidth ?? 120,
+		allowCopy: allowCopy ?? false,
+	});
+	setContext('NodeConfig', nodeConfig);
+
+	// Update config when props change (rarely happens, but supports dynamic updates)
+	$effect(() => {
+		nodeConfig = {
+			shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
+			expandIconClass: expandIconClass ?? 'ltree-icon-expand',
+			collapseIconClass: collapseIconClass ?? 'ltree-icon-collapse',
+			leafIconClass: leafIconClass ?? 'ltree-icon-leaf',
+			selectedNodeClass,
+			dragOverNodeClass,
+			dropZoneMode: dropZoneMode ?? 'glow',
+			dropZoneLayout: dropZoneLayout ?? 'around',
+			dropZoneStart: dropZoneStart ?? 33,
+			dropZoneMaxWidth: dropZoneMaxWidth ?? 120,
+			allowCopy: allowCopy ?? false,
+		};
+	});
+
 	$effect(() => {
 		tree.filterNodes(searchText);
+	});
+
+	// Performance instrumentation for flat mode
+	let flatRenderStart: number | null = null;
+	$effect(() => {
+		if (useFlatRendering && tree?.changeTracker) {
+			// changeTracker changed - flat render is about to happen
+			flatRenderStart = performance.now();
+			console.log('[Flat Mode] changeTracker changed, render starting...');
+
+			// Measure after Svelte processes the DOM update (single rAF = next paint)
+			requestAnimationFrame(() => {
+				if (flatRenderStart) {
+					const elapsed = performance.now() - flatRenderStart;
+					console.log(`[Flat Mode] DOM update complete: ${elapsed.toFixed(2)}ms`);
+					flatRenderStart = null;
+				}
+			});
+		}
 	});
 
 	$effect(() => {
@@ -646,10 +766,116 @@
 			}
 			// Reset progressive render coordinator when data changes
 			renderCoordinator?.reset();
+			// Reset flat progressive render state when data changes
+			flatRenderedIds = new Set();
+			flatRenderQueue = [];
 			console.log('[Tree] Running insertArray with', data.length, 'items');
 			insertResult = tree.insertArray(data);
 		}
 	});
+
+	// Progressive rendering for flat mode - detect new nodes and queue them
+	// Use a separate tracker to avoid reactive loops (effect reads AND writes flatRenderedIds)
+	let lastFlatNodesTracker: Symbol | null = null;
+
+	$effect(() => {
+		if (!useFlatRendering || !progressiveRender || !tree?.visibleFlatNodes) return;
+
+		// Only react to changeTracker changes, not to our own state updates
+		const tracker = tree.changeTracker;
+		if (tracker === lastFlatNodesTracker) return;
+		lastFlatNodesTracker = tracker;
+
+		const allNodes = tree.visibleFlatNodes;
+		const currentIds = new Set(allNodes.map(n => n.id));
+
+		// Snapshot current state to avoid reactive reads during computation
+		const renderedSnapshot = new Set(flatRenderedIds);
+		const queueSnapshot = new Set(flatRenderQueue);
+
+		// Find new nodes (in current but not yet rendered AND not already queued)
+		const newIds: string[] = [];
+		for (const node of allNodes) {
+			if (!renderedSnapshot.has(node.id) && !queueSnapshot.has(node.id)) {
+				newIds.push(node.id);
+			}
+		}
+
+		// Find removed nodes (rendered but no longer in current)
+		const removedIds: string[] = [];
+		for (const id of renderedSnapshot) {
+			if (!currentIds.has(id)) {
+				removedIds.push(id);
+			}
+		}
+
+		// Remove nodes that are no longer visible
+		if (removedIds.length > 0) {
+			const newRendered = new Set(renderedSnapshot);
+			for (const id of removedIds) {
+				newRendered.delete(id);
+			}
+			flatRenderedIds = newRendered;
+		}
+
+		// Queue new nodes for progressive rendering
+		if (newIds.length > 0) {
+			// If we already have many rendered nodes and adding few new ones,
+			// skip progressive batching to minimize Svelte diffs (expand/collapse case)
+			const alreadyHasManyNodes = renderedSnapshot.size > 1000;
+			const addingFewNodes = newIds.length < 200;
+
+			if (alreadyHasManyNodes && addingFewNodes) {
+				// Add all at once - one diff is faster than multiple diffs on large arrays
+				console.log(`[Flat Progressive] Adding ${newIds.length} nodes immediately (large tree optimization)`);
+				flatRenderedIds = new Set([...flatRenderedIds, ...newIds]);
+			} else {
+				// Progressive batching for initial load
+				console.log(`[Flat Progressive] Queueing ${newIds.length} new nodes for progressive render`);
+				const immediateBatch = newIds.slice(0, renderBatchSize);
+				const remaining = newIds.slice(renderBatchSize);
+
+				if (immediateBatch.length > 0) {
+					flatRenderedIds = new Set([...flatRenderedIds, ...immediateBatch]);
+				}
+
+				if (remaining.length > 0) {
+					flatRenderQueue = [...remaining]; // Replace queue, don't append
+					scheduleFlatRenderBatch();
+				}
+			}
+		}
+	});
+
+	// Process flat render queue in batches
+	function scheduleFlatRenderBatch() {
+		if (flatRenderAnimationFrame) return; // Already scheduled
+
+		flatRenderAnimationFrame = requestAnimationFrame(() => {
+			flatRenderAnimationFrame = null;
+
+			if (flatRenderQueue.length === 0) return;
+
+			const batch = flatRenderQueue.slice(0, renderBatchSize);
+			const remaining = flatRenderQueue.slice(renderBatchSize);
+
+			flatRenderedIds = new Set([...flatRenderedIds, ...batch]);
+			flatRenderQueue = remaining;
+
+			// console.log(`[Flat Progressive] Rendered batch of ${batch.length}, ${remaining.length} remaining`);
+
+			if (remaining.length > 0) {
+				scheduleFlatRenderBatch();
+			}
+		});
+	}
+
+	// Derived: nodes to render in flat mode (filtered by progressive state)
+	const flatNodesToRender = $derived(
+		useFlatRendering && progressiveRender
+			? tree?.visibleFlatNodes?.filter(n => flatRenderedIds.has(n.id)) ?? []
+			: tree?.visibleFlatNodes ?? []
+	);
 
 	// $inspect("tree change tracker", tree?.changeTracker?.toString());
 
@@ -756,7 +982,7 @@
 	 * Same-tree moves are auto-handled by default - the library calls moveNode() internally.
 	 * onNodeDrop is still called for notification/logging purposes.
 	 */
-	function _handleDrop(dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent): boolean {
+	async function _handleDrop(dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent): Promise<boolean> {
 		// Determine operation based on Ctrl key and allowCopy setting
 		// Touch events always use 'move' (no Ctrl key on mobile)
 		let operation: DropOperation = 'move';
@@ -773,9 +999,9 @@
 			isCrossTree: draggedNode.treeId !== treeId
 		});
 
-		// Call beforeDropCallback if provided
+		// Call beforeDropCallback if provided (supports async for dialogs)
 		if (beforeDropCallback) {
-			const result = beforeDropCallback(dropNode, draggedNode, position, event, operation);
+			const result = await beforeDropCallback(dropNode, draggedNode, position, event, operation);
 			if (result === false) {
 				// Drop cancelled
 				return false;
@@ -1370,37 +1596,16 @@
 			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 			{#if useFlatRendering}
 				<div class="ltree-tree ltree-flat-mode">
-					{#each tree.visibleFlatNodes as node (node.id)}
+					{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren)}
 						<Node
 							{node}
 							children={nodeTemplate}
-							{shouldToggleOnNodeClick}
 							progressiveRender={false}
-							onNodeClicked={(node) => _onNodeClicked(node)}
-							onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
-							onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}
-							onNodeDragOver={(node, event) => _onNodeDragOver(node, event)}
-							onNodeDragLeave={(node, event) => _onNodeDragLeave(node, event)}
-							onNodeDrop={(node, event) => _onNodeDrop(node, event)}
-							onZoneDrop={(node, position, event) => _onZoneDrop(node, position, event)}
-							onTouchDragStart={(node, event) => _onTouchStart(node, event)}
-							onTouchDragMove={(node, event) => _onTouchMove(node, event)}
-							onTouchDragEnd={(node, event) => _onTouchEnd(node, event)}
-							{expandIconClass}
-							{collapseIconClass}
-							{leafIconClass}
-							{selectedNodeClass}
-							{dragOverNodeClass}
 							isDraggedNode={draggedNode?.path === node.path}
 							{isDragInProgress}
 							hoveredNodeForDropPath={hoveredNodeForDrop?.path}
 							{activeDropPosition}
-							{dropZoneMode}
-							{dropZoneLayout}
-							{dropZoneStart}
-							{dropZoneMaxWidth}
 							dropOperation={currentDropOperation}
-							{allowCopy}
 							flatMode={true}
 							{flatIndentSize}
 						/>
@@ -1438,34 +1643,13 @@
 							<Node
 								{node}
 								children={nodeTemplate}
-								{shouldToggleOnNodeClick}
 								{progressiveRender}
 								{renderBatchSize}
-								onNodeClicked={(node) => _onNodeClicked(node)}
-								onNodeRightClicked={(node, event) => _onNodeRightClicked(node, event)}
-								onNodeDragStart={(node, event) => _onNodeDragStart(node, event)}
-								onNodeDragOver={(node, event) => _onNodeDragOver(node, event)}
-								onNodeDragLeave={(node, event) => _onNodeDragLeave(node, event)}
-								onNodeDrop={(node, event) => _onNodeDrop(node, event)}
-								onZoneDrop={(node, position, event) => _onZoneDrop(node, position, event)}
-								onTouchDragStart={(node, event) => _onTouchStart(node, event)}
-								onTouchDragMove={(node, event) => _onTouchMove(node, event)}
-								onTouchDragEnd={(node, event) => _onTouchEnd(node, event)}
-								{expandIconClass}
-								{collapseIconClass}
-								{leafIconClass}
-								{selectedNodeClass}
-								{dragOverNodeClass}
 								isDraggedNode={draggedNode?.path === node.path}
 								{isDragInProgress}
 								hoveredNodeForDropPath={hoveredNodeForDrop?.path}
 								{activeDropPosition}
-								{dropZoneMode}
-								{dropZoneLayout}
-								{dropZoneStart}
-								{dropZoneMaxWidth}
 								dropOperation={currentDropOperation}
-								{allowCopy}
 							/>
 						{:else}
 							<!-- Empty state when tree has no items -->

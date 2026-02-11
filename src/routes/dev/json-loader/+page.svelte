@@ -18,7 +18,10 @@
 		displayMember: 'name',
 		sortMember: 'name',
 		expandLevel: 2,
-		isSorted: true
+		isSorted: true,
+		useFlatRendering: true,
+		progressiveRender: true,
+		renderBatchSize: 200
 	};
 
 	// Configuration state - Mappings
@@ -36,6 +39,11 @@
 	let sortMember = $state(defaultConfig.sortMember);
 	let expandLevel = $state(defaultConfig.expandLevel);
 	let isSorted = $state(defaultConfig.isSorted);
+
+	// Configuration state - Performance
+	let useFlatRendering = $state(defaultConfig.useFlatRendering);
+	let progressiveRender = $state(defaultConfig.progressiveRender);
+	let renderBatchSize = $state(defaultConfig.renderBatchSize);
 
 	// Data state
 	let jsonData = $state<any[]>([]);
@@ -64,6 +72,9 @@
 				sortMember = config.sortMember ?? defaultConfig.sortMember;
 				expandLevel = config.expandLevel ?? defaultConfig.expandLevel;
 				isSorted = config.isSorted ?? defaultConfig.isSorted;
+				useFlatRendering = config.useFlatRendering ?? defaultConfig.useFlatRendering;
+				progressiveRender = config.progressiveRender ?? defaultConfig.progressiveRender;
+				renderBatchSize = config.renderBatchSize ?? defaultConfig.renderBatchSize;
 			}
 		} catch (e) {
 			console.warn('Failed to load config from localStorage', e);
@@ -75,7 +86,8 @@
 			const config = {
 				idMember, pathMember, parentPathMember, levelMember,
 				hasChildrenMember, isExpandedMember, orderMember, treePathSeparator,
-				displayMember, sortMember, expandLevel, isSorted
+				displayMember, sortMember, expandLevel, isSorted,
+				useFlatRendering, progressiveRender, renderBatchSize
 			};
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 		} catch (e) {
@@ -97,6 +109,9 @@
 		sortMember = defaultConfig.sortMember;
 		expandLevel = defaultConfig.expandLevel;
 		isSorted = defaultConfig.isSorted;
+		useFlatRendering = defaultConfig.useFlatRendering;
+		progressiveRender = defaultConfig.progressiveRender;
+		renderBatchSize = defaultConfig.renderBatchSize;
 	}
 
 	function redrawTree() {
@@ -111,7 +126,7 @@
 		// Touch all config values to track them
 		void [idMember, pathMember, parentPathMember, levelMember, hasChildrenMember,
 			isExpandedMember, orderMember, treePathSeparator, displayMember, sortMember,
-			expandLevel, isSorted];
+			expandLevel, isSorted, useFlatRendering, progressiveRender, renderBatchSize];
 		saveConfigToStorage();
 	});
 
@@ -444,6 +459,28 @@
 			</div>
 		</div>
 
+		<h3>Performance Options</h3>
+		<div class="config-grid">
+			<div class="form-group">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={useFlatRendering} />
+					Use Flat Rendering
+				</label>
+			</div>
+
+			<div class="form-group">
+				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={progressiveRender} />
+					Progressive Render
+				</label>
+			</div>
+
+			<div class="form-group">
+				<label for="renderBatchSize">Batch Size</label>
+				<input type="number" id="renderBatchSize" bind:value={renderBatchSize} min="10" max="1000" step="10" style="width: 100px" />
+			</div>
+		</div>
+
 		{#if availableMembers.length > 0}
 			<div class="note">
 				<p class="note-title">Detected Members</p>
@@ -566,6 +603,9 @@
 						{sortCallback}
 						{isSorted}
 						{expandLevel}
+						{useFlatRendering}
+						{progressiveRender}
+						{renderBatchSize}
 						bind:selectedNode
 						bind:insertResult
 					>

@@ -8,8 +8,9 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 ## 🚀 Features
 
 - **Svelte 5 Native**: Built specifically for Svelte 5 with full support for runes and modern Svelte patterns
-- **High Performance**: Uses LTree data structure for efficient hierarchical data management
-- **Drag & Drop**: Built-in drag and drop support with validation and visual feedback
+- **High Performance**: Flat rendering mode with progressive loading for 5000+ nodes
+- **Drag & Drop**: Built-in drag and drop with position control (above/below/child), touch support, and async validation
+- **Tree Editing**: Built-in methods for add, move, remove operations with automatic path management
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
 - **Context Menus**: Dynamic right-click menus with callback-based generation, icons, disabled states
@@ -81,6 +82,37 @@ let treeData = $state.raw<TreeNode[]>([])
 - Same data loads instantly in isolated test
 
 The array itself remains reactive - only individual items lose deep reactivity (which Tree doesn't need).
+
+## 📢 New in v4.6: Progressive Flat Rendering
+
+> [!NOTE]
+> **The tree now uses progressive flat rendering by default for significantly improved performance.**
+
+**What this means:**
+- The tree renders immediately with the first batch of nodes (~200 by default)
+- Remaining nodes are rendered progressively in subsequent frames
+- For large trees (5000+ nodes), you'll see nodes appear over ~100-500ms instead of a single long freeze
+- The UI remains responsive during rendering
+
+**Configuration options:**
+```svelte
+<Tree
+  {data}
+  useFlatRendering={true}   <!-- Default: true (flat mode) -->
+  progressiveRender={true}  <!-- Default: true (batched rendering) -->
+  renderBatchSize={200}     <!-- Nodes per batch, increase for faster completion -->
+/>
+```
+
+**To use the legacy recursive rendering:**
+```svelte
+<Tree
+  {data}
+  useFlatRendering={false}  <!-- Uses recursive Node components -->
+/>
+```
+
+Recursive mode may be preferred for very small trees or when you need the `{#key changeTracker}` behavior that recreates all nodes on any change.
 
 ## 🎯 Quick Start
 
@@ -237,48 +269,123 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  
-  const sourceData = [
-    { path: '1', name: 'Item 1', isDraggable: true },
-    { path: '2', name: 'Item 2', isDraggable: true }
+
+  let treeRef: Tree<MyNode>;
+
+  const data = [
+    { path: '1', name: 'Folder 1', isDraggable: true },
+    { path: '1.1', name: 'Item 1', isDraggable: true },
+    { path: '2', name: 'Folder 2', isDraggable: true }
   ];
-  
-  const targetData = [
-    { path: 'zone1', name: 'Drop Zone 1' },
-    { path: 'zone2', name: 'Drop Zone 2' }
-  ];
-  
+
   function onDragStart(node, event) {
     console.log('Dragging:', node.data.name);
   }
-  
-  function onDrop(dropNode, draggedNode, event) {
-    console.log(`Dropped ${draggedNode.data.name} onto ${dropNode.data.name}`);
-    // Handle the drop logic here
+
+  // Same-tree moves are auto-handled - this callback is for notification/custom logic
+  function onDrop(dropNode, draggedNode, position, event, operation) {
+    console.log(`Dropped ${draggedNode.data.name} ${position} ${dropNode?.data.name}`);
+    // position is 'above', 'below', or 'child'
+    // operation is 'move' or 'copy' (Ctrl+drag)
   }
 </script>
 
-<div class="row">
-  <div class="col-6">
-    <Tree
-      data={sourceData}
-      idMember="path"
-      pathMember="path"
-      onNodeDragStart={onDragStart}
-    />
-  </div>
-  
-  <div class="col-6">
-    <Tree
-      data={targetData}
-      idMember="path"
-      pathMember="path"
-      dragOverNodeClass="ltree-dragover-highlight"
-      onNodeDrop={onDrop}
-    />
-  </div>
-</div>
+<Tree
+  bind:this={treeRef}
+  {data}
+  idMember="path"
+  pathMember="path"
+  orderMember="sortOrder"
+  dragOverNodeClass="ltree-dragover-highlight"
+  onNodeDragStart={onDragStart}
+  onNodeDrop={onDrop}
+/>
 ```
+
+#### Drop Position Control
+
+When using `dropZoneMode="floating"` (default), users can choose where to drop:
+- **Above**: Insert as sibling before the target node
+- **Below**: Insert as sibling after the target node
+- **Child**: Insert as child of the target node
+
+#### Async Drop Validation
+
+Use `beforeDropCallback` to validate or modify drops, including async operations like confirmation dialogs:
+
+```svelte
+<script lang="ts">
+  async function beforeDrop(dropNode, draggedNode, position, event, operation) {
+    // Cancel specific drops
+    if (draggedNode.data.locked) {
+      return false; // Cancel the drop
+    }
+
+    // Show confirmation dialog (async)
+    if (position === 'child' && !dropNode.data.isFolder) {
+      const confirmed = await showConfirmDialog('Drop as sibling instead?');
+      if (!confirmed) return false;
+      return { position: 'below' }; // Override position
+    }
+
+    // Proceed normally
+    return true;
+  }
+</script>
+
+<Tree
+  {data}
+  beforeDropCallback={beforeDrop}
+  onNodeDrop={onDrop}
+/>
+```
+
+### Tree Editing
+
+The tree provides built-in methods for programmatic editing:
+
+```svelte
+<script lang="ts">
+  import { Tree } from '@keenmate/svelte-treeview';
+
+  let treeRef: Tree<MyNode>;
+
+  // Add a new node
+  function addChild() {
+    const result = treeRef.addNode(
+      selectedNode?.path || '', // parent path (empty = root)
+      { id: Date.now(), path: '', name: 'New Item', sortOrder: 100 }
+    );
+    if (result.success) {
+      console.log('Added:', result.node);
+    }
+  }
+
+  // Move a node
+  function moveUp() {
+    const siblings = treeRef.getSiblings(selectedNode.path);
+    const index = siblings.findIndex(s => s.path === selectedNode.path);
+    if (index > 0) {
+      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'above');
+    }
+  }
+
+  // Remove a node
+  function remove() {
+    treeRef.removeNode(selectedNode.path);
+  }
+</script>
+
+<Tree
+  bind:this={treeRef}
+  {data}
+  idMember="id"
+  pathMember="path"
+  orderMember="sortOrder"
+/>
+```
+
+**Note**: When using `orderMember`, the tree automatically calculates sort order values when moving nodes with 'above' or 'below' positions.
 
 ### With Context Menus
 
@@ -531,6 +638,10 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
+| `useFlatRendering` | `boolean` | `true` | Use flat rendering mode (faster for large trees) |
+| `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
+| `renderBatchSize` | `number` | `50` | Number of nodes to render per batch |
+| `orderMember` | `string \| null` | `null` | Property name for sort order (enables above/below positioning in drag-drop) |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging for tree operations and async search indexing |
@@ -542,7 +653,8 @@ Without both requirements, no search indexing will occur.
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `onNodeDrop` | `(dropNode, draggedNode, event) => void` | `undefined` | Drop event handler |
+| `beforeDropCallback` | `(dropNode, draggedNode, position, event, operation) => boolean \| { position?, operation? } \| Promise<...>` | `undefined` | Async-capable callback to validate/modify drops before they happen |
+| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is 'above', 'below', or 'child'. Operation is 'move' or 'copy' |
 
 #### Visual Styling Properties
 | Prop | Type | Default | Description |
@@ -577,6 +689,12 @@ Without both requirements, no search indexing will occur.
 | `searchNodes` | `searchText: string \| null \| undefined, searchOptions?: SearchOptions` | Search nodes using internal search index and return matching nodes with optional FlexSearch options |
 | `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
 | `update` | `updates: Partial<Props>` | Programmatically update component props from external JavaScript |
+| `addNode` | `parentPath: string, data: T, pathSegment?: string` | Add a new node under the specified parent |
+| `moveNode` | `sourcePath: string, targetPath: string, position: 'above' \| 'below' \| 'child'` | Move a node to a new location |
+| `removeNode` | `path: string, includeDescendants?: boolean` | Remove a node (and optionally its descendants) |
+| `getNodeByPath` | `path: string` | Get a node by its path |
+| `getChildren` | `parentPath: string` | Get direct children of a node |
+| `getSiblings` | `path: string` | Get siblings of a node (including itself) |
 
 #### ScrollToPath Options
 
@@ -742,8 +860,17 @@ Triggered when drag operation starts.
 #### onNodeDragOver(node, event)
 Triggered when dragging over a potential drop target.
 
-#### onNodeDrop(dropNode, draggedNode, event)
-Triggered when a node is dropped onto another node.
+#### beforeDropCallback(dropNode, draggedNode, position, event, operation)
+Called before a drop is processed. Can be async for showing dialogs.
+- Return `false` to cancel the drop
+- Return `{ position: 'above'|'below'|'child' }` to override position
+- Return `{ operation: 'move'|'copy' }` to override operation
+- Return `true` or `undefined` to proceed normally
+
+#### onNodeDrop(dropNode, draggedNode, position, event, operation)
+Triggered when a node is dropped. For same-tree moves, the tree auto-handles the move and this callback is for notification.
+- `position`: 'above', 'below', or 'child'
+- `operation`: 'move' or 'copy' (Ctrl+drag)
 
 ### Slots
 
@@ -917,15 +1044,34 @@ interface InsertArrayResult<T> {
 
 The component is optimized for large datasets:
 
+- **Flat Rendering Mode**: Single `{#each}` loop instead of recursive components (default, ~12x faster initial render)
+- **Progressive Rendering**: Batched rendering prevents UI freeze during initial load
+- **Context-Based Callbacks**: Stable function references eliminate unnecessary re-renders
 - **LTree**: Efficient hierarchical data structure
 - **Async Search Indexing**: Uses `requestIdleCallback` for non-blocking search index building
-- **Accurate Search Results**: Search index only includes successfully inserted nodes, ensuring results match visible tree structure
-- **Consistent Visual Hierarchy**: Optimized CSS-based indentation prevents exponential spacing growth
+- **Accurate Search Results**: Search index only includes successfully inserted nodes
 - **Search Indexing**: Uses FlexSearch for fast search operations
 
-### v4.5 Performance Improvements
+### Performance Benchmarks (5500 nodes)
 
-**Optimized `insertArray` algorithm** - Fixed O(n²) bottleneck that caused 85+ second load times with large datasets. Now loads 17,000+ nodes in under 100ms.
+| Operation | Time |
+|-----------|------|
+| Initial render | ~25ms |
+| Expand/collapse | ~100-150ms |
+| Search filtering | <50ms |
+
+### v4.5+ Performance Improvements
+
+**Flat Rendering Mode** (default) - Renders all visible nodes in a single loop:
+```svelte
+<Tree
+  {data}
+  useFlatRendering={true}
+  progressiveRender={true}
+/>
+```
+
+**Optimized `insertArray` algorithm** - Fixed O(n²) bottleneck. Now loads 17,000+ nodes in under 100ms.
 
 **Performance Logging** - Built-in performance measurement for debugging:
 ```typescript

@@ -132,6 +132,57 @@
     return nodes;
   }
 
+  // Countries + States data loader (real-world hierarchical data)
+  // Data source: https://github.com/dr5hn/countries-states-cities-database
+  const COUNTRIES_STATES_URL = 'https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/json/countries%2Bstates.json';
+
+  interface CountryData {
+    name: string;
+    states: string[];
+  }
+
+  function transformCountriesData(countries: CountryData[]): any[] {
+    const nodes: any[] = [];
+    let id = 1;
+
+    countries.forEach((country, countryIdx) => {
+      const countryPath = String(countryIdx + 1);
+      const hasStates = country.states && country.states.length > 0;
+
+      nodes.push({
+        id: id++,
+        path: countryPath,
+        parentPath: '',
+        level: 1,
+        name: country.name,
+        hasChildren: hasStates
+      });
+
+      if (hasStates) {
+        country.states.forEach((state, stateIdx) => {
+          const statePath = `${countryPath}.${stateIdx + 1}`;
+          nodes.push({
+            id: id++,
+            path: statePath,
+            parentPath: countryPath,
+            level: 2,
+            name: state,
+            hasChildren: false
+          });
+        });
+      }
+    });
+
+    return nodes;
+  }
+
+  async function loadCountriesData(): Promise<any[]> {
+    const response = await fetch(COUNTRIES_STATES_URL);
+    if (!response.ok) throw new Error('Failed to fetch countries data');
+    const countries: CountryData[] = await response.json();
+    return transformCountriesData(countries);
+  }
+
   // Data
   let treeData = $state.raw<any[]>([]);
   let isLoading = $state(false);
@@ -159,6 +210,7 @@
   function generateTestData() {
     isLoading = true;
     metrics.renderTime = null;
+    dataSource = 'synthetic';
 
     const generateStart = performance.now();
     const data = generateTreeData(nodeCountTarget);
@@ -173,6 +225,32 @@
     isLoading = false;
   }
 
+  async function loadCountriesTestData() {
+    isLoading = true;
+    metrics.renderTime = null;
+    dataSource = 'countries';
+
+    try {
+      const generateStart = performance.now();
+      const data = await loadCountriesData();
+      metrics.generateTime = performance.now() - generateStart;
+      metrics.nodeCount = data.length;
+
+      // Trigger render
+      metrics.renderStart = performance.now();
+      treeData = data;
+      treeKey++;
+    } catch (e) {
+      console.error('Failed to load countries data:', e);
+      alert('Failed to load countries data. Check console for details.');
+    }
+
+    isLoading = false;
+  }
+
+  // Track which data source was used
+  let dataSource = $state<'synthetic' | 'countries' | null>(null);
+
   function clearData() {
     treeData = [];
     metrics = {
@@ -183,6 +261,7 @@
     };
     insertResult = null;
     lastExpandTime = null;
+    dataSource = null;
   }
 
   function redraw() {
@@ -220,6 +299,67 @@
     });
   }
 
+  // Expand just one node - finds a collapsed node with children
+  function timedExpandOneNode() {
+    // With expandLevel=1, L2 nodes are collapsed. Find one to expand.
+    // First try L2, then L1
+    let nodeToExpand = treeData.find(n => n.level === 2 && n.hasChildren);
+    if (!nodeToExpand) {
+      nodeToExpand = treeData.find(n => n.level === 1 && n.hasChildren);
+    }
+    if (!nodeToExpand) {
+      console.log('[Performance Test] No expandable node found');
+      return;
+    }
+
+    console.log(`[Performance Test] Expanding node: ${nodeToExpand.path} (level ${nodeToExpand.level})`);
+    const start = performance.now();
+    treeRef?.expandNodes(nodeToExpand.path);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        lastExpandTime = performance.now() - start;
+        console.log(`[Performance Test] Expand one node (${nodeToExpand.path}): ${lastExpandTime.toFixed(2)}ms`);
+      });
+    });
+  }
+
+  // Collapse just one node - finds an expanded node
+  function timedCollapseOneNode() {
+    // With expandLevel=1, L1 nodes are expanded. Collapse the first one.
+    const nodeToCollapse = treeData.find(n => n.level === 1 && n.hasChildren);
+    if (!nodeToCollapse) {
+      console.log('[Performance Test] No collapsible node found');
+      return;
+    }
+
+    console.log(`[Performance Test] Collapsing node: ${nodeToCollapse.path} (level ${nodeToCollapse.level})`);
+    const start = performance.now();
+    treeRef?.collapseNodes(nodeToCollapse.path);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        lastExpandTime = performance.now() - start;
+        console.log(`[Performance Test] Collapse one node (${nodeToCollapse.path}): ${lastExpandTime.toFixed(2)}ms`);
+      });
+    });
+  }
+
+  // Track previous flat rendering state to detect changes
+  let prevFlatRendering = useFlatRendering;
+
+  // Auto-redraw when rendering mode changes (if data is loaded)
+  $effect(() => {
+    const currentFlat = useFlatRendering;
+    if (treeData.length > 0 && currentFlat !== prevFlatRendering) {
+      prevFlatRendering = currentFlat;
+      // Reset metrics and trigger redraw
+      metrics.generateTime = null; // Clear generate time since we're just switching modes
+      metrics.renderStart = performance.now();
+      metrics.renderTime = null;
+      lastExpandTime = null;
+      treeKey++;
+    }
+  });
+
   // Measure render time
   $effect(() => {
     if (treeData.length > 0 && metrics.renderStart && !metrics.renderTime) {
@@ -234,12 +374,13 @@
   // Log results for easy comparison
   $effect(() => {
     if (metrics.renderTime) {
-      console.log(`[Performance Test] Flat Rendering: ${useFlatRendering}`);
+      console.log(`[Performance Test] Mode: ${useFlatRendering ? 'FLAT' : 'RECURSIVE'}`);
       console.log(`[Performance Test] Nodes: ${metrics.nodeCount}`);
       console.log(`[Performance Test] Expand Level: ${expandLevel}`);
-      console.log(`[Performance Test] Generate: ${metrics.generateTime?.toFixed(2)}ms`);
-      console.log(`[Performance Test] Render: ${metrics.renderTime?.toFixed(2)}ms`);
-      console.log(`[Performance Test] Total: ${((metrics.generateTime || 0) + metrics.renderTime).toFixed(2)}ms`);
+      if (metrics.generateTime !== null) {
+        console.log(`[Performance Test] Generate: ${metrics.generateTime.toFixed(2)}ms`);
+      }
+      console.log(`[Performance Test] Render: ${metrics.renderTime.toFixed(2)}ms`);
       console.log('---');
     }
   });
@@ -288,17 +429,15 @@
         <input type="checkbox" bind:checked={isSorted} />
         Sort by name
       </label>
-      {#if !useFlatRendering}
+      <label>
+        <input type="checkbox" bind:checked={progressiveRender} />
+        Progressive Render
+      </label>
+      {#if progressiveRender}
         <label>
-          <input type="checkbox" bind:checked={progressiveRender} />
-          Progressive Render
+          Batch Size:
+          <input type="number" bind:value={renderBatchSize} min="10" max="500" step="10" />
         </label>
-        {#if progressiveRender}
-          <label>
-            Batch Size:
-            <input type="number" bind:value={renderBatchSize} min="10" max="500" step="10" />
-          </label>
-        {/if}
       {/if}
       <label>
         <input type="checkbox" bind:checked={shouldUseInternalSearchIndex} />
@@ -313,7 +452,10 @@
     </div>
     <div class="controls">
       <button class="btn" onclick={generateTestData} disabled={isLoading}>
-        {isLoading ? 'Generating...' : `Generate ${nodeCountTarget.toLocaleString()} Nodes`}
+        {isLoading ? 'Loading...' : `Generate ${nodeCountTarget.toLocaleString()} Nodes`}
+      </button>
+      <button class="btn" onclick={loadCountriesTestData} disabled={isLoading}>
+        {isLoading ? 'Loading...' : 'Load Countries + States (~5K nodes)'}
       </button>
       <button class="btn secondary" onclick={redraw} disabled={treeData.length === 0}>Redraw</button>
       <button class="btn secondary" onclick={clearData} disabled={treeData.length === 0}>Clear</button>
@@ -353,7 +495,7 @@
           <span class="label">Expand/Collapse</span>
         </div>
       {/if}
-      {#if progressiveRender && !useFlatRendering}
+      {#if progressiveRender}
         <div class="metric" class:rendering={isRendering}>
           <span class="value">
             {#if isRendering}
@@ -376,8 +518,14 @@
 
   {#if treeData.length > 0}
     <div class="card">
-      <h2>Tree ({metrics.nodeCount.toLocaleString()} nodes) - {useFlatRendering ? 'Flat Mode' : 'Recursive Mode'}</h2>
+      <h2>
+        {dataSource === 'countries' ? 'Countries + States' : 'Synthetic Data'}
+        ({metrics.nodeCount.toLocaleString()} nodes) - {useFlatRendering ? 'Flat Mode' : 'Recursive Mode'}
+      </h2>
       <div class="tree-controls">
+        <button class="btn" onclick={timedExpandOneNode}>Expand One (timed)</button>
+        <button class="btn" onclick={timedCollapseOneNode}>Collapse One (timed)</button>
+        <span class="control-divider">|</span>
         <button class="btn secondary" onclick={timedExpandAll}>Expand All (timed)</button>
         <button class="btn secondary" onclick={timedCollapseAll}>Collapse All (timed)</button>
         <button class="btn secondary" onclick={() => treeRef?.expandAll()}>Expand All</button>
@@ -397,7 +545,7 @@
             {sortCallback}
             {isSorted}
             {expandLevel}
-            progressiveRender={useFlatRendering ? false : progressiveRender}
+            {progressiveRender}
             {renderBatchSize}
             {indexerBatchSize}
             {shouldUseInternalSearchIndex}
@@ -430,8 +578,8 @@
     <div class="description">
       <ol>
         <li><strong>Initial render:</strong> Generate data with different node counts and expand levels. Compare render times between modes.</li>
-        <li><strong>Expand/Collapse:</strong> Click a node to expand/collapse. In recursive mode, this destroys and recreates all DOM nodes. In flat mode, only affected nodes are updated.</li>
-        <li><strong>Expand All:</strong> Use the timed buttons to measure how long expand/collapse operations take.</li>
+        <li><strong>Expand/Collapse ONE node:</strong> The key test! Use "Expand One" and "Collapse One" buttons. This is the typical user interaction - expanding a single node.</li>
+        <li><strong>Expand/Collapse ALL:</strong> Bulk operations - these may be similar between modes since both need to render thousands of nodes.</li>
         <li><strong>Perf Logging:</strong> Enable to see detailed timing in the console.</li>
       </ol>
     </div>
@@ -439,9 +587,9 @@
     <div class="note">
       <div class="note-title">Expected Results</div>
       <ul>
-        <li><strong>Recursive mode:</strong> Expand/collapse triggers full re-render (slow with many nodes)</li>
-        <li><strong>Flat mode:</strong> Expand/collapse only updates the changed nodes (fast)</li>
-        <li>Initial render may be similar, but subsequent operations should be much faster in flat mode</li>
+        <li><strong>Expand One - Recursive:</strong> Destroys and recreates ALL visible nodes just to add ~10 children</li>
+        <li><strong>Expand One - Flat:</strong> Only adds the new children (~10 nodes) - should be much faster</li>
+        <li>Expand All may be similar because both modes create thousands of new nodes</li>
       </ul>
     </div>
   </div>
@@ -551,6 +699,12 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .control-divider {
+    color: #cbd5e0;
+    margin: 0 0.25rem;
   }
 
   .btn.active {

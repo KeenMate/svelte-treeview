@@ -75,6 +75,10 @@ export function createLTree<T>(
 	let filteredTree: LTreeNode<T>[] | null = null;
 	let isFiltered = false;
 
+	// Cache for visibleFlatNodes - only recompute when tree changes
+	let cachedVisibleFlatNodes: LTreeNode<T>[] = [];
+	let cachedVisibleFlatNodesTracker: Symbol | null = null;
+
 	// Async search indexing infrastructure
 	let indexer: Indexer<T> | null = null;
 
@@ -139,15 +143,25 @@ export function createLTree<T>(
 		 *
 		 * Note: This getter depends on changeTracker to ensure reactivity when
 		 * nodes are expanded/collapsed or the tree structure changes.
+		 * Results are cached to avoid recomputation on repeated access.
 		 */
 		get visibleFlatNodes(): LTreeNode<T>[] {
 			// Explicitly read changeTracker to create reactive dependency
-			// This ensures the getter re-runs when _emitTreeChanged() is called
 			const _tracker = changeTracker;
+
+			// Return cached result if changeTracker hasn't changed
+			if (_tracker === cachedVisibleFlatNodesTracker && cachedVisibleFlatNodes.length > 0) {
+				// console.log(`[visibleFlatNodes] Cache HIT - returning ${cachedVisibleFlatNodes.length} nodes`);
+				return cachedVisibleFlatNodes;
+			}
+
+			const computeStart = performance.now();
 
 			const startRoot = this.isFiltered ? filteredRoot : root;
 			if (!startRoot?.children || !_tracker) {
-				return [];
+				cachedVisibleFlatNodes = [];
+				cachedVisibleFlatNodesTracker = _tracker;
+				return cachedVisibleFlatNodes;
 			}
 
 			const result: LTreeNode<T>[] = [];
@@ -170,6 +184,13 @@ export function createLTree<T>(
 			}
 
 			traverse(startRoot);
+
+			const computeTime = performance.now() - computeStart;
+			console.log(`[visibleFlatNodes] Computed ${result.length} nodes in ${computeTime.toFixed(2)}ms`);
+
+			// Cache the result
+			cachedVisibleFlatNodes = result;
+			cachedVisibleFlatNodesTracker = _tracker;
 			return result;
 		},
 
@@ -835,9 +856,9 @@ export function createLTree<T>(
 			}
 
 			const newPath = newParentPath ? `${newParentPath}${this.treePathSeparator}${newSegment}` : newSegment;
+			const oldPath = sourceNode.path;
 
 			// Update source node's path and parentPath
-			const oldPath = sourceNode.path;
 			sourceNode.path = newPath;
 			sourceNode.pathSegment = newSegment;
 			sourceNode.parentPath = newParentPath || null;

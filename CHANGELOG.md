@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.6.0] - 2026-02-11
+
+### Added
+- **Flat Rendering Mode**: New `useFlatRendering` prop (default: `true`) for significantly faster rendering
+  - Renders all visible nodes in a single `{#each}` loop instead of recursive components
+  - Initial render ~12x faster (300ms → 25ms for 5500 nodes)
+  - Progressive rendering batches initial load to prevent UI freeze
+  - Documentation: `docs/FLAT_MODE_PERFORMANCE.md`
+- **Context-Based Node Configuration**: Moved stable callbacks and config to Svelte context
+  - `NodeCallbacks<T>` interface for all event handlers (click, drag, drop, touch)
+  - `NodeConfig` interface for stable configuration (icons, classes, drop zone settings)
+  - Eliminates inline arrow function re-renders (5500 nodes no longer re-evaluate on array changes)
+  - Exported types: `NodeCallbacks`, `NodeConfig` from package index
+- **Async beforeDropCallback**: `beforeDropCallback` now supports async/Promise return values
+  - Enables showing confirmation dialogs before completing a drop
+  - Can await user input to decide whether to cancel, proceed, or modify the drop
+  - Example: `async (dropNode, draggedNode, position) => { return await showDialog(); }`
+
+### Enhanced
+- **Progressive Rendering for Flat Mode**: Smart batching based on tree state
+  - Initial load: Progressive batches (50 nodes/frame) for smooth rendering
+  - Expand/collapse on large trees (>1000 nodes): Immediate add to minimize diffs
+  - Avoids O(n) Svelte array diffing penalty on each batch
+- **Tree Editor Example**: Enhanced with async drop validation dialog
+  - Demonstrates async `beforeDropCallback` with native confirm dialog
+  - Shows warning when drop position is modified
+
+### Fixed
+- **Scroll Highlight Stacking**: Fixed multiple nodes staying highlighted when rapidly clicking prev/next
+  - Previous highlight now immediately cleared when navigating to new node
+  - Timeout properly cancelled to prevent stale highlight removal
+- **Flat Mode Node Updates After Move**: Fixed nodes not re-rendering after `moveNode()` in flat mode
+  - Keyed each now uses `node.id + path + hasChildren` to detect moved nodes
+  - Moved nodes now correctly update their indentation level
+  - Parent nodes correctly update toggle icon when children are moved away
+
+### Changed
+- **Default Rendering Mode**: `useFlatRendering` now defaults to `true` (was `false`)
+- **Default Progressive Render**: `progressiveRender` now defaults to `true` (was `false`)
+
 ## [4.5.0] - 2026-02-09
 
 ### Added

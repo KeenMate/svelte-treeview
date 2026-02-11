@@ -15,6 +15,8 @@
 	let treeData = $state<EditorNode[]>([
 		{ id: 1, path: '1', name: 'Root Folder', icon: '📁', sortOrder: 10 },
 		{ id: 2, path: '1.1', name: 'Documents', icon: '📂', sortOrder: 10 },
+		{ id: 8, path: '1.1.1', name: 'A', icon: '📄', sortOrder: 10 },
+		{ id: 9, path: '1.1.1.1', name: 'B', icon: '📄', sortOrder: 10 },
 		{ id: 3, path: '1.2', name: 'Images', icon: '🖼️', sortOrder: 20 },
 		{ id: 4, path: '1.3', name: 'Music', icon: '🎵', sortOrder: 30 },
 		{ id: 5, path: '2', name: 'Projects', icon: '🚀', sortOrder: 20 },
@@ -25,6 +27,7 @@
 	let treeRef: Tree<EditorNode>;
 	let selectedNode = $state<LTreeNode<EditorNode> | null>(null);
 	let activityLog = $state<string[]>([]);
+	let dropWarning = $state<string | null>(null);
 	let nextId = 100;
 
 	// Form state for adding nodes
@@ -160,7 +163,7 @@
 		}
 	}
 
-	function beforeDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent): boolean | { position: string } | void {
+	async function beforeDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent): Promise<boolean | { position: string } | void> {
 		const isFolder = (node: LTreeNode<EditorNode> | null) =>
 			node?.data?.icon?.includes('📁') || node?.data?.icon?.includes('📂');
 		const isImage = (node: LTreeNode<EditorNode> | null) =>
@@ -171,16 +174,38 @@
 		// Rule 1: Images cannot be dropped under Documents folder
 		if (isImage(draggedNode) && position === 'child' && isDocumentsFolder(dropNode)) {
 			addLog(`Cannot drop images under Documents folder - cancelled`);
+			dropWarning = `Cannot drop images under Documents folder`;
 			return false; // Cancel the drop
 		}
 
-		// Rule 2: Prevent dropping as child of non-folder items (convert to 'below')
+		// Rule 2: Ask user when dropping as child of non-folder items
 		if (position === 'child' && dropNode && !isFolder(dropNode)) {
-			addLog(`Cannot drop as child of "${dropNode.data?.name}" (not a folder) - converting to 'below'`);
-			return { position: 'below' }; // Override to drop below instead
+			const choice = await showDropDialog(dropNode.data?.name || 'item');
+			if (choice === 'cancel') {
+				addLog(`Drop cancelled by user`);
+				return false;
+			}
+			if (choice === 'sibling') {
+				addLog(`User chose to drop as sibling of "${dropNode.data?.name}"`);
+				return { position: 'below' };
+			}
 		}
 
 		// Return undefined to proceed normally
+	}
+
+	// Simple dialog using native confirm/prompt - replace with your own modal
+	function showDropDialog(targetName: string): Promise<'cancel' | 'sibling'> {
+		return new Promise((resolve) => {
+			const result = confirm(
+				`"${targetName}" is not a folder.\n\nClick OK to drop as sibling, or Cancel to abort.`
+			);
+			resolve(result ? 'sibling' : 'cancel');
+		});
+	}
+
+	function handleDragStart() {
+		dropWarning = null;
 	}
 
 	function handleDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent) {
@@ -271,6 +296,7 @@
 						bind:selectedNode
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
+						onNodeDragStart={handleDragStart}
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
@@ -282,6 +308,11 @@
 						{/snippet}
 					</Tree>
 				</div>
+				{#if dropWarning}
+					<div class="drop-warning">
+						{dropWarning}
+					</div>
+				{/if}
 			</div>
 
 			<div class="controls-section">
@@ -604,5 +635,15 @@
 	.selected-node {
 		font-weight: 600;
 		color: #667eea;
+	}
+
+	.drop-warning {
+		margin-top: 0.75rem;
+		padding: 0.5rem 0.75rem;
+		background: #fef3c7;
+		border: 1px solid #f59e0b;
+		border-radius: 4px;
+		color: #92400e;
+		font-size: 0.85rem;
 	}
 </style>
