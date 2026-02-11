@@ -2,8 +2,39 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
-> [!IMPORTANT]
-> **Looking for a framework-agnostic solution?** There's also a web component version that can be used standalone or in other frameworks at https://github.com/KeenMate/web-treeview/
+## 📢 New in v4.6: Progressive Flat Rendering
+
+> [!NOTE]
+> **The tree now uses progressive flat rendering by default for significantly improved performance.**
+
+**What this means:**
+- The tree renders immediately with the first batch of nodes (~20 by default)
+- Remaining nodes are rendered progressively in subsequent frames
+- For large trees (5000+ nodes), you'll see nodes appear over ~100-500ms instead of a single long freeze
+- The UI remains responsive during rendering
+
+**Configuration options:**
+```svelte
+<Tree
+  {data}
+  useFlatRendering={true}   <!-- Default: true (flat mode) -->
+  progressiveRender={true}  <!-- Default: true (batched rendering) -->
+  initialBatchSize={20}     <!-- First batch size (default: 20) -->
+  maxBatchSize={500}        <!-- Maximum batch size cap (default: 500) -->
+/>
+```
+
+**Exponential batching:** The first batch renders 20 nodes instantly, then doubles each frame (20 → 40 → 80 → 160 → 320 → 500...) for optimal perceived performance.
+
+**To use the legacy recursive rendering:**
+```svelte
+<Tree
+  {data}
+  useFlatRendering={false}  <!-- Uses recursive Node components -->
+/>
+```
+
+Recursive mode may be preferred for very small trees or when you need the `{#key changeTracker}` behavior that recreates all nodes on any change.
 
 ## 🚀 Features
 
@@ -82,40 +113,6 @@ let treeData = $state.raw<TreeNode[]>([])
 - Same data loads instantly in isolated test
 
 The array itself remains reactive - only individual items lose deep reactivity (which Tree doesn't need).
-
-## 📢 New in v4.6: Progressive Flat Rendering
-
-> [!NOTE]
-> **The tree now uses progressive flat rendering by default for significantly improved performance.**
-
-**What this means:**
-- The tree renders immediately with the first batch of nodes (~200 by default)
-- Remaining nodes are rendered progressively in subsequent frames
-- For large trees (5000+ nodes), you'll see nodes appear over ~100-500ms instead of a single long freeze
-- The UI remains responsive during rendering
-
-**Configuration options:**
-```svelte
-<Tree
-  {data}
-  useFlatRendering={true}   <!-- Default: true (flat mode) -->
-  progressiveRender={true}  <!-- Default: true (batched rendering) -->
-  initialBatchSize={20}     <!-- First batch size (default: 20) -->
-  maxBatchSize={500}        <!-- Maximum batch size cap (default: 500) -->
-/>
-```
-
-**Exponential batching:** The first batch renders 20 nodes instantly, then doubles each frame (20 → 40 → 80 → 160 → 320 → 500...) for optimal perceived performance.
-
-**To use the legacy recursive rendering:**
-```svelte
-<Tree
-  {data}
-  useFlatRendering={false}  <!-- Uses recursive Node components -->
-/>
-```
-
-Recursive mode may be preferred for very small trees or when you need the `{#key changeTracker}` behavior that recreates all nodes on any change.
 
 ## 🎯 Quick Start
 
