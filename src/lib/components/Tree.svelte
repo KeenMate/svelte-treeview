@@ -70,6 +70,7 @@
 	let flatRenderedIds = $state<Set<string>>(new Set());
 	let flatRenderQueue = $state<string[]>([]);
 	let flatRenderAnimationFrame: number | null = null;
+	let currentBatchSize: number = 0; // Exponential: doubles each batch up to maxBatchSize
 
 	// Drop placeholder state for empty trees
 	let isDropPlaceholderActive = $state(false);
@@ -138,7 +139,8 @@
 
 		// Progressive rendering - render children in batches to avoid UI freeze
 		progressiveRender?: boolean;
-		renderBatchSize?: number;
+		initialBatchSize?: number;
+		maxBatchSize?: number;
 		isRendering?: boolean; // Bindable: true while progressive rendering is active
 		onRenderStart?: () => void;
 		onRenderProgress?: (stats: RenderStats) => void;
@@ -242,9 +244,10 @@
 		shouldDisplayContextMenuInDebugMode = false,
 		isLoading = false,
 
-		// Progressive rendering
+		// Progressive rendering (exponential batching: 20 → 40 → 80 → 160...)
 		progressiveRender = true,
-		renderBatchSize = 50,
+		initialBatchSize = 20,
+		maxBatchSize = 500,
 		isRendering = $bindable(false),
 		onRenderStart,
 		onRenderProgress,
@@ -680,8 +683,8 @@
 
 	// Note: NodeConfig is set via $effect below since it depends on reactive props
 
-	// Create and provide render coordinator for progressive rendering
-	// Process only 2 nodes per frame - each node renders renderBatchSize children
+	// Create and provide render coordinator for progressive rendering (recursive mode)
+	// Process only 2 nodes per frame - each node renders initialBatchSize children
 	// This prevents too many reactive updates per frame
 	const renderCoordinator = progressiveRender ? createRenderCoordinator(2, {
 		onStart: () => {
@@ -769,6 +772,7 @@
 			// Reset flat progressive render state when data changes
 			flatRenderedIds = new Set();
 			flatRenderQueue = [];
+			currentBatchSize = 0; // Reset exponential batch size
 			console.log('[Tree] Running insertArray with', data.length, 'items');
 			insertResult = tree.insertArray(data);
 		}
@@ -830,14 +834,18 @@
 				console.log(`[Flat Progressive] Adding ${newIds.length} nodes immediately (large tree optimization)`);
 				flatRenderedIds = new Set([...flatRenderedIds, ...newIds]);
 			} else {
-				// Progressive batching for initial load
-				console.log(`[Flat Progressive] Queueing ${newIds.length} new nodes for progressive render`);
-				const immediateBatch = newIds.slice(0, renderBatchSize);
-				const remaining = newIds.slice(renderBatchSize);
+				// Progressive batching for initial load (exponential: 20 → 40 → 80 → 160...)
+				currentBatchSize = initialBatchSize; // Start with initial batch size
+				console.log(`[Flat Progressive] Queueing ${newIds.length} new nodes for progressive render (exponential batching)`);
+				const immediateBatch = newIds.slice(0, currentBatchSize);
+				const remaining = newIds.slice(currentBatchSize);
 
 				if (immediateBatch.length > 0) {
 					flatRenderedIds = new Set([...flatRenderedIds, ...immediateBatch]);
 				}
+
+				// Double batch size for next iteration (capped at maxBatchSize)
+				currentBatchSize = Math.min(currentBatchSize * 2, maxBatchSize);
 
 				if (remaining.length > 0) {
 					flatRenderQueue = [...remaining]; // Replace queue, don't append
@@ -847,7 +855,7 @@
 		}
 	});
 
-	// Process flat render queue in batches
+	// Process flat render queue in batches (exponential sizing)
 	function scheduleFlatRenderBatch() {
 		if (flatRenderAnimationFrame) return; // Already scheduled
 
@@ -856,13 +864,17 @@
 
 			if (flatRenderQueue.length === 0) return;
 
-			const batch = flatRenderQueue.slice(0, renderBatchSize);
-			const remaining = flatRenderQueue.slice(renderBatchSize);
+			const batchSize = currentBatchSize || initialBatchSize;
+			const batch = flatRenderQueue.slice(0, batchSize);
+			const remaining = flatRenderQueue.slice(batchSize);
 
 			flatRenderedIds = new Set([...flatRenderedIds, ...batch]);
 			flatRenderQueue = remaining;
 
-			// console.log(`[Flat Progressive] Rendered batch of ${batch.length}, ${remaining.length} remaining`);
+			// Double batch size for next iteration (capped at maxBatchSize)
+			currentBatchSize = Math.min(batchSize * 2, maxBatchSize);
+
+			// console.log(`[Flat Progressive] Rendered batch of ${batch.length}, next batch: ${currentBatchSize}, ${remaining.length} remaining`);
 
 			if (remaining.length > 0) {
 				scheduleFlatRenderBatch();
@@ -1644,7 +1656,7 @@
 								{node}
 								children={nodeTemplate}
 								{progressiveRender}
-								{renderBatchSize}
+								renderBatchSize={initialBatchSize}
 								isDraggedNode={draggedNode?.path === node.path}
 								{isDragInProgress}
 								hoveredNodeForDropPath={hoveredNodeForDrop?.path}

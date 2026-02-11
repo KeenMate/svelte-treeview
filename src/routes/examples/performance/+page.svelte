@@ -18,7 +18,8 @@
   let expandLevel = $state(savedConfig.expandLevel ?? 1);
   let isSorted = $state(savedConfig.isSorted ?? true);
   let progressiveRender = $state(savedConfig.progressiveRender ?? false);
-  let renderBatchSize = $state(savedConfig.renderBatchSize ?? 50);
+  let initialBatchSize = $state(savedConfig.initialBatchSize ?? 20);
+  let maxBatchSize = $state(savedConfig.maxBatchSize ?? 500);
   let indexerBatchSize = $state(savedConfig.indexerBatchSize ?? 25);
   let shouldUseInternalSearchIndex = $state(savedConfig.shouldUseInternalSearchIndex ?? true);
   let useFlatRendering = $state(savedConfig.useFlatRendering ?? false);
@@ -33,7 +34,8 @@
       expandLevel,
       isSorted,
       progressiveRender,
-      renderBatchSize,
+      initialBatchSize,
+      maxBatchSize,
       indexerBatchSize,
       shouldUseInternalSearchIndex,
       useFlatRendering,
@@ -47,7 +49,8 @@
     expandLevel = 1;
     isSorted = true;
     progressiveRender = false;
-    renderBatchSize = 50;
+    initialBatchSize = 20;
+    maxBatchSize = 500;
     indexerBatchSize = 25;
     shouldUseInternalSearchIndex = true;
     useFlatRendering = false;
@@ -435,8 +438,12 @@
       </label>
       {#if progressiveRender}
         <label>
-          Batch Size:
-          <input type="number" bind:value={renderBatchSize} min="10" max="500" step="10" />
+          Initial Batch:
+          <input type="number" bind:value={initialBatchSize} min="5" max="200" step="5" />
+        </label>
+        <label>
+          Max Batch:
+          <input type="number" bind:value={maxBatchSize} min="100" max="2000" step="100" />
         </label>
       {/if}
       <label>
@@ -546,7 +553,8 @@
             {isSorted}
             {expandLevel}
             {progressiveRender}
-            {renderBatchSize}
+            {initialBatchSize}
+            {maxBatchSize}
             {indexerBatchSize}
             {shouldUseInternalSearchIndex}
             {useFlatRendering}

@@ -100,9 +100,12 @@ The array itself remains reactive - only individual items lose deep reactivity (
   {data}
   useFlatRendering={true}   <!-- Default: true (flat mode) -->
   progressiveRender={true}  <!-- Default: true (batched rendering) -->
-  renderBatchSize={200}     <!-- Nodes per batch, increase for faster completion -->
+  initialBatchSize={20}     <!-- First batch size (default: 20) -->
+  maxBatchSize={500}        <!-- Maximum batch size cap (default: 500) -->
 />
 ```
+
+**Exponential batching:** The first batch renders 20 nodes instantly, then doubles each frame (20 → 40 → 80 → 160 → 320 → 500...) for optimal perceived performance.
 
 **To use the legacy recursive rendering:**
 ```svelte

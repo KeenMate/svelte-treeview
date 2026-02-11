@@ -24,10 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Example: `async (dropNode, draggedNode, position) => { return await showDialog(); }`
 
 ### Enhanced
-- **Progressive Rendering for Flat Mode**: Smart batching based on tree state
-  - Initial load: Progressive batches (50 nodes/frame) for smooth rendering
+- **Exponential Batch Sizing**: Progressive rendering now uses exponential batching (20 → 40 → 80 → 160...)
+  - First batch (20 nodes) renders instantly for immediate visual feedback
+  - Batch size doubles each frame up to `maxBatchSize` (default 500)
+  - New props: `initialBatchSize` (default 20), `maxBatchSize` (default 500)
+  - Replaces fixed `renderBatchSize` prop
   - Expand/collapse on large trees (>1000 nodes): Immediate add to minimize diffs
-  - Avoids O(n) Svelte array diffing penalty on each batch
 - **Tree Editor Example**: Enhanced with async drop validation dialog
   - Demonstrates async `beforeDropCallback` with native confirm dialog
   - Shows warning when drop position is modified
