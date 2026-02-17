@@ -1527,7 +1527,7 @@
 		</div>
 	{/if}
 
-	<div class:bodyClass>
+	<div class={bodyClass}>
 		{#if tree?.root}
 			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 			{#if useFlatRendering}
