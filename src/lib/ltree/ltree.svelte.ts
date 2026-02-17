@@ -191,9 +191,6 @@ export function createLTree<T>(
 
 			traverse(startRoot);
 
-			const computeTime = performance.now() - computeStart;
-			console.log(`[visibleFlatNodes] Computed ${result.length} nodes in ${computeTime.toFixed(2)}ms`);
-
 			// Cache the result
 			cachedVisibleFlatNodes = result;
 			cachedVisibleFlatNodesTracker = _tracker;
@@ -259,17 +256,12 @@ export function createLTree<T>(
 			});
 			const conversionTime = perfEnd(`[${_treeId}] insertArray:conversion`, data.length);
 
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Mapped data before sort`, mappedData);
-
 			perfStart(`[${_treeId}] insertArray:sort`);
 			if (!this.isSorted) {
 				if (this.sortCallback) mappedData = this.sortCallback(mappedData);
 				else mappedData = this._defaultSort(this, mappedData);
 			}
 
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Mapped data after sort`, mappedData);
 			const sortTime = perfEnd(`[${_treeId}] insertArray:sort`, data.length);
 
 			perfStart(`[${_treeId}] insertArray:insert`);
@@ -315,10 +307,6 @@ export function createLTree<T>(
 						// We've processed all nodes up to expandLevel - render now!
 						hasRenderedExpandLevel = true;
 						this._emitTreeChanged();
-
-						if (this.shouldDisplayDebugInformation) {
-							console.log(`[Tree ${_treeId}] Progressive render: Displayed levels 1-${_expandLevel} (${successfulCount} nodes processed so far)`);
-						}
 					}
 				}
 			});
@@ -348,19 +336,7 @@ export function createLTree<T>(
 
 			// Final render (only if we haven't already rendered progressively)
 			if (!noEmitChanges) {
-				if (hasRenderedExpandLevel) {
-					// We already rendered expandLevel, now render the complete tree
-					this._emitTreeChanged();
-					if (this.shouldDisplayDebugInformation) {
-						console.log(`[Tree ${_treeId}] Final render: Complete tree with all ${successfulCount} nodes`);
-					}
-				} else {
-					// No progressive rendering occurred, render everything at once
-					this._emitTreeChanged();
-					if (this.shouldDisplayDebugInformation) {
-						console.log(`[Tree ${_treeId}] Single render: All ${successfulCount} nodes (no expandLevel or progressive render conditions met)`);
-					}
-				}
+				this._emitTreeChanged();
 			}
 
 			const insertTime = perfEnd(`[${_treeId}] insertArray:insert`, data.length);
@@ -415,14 +391,7 @@ export function createLTree<T>(
 		},
 
 		filterNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): void {
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Filtering nodes by:`, _searchText);
-
 			if (isEmptyString(_searchText)) {
-				if (this.shouldDisplayDebugInformation)
-					console.log(
-						`[Tree ${_treeId}] Search text is empty, cleaning filtered tree and setting isFiltered = false`
-					);
 				// Clear filter when search is empty
 				filteredRoot.children = {};
 				this.isFiltered = false;
@@ -431,8 +400,6 @@ export function createLTree<T>(
 			}
 
 			if (!_shouldUseInternalSearchIndex) {
-				if (this.shouldDisplayDebugInformation)
-					console.warn(`[Tree ${_treeId}] Internal search index is disabled`);
 				return;
 			}
 
@@ -441,31 +408,20 @@ export function createLTree<T>(
 			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
 			perfEnd(`[${_treeId}] filterNodes:search`, resultIndices.length);
 
-			if (this.shouldDisplayDebugInformation)
-				console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices, foundPaths);
-
 			this.createFilteredTree(foundPaths);
 		},
 
 		searchNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): LTreeNode<T>[] {
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Searching nodes by:`, _searchText);
-
 			if (isEmptyString(_searchText)) {
 				return [];
 			}
 
 			if (!_shouldUseInternalSearchIndex) {
-				if (this.shouldDisplayDebugInformation)
-					console.warn(`[Tree ${_treeId}] Internal search index is disabled`);
 				return [];
 			}
 
 			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
 			const foundNodes = resultIndices.map((row) => flatTreeNodes[row]);
-
-			if (this.shouldDisplayDebugInformation)
-				console.warn(`[Tree ${_treeId}] Found indices:`, resultIndices, foundNodes);
 
 			return foundNodes;
 		},
@@ -484,9 +440,6 @@ export function createLTree<T>(
 					allRequiredPaths.add(segments.slice(0, i).join(this.treePathSeparator));
 				}
 			});
-
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] allRequiredPaths`, Array.from(allRequiredPaths));
 
 			// 2. Build filtered tree with only required paths
 			const pathToNode = new Map<string, LTreeNode<T>>();
@@ -549,8 +502,6 @@ export function createLTree<T>(
 
 			perfEnd(`[${_treeId}] createFilteredTree`, rootNodes.length);
 
-			if (this.shouldDisplayDebugInformation)
-				console.log(`[Tree ${_treeId}] Created filtered tree with`, rootNodes.length, 'root nodes');
 		},
 
 		clearFilter(): void {
@@ -628,7 +579,6 @@ export function createLTree<T>(
 
 			// Only emit changes if something actually changed
 			if (!noEmitChanges && hasChanges) {
-				console.log(`[Tree ${_treeId}] expandNodes triggering re-render for path: ${path}`);
 				this._emitTreeChanged();
 			}
 
@@ -782,12 +732,6 @@ export function createLTree<T>(
 				newChildren[segment] = child;
 			});
 			parent.children = newChildren;
-
-			if (this.shouldDisplayDebugInformation) {
-				console.log(`[Tree ${_treeId}] refreshSiblings: Re-sorted ${sorted.length} children under "${parentPath || 'root'}":`,
-					sorted.map(s => ({ path: s.path, sortOrder: s.data?.[this.orderMember as keyof T] }))
-				);
-			}
 
 			this._emitTreeChanged();
 		},
@@ -1060,13 +1004,6 @@ export function createLTree<T>(
 			// Re-sort siblings to place new node in correct position
 			this.refreshSiblings(parentPath);
 
-			if (this.shouldDisplayDebugInformation) {
-				const siblings = Object.values(targetParent.children) as LTreeNode<T>[];
-				console.log(`[Tree ${_treeId}] addNode: Added "${newPath}" to "${parentPath || 'root'}". Siblings after sort:`,
-					siblings.map(s => ({ path: s.path, sortOrder: s.data?.[this.orderMember as keyof T] }))
-				);
-			}
-
 			this._emitTreeChanged();
 			return { success: true, node: newNode };
 		},
@@ -1088,10 +1025,6 @@ export function createLTree<T>(
 
 			// Check if orderMember is being updated (will need re-sort)
 			const orderMemberUpdated = this.orderMember && this.orderMember in dataUpdates;
-
-			if (this.shouldDisplayDebugInformation) {
-				console.log(`[Tree ${_treeId}] updateNode: "${path}" updating:`, dataUpdates);
-			}
 
 			// Merge updates into existing data
 			node.data = { ...node.data, ...dataUpdates };
@@ -1270,10 +1203,6 @@ export function createLTree<T>(
 						this.refreshSiblings(targetParentPath);
 					}
 				}
-			}
-
-			if (this.shouldDisplayDebugInformation) {
-				console.log(`[Tree ${_treeId}] copyNodeWithDescendants: Copied ${totalCount} nodes to "${targetParentPath}"${siblingPath ? ` ${position} "${siblingPath}"` : ''}`);
 			}
 
 			return { success: true, rootNode, count: totalCount };

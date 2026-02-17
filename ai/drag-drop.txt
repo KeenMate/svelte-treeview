@@ -1,7 +1,8 @@
 DRAG AND DROP
 =============
 
-CRITICAL: Full drag and drop support with position control
+CRITICAL: Drag and drop is DISABLED by default
+- Set dragDropMode="both" to enable
 - Three drop positions: above, below, child
 - Same-tree and cross-tree moves
 - Touch support for mobile
@@ -108,10 +109,10 @@ DRAG DROP MODE
 --------------
 Control which drag operations are allowed:
 
-<Tree dragDropMode="both" />  <!-- Default: self and cross-tree -->
+<Tree dragDropMode="none" />  <!-- Default: disabled -->
 
 Options:
-- 'none' - Drag and drop disabled
+- 'none' - Drag and drop disabled (DEFAULT)
 - 'self' - Only within same tree
 - 'cross' - Only between different trees
 - 'both' - Both self and cross-tree

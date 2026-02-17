@@ -2,6 +2,8 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
+**[Live Demo & Examples](https://svelte-treeview.keenmate.dev)**
+
 > **For AI Agents / LLMs**: Comprehensive documentation is available in the `ai/` folder with topic-specific files (basic-setup.txt, drag-drop.txt, performance.txt, etc.). Start with `ai/INDEX.txt` for navigation.
 
 ## 📢 New in v4.7: Per-Node Drop Position Restrictions
@@ -283,6 +285,8 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
 
 ### With Drag & Drop
 
+**Note:** Drag and drop is disabled by default. Set `dragDropMode` to enable it.
+
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
@@ -290,9 +294,9 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
   let treeRef: Tree<MyNode>;
 
   const data = [
-    { path: '1', name: 'Folder 1', isDraggable: true },
-    { path: '1.1', name: 'Item 1', isDraggable: true },
-    { path: '2', name: 'Folder 2', isDraggable: true }
+    { path: '1', name: 'Folder 1' },
+    { path: '1.1', name: 'Item 1' },
+    { path: '2', name: 'Folder 2' }
   ];
 
   function onDragStart(node, event) {
@@ -312,6 +316,7 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
   {data}
   idMember="path"
   pathMember="path"
+  dragDropMode="both"
   orderMember="sortOrder"
   dragOverNodeClass="ltree-dragover-highlight"
   onNodeDragStart={onDragStart}

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.1] - 2026-02-17
+
+### Changed
+- **Drag and Drop Disabled by Default**: `dragDropMode` now defaults to `'none'` instead of `'both'`
+  - Most trees are read-only, so this is a safer default
+  - To enable drag and drop, explicitly set `dragDropMode="both"` (or `"self"` / `"cross"`)
+
+### Fixed
+- Removed development `console.log` statements from `Tree.svelte` and `ltree.svelte.ts`
+
 ## [4.7.0] - 2026-02-11
 
 ### Added

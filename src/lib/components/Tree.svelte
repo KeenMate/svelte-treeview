@@ -262,7 +262,7 @@
 		flatIndentSize = '1.5rem',
 
 		// DRAG AND DROP
-		dragDropMode = 'both',
+		dragDropMode = 'none',
 		dropZoneMode = 'glow',
 		dropZoneLayout = 'around',
 		dropZoneStart = 33,
@@ -625,8 +625,6 @@
 
 	treeId = treeId || generateTreeId();
 
-	if (shouldDisplayDebugInformation)
-		console.log("Tree treePathSeparator:", treePathSeparator)
 
 	// svelte-ignore non_reactive_update
 	const tree: Ltree<T> = createLTree<T>(
@@ -747,29 +745,9 @@
 		tree.filterNodes(searchText);
 	});
 
-	// Performance instrumentation for flat mode
-	let flatRenderStart: number | null = null;
-	$effect(() => {
-		if (useFlatRendering && tree?.changeTracker) {
-			// changeTracker changed - flat render is about to happen
-			flatRenderStart = performance.now();
-			console.log('[Flat Mode] changeTracker changed, render starting...');
-
-			// Measure after Svelte processes the DOM update (single rAF = next paint)
-			requestAnimationFrame(() => {
-				if (flatRenderStart) {
-					const elapsed = performance.now() - flatRenderStart;
-					console.log(`[Flat Mode] DOM update complete: ${elapsed.toFixed(2)}ms`);
-					flatRenderStart = null;
-				}
-			});
-		}
-	});
-
 	$effect(() => {
 		if (tree && data) {
 			if (_skipInsertArray) {
-				console.log('[Tree] Skipping insertArray due to internal mutation');
 				_skipInsertArray = false; // Reset for next time
 				return;
 			}
@@ -779,7 +757,6 @@
 			flatRenderedIds = new Set();
 			flatRenderQueue = [];
 			currentBatchSize = 0; // Reset exponential batch size
-			console.log('[Tree] Running insertArray with', data.length, 'items');
 			insertResult = tree.insertArray(data);
 		}
 	});
@@ -837,12 +814,10 @@
 
 			if (alreadyHasManyNodes && addingFewNodes) {
 				// Add all at once - one diff is faster than multiple diffs on large arrays
-				console.log(`[Flat Progressive] Adding ${newIds.length} nodes immediately (large tree optimization)`);
 				flatRenderedIds = new Set([...flatRenderedIds, ...newIds]);
 			} else {
 				// Progressive batching for initial load (exponential: 20 → 40 → 80 → 160...)
 				currentBatchSize = initialBatchSize; // Start with initial batch size
-				console.log(`[Flat Progressive] Queueing ${newIds.length} new nodes for progressive render (exponential batching)`);
 				const immediateBatch = newIds.slice(0, currentBatchSize);
 				const remaining = newIds.slice(currentBatchSize);
 
@@ -1039,9 +1014,6 @@
 		const isSameTreeDrag = draggedNode.treeId === treeId;
 		if (isSameTreeDrag && operation === 'move' && dropNode) {
 			const result = moveNode(draggedNode.path, dropNode.path, position);
-			if (shouldDisplayDebugInformation) {
-				console.log('[Tree] Auto-moved node:', result);
-			}
 			// Still call onNodeDrop for notification/logging
 			onNodeDrop?.(dropNode, draggedNode, position, event, operation);
 			return result.success;
@@ -1066,9 +1038,6 @@
 				siblingPath,
 				copyPosition
 			);
-			if (shouldDisplayDebugInformation) {
-				console.log('[Tree] Auto-copied node:', result);
-			}
 			// Still call onNodeDrop for notification/logging
 			onNodeDrop?.(dropNode, draggedNode, position, event, operation);
 			return result.success;
@@ -1105,9 +1074,6 @@
 			: isDropAllowedByMode(effectiveDraggedNode?.treeId);
 
 		if (!dropAllowed) {
-			if (shouldDisplayDebugInformation) {
-				console.log('[Tree] Drop not allowed:', { treeId, dragDropMode, isCrossTreeDrag, effectiveDraggedNodeTreeId: effectiveDraggedNode?.treeId });
-			}
 			hoveredNodeForDrop = null;  // Clear hover to prevent glow on invalid targets
 			return;
 		}
@@ -1130,11 +1096,7 @@
 			}
 
 			// Update current operation based on Ctrl key
-			const prevOperation = currentDropOperation;
 			currentDropOperation = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
-			if (shouldDisplayDebugInformation && prevOperation !== currentDropOperation) {
-				console.log('[Tree] _onNodeDragOver - operation changed:', prevOperation, '->', currentDropOperation, 'ctrlKey:', event.ctrlKey, 'allowCopy:', allowCopy);
-			}
 
 			onNodeDragOver?.(node, event);
 
@@ -1151,12 +1113,6 @@
 	}
 
 	function _onNodeDrop(node: LTreeNode<T>, event: DragEvent) {
-		if (shouldDisplayDebugInformation)
-			console.log(
-				'🚀 ~ _onNodeDrop ~ _onNodeDrop:',
-				_onNodeDrop,
-				event.dataTransfer?.getData('application/svelte-treeview')
-			);
 		event.preventDefault();
 
 		let isCrossTreeDrag = false;
@@ -1191,9 +1147,6 @@
 
 	// Zone drop handler - receives explicit position from drop zone panels
 	function _onZoneDrop(node: LTreeNode<T>, position: DropPosition, event: DragEvent) {
-		if (shouldDisplayDebugInformation)
-			console.log('🎯 ~ _onZoneDrop ~ position:', position, 'node:', node.path);
-
 		event.preventDefault();
 
 		let isCrossTreeDrag = false;
@@ -1399,16 +1352,9 @@
 
 	// Empty tree drop handlers
 	function handleEmptyTreeDragOver(event: DragEvent) {
-		console.log('[EmptyTree] dragover/dragenter fired', {
-			types: event.dataTransfer?.types,
-			hasTreeviewType: event.dataTransfer?.types.includes("application/svelte-treeview"),
-			isDropPlaceholderActive,
-			treeId
-		});
 		if (event.dataTransfer?.types.includes("application/svelte-treeview")) {
 			event.preventDefault();
 			isDropPlaceholderActive = true;
-			console.log('[EmptyTree] isDropPlaceholderActive set to true');
 			if (event.dataTransfer) {
 				event.dataTransfer.dropEffect = 'move';
 			}
@@ -1421,46 +1367,25 @@
 		const x = event.clientX;
 		const y = event.clientY;
 
-		console.log('[EmptyTree] dragleave fired', {
-			x, y,
-			rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
-			isOutside: x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom,
-			treeId
-		});
-
 		if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
 			isDropPlaceholderActive = false;
-			console.log('[EmptyTree] isDropPlaceholderActive set to false (left element)');
 		}
 	}
 
 	function handleEmptyTreeDrop(event: DragEvent) {
-		console.log('[EmptyTree] drop fired', {
-			types: event.dataTransfer?.types,
-			data: event.dataTransfer?.getData('application/svelte-treeview'),
-			treeId
-		});
 		event.preventDefault();
 		isDropPlaceholderActive = false;
 
 		const draggedNodeData = event.dataTransfer?.getData('application/svelte-treeview');
 		if (draggedNodeData) {
 			const droppedNode = JSON.parse(draggedNodeData);
-			console.log('[EmptyTree] calling _handleDrop with', { droppedNode });
 			// Call onNodeDrop with null as dropNode to indicate "root level drop"
 			_handleDrop(null, droppedNode, 'child', event);
-		} else {
-			console.log('[EmptyTree] no draggedNodeData found!');
 		}
 		_onNodeDragEnd(event);
 	}
 
 	function handleEmptyTreeTouchEnd(event: TouchEvent) {
-		console.log('[EmptyTree] touchend fired', {
-			draggedNode,
-			isDropPlaceholderActive,
-			treeId
-		});
 		// Check if touch drag was active and we have a dragged node
 		if (draggedNode && isDropPlaceholderActive) {
 			_handleDrop(null, draggedNode, 'child', event);
@@ -1512,9 +1437,6 @@
 			};
 
 			const handleGlobalScroll = (event?: Event) => {
-				if (shouldDisplayDebugInformation) {
-					console.log(`[Tree ${treeId}] Scroll/wheel event detected, closing context menu`, event?.type);
-				}
 				closeContextMenu();
 			};
 
@@ -1553,10 +1475,6 @@
 				contextMenuY = treeRect.top + 100;  // 100px from tree's top edge
 				contextMenuVisible = true;
 				isDebugMenuActive = true;
-
-				if (shouldDisplayDebugInformation) {
-					console.log(`[Tree ${treeId}] Debug context menu displayed for node:`, targetNode.data, `at position (${contextMenuX}, ${contextMenuY})`);
-				}
 			}
 		} else if (!shouldDisplayContextMenuInDebugMode && isDebugMenuActive) {
 			// Only hide the context menu if it was opened by debug mode
