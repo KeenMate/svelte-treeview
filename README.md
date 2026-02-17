@@ -6,9 +6,7 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-> **For AI Agents / LLMs**: Comprehensive documentation is available in the `ai/` folder with topic-specific files (basic-setup.txt, drag-drop.txt, performance.txt, etc.). Start with `ai/INDEX.txt` for navigation.
-
-## 📢 New in v4.7: Per-Node Drop Position Restrictions
+## New in v4.7: Per-Node Drop Position Restrictions
 
 > [!NOTE]
 > **You can now restrict which drop positions (above/below/child) are allowed per node.**
@@ -23,7 +21,7 @@ function getAllowedDropPositions(node) {
 }
 ```
 
-## 📢 v4.6: Progressive Flat Rendering
+## v4.6: Progressive Flat Rendering
 
 > [!NOTE]
 > **The tree now uses progressive flat rendering by default for significantly improved performance.**
@@ -57,7 +55,7 @@ function getAllowedDropPositions(node) {
 
 Recursive mode may be preferred for very small trees or when you need the `{#key changeTracker}` behavior that recreates all nodes on any change.
 
-## 🚀 Features
+## Features
 
 - **Svelte 5 Native**: Built specifically for Svelte 5 with full support for runes and modern Svelte patterns
 - **High Performance**: Flat rendering mode with progressive loading for 5000+ nodes
@@ -70,77 +68,34 @@ Recursive mode may be preferred for very small trees or when you need the `{#key
 - **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - **Accessibility**: Built with accessibility in mind
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install @keenmate/svelte-treeview
 ```
 
-## 🔨 Development Setup
-
-For developers working on the project, you can use either standard npm commands or the provided Makefile (which provides a unified interface for all contributors):
-
-```bash
-# Using Makefile (recommended for consistency)
-make setup      # or make install
-make dev
-
-# Or using standard npm commands
-npm install
-npm run dev
-```
-
-## 🎨 Importing Styles
+### Importing Styles
 
 The component requires CSS to display correctly. Import the styles in your app:
 
-### Option 1: Import SCSS in your main app file
+**JavaScript import** (in your main.js/main.ts or Vite/Webpack entry):
 ```javascript
-// In your main.js or main.ts
 import '@keenmate/svelte-treeview/styles.scss';
 ```
 
-### Option 2: Import in your Svelte component
+**Svelte component import:**
 ```svelte
 <style>
   @import '@keenmate/svelte-treeview/styles.scss';
 </style>
 ```
 
-### Option 3: Use with your build system
-If using Vite, Webpack, or similar, you can import the SCSS:
-```javascript
-import '@keenmate/svelte-treeview/styles.scss';
-```
-
-## ⚠️ Performance Warning: Use `$state.raw()` for Large Datasets
-
-> [!WARNING]
-> **When passing large arrays (1000+ items) to the Tree component, use `$state.raw()` instead of `$state()` to avoid severe performance issues.**
-
-Svelte 5's `$state()` creates deep proxies for all nested objects. With thousands of items, this causes massive overhead during tree operations.
-
-```typescript
-// ❌ SLOW - Each item becomes a Proxy (5000x slower with large datasets)
-let treeData = $state<TreeNode[]>([])
-
-// ✅ FAST - Items remain plain objects
-let treeData = $state.raw<TreeNode[]>([])
-```
-
-**Symptoms of this issue:**
-- Tree takes 15-90+ seconds to render with thousands of items
-- Console shows `[Violation] 'message' handler took XXXXms`
-- Same data loads instantly in isolated test
-
-The array itself remains reactive - only individual items lose deep reactivity (which Tree doesn't need).
-
-## 🎯 Quick Start
+## Quick Start
 
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  
+
   const data = [
     { path: '1', name: 'Documents', type: 'folder' },
     { path: '1.1', name: 'Projects', type: 'folder' },
@@ -159,14 +114,24 @@ The array itself remains reactive - only individual items lose deep reactivity (
 />
 ```
 
-## 🔧 Advanced Usage
+> [!TIP]
+> **Performance tip:** When passing large arrays (1000+ items) to the Tree component, use `$state.raw()` instead of `$state()` to avoid severe performance issues. Svelte 5's `$state()` creates deep proxies — with thousands of items this causes up to 5,000x slowdown. The array itself remains reactive; only individual items lose deep reactivity (which Tree doesn't need).
+> ```typescript
+> // BAD - Each item becomes a Proxy
+> let treeData = $state<TreeNode[]>([])
+>
+> // GOOD - Items remain plain objects
+> let treeData = $state.raw<TreeNode[]>([])
+> ```
+
+## Advanced Usage
 
 ### With Custom Node Templates
 
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  
+
   const fileData = [
     { path: '1', name: 'Documents', type: 'folder', icon: '📁' },
     { path: '1.1', name: 'report.pdf', type: 'file', icon: '📄', size: '2.3 MB' },
@@ -199,15 +164,15 @@ The array itself remains reactive - only individual items lose deep reactivity (
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  
+
   let searchText = $state('');
   const data = [/* your data */];
 </script>
 
-<input 
-  type="text" 
-  placeholder="Search..." 
-  bind:value={searchText} 
+<input
+  type="text"
+  placeholder="Search..."
+  bind:value={searchText}
 />
 
 <Tree
@@ -226,29 +191,29 @@ The array itself remains reactive - only individual items lose deep reactivity (
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
   import type { SearchOptions } from 'flexsearch';
-  
+
   let treeRef;
   const data = [/* your data */];
-  
+
   // Programmatic search with FlexSearch options
   function performAdvancedSearch(searchTerm: string) {
     const searchOptions: SearchOptions = {
       suggest: true,        // Enable suggestions for typos
-      limit: 10,            // Limit results to 10 items  
+      limit: 10,            // Limit results to 10 items
       bool: "and"           // Use AND logic for multiple terms
     };
-    
+
     const results = treeRef.searchNodes(searchTerm, searchOptions);
     console.log('Advanced search results:', results);
   }
-  
+
   // Programmatic filtering with options
   function filterWithOptions(searchTerm: string) {
     const searchOptions: SearchOptions = {
       threshold: 0.8,       // Similarity threshold
       depth: 2              // Search depth
     };
-    
+
     treeRef.filterNodes(searchTerm, searchOptions);
   }
 </script>
@@ -548,7 +513,7 @@ The tree supports context menus with two approaches: callback-based (recommended
 - **Auto-close**: Closes on scroll, click outside, or programmatically
 - **Type safety**: Full TypeScript support with `ContextMenuItem` interface
 
-## 🎨 Styling and Customization
+## Styling and Customization
 
 The component comes with default styles that provide a clean, modern look. You can customize it extensively:
 
@@ -618,7 +583,7 @@ The component includes several pre-built classes for styling selected nodes:
 |-------|-------------|---------------|
 | `ltree-selected-bold` | Bold text with primary color | **Bold text** in theme primary color |
 | `ltree-selected-border` | Border and background highlight | Solid border with light background |
-| `ltree-selected-brackets` | Decorative brackets around text | ❯ **Node Text** ❮ |
+| `ltree-selected-brackets` | Decorative brackets around text | > **Node Text** < |
 
 **Available Drag-over Node Classes:**
 
@@ -640,17 +605,17 @@ The component includes several pre-built classes for styling selected nodes:
 />
 ```
 
-## 📚 API Reference
+## API Reference
 
 ### Tree Component Props
 
-#### Core Required Properties
-| Prop | Type | Required | Description |
-|------|------|----------|-------------|
-| `data` | `T[]` | ✅ | Array of data objects |
-| `idMember` | `string` | ✅ | Property name for unique identifiers |
-| `pathMember` | `string` | ✅ | Property name for hierarchical paths |
-| `sortCallback` | `(items: T[]) => T[]` | ✅ | Function to sort items |
+#### Core Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `data` | `T[]` | **required** | Array of data objects |
+| `idMember` | `string` | **required** | Property name for unique identifiers |
+| `pathMember` | `string` | **required** | Property name for hierarchical paths |
+| `sortCallback` | `(items: T[]) => T[]` | default sort | Function to sort items (optional) |
 
 #### Data Mapping Properties
 | Prop | Type | Default | Description |
@@ -679,13 +644,13 @@ The component includes several pre-built classes for styling selected nodes:
 
 **Note**: When `shouldUseInternalSearchIndex` is enabled, node indexing is performed asynchronously using `requestIdleCallback` (with fallback to `setTimeout`). This ensures the tree renders immediately while search indexing happens during browser idle time, providing better performance for large datasets.
 
-**⚠️ Important**: For internal search indexing to work, you must:
+**Important**: For internal search indexing to work, you must:
 1. Set `shouldUseInternalSearchIndex={true}`
 2. Provide either `searchValueMember` (property name) or `getSearchValueCallback` (function)
 
 Without both requirements, no search indexing will occur.
 
-**Performance Tuning**: 
+**Performance Tuning**:
 - `indexerBatchSize` controls how many nodes are processed per idle callback. Lower values (10-25) provide smoother UI performance but slower indexing, while higher values (50-100) index faster but may cause brief UI pauses. Default: 25.
 - `indexerTimeout` sets the maximum wait time before forcing indexing when the browser is busy. Lower values (25-50ms) ensure more responsive indexing, while higher values (100-200ms) give more time for genuine idle periods. Default: 50ms.
 
@@ -702,14 +667,34 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
-| `useFlatRendering` | `boolean` | `true` | Use flat rendering mode (faster for large trees) |
-| `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
-| `renderBatchSize` | `number` | `50` | Number of nodes to render per batch |
 | `orderMember` | `string \| null` | `null` | Property name for sort order (enables above/below positioning in drag-drop) |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
-| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging for tree operations and async search indexing |
+| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging |
 | `shouldDisplayContextMenuInDebugMode` | `boolean` | `false` | Display persistent context menu at fixed position for styling development |
+
+#### Rendering Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `useFlatRendering` | `boolean` | `true` | Use flat rendering mode (faster for large trees) |
+| `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
+| `initialBatchSize` | `number` | `20` | First batch size for progressive rendering |
+| `maxBatchSize` | `number` | `500` | Maximum batch size cap |
+| `flatIndentSize` | `string` | `'1.5rem'` | Indentation size per level in flat mode |
+
+#### Drag & Drop Properties
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `dragDropMode` | `DragDropMode` | `'none'` | Controls allowed drag operations: `'none'`, `'self'`, `'cross'`, `'both'` |
+| `dropZoneMode` | `string` | `'glow'` | Drop indicator style: `'floating'` or `'glow'` |
+| `dropZoneLayout` | `string` | `'around'` | Zone arrangement: `'around'`, `'above'`, `'below'`, `'wave'`, `'wave2'` |
+| `dropZoneStart` | `number \| string` | `33` | Where zones start horizontally (number=%, string=CSS value) |
+| `dropZoneMaxWidth` | `number` | `120` | Max width in pixels for wave layouts |
+| `allowCopy` | `boolean` | `false` | Enable Ctrl+drag to copy instead of move |
+| `autoHandleCopy` | `boolean` | `true` | Auto-handle same-tree copies (false for external DB/API) |
+| `allowedDropPositionsMember` | `string \| null` | `null` | Property name for allowed drop positions array |
+| `getAllowedDropPositionsCallback` | `(node) => DropPosition[] \| null` | `undefined` | Callback returning allowed drop positions per node |
+| `beforeDropCallback` | `(dropNode, draggedNode, position, event, operation) => ...` | `undefined` | Async-capable callback to validate/modify drops |
 
 #### Event Handler Properties
 | Prop | Type | Default | Description |
@@ -717,9 +702,7 @@ Without both requirements, no search indexing will occur.
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `getAllowedDropPositionsCallback` | `(node) => DropPosition[] \| null` | `undefined` | Callback returning allowed drop positions per node |
-| `beforeDropCallback` | `(dropNode, draggedNode, position, event, operation) => boolean \| { position?, operation? } \| Promise<...>` | `undefined` | Async-capable callback to validate/modify drops before they happen |
-| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is 'above', 'below', or 'child'. Operation is 'move' or 'copy' |
+| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is `'above'`, `'below'`, or `'child'`. Operation is `'move'` or `'copy'` |
 
 #### Visual Styling Properties
 | Prop | Type | Default | Description |
@@ -733,15 +716,15 @@ Without both requirements, no search indexing will occur.
 | `scrollHighlightTimeout` | `number \| null` | `4000` | Duration (ms) for scroll highlight animation |
 | `scrollHighlightClass` | `string \| null` | `'ltree-scroll-highlight'` | CSS class to apply for scroll highlight effect |
 
-#### Available Slots
-| Slot | Description |
-|------|-------------|
-| `nodeTemplate` | Custom node template |
-| `treeHeader` | Tree header content |
-| `treeBody` | Tree body content |
-| `treeFooter` | Tree footer content |
-| `noDataFound` | No data template |
-| `contextMenu` | Context menu template |
+#### Snippets
+| Snippet | Parameters | Description |
+|---------|------------|-------------|
+| `nodeTemplate` | `(node)` | Custom node template |
+| `treeHeader` | | Tree header content |
+| `treeBody` | | Tree body content |
+| `treeFooter` | | Tree footer content |
+| `noDataFound` | | No data template |
+| `contextMenu` | `(node, closeMenu)` | Context menu template |
 
 #### Public Methods
 | Method | Parameters | Description |
@@ -914,99 +897,7 @@ When enabled, the component will log detailed information to the browser console
 
 This provides valuable insights for performance optimization and troubleshooting, especially when working with large datasets or complex search operations.
 
-### Events
-
-#### onNodeClicked(node)
-Triggered when a node is clicked.
-
-#### onNodeDragStart(node, event)
-Triggered when drag operation starts.
-
-#### onNodeDragOver(node, event)
-Triggered when dragging over a potential drop target.
-
-#### beforeDropCallback(dropNode, draggedNode, position, event, operation)
-Called before a drop is processed. Can be async for showing dialogs.
-- Return `false` to cancel the drop
-- Return `{ position: 'above'|'below'|'child' }` to override position
-- Return `{ operation: 'move'|'copy' }` to override operation
-- Return `true` or `undefined` to proceed normally
-
-#### onNodeDrop(dropNode, draggedNode, position, event, operation)
-Triggered when a node is dropped. For same-tree moves, the tree auto-handles the move and this callback is for notification.
-- `position`: 'above', 'below', or 'child'
-- `operation`: 'move' or 'copy' (Ctrl+drag)
-
-### Slots
-
-#### nodeTemplate
-Custom template for rendering node content.
-
-```svelte
-{#snippet nodeTemplate(node)}
-  <!-- Your custom node content -->
-{/snippet}
-```
-
-#### contextMenu
-Custom context menu template (snippet-based approach).
-
-```svelte
-{#snippet contextMenu(node, closeMenu)}
-  <button onclick={() => { /* action */ closeMenu(); }}>
-    Action
-  </button>
-{/snippet}
-```
-
-### Context Menu Properties
-
-#### contextMenuCallback
-Function that generates context menu items dynamically.
-
-```typescript
-contextMenuCallback: (node: LTreeNode<T>) => ContextMenuItem[]
-```
-
-Where `ContextMenuItem` is:
-```typescript
-interface ContextMenuItem {
-  icon?: string;        // Optional icon (emoji or text)
-  title: string;        // Menu item text
-  isDisabled?: boolean; // Whether item is disabled
-  callback: () => void; // Action to perform
-  isDivider?: boolean;  // Render as divider instead of item
-}
-```
-
-#### contextMenuXOffset
-Horizontal offset from cursor position (default: 8px).
-
-#### contextMenuYOffset
-Vertical offset from cursor position (default: 0px).
-
-#### shouldDisplayContextMenuInDebugMode
-When enabled, displays a persistent context menu at a fixed position for styling development (default: false).
-
-```svelte
-<Tree
-  {data}
-  contextMenuCallback={createContextMenu}
-  shouldDisplayContextMenuInDebugMode={true}
-  shouldDisplayDebugInformation={true}
-  contextMenuXOffset={10}
-  contextMenuYOffset={5}
-/>
-```
-
-**Debug Mode Features:**
-- Shows context menu for the second node (or first if only one exists)
-- Positions menu 200px right and 100px down from tree's top-left corner
-- Persistent display - no need to right-click repeatedly
-- Perfect for CSS styling and position testing
-- Works with both callback-based and snippet-based context menus
-
-## 🏗️ Data Structure
+## Data Structure
 
 The component expects hierarchical data with path-based organization:
 
@@ -1066,21 +957,21 @@ interface InsertArrayResult<T> {
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  
+
   let insertResult = $state();
-  
+
   const data = [
     { id: '1', path: '1', name: 'Root' },
     { id: '1.2', path: '1.2', name: 'Child' },    // Missing parent "1.1"
     { id: '1.1.1', path: '1.1.1', name: 'Deep' } // Missing parent "1.1"
   ];
-  
+
   // Check results after tree processes data
   $effect(() => {
     if (insertResult) {
-      console.log(`✅ ${insertResult.successful} nodes inserted successfully`);
-      console.log(`❌ ${insertResult.failed.length} nodes failed to insert`);
-      
+      console.log(`${insertResult.successful} nodes inserted successfully`);
+      console.log(`${insertResult.failed.length} nodes failed to insert`);
+
       insertResult.failed.forEach(failure => {
         console.log(`Failed: ${failure.originalData.name} - ${failure.error}`);
       });
@@ -1088,10 +979,10 @@ interface InsertArrayResult<T> {
   });
 </script>
 
-<Tree 
-  {data} 
-  idMember="id" 
-  pathMember="path" 
+<Tree
+  {data}
+  idMember="id"
+  pathMember="path"
   displayValueMember="name"
   bind:insertResult
 />
@@ -1105,7 +996,7 @@ interface InsertArrayResult<T> {
 - **Search Accuracy**: Failed nodes are excluded from search index, ensuring search results match visible tree
 - **User Feedback**: Inform users about data issues with detailed failure information
 
-## 🚀 Performance
+## Performance
 
 The component is optimized for large datasets:
 
@@ -1147,20 +1038,34 @@ enablePerfLogging();
 window.components['svelte-treeview'].perf.enable()
 ```
 
-**Important**: See the [$state.raw() warning](#%EF%B8%8F-performance-warning-use-stateraw-for-large-datasets) above - using `$state()` instead of `$state.raw()` for tree data can cause 5,000x slowdown!
+**Important**: See the [$state.raw() tip](#quick-start) above - using `$state()` instead of `$state.raw()` for tree data can cause 5,000x slowdown!
 
-## 🤝 Contributing
+## Development Setup & Contributing
+
+For developers working on the project, you can use either standard npm commands or the provided Makefile:
+
+```bash
+# Using Makefile (recommended for consistency)
+make setup      # or make install
+make dev
+
+# Or using standard npm commands
+npm install
+npm run dev
+```
 
 We welcome contributions! Please see our contributing guidelines for details.
 
-## 📄 License
+> **For AI Agents / LLMs**: Comprehensive documentation is available in the `ai/` folder with topic-specific files (basic-setup.txt, drag-drop.txt, performance.txt, etc.). Start with `ai/INDEX.txt` for navigation.
+
+## License
 
 MIT License - see LICENSE file for details.
 
-## 🆘 Support
+## Support
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/keenmate/svelte-treeview/issues)
-- **Documentation**: [Full documentation](https://github.com/keenmate/svelte-treeview#readme)
+- **Live demo & docs**: [svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)
 
 ---
 
