@@ -7,6 +7,7 @@
 	import type {
 		Orientation,
 		GrowthDirection,
+		LayoutMode,
 		ClickBehavior,
 		InitialViewport,
 		LayoutNode,
@@ -26,10 +27,12 @@
 	} from './types.js';
 	import { createTextCache } from './canvas-text.js';
 	import { computeLayout } from './canvas-layout.js';
+	import { drawRadialConnections } from './canvas-layout-radial.js';
 	import type { CanvasTheme } from './canvas-theme.js';
 	import { defaultCanvasTheme, readCssTheme, resolveTheme } from './canvas-theme.js';
 	import {
 		drawConnections,
+		drawBalancedConnections,
 		drawGroupBoxes,
 		drawDotGrid,
 		drawMinimap,
@@ -70,8 +73,16 @@
 		orderMember?: string;
 
 		// Canvas Visual Config
+		layoutMode?: LayoutMode;
 		growthDirection?: GrowthDirection;
 		initialViewport?: InitialViewport;
+
+		// Balanced layout
+		balancedSplit?: 'even' | 'weighted';
+
+		// Radial layout
+		radialStartAngle?: number;
+		radialSpacing?: number;
 		groupSiblings?: boolean;
 		showDotGrid?: boolean;
 		clickBehavior?: ClickBehavior;
@@ -150,8 +161,12 @@
 		orderMember,
 
 		// Visual config
+		layoutMode = $bindable('tree'),
 		growthDirection = $bindable('right'),
 		initialViewport = 'root',
+		balancedSplit = 'even',
+		radialStartAngle = 0,
+		radialSpacing,
 		groupSiblings = $bindable(true),
 		showDotGrid = $bindable(false),
 		clickBehavior = $bindable('expand'),
@@ -294,6 +309,12 @@
 				gridNodeMaxW,
 				nodeMinWidth,
 				levelOverrides: levelConfig
+			},
+			layoutMode,
+			{
+				balancedSplit,
+				radialStartAngle,
+				radialSpacing: radialSpacing ?? columnGap * 3
 			}
 		);
 		layoutNodes = result.nodes;
@@ -354,7 +375,13 @@
 		const isSearchActive = matchedPaths.size > 0;
 
 		// Connections
-		drawConnections(ctx, layoutNodes, levelXArr, isV, isReversed, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
+		if (layoutMode === 'balanced') {
+			drawBalancedConnections(ctx, layoutNodes, vl, vt, vr, vb, theme, columnGap, levelSpacingV);
+		} else if (layoutMode === 'radial') {
+			drawRadialConnections(ctx, layoutNodes, vl, vt, vr, vb, theme);
+		} else if (layoutMode !== 'box') {
+			drawConnections(ctx, layoutNodes, levelXArr, isV, isReversed, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
+		}
 
 		// Group boxes
 		drawGroupBoxes(ctx, groupBoxes, getDepthColor, zoomLodSimple, zoomLodText, iState.zoom, vl, vt, vr, vb);
@@ -385,6 +412,7 @@
 		};
 
 		for (const n of layoutNodes) {
+			if (n.isVirtual) continue;
 			if (n.x + n.w < vl - M || n.x > vr + M || n.y + n.h < vt - M || n.y > vb + M) continue;
 			visible++;
 
@@ -631,8 +659,9 @@
 	 */
 	type NavAction = 'treeForward' | 'treeBack' | 'crossNext' | 'crossPrev';
 
-	function resolveNavAction(key: string): NavAction | null {
-		switch (growthDirection) {
+	function resolveNavAction(key: string, dir?: GrowthDirection): NavAction | null {
+		const effectiveDir = dir ?? growthDirection;
+		switch (effectiveDir) {
 			case 'right':
 				switch (key) {
 					case 'ArrowRight': return 'treeForward';
@@ -670,9 +699,10 @@
 	}
 
 	/** Resolve the spatial axis & direction for a logical action */
-	function resolveAxis(action: NavAction): { axis: 'x' | 'y'; forward: boolean } {
-		const isV = growthDirection === 'up' || growthDirection === 'down';
-		const isReversed = growthDirection === 'left' || growthDirection === 'up';
+	function resolveAxis(action: NavAction, dir?: GrowthDirection): { axis: 'x' | 'y'; forward: boolean } {
+		const effectiveDir = dir ?? growthDirection;
+		const isV = effectiveDir === 'up' || effectiveDir === 'down';
+		const isReversed = effectiveDir === 'left' || effectiveDir === 'up';
 
 		if (isV) {
 			// tree axis = Y, cross axis = X
@@ -691,6 +721,28 @@
 				case 'crossPrev':   return { axis: 'y', forward: false };
 			}
 		}
+	}
+
+	/** Find the root (depth-0) layout node for balanced nav */
+	function getBalancedRootLn(): LayoutNode<T> | null {
+		return layoutNodes.find(ln => ln.depth === 0) ?? null;
+	}
+
+	/** Determine which arm a node belongs to based on its cx relative to root's cx */
+	function getBalancedArmDir(currentLn: LayoutNode<T>, rootLn: LayoutNode<T>): GrowthDirection | 'root' {
+		if (currentLn.node.path === rootLn.node.path) return 'root';
+		return currentLn.cx < rootLn.cx ? 'left' : 'right';
+	}
+
+	/** Cross-axis neighbor constrained to the same arm of a balanced layout */
+	function findBalancedCrossNeighbor(
+		currentLn: LayoutNode<T>, rootCx: number, axis: 'x' | 'y', forward: boolean
+	): LayoutNode<T> | null {
+		const isLeft = currentLn.cx < rootCx;
+		const candidates = layoutNodes.filter(ln =>
+			ln.depth === currentLn.depth && (isLeft ? ln.cx < rootCx : ln.cx >= rootCx)
+		);
+		return findNearest(currentLn, candidates, axis, forward);
 	}
 
 	function onKeyDown(e: KeyboardEvent) {
@@ -757,6 +809,53 @@
 			}
 		} else {
 			// ── Outside a group box: individually laid out nodes ──
+
+			if (layoutMode === 'balanced') {
+				const rootLn = getBalancedRootLn();
+				if (!rootLn) return;
+				const armDir = getBalancedArmDir(currentLn, rootLn);
+
+				if (armDir === 'root') {
+					// Root node: arrows directly enter the respective arm
+					if (e.key === 'ArrowRight') {
+						const rightKids = (currentLn.children || []).filter(c => c.cx > currentLn.cx);
+						if (rightKids.length > 0) {
+							const best = rightKids.reduce((a, b) =>
+								Math.abs(a.cy - currentLn.cy) < Math.abs(b.cy - currentLn.cy) ? a : b
+							);
+							navigateToPath(best.node.path);
+						}
+					} else if (e.key === 'ArrowLeft') {
+						const leftKids = (currentLn.children || []).filter(c => c.cx < currentLn.cx);
+						if (leftKids.length > 0) {
+							const best = leftKids.reduce((a, b) =>
+								Math.abs(a.cy - currentLn.cy) < Math.abs(b.cy - currentLn.cy) ? a : b
+							);
+							navigateToPath(best.node.path);
+						}
+					}
+					// Up/Down from root: no siblings — do nothing
+				} else {
+					// Non-root node in an arm: use the arm's direction
+					const armAction = resolveNavAction(e.key, armDir);
+					if (!armAction) return;
+
+					if (armAction === 'crossPrev' || armAction === 'crossNext') {
+						const { axis, forward } = resolveAxis(armAction, armDir);
+						const neighbor = findBalancedCrossNeighbor(currentLn, rootLn.cx, axis, forward);
+						if (neighbor) navigateToPath(neighbor.node.path);
+					} else if (armAction === 'treeForward') {
+						if (node.hasChildren && node.isExpanded) {
+							const children = ctrlRef.getChildren(node.path);
+							if (children.length > 0) navigateToPath(children[0].path);
+						}
+					} else if (armAction === 'treeBack') {
+						if (node.parentPath) navigateToPath(node.parentPath);
+					}
+				}
+				return;
+			}
+
 			if (action === 'crossPrev' || action === 'crossNext') {
 				const { axis, forward } = resolveAxis(action);
 				const neighbor = findSpatialNeighborAtDepth(currentLn, axis, forward);
@@ -810,11 +909,12 @@
 		const _direction = growthDirection;
 		const _grouped = groupSiblings;
 		const _dots = showDotGrid;
+		const _layoutMode = layoutMode;
 		// Track all layout-affecting state
 		void [columnGap, gridNodeMaxW, nodeHeight, nodeGap, levelSpacingV,
 			nodePaddingX, nodeMinWidth, colorBarWidth, fontSize, fontFamily,
 			gridGap, groupPadding, maxGridCols, depthColors, levelConfig,
-			zoomLodText, zoomLodSimple];
+			zoomLodText, zoomLodSimple, balancedSplit, radialStartAngle, radialSpacing];
 		doLayout();
 		requestRedraw();
 	});
