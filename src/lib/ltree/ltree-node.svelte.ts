@@ -1,5 +1,5 @@
 export type NodeId = string | number;
-export type DropPosition = 'above' | 'below' | 'child';
+export type DropPosition = 'before' | 'after' | 'child';
 
 export enum VisualState {
 	indeterminate = "indeterminate",

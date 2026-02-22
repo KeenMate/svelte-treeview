@@ -102,7 +102,7 @@
 		// Calculate parent path and sibling for positioning
 		let parentPath: string;
 		let siblingPath: string | undefined;
-		let copyPosition: 'above' | 'below' | undefined;
+		let copyPosition: 'before' | 'after' | undefined;
 
 		if (dropNode === null) {
 			// Dropped on empty tree placeholder - add to root
@@ -111,10 +111,10 @@
 			// Drop as child of target node
 			parentPath = dropNode.path;
 		} else {
-			// Drop as sibling (above/below) - use target's parent
+			// Drop as sibling (before/after) - use target's parent
 			parentPath = dropNode.parentPath || '';
 			siblingPath = dropNode.path;
-			copyPosition = position as 'above' | 'below';
+			copyPosition = position as 'before' | 'after';
 		}
 
 		// Copy the node and all its descendants with new IDs
@@ -184,7 +184,7 @@
 	// === Restricted Drop Positions Demo ===
 	// Data with allowedDropPositions to restrict where nodes can be dropped
 	let restrictedData = $state<RestrictedFileItem[]>([
-		// Trash folder: only accepts drops as children (can't drop above/below)
+		// Trash folder: only accepts drops as children (can't drop before/after)
 		{ id: 101, path: '1', name: '🗑️ Trash', icon: '', sortOrder: 10, allowedDropPositions: ['child'] },
 		{ id: 102, path: '1.1', name: 'Deleted Item 1', icon: '📄', sortOrder: 10 },
 		{ id: 103, path: '1.2', name: 'Deleted Item 2', icon: '📄', sortOrder: 20 },
@@ -194,9 +194,9 @@
 		{ id: 105, path: '2.1', name: 'Project A', icon: '📂', sortOrder: 10 },
 		{ id: 106, path: '2.2', name: 'Project B', icon: '📂', sortOrder: 20 },
 
-		// Files: only accept drops above/below (can't drop INTO a file)
-		{ id: 107, path: '3', name: '📄 Readme.md', icon: '', sortOrder: 30, allowedDropPositions: ['above', 'below'] },
-		{ id: 108, path: '4', name: '📄 Config.json', icon: '', sortOrder: 40, allowedDropPositions: ['above', 'below'] },
+		// Files: only accept drops before/after (can't drop INTO a file)
+		{ id: 107, path: '3', name: '📄 Readme.md', icon: '', sortOrder: 30, allowedDropPositions: ['before', 'after'] },
+		{ id: 108, path: '4', name: '📄 Config.json', icon: '', sortOrder: 40, allowedDropPositions: ['before', 'after'] },
 
 		// Source items to drag
 		{ id: 109, path: '5', name: '📁 Source Items', icon: '', sortOrder: 50 },
@@ -210,6 +210,54 @@
 	function addRestrictedLog(message: string) {
 		restrictedLog = [...restrictedLog.slice(-4), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
+
+	// === Touch Drag Demo ===
+	let touchData = $state<FileItem[]>([
+		{ id: 501, path: '1', name: 'Inbox', icon: '📥', sortOrder: 10 },
+		{ id: 502, path: '1.1', name: 'New Message', icon: '✉️', sortOrder: 10 },
+		{ id: 503, path: '1.2', name: 'Newsletter', icon: '📰', sortOrder: 20 },
+		{ id: 504, path: '2', name: 'Archive', icon: '📦', sortOrder: 20 },
+		{ id: 505, path: '2.1', name: 'Old Stuff', icon: '📜', sortOrder: 10 },
+		{ id: 506, path: '3', name: 'Drafts', icon: '📝', sortOrder: 30 },
+	]);
+	let touchLog = $state<string[]>([]);
+
+	function addTouchLog(message: string) {
+		touchLog = [...touchLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+
+	function handleTouchDragStart(node: LTreeNode<FileItem>, event: DragEvent) {
+		addTouchLog(`dragStart: "${node.data?.name}"`);
+	}
+
+	function handleTouchDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
+		addTouchLog(`drop: "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
+	}
+
+	// Attach document-level touch logging to debug DevTools emulation
+	onMount(() => {
+		const touchTree = document.querySelector('.touch-demo-tree');
+		if (!touchTree) return;
+
+		touchTree.addEventListener('touchstart', (e) => {
+			const touch = (e as TouchEvent).touches[0];
+			addTouchLog(`touchstart: (${Math.round(touch.clientX)}, ${Math.round(touch.clientY)})`);
+		}, { passive: true });
+
+		touchTree.addEventListener('touchmove', (e) => {
+			const touch = (e as TouchEvent).touches[0];
+			addTouchLog(`touchmove: (${Math.round(touch.clientX)}, ${Math.round(touch.clientY)})`);
+		}, { passive: false });
+
+		touchTree.addEventListener('touchend', (e) => {
+			const touch = (e as TouchEvent).changedTouches[0];
+			addTouchLog(`touchend: (${Math.round(touch.clientX)}, ${Math.round(touch.clientY)})`);
+		});
+
+		touchTree.addEventListener('touchcancel', () => {
+			addTouchLog(`touchcancel`);
+		});
+	});
 
 	function handleRestrictedDrop(dropNode: LTreeNode<RestrictedFileItem> | null, draggedNode: LTreeNode<RestrictedFileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
 		const positionLabel = dropNode?.data?.allowedDropPositions?.length === 1
@@ -256,7 +304,7 @@
 				<label style="display: flex; align-items: center; gap: 0.5rem;">
 					Layout:
 					<select bind:value={dropZoneLayout}>
-						<option value="around">Around (above + below/child)</option>
+						<option value="around">Around (before + after/child)</option>
 						<option value="above">Above (all 3 in row above)</option>
 						<option value="below">Below (all 3 in row below)</option>
 						<option value="wave">Wave (stacked vertically)</option>
@@ -292,6 +340,7 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
+						dragDropMode="both"
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{allowCopy}
@@ -320,6 +369,7 @@
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						expandLevel={3}
+						dragDropMode="both"
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
 						{allowCopy}
@@ -362,9 +412,9 @@
 		<div class="note">
 			<p class="note-title">Node Types</p>
 			<ul>
-				<li><strong>🗑️ Trash</strong> - Only accepts <code>child</code> drops (drop INTO, not above/below)</li>
+				<li><strong>🗑️ Trash</strong> - Only accepts <code>child</code> drops (drop INTO, not before/after)</li>
 				<li><strong>📁 Projects</strong> - All positions allowed (default behavior)</li>
-				<li><strong>📄 Files</strong> - Only <code>above</code> and <code>below</code> (can't drop INTO a file)</li>
+				<li><strong>📄 Files</strong> - Only <code>before</code> and <code>after</code> (can't drop INTO a file)</li>
 			</ul>
 		</div>
 
@@ -380,6 +430,7 @@
 				sortCallback={sortByOrder}
 				isSorted={true}
 				expandLevel={3}
+				dragDropMode="self"
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
 				{dropZoneLayout}
@@ -412,7 +463,7 @@ const data = [
   { id: 2, name: '📁 Projects' },
 
   // Files: can't drop INTO them
-  { id: 3, name: '📄 Readme.md', allowedDropPositions: ['above', 'below'] },
+  { id: 3, name: '📄 Readme.md', allowedDropPositions: ['before', 'after'] },
 ];
 
 <Tree
@@ -427,6 +478,37 @@ const data = [
 	<div class="card">
 		<h2>Touch Drag (Mobile)</h2>
 		<p class="description">On touch devices, long-press (300ms) on a node to start dragging. A ghost element will follow your finger.</p>
+
+		<div class="tree-container touch-demo-tree" style="max-height: 260px;">
+			<Tree
+				data={touchData}
+				idMember="id"
+				pathMember="path"
+				orderMember="sortOrder"
+				displayValueMember="name"
+				sortCallback={sortByOrder}
+				isSorted={true}
+				expandLevel={3}
+				dragDropMode="self"
+				shouldDisplayDebugInformation={true}
+				onNodeDragStart={handleTouchDragStart}
+				onNodeDrop={handleTouchDrop}
+			>
+				{#snippet nodeTemplate(node)}
+					<span>{node.data?.icon} {node.data?.name}</span>
+				{/snippet}
+			</Tree>
+		</div>
+
+		<div class="activity-log" style="margin-top: 0.75rem; min-height: 3rem;">
+			{#if touchLog.length === 0}
+				<div class="log-entry" style="color: #999;">Touch events will appear here...</div>
+			{:else}
+				{#each touchLog as entry}
+					<div class="log-entry">{entry}</div>
+				{/each}
+			{/if}
+		</div>
 
 		<div class="note">
 			<p class="note-title">How Touch Drag Works</p>
@@ -447,7 +529,7 @@ const data = [
   pathMember="path"
   sortCallback={sortByName}
   onNodeDrop={(dropNode, draggedNode, position, event) => {
-    // Handle the drop - position is 'above', 'below', or 'child'
+    // Handle the drop - position is 'before', 'after', or 'child'
     console.log('Dropped:', draggedNode.data?.name);
     console.log('Position:', position);
     console.log('On:', dropNode?.data?.name || 'empty tree');
@@ -474,14 +556,14 @@ const data = [
 
 		<div class="note">
 			<p class="note-title">onNodeDrop Signature</p>
-			<p>The <code>position</code> parameter indicates where to drop: <code>'above'</code>, <code>'below'</code>, or <code>'child'</code>:</p>
+			<p>The <code>position</code> parameter indicates where to drop: <code>'before'</code>, <code>'after'</code>, or <code>'child'</code>:</p>
 			<pre style="margin-top: 0.5rem;">{`onNodeDrop={(dropNode, draggedNode, position, event) => {
   if (dropNode === null) {
     // Dropped on empty tree placeholder or root drop zone
     // Add as root node
   } else {
-    // position: 'above' - insert as sibling before dropNode
-    // position: 'below' - insert as sibling after dropNode
+    // position: 'before' - insert as sibling before dropNode
+    // position: 'after' - insert as sibling after dropNode
     // position: 'child' - insert as child of dropNode
   }
 }}`}</pre>
@@ -564,12 +646,12 @@ const data = [
 				<tr>
 					<td><code>ltree-drop-indicators</code></td>
 					<td>Drag in progress over a node</td>
-					<td>Container for position indicators (above/child/below)</td>
+					<td>Container for position indicators (before/child/after)</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-above</code></td>
+					<td><code>ltree-drop-before</code></td>
 					<td>Position indicator active</td>
-					<td>Shows drop will insert above the node</td>
+					<td>Shows drop will insert before the node</td>
 				</tr>
 				<tr>
 					<td><code>ltree-drop-child</code></td>
@@ -577,9 +659,9 @@ const data = [
 					<td>Shows drop will insert as child of the node</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-below</code></td>
+					<td><code>ltree-drop-after</code></td>
 					<td>Position indicator active</td>
-					<td>Shows drop will insert below the node</td>
+					<td>Shows drop will insert after the node</td>
 				</tr>
 				<tr>
 					<td><code>ltree-touch-ghost</code></td>

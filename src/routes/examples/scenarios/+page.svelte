@@ -196,9 +196,9 @@
 
 			// Calculate sortOrder based on position
 			let rootSortOrder = 10;
-			if (dropNode && position === 'above') {
+			if (dropNode && position === 'before') {
 				rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
-			} else if (dropNode && position === 'below') {
+			} else if (dropNode && position === 'after') {
 				rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
 			} else if (position === 'child') {
 				rootSortOrder = 10; // First child
@@ -287,9 +287,9 @@
 
 			// Calculate sortOrder based on position
 			let rootSortOrder = 10;
-			if (dropNode && position === 'above') {
+			if (dropNode && position === 'before') {
 				rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
-			} else if (dropNode && position === 'below') {
+			} else if (dropNode && position === 'after') {
 				rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
 			}
 
@@ -337,9 +337,9 @@
 
 			// Calculate sortOrder based on position
 			let sortOrder = 10;
-			if (dropNode && position === 'above') {
+			if (dropNode && position === 'before') {
 				sortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
-			} else if (dropNode && position === 'below') {
+			} else if (dropNode && position === 'after') {
 				sortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
 			}
 
@@ -440,9 +440,9 @@
 
 		// Calculate sortOrder based on position
 		let sortOrder = 10;
-		if (dropNode && position === 'above') {
+		if (dropNode && position === 'before') {
 			sortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
-		} else if (dropNode && position === 'below') {
+		} else if (dropNode && position === 'after') {
 			sortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
 		}
 
@@ -505,9 +505,9 @@
 
 		// Calculate sortOrder based on position
 		let rootSortOrder = 10;
-		if (dropNode && position === 'above') {
+		if (dropNode && position === 'before') {
 			rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
-		} else if (dropNode && position === 'below') {
+		} else if (dropNode && position === 'after') {
 			rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
 		}
 
@@ -670,6 +670,7 @@
 							orderMember="sortOrder"
 							sortCallback={sortByOrder}
 							expandLevel={3}
+							dragDropMode="cross"
 							onNodeDrop={handleDropA}
 							isLoading={isLoadingA}
 						>
@@ -687,6 +688,7 @@
 							orderMember="sortOrder"
 							sortCallback={sortByOrder}
 							expandLevel={3}
+							dragDropMode="cross"
 							onNodeDrop={handleDropB}
 							isLoading={isLoadingB}
 						>
@@ -704,6 +706,7 @@
 							orderMember="sortOrder"
 							sortCallback={sortByOrder}
 							expandLevel={3}
+							dragDropMode="cross"
 							onNodeDrop={handleDropC}
 							onNodeClicked={onNodeClickC}
 							selectedNode={selectedNodeC}
@@ -723,6 +726,7 @@
 							orderMember="sortOrder"
 							sortCallback={sortByOrder}
 							expandLevel={3}
+							dragDropMode="cross"
 							onNodeDrop={handleDropD}
 							isLoading={isLoadingD}
 						>
@@ -746,6 +750,7 @@
 							orderMember="sortOrder"
 							sortCallback={sortByOrder}
 							expandLevel={3}
+							dragDropMode="cross"
 							onNodeDrop={handleDropE}
 							isLoading={isLoadingE}
 						>

@@ -6,7 +6,9 @@
 	import type { DropPosition, ContextMenuItem } from '../ltree/types.js';
 	import type {
 		Orientation,
+		GrowthDirection,
 		ClickBehavior,
+		InitialViewport,
 		LayoutNode,
 		LayoutResult,
 		GroupBox,
@@ -67,7 +69,8 @@
 		orderMember?: string;
 
 		// Canvas Visual Config
-		orientation?: Orientation;
+		growthDirection?: GrowthDirection;
+		initialViewport?: InitialViewport;
 		groupSiblings?: boolean;
 		showDotGrid?: boolean;
 		clickBehavior?: ClickBehavior;
@@ -145,7 +148,8 @@
 		orderMember,
 
 		// Visual config
-		orientation = $bindable('horizontal'),
+		growthDirection = $bindable('right'),
+		initialViewport = 'root',
 		groupSiblings = $bindable(true),
 		showDotGrid = $bindable(false),
 		clickBehavior = $bindable('expand'),
@@ -257,7 +261,7 @@
 				font: fontStr,
 				fontBold,
 				getDepthColor,
-				orientation
+				growthDirection
 			});
 		}
 		const label = getLabel(treeNode);
@@ -272,7 +276,7 @@
 		if (!ctrlRef) return;
 		const result = computeLayout(
 			ctrlRef,
-			orientation,
+			growthDirection,
 			groupSiblings,
 			measureNodeWidthFn,
 			{
@@ -342,11 +346,12 @@
 		const vb = vt + ch / iState.zoom;
 		const M = 50;
 
-		const isV = orientation === 'vertical';
+		const isV = growthDirection === 'up' || growthDirection === 'down';
+		const isReversed = growthDirection === 'left' || growthDirection === 'up';
 		const isSearchActive = matchedPaths.size > 0;
 
 		// Connections
-		drawConnections(ctx, layoutNodes, levelXArr, isV, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
+		drawConnections(ctx, layoutNodes, levelXArr, isV, isReversed, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
 
 		// Group boxes
 		drawGroupBoxes(ctx, groupBoxes, getDepthColor, zoomLodSimple, zoomLodText, iState.zoom, vl, vt, vr, vb);
@@ -364,7 +369,7 @@
 			font: fontStr,
 			fontBold,
 			getDepthColor,
-			orientation
+			growthDirection
 		};
 
 		const slots: NodeRenderSlots<T> = {
@@ -423,7 +428,7 @@
 
 		// Drop zone buttons
 		if (iState.isDragging && iState.dropTarget) {
-			drawDropZones(ctx, iState.dropTarget as LayoutNode<T>, iState.dropPosition, isV, theme);
+			drawDropZones(ctx, iState.dropTarget as LayoutNode<T>, iState.dropPosition, isV, isReversed, theme);
 		}
 
 		// Drag ghost
@@ -482,7 +487,10 @@
 			getContainer: () => containerEl,
 			getLayoutNodes: () => layoutNodes,
 			getLayoutSize: () => ({ width: layoutWidth, height: layoutHeight }),
-			getOrientation: () => orientation,
+			getDirection: () => ({
+				isV: growthDirection === 'up' || growthDirection === 'down',
+				isReversed: growthDirection === 'left' || growthDirection === 'up'
+			}),
 			requestRedraw,
 			onNodeClick: (ln, chevronHit) => {
 				const shouldToggle = ln.node.hasChildren && (
@@ -606,6 +614,81 @@
 		return findNearest(currentLn, candidates, axis, forward);
 	}
 
+	/**
+	 * Map a physical arrow key to a logical navigation action based on
+	 * orientation and direction.  This keeps all layout-specific key
+	 * binding in one place so adding RTL or new orientations is trivial.
+	 *
+	 * Logical actions:
+	 *   treeForward  – toward children  (Right in H-LTR, Down in V, Left in H-RTL)
+	 *   treeBack     – toward parent    (Left  in H-LTR, Up   in V, Right in H-RTL)
+	 *   crossNext    – next on cross axis (Down in H, Right in V-LTR, Left in V-RTL)
+	 *   crossPrev    – prev on cross axis (Up   in H, Left  in V-LTR, Right in V-RTL)
+	 */
+	type NavAction = 'treeForward' | 'treeBack' | 'crossNext' | 'crossPrev';
+
+	function resolveNavAction(key: string): NavAction | null {
+		switch (growthDirection) {
+			case 'right':
+				switch (key) {
+					case 'ArrowRight': return 'treeForward';
+					case 'ArrowLeft':  return 'treeBack';
+					case 'ArrowDown':  return 'crossNext';
+					case 'ArrowUp':    return 'crossPrev';
+				}
+				break;
+			case 'left':
+				switch (key) {
+					case 'ArrowLeft':  return 'treeForward';
+					case 'ArrowRight': return 'treeBack';
+					case 'ArrowDown':  return 'crossNext';
+					case 'ArrowUp':    return 'crossPrev';
+				}
+				break;
+			case 'down':
+				switch (key) {
+					case 'ArrowDown':  return 'treeForward';
+					case 'ArrowUp':    return 'treeBack';
+					case 'ArrowRight': return 'crossNext';
+					case 'ArrowLeft':  return 'crossPrev';
+				}
+				break;
+			case 'up':
+				switch (key) {
+					case 'ArrowUp':    return 'treeForward';
+					case 'ArrowDown':  return 'treeBack';
+					case 'ArrowRight': return 'crossNext';
+					case 'ArrowLeft':  return 'crossPrev';
+				}
+				break;
+		}
+		return null;
+	}
+
+	/** Resolve the spatial axis & direction for a logical action */
+	function resolveAxis(action: NavAction): { axis: 'x' | 'y'; forward: boolean } {
+		const isV = growthDirection === 'up' || growthDirection === 'down';
+		const isReversed = growthDirection === 'left' || growthDirection === 'up';
+
+		if (isV) {
+			// tree axis = Y, cross axis = X
+			switch (action) {
+				case 'treeForward': return { axis: 'y', forward: !isReversed };
+				case 'treeBack':    return { axis: 'y', forward: isReversed };
+				case 'crossNext':   return { axis: 'x', forward: true };
+				case 'crossPrev':   return { axis: 'x', forward: false };
+			}
+		} else {
+			// tree axis = X, cross axis = Y
+			switch (action) {
+				case 'treeForward': return { axis: 'x', forward: !isReversed };
+				case 'treeBack':    return { axis: 'x', forward: isReversed };
+				case 'crossNext':   return { axis: 'y', forward: true };
+				case 'crossPrev':   return { axis: 'y', forward: false };
+			}
+		}
+	}
+
 	function onKeyDown(e: KeyboardEvent) {
 		// Don't handle keys when focus is in input fields
 		if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -633,60 +716,54 @@
 			return;
 		}
 
-		const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
-		if (!isArrow) return;
+		const action = resolveNavAction(e.key);
+		if (!action) return;
 		e.preventDefault();
 
 		const currentLn = layoutNodes.find(ln => ln.node.path === node.path);
 		if (!currentLn) return;
-		const isV = orientation === 'vertical';
 		const box = findContainingGroupBox(currentLn);
 
 		if (box) {
 			// ── Inside a group box: navigate like Excel within the grid ──
 			const groupNodes = getNodesInGroupBox(box);
-			const crossAxis = isV ? 'x' : 'y'; // Up/Down axis
-			const treeAxis = isV ? 'y' : 'x';  // Left/Right axis
+			const { axis, forward } = resolveAxis(action);
 
-			if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-				const forward = e.key === 'ArrowDown';
-				const neighbor = findNearest(currentLn, groupNodes, crossAxis, forward);
+			if (action === 'crossPrev' || action === 'crossNext') {
+				const neighbor = findNearest(currentLn, groupNodes, axis, forward);
 				if (neighbor) {
 					navigateToPath(neighbor.node.path);
 				} else {
 					// At edge of group — escape to nearest same-depth node outside
-					const outer = findSpatialNeighborAtDepth(currentLn, crossAxis, forward);
+					const outer = findSpatialNeighborAtDepth(currentLn, axis, forward);
 					if (outer) navigateToPath(outer.node.path);
 				}
-			} else if (e.key === 'ArrowRight') {
-				const neighbor = findNearest(currentLn, groupNodes, treeAxis, true);
-				if (neighbor) {
-					navigateToPath(neighbor.node.path);
-				}
-				// At right edge of group → do nothing (no children to navigate to from grouped node)
-			} else if (e.key === 'ArrowLeft') {
-				const neighbor = findNearest(currentLn, groupNodes, treeAxis, false);
+			} else if (action === 'treeForward') {
+				const neighbor = findNearest(currentLn, groupNodes, axis, forward);
+				if (neighbor) navigateToPath(neighbor.node.path);
+				// At forward edge of group → do nothing (grouped nodes have no children)
+			} else if (action === 'treeBack') {
+				const neighbor = findNearest(currentLn, groupNodes, axis, forward);
 				if (neighbor) {
 					navigateToPath(neighbor.node.path);
 				} else if (node.parentPath) {
-					// At left edge of group → go to parent
+					// At back edge of group → go to parent
 					navigateToPath(node.parentPath);
 				}
 			}
 		} else {
 			// ── Outside a group box: individually laid out nodes ──
-			if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-				const axis = isV ? 'x' : 'y';
-				const forward = e.key === 'ArrowDown';
+			if (action === 'crossPrev' || action === 'crossNext') {
+				const { axis, forward } = resolveAxis(action);
 				const neighbor = findSpatialNeighborAtDepth(currentLn, axis, forward);
 				if (neighbor) navigateToPath(neighbor.node.path);
-			} else if (e.key === 'ArrowRight') {
+			} else if (action === 'treeForward') {
 				// Go to first child if expanded
 				if (node.hasChildren && node.isExpanded) {
 					const children = ctrlRef.getChildren(node.path);
 					if (children.length > 0) navigateToPath(children[0].path);
 				}
-			} else if (e.key === 'ArrowLeft') {
+			} else if (action === 'treeBack') {
 				// Go to parent
 				if (node.parentPath) navigateToPath(node.parentPath);
 			}
@@ -707,11 +784,26 @@
 		textCache.setFont(_font);
 	});
 
+	// Reposition viewport when growth direction changes via binding
+	let prevDirection: GrowthDirection | null = null;
+	$effect(() => {
+		const dir = growthDirection;
+		if (prevDirection !== null && prevDirection !== dir && containerEl) {
+			// Direction changed — reposition pan to show root
+			doLayout();
+			const { x, y } = panForDirection(dir);
+			interaction.setPan(x, y);
+			interaction.setZoom(1);
+			requestRedraw();
+		}
+		prevDirection = dir;
+	});
+
 	// Rebuild layout when tree or config changes
 	$effect(() => {
 		if (!ctrlRef || !canvasEl) return;
 		const _tracker = ctrlRef.tree.changeTracker;
-		const _orient = orientation;
+		const _direction = growthDirection;
 		const _grouped = groupSiblings;
 		const _dots = showDotGrid;
 		// Track all layout-affecting state
@@ -852,11 +944,44 @@
 		return { results: searchResults, currentIndex: currentResultIndex, matchedPaths };
 	}
 
-	export function setOrientation(o: Orientation) {
-		orientation = o;
-		interaction.setPan(40, 40);
+	/** Compute the initial pan so the viewport starts at the root's corner or at the origin */
+	function panForDirection(dir: GrowthDirection): { x: number; y: number } {
+		const pad = 40;
+		if (initialViewport === 'origin') {
+			console.log(`[panForDirection] dir=${dir}, initialViewport=${initialViewport} → pan=(${pad}, ${pad})`);
+			return { x: pad, y: pad };
+		}
+		const rect = containerEl?.getBoundingClientRect();
+		const cw = rect?.width ?? 800;
+		const ch = rect?.height ?? 600;
+		// Center the viewport on the root node:
+		// - horizontal dirs (left/right): root is at one horizontal edge, vertically centered
+		// - vertical dirs (up/down): root is at one vertical edge, horizontally centered
+		const centerY = (ch - layoutHeight) / 2;
+		const centerX = (cw - layoutWidth) / 2;
+		let result: { x: number; y: number };
+		switch (dir) {
+			case 'right': result = { x: pad, y: centerY }; break;
+			case 'left':  result = { x: cw - layoutWidth - pad, y: centerY }; break;
+			case 'down':  result = { x: centerX, y: pad }; break;
+			case 'up':    result = { x: centerX, y: ch - layoutHeight - pad }; break;
+		}
+		console.log(`[panForDirection] dir=${dir}, initialViewport=${initialViewport}, container=${cw}x${ch}, layout=${layoutWidth}x${layoutHeight} → pan=(${result.x}, ${result.y})`);
+		return result;
+	}
+
+	export function setGrowthDirection(dir: GrowthDirection) {
+		growthDirection = dir;
 		interaction.setZoom(1);
-		recomputeAndDraw();
+		doLayout();
+		const { x, y } = panForDirection(dir);
+		interaction.setPan(x, y);
+		requestRedraw();
+	}
+
+	/** @deprecated Use setGrowthDirection instead */
+	export function setOrientation(o: Orientation) {
+		setGrowthDirection(o === 'vertical' ? 'down' : 'right');
 	}
 
 	export function getLayoutNodes(): LayoutNode<T>[] {

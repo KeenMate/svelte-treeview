@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **CanvasTree `initialViewport='root'` not centering on root node**: `panForDirection()` used a fixed `y=pad` (or `x=pad`) offset, so for large trees the root was off-screen. Now centers the viewport on the root's cross-axis position (vertical center for left/right directions, horizontal center for up/down directions).
+
+### Added
+- **NHL Playoff Bracket example** (`/examples/nhl-playoffs`): 128-team, 7-round single-elimination bracket using `CanvasTree` with custom `renderNode` — matchup cards with team names, seeds, series scores, and round labels.
+- **Custom Canvas Renderers landing page** (`/custom-renderers`): Sub-landing page grouping CanvasTree examples that use custom `renderNode` callbacks (org chart, NHL bracket).
+
+### Changed
+- **Custom Layout Example — Explicit Drop Zones for Dendrograms**: Replaced invisible spatial detection (left/right half of node) with visible drop zone pills (Before / After / Child) that appear around the hovered node during drag. Applies to both horizontal (#5) and vertical (#6) dendrogram examples.
+  - Zones are color-coded: green (Before), orange (After), purple (Child)
+  - Invisible hitbox div ensures smooth cursor travel from node to zone pill
+  - Added `ondragend` on viewport containers to properly reset drag state on cancel
+- **Custom Layout Example — TreeProvider dendrograms**: Updated card descriptions to reflect the new zone pill interaction
+
+## [4.7.2] - 2026-02-17
+
+### Fixed
+- **`bodyClass` prop not working** ([#24](https://github.com/keenmate/svelte-treeview/issues/24)): `class:bodyClass` was toggling a literal CSS class named `"bodyClass"` instead of applying the user's custom class value. Changed to `class={bodyClass}`.
+
 ## [4.7.1] - 2026-02-17
 
 ### Changed

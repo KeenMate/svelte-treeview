@@ -513,24 +513,42 @@ export function createLTree<T>(
 
 		expandAll(nodePath: string | null | undefined): void {
 			perfStart(`[${_treeId}] expandAll`);
-			if (isEmptyString(nodePath))
-				flatTreeNodes.forEach((row) => {
-					row.isExpanded = true;
-				});
+			function setExpandedRecursive(node: LTreeNode<T>, value: boolean) {
+				node.isExpanded = value;
+				for (const key in node.children) {
+					setExpandedRecursive(node.children[key], value);
+				}
+			}
+
+			if (isEmptyString(nodePath)) {
+				setExpandedRecursive(root, true);
+			} else {
+				const target = this.getNodeByPath(nodePath!);
+				if (target) setExpandedRecursive(target, true);
+			}
 
 			this._emitTreeChanged();
-			perfEnd(`[${_treeId}] expandAll`, flatTreeNodes.length);
+			perfEnd(`[${_treeId}] expandAll`);
 		},
 
 		collapseAll(nodePath?: string | null | undefined): void {
 			perfStart(`[${_treeId}] collapseAll`);
-			if (isEmptyString(nodePath))
-				flatTreeNodes.forEach((row) => {
-					row.isExpanded = false;
-				});
+			function setExpandedRecursive(node: LTreeNode<T>, value: boolean) {
+				node.isExpanded = value;
+				for (const key in node.children) {
+					setExpandedRecursive(node.children[key], value);
+				}
+			}
+
+			if (isEmptyString(nodePath)) {
+				setExpandedRecursive(root, false);
+			} else {
+				const target = this.getNodeByPath(nodePath!);
+				if (target) setExpandedRecursive(target, false);
+			}
 
 			this._emitTreeChanged();
-			perfEnd(`[${_treeId}] collapseAll`, flatTreeNodes.length);
+			perfEnd(`[${_treeId}] collapseAll`);
 		},
 
 		insert: function (path: string, data: T, noEmitChanges: boolean = false): void {
@@ -596,12 +614,13 @@ export function createLTree<T>(
 
 				if (node.children.hasOwnProperty(segment)) {
 					node = node.children[segment];
-					// Only mark as changed if actually changing from expanded to collapsed
-					if (node.isExpanded) {
-						node.isExpanded = false;
-						hasChanges = true;
-					}
 				}
+			}
+
+			// Only collapse the target node, not ancestors
+			if (node.isExpanded) {
+				node.isExpanded = false;
+				hasChanges = true;
 			}
 
 			// Only emit changes if something actually changed
@@ -673,8 +692,10 @@ export function createLTree<T>(
 		 * @returns Array of child nodes
 		 */
 		getChildren(parentPath: string): LTreeNode<T>[] {
+			// Read changeTracker to create reactive dependency for custom recursive renderers
+			const _tracker = changeTracker;
 			const parent = this.getNodeByPath(parentPath);
-			if (!parent) return [];
+			if (!parent || !_tracker) return [];
 			return Object.values(parent.children);
 		},
 
@@ -684,8 +705,10 @@ export function createLTree<T>(
 		 * @returns Array of sibling nodes (nodes with same parent)
 		 */
 		getSiblings(path: string): LTreeNode<T>[] {
+			// Read changeTracker to create reactive dependency for custom recursive renderers
+			const _tracker = changeTracker;
 			const node = this.getNodeByPath(path);
-			if (!node) return [];
+			if (!node || !_tracker) return [];
 
 			// Get parent and return all its children
 			const parentPath = node.parentPath || '';
@@ -751,10 +774,10 @@ export function createLTree<T>(
 		 * Move a node to a new location in the tree
 		 * @param sourcePath - Path of the node to move
 		 * @param targetPath - Path of the target node
-		 * @param position - Where to place relative to target: 'above', 'below', or 'child'
+		 * @param position - Where to place relative to target: 'before', 'after', or 'child'
 		 * @returns Object with success status and optional error message
 		 */
-		moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string } {
+		moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child'): { success: boolean; error?: string } {
 			// Find source node
 			const sourceNode = this.getNodeByPath(sourcePath);
 			if (!sourceNode) {
@@ -797,7 +820,7 @@ export function createLTree<T>(
 				newParentPath = targetPath;
 				newParent = targetNode;
 			} else {
-				// Insert as sibling (above or below)
+				// Insert as sibling (before or after)
 				newParentPath = targetNode.parentPath || '';
 				newParent = newParentPath ? this.getNodeByPath(newParentPath)! : root;
 			}
@@ -840,29 +863,29 @@ export function createLTree<T>(
 			newParent.children[segmentPrefix + newSegment] = sourceNode;
 			newParent.hasChildren = true;
 
-			// If orderMember is defined and position is above/below, calculate order
+			// If orderMember is defined and position is before/after, calculate order
 			if (this.orderMember && position !== 'child' && sourceNode.data) {
 				const siblings = Object.values(newParent.children) as LTreeNode<T>[];
 				const targetOrder = targetNode.data?.[this.orderMember] ?? 0;
 
-				if (position === 'above') {
-					// Find order value just below target
+				if (position === 'before') {
+					// Find order value just before target
 					const siblingOrders = siblings
 						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
 						.map(s => s.data![this.orderMember] as number)
 						.filter(o => o < targetOrder)
 						.sort((a, b) => b - a);
-					const belowOrder = siblingOrders[0] ?? targetOrder - 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((belowOrder + targetOrder) / 2);
+					const prevOrder = siblingOrders[0] ?? targetOrder - 20;
+					(sourceNode.data as any)[this.orderMember] = Math.floor((prevOrder + targetOrder) / 2);
 				} else {
-					// Find order value just above target
+					// Find order value just after target
 					const siblingOrders = siblings
 						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
 						.map(s => s.data![this.orderMember] as number)
 						.filter(o => o > targetOrder)
 						.sort((a, b) => a - b);
-					const aboveOrder = siblingOrders[0] ?? targetOrder + 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((targetOrder + aboveOrder) / 2);
+					const nextOrder = siblingOrders[0] ?? targetOrder + 20;
+					(sourceNode.data as any)[this.orderMember] = Math.floor((targetOrder + nextOrder) / 2);
 				}
 			}
 
@@ -1117,7 +1140,7 @@ export function createLTree<T>(
 		 * @param targetParentPath - Path where to insert the copy (empty string for root)
 		 * @param transformData - Function to transform each node's data (e.g., assign new IDs)
 		 * @param siblingPath - Optional path of sibling to position relative to
-		 * @param position - Optional position relative to sibling ('above' or 'below')
+		 * @param position - Optional position relative to sibling ('before' or 'after')
 		 * @returns Object with success status, the created root node, and count of nodes created
 		 */
 		copyNodeWithDescendants(
@@ -1125,7 +1148,7 @@ export function createLTree<T>(
 			targetParentPath: string,
 			transformData: (data: T) => T,
 			siblingPath?: string,
-			position?: 'above' | 'below'
+			position?: 'before' | 'after'
 		): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
 			if (!sourceNode.data) {
 				return { success: false, count: 0, error: 'Source node has no data' };
@@ -1179,24 +1202,24 @@ export function createLTree<T>(
 						const siblings = Object.values(parent.children) as LTreeNode<T>[];
 						const siblingOrder = siblingNode.data?.[this.orderMember] ?? 0;
 
-						if (position === 'above') {
-							// Find order value just below sibling
+						if (position === 'before') {
+							// Find order value just before sibling
 							const siblingOrders = siblings
 								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
 								.map(s => s.data![this.orderMember] as number)
 								.filter(o => o < siblingOrder)
 								.sort((a, b) => b - a);
-							const belowOrder = siblingOrders[0] ?? siblingOrder - 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((belowOrder + siblingOrder) / 2);
+							const prevOrder = siblingOrders[0] ?? siblingOrder - 20;
+							(rootNode.data as any)[this.orderMember] = Math.floor((prevOrder + siblingOrder) / 2);
 						} else {
-							// Find order value just above sibling
+							// Find order value just after sibling
 							const siblingOrders = siblings
 								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
 								.map(s => s.data![this.orderMember] as number)
 								.filter(o => o > siblingOrder)
 								.sort((a, b) => a - b);
-							const aboveOrder = siblingOrders[0] ?? siblingOrder + 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((siblingOrder + aboveOrder) / 2);
+							const nextOrder = siblingOrders[0] ?? siblingOrder + 20;
+							(rootNode.data as any)[this.orderMember] = Math.floor((siblingOrder + nextOrder) / 2);
 						}
 
 						// Re-sort siblings

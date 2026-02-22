@@ -62,7 +62,7 @@ export interface Ltree<T> {
 	searchValueMember?: string | null | undefined;
 	getSearchValueCallback?: (node: LTreeNode<T>) => string;
 
-	// For sibling ordering in drag-drop (above/below positioning)
+	// For sibling ordering in drag-drop (before/after positioning)
 	orderMember?: string | null | undefined;
 
 	isSorted: boolean | null | undefined;
@@ -131,7 +131,7 @@ export interface Ltree<T> {
 	refreshNode(path: string): void;
 
 	// Tree editor mutation methods
-	moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string };
+	moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child'): { success: boolean; error?: string };
 	removeNode(path: string, includeDescendants?: boolean): { success: boolean; node?: LTreeNode<T>; error?: string };
 	addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string };
 	updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string };
@@ -143,7 +143,7 @@ export interface Ltree<T> {
 		targetParentPath: string,
 		transformData: (data: T) => T,
 		siblingPath?: string,
-		position?: 'above' | 'below'
+		position?: 'before' | 'after'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string };
 
 	// State persistence methods

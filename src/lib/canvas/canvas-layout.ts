@@ -1,6 +1,6 @@
 import type { LTreeNode } from '../ltree/ltree-node.svelte.js';
 import type { TreeController } from '../core/TreeController.svelte.js';
-import type { LayoutNode, GroupBox, LayoutResult, LayoutConfig, CanvasLevelConfig } from './types.js';
+import type { LayoutNode, GroupBox, LayoutResult, LayoutConfig, CanvasLevelConfig, GrowthDirection } from './types.js';
 
 const LEVEL_SPACING_H = 180;
 const GRID_NODE_W = 120;
@@ -487,10 +487,48 @@ function computeLayoutGroupedV<T>(
 
 // ── Public API ──────────────────────────────────────────────────────────
 
-/** Compute layout for the tree using the specified orientation and grouping */
+/** Mirror all X coordinates for 'left' growth direction */
+function mirrorX<T>(result: LayoutResult<T>): void {
+	const W = result.width;
+	for (const n of result.nodes) {
+		n.x = W - n.x - n.w;
+		n.cx = n.x + n.w / 2;
+		if (n.connectionTargets) {
+			for (const t of n.connectionTargets) {
+				t.x = W - t.x;
+			}
+		}
+	}
+	for (const box of result.groupBoxes) {
+		box.x = W - box.x - box.w;
+		box.connX = W - box.connX;
+	}
+	// Note: levelXArr is NOT mirrored — drawConnections uses isReversed
+	// to determine which edges to connect and compute midpoints from node positions.
+}
+
+/** Mirror all Y coordinates for 'up' growth direction */
+function mirrorY<T>(result: LayoutResult<T>): void {
+	const H = result.height;
+	for (const n of result.nodes) {
+		n.y = H - n.y - n.h;
+		n.cy = n.y + n.h / 2;
+		if (n.connectionTargets) {
+			for (const t of n.connectionTargets) {
+				t.y = H - t.y;
+			}
+		}
+	}
+	for (const box of result.groupBoxes) {
+		box.y = H - box.y - box.h;
+		box.connY = H - box.connY;
+	}
+}
+
+/** Compute layout for the tree using the specified growth direction and grouping */
 export function computeLayout<T>(
 	ctrl: TreeController<T>,
-	orientation: 'horizontal' | 'vertical',
+	growthDirection: GrowthDirection,
 	grouped: boolean,
 	measureNodeWidth: (node: LTreeNode<T>) => number,
 	config: LayoutConfig
@@ -499,10 +537,22 @@ export function computeLayout<T>(
 	const anyLevelGrouped = config.levelOverrides?.some(l => l.groupSiblings === true) ?? false;
 	const useGrouped = grouped || anyLevelGrouped;
 
+	const isV = growthDirection === 'up' || growthDirection === 'down';
+
+	let result: LayoutResult<T>;
 	if (useGrouped) {
-		if (orientation === 'vertical') return computeLayoutGroupedV(ctrl, measureNodeWidth, config);
-		return computeLayoutGroupedH(ctrl, measureNodeWidth, config);
+		result = isV
+			? computeLayoutGroupedV(ctrl, measureNodeWidth, config)
+			: computeLayoutGroupedH(ctrl, measureNodeWidth, config);
+	} else {
+		result = isV
+			? computeLayoutV(ctrl, measureNodeWidth, config)
+			: computeLayoutH(ctrl, measureNodeWidth, config);
 	}
-	if (orientation === 'vertical') return computeLayoutV(ctrl, measureNodeWidth, config);
-	return computeLayoutH(ctrl, measureNodeWidth, config);
+
+	// Post-process: mirror for reversed directions
+	if (growthDirection === 'left') mirrorX(result);
+	if (growthDirection === 'up') mirrorY(result);
+
+	return result;
 }

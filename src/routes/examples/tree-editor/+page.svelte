@@ -130,10 +130,10 @@
 		}
 
 		const targetNode = siblings[currentIndex - 1];
-		const result = treeRef.moveNode(selectedNode.path, targetNode.path, 'above');
+		const result = treeRef.moveNode(selectedNode.path, targetNode.path, 'before');
 
 		if (result.success) {
-			addLog(`Moved "${selectedNode.data?.name}" above "${targetNode.data?.name}"`);
+			addLog(`Moved "${selectedNode.data?.name}" before "${targetNode.data?.name}"`);
 		} else {
 			addLog(`Error: ${result.error}`);
 		}
@@ -154,10 +154,10 @@
 		}
 
 		const targetNode = siblings[currentIndex + 1];
-		const result = treeRef.moveNode(selectedNode.path, targetNode.path, 'below');
+		const result = treeRef.moveNode(selectedNode.path, targetNode.path, 'after');
 
 		if (result.success) {
-			addLog(`Moved "${selectedNode.data?.name}" below "${targetNode.data?.name}"`);
+			addLog(`Moved "${selectedNode.data?.name}" after "${targetNode.data?.name}"`);
 		} else {
 			addLog(`Error: ${result.error}`);
 		}
@@ -187,7 +187,7 @@
 			}
 			if (choice === 'sibling') {
 				addLog(`User chose to drop as sibling of "${dropNode.data?.name}"`);
-				return { position: 'below' };
+				return { position: 'after' as const };
 			}
 		}
 
@@ -217,7 +217,7 @@
 		const result = treeRef.moveNode(
 			draggedNode.path,
 			dropNode.path,
-			position as 'above' | 'below' | 'child'
+			position as 'before' | 'after' | 'child'
 		);
 
 		if (result.success) {
@@ -293,6 +293,7 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
+						dragDropMode="self"
 						bind:selectedNode
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
@@ -423,7 +424,7 @@
 				</tr>
 				<tr>
 					<td><code>moveNode(sourcePath, targetPath, position)</code></td>
-					<td>Move a node to a new location ('above', 'below', 'child')</td>
+					<td>Move a node to a new location ('before', 'after', 'child')</td>
 				</tr>
 				<tr>
 					<td><code>removeNode(path, includeDescendants?)</code></td>
@@ -451,7 +452,7 @@
 		<div class="note">
 			<p class="note-title">orderMember Prop</p>
 			<p>
-				For proper above/below positioning, set the <code>orderMember</code> prop to specify
+				For proper before/after positioning, set the <code>orderMember</code> prop to specify
 				which field in your data contains the sort order value. The tree will automatically
 				calculate new order values when moving nodes.
 			</p>
@@ -493,12 +494,12 @@
     }
   }
 
-  // Move node above sibling
+  // Move node before sibling
   function moveUp() {
     const siblings = treeRef.getSiblings(selectedNode.path);
     const index = siblings.findIndex(s => s.path === selectedNode.path);
     if (index > 0) {
-      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'above');
+      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'before');
     }
   }
 

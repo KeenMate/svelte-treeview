@@ -25,19 +25,19 @@ $tree-children-margin-top: 2px !default;
 // Drop Zone Variables
 $drop-zone-border-radius: 0 !default;
 
-// Above zone (soft sage green)
-$drop-zone-above-bg: rgba(134, 179, 152, 0.25) !default;
-$drop-zone-above-color: rgba(62, 89, 72, 0.7) !default;
-$drop-zone-above-active-bg: rgba(134, 179, 152, 0.85) !default;
-$drop-zone-above-active-color: rgb(32, 54, 40) !default;
-$drop-zone-above-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4) !default;
+// Before zone (soft sage green)
+$drop-zone-before-bg: rgba(134, 179, 152, 0.25) !default;
+$drop-zone-before-color: rgba(62, 89, 72, 0.7) !default;
+$drop-zone-before-active-bg: rgba(134, 179, 152, 0.85) !default;
+$drop-zone-before-active-color: rgb(32, 54, 40) !default;
+$drop-zone-before-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4) !default;
 
-// Below zone (soft peach/coral)
-$drop-zone-below-bg: rgba(242, 182, 158, 0.25) !default;
-$drop-zone-below-color: rgba(120, 70, 50, 0.7) !default;
-$drop-zone-below-active-bg: rgba(242, 182, 158, 0.85) !default;
-$drop-zone-below-active-color: rgb(80, 45, 30) !default;
-$drop-zone-below-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4) !default;
+// After zone (soft peach/coral)
+$drop-zone-after-bg: rgba(242, 182, 158, 0.25) !default;
+$drop-zone-after-color: rgba(120, 70, 50, 0.7) !default;
+$drop-zone-after-active-bg: rgba(242, 182, 158, 0.85) !default;
+$drop-zone-after-active-color: rgb(80, 45, 30) !default;
+$drop-zone-after-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4) !default;
 
 // Child zone (soft lavender)
 $drop-zone-child-bg: rgba(167, 155, 198, 0.25) !default;
@@ -47,20 +47,20 @@ $drop-zone-child-active-color: rgb(45, 38, 62) !default;
 $drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4) !default;
 
 // Border glow drop indicators (for glow mode)
-$drop-glow-above-color: rgba(134, 179, 152, 0.8) !default;
-$drop-glow-below-color: rgba(242, 182, 158, 0.8) !default;
+$drop-glow-before-color: rgba(134, 179, 152, 0.8) !default;
+$drop-glow-after-color: rgba(242, 182, 158, 0.8) !default;
 $drop-glow-child-color: rgba(167, 155, 198, 0.8) !default;
 $drop-glow-child-bg: rgba(167, 155, 198, 0.15) !default;
 $drop-glow-size: 3px !default;
 
 // Drop indicator arrows (Lucide icons as data URIs)
-$drop-arrow-above: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2386b398' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E") !default;
-$drop-arrow-below: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f2b69e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E") !default;
+$drop-arrow-before: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2386b398' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E") !default;
+$drop-arrow-after: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f2b69e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E") !default;
 $drop-arrow-child: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a79bc6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E") !default;
 $drop-arrow-size: 24px !default;
 $drop-arrow-position: 66% !default;
-$drop-arrow-above-rotation: 0deg !default;
-$drop-arrow-below-rotation: 0deg !default;
+$drop-arrow-before-rotation: 0deg !default;
+$drop-arrow-after-rotation: 0deg !default;
 $drop-arrow-child-rotation: 45deg !default;
 
 // Color variables for selected states and drag/drop
@@ -144,9 +144,9 @@ $body-color: #212529 !default;
 		}
 
 		// Border glow drop indicators (glow mode)
-		&.ltree-glow-above {
+		&.ltree-glow-before {
 			border-radius: 0 !important;
-			box-shadow: inset 0 $drop-glow-size 0 0 $drop-glow-above-color;
+			box-shadow: inset 0 $drop-glow-size 0 0 $drop-glow-before-color;
 
 			// Arrow indicator
 			&::after {
@@ -154,10 +154,10 @@ $body-color: #212529 !default;
 				position: absolute;
 				left: $drop-arrow-position;
 				top: 50%;
-				transform: translate(-50%, -50%) rotate($drop-arrow-above-rotation);
+				transform: translate(-50%, -50%) rotate($drop-arrow-before-rotation);
 				width: $drop-arrow-size;
 				height: $drop-arrow-size;
-				background-image: $drop-arrow-above;
+				background-image: $drop-arrow-before;
 				background-repeat: no-repeat;
 				background-size: contain;
 				pointer-events: none;
@@ -165,9 +165,9 @@ $body-color: #212529 !default;
 			}
 		}
 
-		&.ltree-glow-below {
+		&.ltree-glow-after {
 			border-radius: 0 !important;
-			box-shadow: inset 0 (-$drop-glow-size) 0 0 $drop-glow-below-color;
+			box-shadow: inset 0 (-$drop-glow-size) 0 0 $drop-glow-after-color;
 
 			// Arrow indicator
 			&::after {
@@ -175,10 +175,10 @@ $body-color: #212529 !default;
 				position: absolute;
 				left: $drop-arrow-position;
 				top: 50%;
-				transform: translate(-50%, -50%) rotate($drop-arrow-below-rotation);
+				transform: translate(-50%, -50%) rotate($drop-arrow-after-rotation);
 				width: $drop-arrow-size;
 				height: $drop-arrow-size;
-				background-image: $drop-arrow-below;
+				background-image: $drop-arrow-after;
 				background-repeat: no-repeat;
 				background-size: contain;
 				pointer-events: none;
@@ -605,26 +605,26 @@ $body-color: #212529 !default;
 	border-radius: $drop-zone-border-radius;
 
 	// Above zone (green)
-	&.ltree-drop-above {
-		background: $drop-zone-above-bg;
-		color: $drop-zone-above-color;
+	&.ltree-drop-before {
+		background: $drop-zone-before-bg;
+		color: $drop-zone-before-color;
 
 		&.ltree-drop-zone-active {
-			background: $drop-zone-above-active-bg;
-			color: $drop-zone-above-active-color;
-			box-shadow: $drop-zone-above-active-shadow;
+			background: $drop-zone-before-active-bg;
+			color: $drop-zone-before-active-color;
+			box-shadow: $drop-zone-before-active-shadow;
 		}
 	}
 
 	// Below zone (yellow)
-	&.ltree-drop-below {
-		background: $drop-zone-below-bg;
-		color: $drop-zone-below-color;
+	&.ltree-drop-after {
+		background: $drop-zone-after-bg;
+		color: $drop-zone-after-color;
 
 		&.ltree-drop-zone-active {
-			background: $drop-zone-below-active-bg;
-			color: $drop-zone-below-active-color;
-			box-shadow: $drop-zone-below-active-shadow;
+			background: $drop-zone-after-active-bg;
+			color: $drop-zone-after-active-color;
+			box-shadow: $drop-zone-after-active-shadow;
 		}
 	}
 
@@ -643,7 +643,7 @@ $body-color: #212529 !default;
 
 // Layout: "around" - Above on top, Below/Child on bottom (default)
 .ltree-drop-zones-around {
-	.ltree-drop-above {
+	.ltree-drop-before {
 		top: 0;
 		left: var(--drop-zone-start, 33%);
 		right: 0;
@@ -651,7 +651,7 @@ $body-color: #212529 !default;
 		// border-radius: 4px 4px 0 0;
 	}
 
-	.ltree-drop-below {
+	.ltree-drop-after {
 		bottom: 0;
 		left: var(--drop-zone-start, 33%);
 		// Middle third of available space
@@ -672,20 +672,20 @@ $body-color: #212529 !default;
 
 // Layout: "above" - All 3 zones in a row above the node
 .ltree-drop-zones-above {
-	.ltree-drop-above,
-	.ltree-drop-below,
+	.ltree-drop-before,
+	.ltree-drop-after,
 	.ltree-drop-child {
 		top: 0;
 		transform: translateY(-100%);
 	}
 
-	.ltree-drop-above {
+	.ltree-drop-before {
 		left: var(--drop-zone-start, 33%);
 		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
 		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
 	}
 
-	.ltree-drop-below {
+	.ltree-drop-after {
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
 		right: calc((100% - var(--drop-zone-start, 33%)) / 3);
 		border-radius: 0;
@@ -700,20 +700,20 @@ $body-color: #212529 !default;
 
 // Layout: "below" - All 3 zones in a row below the node
 .ltree-drop-zones-below {
-	.ltree-drop-above,
-	.ltree-drop-below,
+	.ltree-drop-before,
+	.ltree-drop-after,
 	.ltree-drop-child {
 		bottom: 0;
 		transform: translateY(100%);
 	}
 
-	.ltree-drop-above {
+	.ltree-drop-before {
 		left: var(--drop-zone-start, 33%);
 		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
 		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
 	}
 
-	.ltree-drop-below {
+	.ltree-drop-after {
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
 		right: calc((100% - var(--drop-zone-start, 33%)) / 3);
 		border-radius: 0;
@@ -726,10 +726,10 @@ $body-color: #212529 !default;
 	}
 }
 
-// Layout: "wave" - Zones stacked vertically (above/child/below)
+// Layout: "wave" - Zones stacked vertically (before/child/after)
 .ltree-drop-zones-wave {
-	.ltree-drop-above,
-	.ltree-drop-below,
+	.ltree-drop-before,
+	.ltree-drop-after,
 	.ltree-drop-child {
 		left: var(--drop-zone-start, 33%);
 		right: auto;
@@ -739,7 +739,7 @@ $body-color: #212529 !default;
 		transform: none;
 	}
 
-	.ltree-drop-above {
+	.ltree-drop-before {
 		top: 0;
 		bottom: auto;
 		transform: translateY(-100%);
@@ -752,7 +752,7 @@ $body-color: #212529 !default;
 		border-radius: 0;
 	}
 
-	.ltree-drop-below {
+	.ltree-drop-after {
 		top: auto;
 		bottom: 0;
 		transform: translateY(100%);
@@ -763,8 +763,8 @@ $body-color: #212529 !default;
 // Layout: "wave2" - Diagonal wave pattern
 // Above and Below are offset 7% to the left, Child stays at dropZoneStart
 .ltree-drop-zones-wave2 {
-	.ltree-drop-above,
-	.ltree-drop-below,
+	.ltree-drop-before,
+	.ltree-drop-after,
 	.ltree-drop-child {
 		right: auto;
 		width: var(--drop-zone-max-width, 120px);
@@ -772,7 +772,7 @@ $body-color: #212529 !default;
 		height: auto;
 	}
 
-	.ltree-drop-above {
+	.ltree-drop-before {
 		left: calc(var(--drop-zone-start, 33%) - 7%);
 		top: 10%;
 		bottom: auto;
@@ -788,7 +788,7 @@ $body-color: #212529 !default;
 		border-radius: 0;
 	}
 
-	.ltree-drop-below {
+	.ltree-drop-after {
 		left: calc(var(--drop-zone-start, 33%) - 7%);
 		top: auto;
 		bottom: 10%;
