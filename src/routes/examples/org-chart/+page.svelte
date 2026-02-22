@@ -7,6 +7,7 @@
 		CanvasRenderContext,
 		MeasureNodeWidthCallback,
 		GrowthDirection,
+		LayoutMode,
 		ClickBehavior,
 		InitialViewport
 	} from '$lib/canvas/types.js';
@@ -184,6 +185,7 @@
 	// ── State ──────────────────────────────────────────────────────────────
 
 	let orgData = $state.raw<Person[]>(generateOrgData());
+	let layoutMode: LayoutMode = $state('tree');
 	let growthDirection: GrowthDirection = $state('right');
 	let initialViewport: InitialViewport = $state('root');
 	let clickBehavior: ClickBehavior = $state('expand-and-focus');
@@ -704,15 +706,24 @@
 			</span>
 
 			<span class="orientation-toggle">
-				<button class="btn orient-btn" class:orient-active={growthDirection === 'right'}
-					onclick={() => { growthDirection = 'right'; canvasTreeRef?.setGrowthDirection('right'); }}>Right</button>
-				<button class="btn orient-btn" class:orient-active={growthDirection === 'left'}
-					onclick={() => { growthDirection = 'left'; canvasTreeRef?.setGrowthDirection('left'); }}>Left</button>
-				<button class="btn orient-btn" class:orient-active={growthDirection === 'down'}
-					onclick={() => { growthDirection = 'down'; canvasTreeRef?.setGrowthDirection('down'); }}>Down</button>
-				<button class="btn orient-btn" class:orient-active={growthDirection === 'up'}
-					onclick={() => { growthDirection = 'up'; canvasTreeRef?.setGrowthDirection('up'); }}>Up</button>
+				{#each /** @type {LayoutMode[]} */ (['tree', 'balanced', 'fishbone', 'radial', 'box']) as mode}
+					<button class="btn orient-btn" class:orient-active={layoutMode === mode}
+						onclick={() => layoutMode = mode}>{mode[0].toUpperCase() + mode.slice(1)}</button>
+				{/each}
 			</span>
+
+			{#if layoutMode !== 'radial' && layoutMode !== 'box'}
+				<span class="orientation-toggle">
+					<button class="btn orient-btn" class:orient-active={growthDirection === 'right'}
+						onclick={() => { growthDirection = 'right'; canvasTreeRef?.setGrowthDirection('right'); }}>Right</button>
+					<button class="btn orient-btn" class:orient-active={growthDirection === 'left'}
+						onclick={() => { growthDirection = 'left'; canvasTreeRef?.setGrowthDirection('left'); }}>Left</button>
+					<button class="btn orient-btn" class:orient-active={growthDirection === 'down'}
+						onclick={() => { growthDirection = 'down'; canvasTreeRef?.setGrowthDirection('down'); }}>Down</button>
+					<button class="btn orient-btn" class:orient-active={growthDirection === 'up'}
+						onclick={() => { growthDirection = 'up'; canvasTreeRef?.setGrowthDirection('up'); }}>Up</button>
+				</span>
+			{/if}
 
 			<span class="orientation-toggle">
 				<button class="btn orient-btn" class:orient-active={initialViewport === 'root'} onclick={() => initialViewport = 'root'}>Root</button>
@@ -780,6 +791,7 @@
 				isSorted={true}
 				expandLevel={2}
 				dragDropMode="self"
+				getIsCollapsibleCallback={(node) => (node.level ?? 0) > 2}
 				shouldUseInternalSearchIndex={true}
 				searchValueMember="name"
 				bind:selectedPath
@@ -788,6 +800,7 @@
 				bind:drawTime
 				bind:visibleCount
 				bind:totalCount
+				{layoutMode}
 				bind:growthDirection
 				{initialViewport}
 				bind:groupSiblings

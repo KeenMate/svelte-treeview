@@ -33,6 +33,7 @@
 	import {
 		drawConnections,
 		drawBalancedConnections,
+		drawFishboneConnections,
 		drawGroupBoxes,
 		drawDotGrid,
 		drawMinimap,
@@ -67,9 +68,12 @@
 		shouldUseInternalSearchIndex?: boolean;
 		isExpandedMember?: string;
 		isDraggableMember?: string;
+		getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 		isDropAllowedMember?: string;
 		allowedDropPositionsMember?: string;
 		getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('../ltree/types.js').DropPosition[] | null;
+		isCollapsibleMember?: string;
+		getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean;
 		orderMember?: string;
 
 		// Canvas Visual Config
@@ -155,9 +159,12 @@
 		shouldUseInternalSearchIndex,
 		isExpandedMember,
 		isDraggableMember,
+		getIsDraggableCallback,
 		isDropAllowedMember,
 		allowedDropPositionsMember,
 		getAllowedDropPositionsCallback,
+		isCollapsibleMember,
+		getIsCollapsibleCallback,
 		orderMember,
 
 		// Visual config
@@ -379,6 +386,8 @@
 			drawBalancedConnections(ctx, layoutNodes, vl, vt, vr, vb, theme, columnGap, levelSpacingV);
 		} else if (layoutMode === 'radial') {
 			drawRadialConnections(ctx, layoutNodes, vl, vt, vr, vb, theme);
+		} else if (layoutMode === 'fishbone') {
+			drawFishboneConnections(ctx, layoutNodes, isV, vl, vt, vr, vb, theme);
 		} else if (layoutMode !== 'box') {
 			drawConnections(ctx, layoutNodes, levelXArr, isV, isReversed, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
 		}
@@ -524,7 +533,8 @@
 			}),
 			requestRedraw,
 			onNodeClick: (ln, chevronHit) => {
-				const shouldToggle = collapsible && ln.node.hasChildren && (
+				const nodeCollapsible = ctrlRef?.getNodeIsCollapsible(ln.node) ?? true;
+				const shouldToggle = collapsible && nodeCollapsible && ln.node.hasChildren && (
 					clickBehavior !== 'select' || chevronHit
 				);
 				if (shouldToggle) {
@@ -1119,9 +1129,12 @@
 	shouldUseInternalSearchIndex={shouldUseInternalSearchIndex}
 	isExpandedMember={isExpandedMember}
 	isDraggableMember={isDraggableMember}
+	getIsDraggableCallback={getIsDraggableCallback}
 	isDropAllowedMember={isDropAllowedMember}
 	allowedDropPositionsMember={allowedDropPositionsMember}
 	getAllowedDropPositionsCallback={getAllowedDropPositionsCallback}
+	isCollapsibleMember={isCollapsibleMember}
+	getIsCollapsibleCallback={getIsCollapsibleCallback}
 	orderMember={orderMember}
 	contextMenuCallback={onNodeContextMenuCb}
 	contextMenuXOffset={8}

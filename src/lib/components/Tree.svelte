@@ -28,9 +28,12 @@
 		isExpandedMember?: string | null | undefined;
 		isSelectedMember?: string | null | undefined;
 		isDraggableMember?: string | null | undefined;
+		getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 		isDropAllowedMember?: string | null | undefined;
 		allowedDropPositionsMember?: string | null | undefined;
 		getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
+		isCollapsibleMember?: string | null | undefined;
+		getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean;
 		hasChildrenMember?: string | null | undefined;
 		isSorted?: boolean | null | undefined;
 
@@ -144,9 +147,12 @@
 		isExpandedMember,
 		isSelectedMember,
 		isDraggableMember,
+		getIsDraggableCallback,
 		isDropAllowedMember,
 		allowedDropPositionsMember,
 		getAllowedDropPositionsCallback,
+		isCollapsibleMember,
+		getIsCollapsibleCallback,
 
 		displayValueMember,
 		getDisplayValueCallback,
@@ -236,9 +242,12 @@
 		isExpandedMember,
 		isSelectedMember,
 		isDraggableMember,
+		getIsDraggableCallback,
 		isDropAllowedMember,
 		allowedDropPositionsMember,
 		getAllowedDropPositionsCallback,
+		isCollapsibleMember,
+		getIsCollapsibleCallback,
 		displayValueMember,
 		getDisplayValueCallback,
 		searchValueMember,
@@ -486,11 +495,14 @@
 				| "isExpandedMember"
 				| "isSelectedMember"
 				| "isDraggableMember"
+				| "getIsDraggableCallback"
 				| "isDropAllowedMember"
 				| "displayValueMember"
 				| "getDisplayValueCallback"
 				| "searchValueMember"
 				| "getSearchValueCallback"
+				| "isCollapsibleMember"
+				| "getIsCollapsibleCallback"
 				| "orderMember"
 				| "isSorted"
 				| "sortCallback"
@@ -537,11 +549,14 @@
 		if (updates.isExpandedMember !== undefined) isExpandedMember = updates.isExpandedMember;
 		if (updates.isSelectedMember !== undefined) isSelectedMember = updates.isSelectedMember;
 		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
+		if (updates.getIsDraggableCallback !== undefined) getIsDraggableCallback = updates.getIsDraggableCallback;
 		if (updates.isDropAllowedMember !== undefined) isDropAllowedMember = updates.isDropAllowedMember;
 		if (updates.displayValueMember !== undefined) displayValueMember = updates.displayValueMember;
 		if (updates.getDisplayValueCallback !== undefined) getDisplayValueCallback = updates.getDisplayValueCallback;
 		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
 		if (updates.getSearchValueCallback !== undefined) getSearchValueCallback = updates.getSearchValueCallback;
+		if (updates.isCollapsibleMember !== undefined) isCollapsibleMember = updates.isCollapsibleMember;
+		if (updates.getIsCollapsibleCallback !== undefined) getIsCollapsibleCallback = updates.getIsCollapsibleCallback;
 		if (updates.orderMember !== undefined) orderMember = updates.orderMember;
 		if (updates.isSorted !== undefined) isSorted = updates.isSorted;
 		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;

@@ -63,9 +63,12 @@ export interface TreeControllerProps<T> {
 	isExpandedMember?: string | null | undefined;
 	isSelectedMember?: string | null | undefined;
 	isDraggableMember?: string | null | undefined;
+	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 	isDropAllowedMember?: string | null | undefined;
 	allowedDropPositionsMember?: string | null | undefined;
 	getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
+	isCollapsibleMember?: string | null | undefined;
+	getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean;
 	hasChildrenMember?: string | null | undefined;
 	isSorted?: boolean | null | undefined;
 
@@ -380,6 +383,7 @@ export class TreeController<T> {
 			props.isExpandedMember,
 			props.isSelectedMember,
 			props.isDraggableMember,
+			props.getIsDraggableCallback,
 			props.isDropAllowedMember,
 			props.allowedDropPositionsMember,
 			props.displayValueMember,
@@ -387,6 +391,8 @@ export class TreeController<T> {
 			props.searchValueMember,
 			props.getSearchValueCallback,
 			props.getAllowedDropPositionsCallback,
+			props.isCollapsibleMember,
+			props.getIsCollapsibleCallback,
 			props.orderMember,
 			this.treeId,
 			this.treePathSeparator,
@@ -784,8 +790,8 @@ export class TreeController<T> {
 
 	/** Call from ondragstart. Sets up dataTransfer, stores drag state, fires callback. */
 	startDrag(node: LTreeNode<T>, event: DragEvent): void {
-		dragLogger.debug('startDrag', { path: node.path, isDraggable: node.isDraggable, hasDataTransfer: !!event.dataTransfer });
-		if (!node.isDraggable || !event.dataTransfer) return;
+		dragLogger.debug('startDrag', { path: node.path, isDraggable: this.getNodeIsDraggable(node), hasDataTransfer: !!event.dataTransfer });
+		if (!this.getNodeIsDraggable(node) || !event.dataTransfer) return;
 		event.dataTransfer.effectAllowed = this.allowCopy ? 'copyMove' : 'move';
 		event.dataTransfer.setData('application/svelte-treeview', JSON.stringify(node));
 		const displayValue = this.tree.getNodeDisplayValue(node);
@@ -965,6 +971,16 @@ export class TreeController<T> {
 	/** Get allowed drop positions for a node (proxies LTree method). */
 	getNodeAllowedDropPositions(node: LTreeNode<T>): DropPosition[] | null {
 		return this.tree?.getNodeAllowedDropPositions(node) ?? null;
+	}
+
+	/** Get whether a node is draggable (proxies LTree resolution: callback > member > node property). */
+	getNodeIsDraggable(node: LTreeNode<T>): boolean {
+		return this.tree?.getNodeIsDraggable(node) ?? true;
+	}
+
+	/** Get whether a node is collapsible (proxies LTree resolution: callback > member > node property). */
+	getNodeIsCollapsible(node: LTreeNode<T>): boolean {
+		return this.tree?.getNodeIsCollapsible(node) ?? true;
 	}
 
 	/** Calculate drop position from cursor location within an element (before/after/child).
@@ -1440,7 +1456,7 @@ export class TreeController<T> {
 	// ── Touch drag handlers ─────────────────────────────────────────────
 
 	private _onTouchStart(node: LTreeNode<any>, event: TouchEvent) {
-		if (!node?.isDraggable) return;
+		if (!this.getNodeIsDraggable(node)) return;
 
 		const touch = event.touches[0];
 		this.touchDragState = {

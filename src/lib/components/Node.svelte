@@ -148,6 +148,9 @@
 		return allowedPositions[0];
 	}
 
+	// Resolve isCollapsible via tree's resolution method (callback > member > node property)
+	const isCollapsible = $derived(tree.getNodeIsCollapsible(node));
+
 	// Convert reactive statements to derived values
 	// In flat mode, children rendering is handled by Tree.svelte, so we skip these computations
 	const childrenArray = $derived(!flatMode ? Object.values(node?.children || []) : [])
@@ -236,7 +239,7 @@
 	});
 
 	function toggleExpanded() {
-		if (node.hasChildren) {
+		if (node.hasChildren && isCollapsible) {
 			const newState = !node.isExpanded
 			uiLogger.debug(`${newState ? 'Expanding' : 'Collapsing'} node: ${node.path}`)
 			node.isExpanded = newState
@@ -263,7 +266,7 @@
 	<div class="ltree-node-row">
 		<!-- Toggle icon with its own click handler -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		{#if hasChildren}
+		{#if hasChildren && isCollapsible}
 			<span
 				class="ltree-toggle-icon ltree-clickable {node.isExpanded
 					? collapseIconClass

@@ -23,6 +23,7 @@ export interface LTreeNode<T> {
 	priority: number | null | undefined;
 
 	isDraggable: boolean;
+	isCollapsible: boolean;
 	isDropAllowed: boolean;
 	allowedDropPositions: DropPosition[] | null | undefined;
 
@@ -53,6 +54,7 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		useCallback: false,
 		priority: undefined,
 		isDraggable: true,
+		isCollapsible: true,
 		isDropAllowed: true,
 		allowedDropPositions: undefined,
 		isInsertAllowed: true,

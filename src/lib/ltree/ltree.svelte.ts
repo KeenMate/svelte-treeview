@@ -24,6 +24,7 @@ export function createLTree<T>(
 	_isExpandedMember?: string | null | undefined,
 	_isSelectableMember?: string | null | undefined,
 	_isDraggableMember?: string | null | undefined,
+	_getIsDraggableCallback?: (node: LTreeNode<T>) => boolean,
 	_isDropAllowedMember?: string | null | undefined,
 	_allowedDropPositionsMember?: string | null | undefined,
 	_displayValueMember?: string | null | undefined,
@@ -33,6 +34,9 @@ export function createLTree<T>(
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
 	_getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('./types').DropPosition[] | null | undefined,
+
+	_isCollapsibleMember?: string | null | undefined,
+	_getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean,
 
 	_orderMember?: string | null | undefined,
 
@@ -55,6 +59,7 @@ export function createLTree<T>(
 	let shouldCalculateIsDraggable: boolean = isEmptyString(_isDraggableMember);
 	let shouldCalculateIsDropAllowed: boolean = isEmptyString(_isDropAllowedMember);
 	let shouldCalculateAllowedDropPositions: boolean = isEmptyString(_allowedDropPositionsMember);
+	let shouldCalculateIsCollapsible: boolean = isEmptyString(_isCollapsibleMember);
 	let shouldCalculateDisplayValue: boolean = isEmptyString(_displayValueMember);
 	let shouldCalculateSearchValue: boolean = isEmptyString(_searchValueMember);
 
@@ -114,6 +119,7 @@ export function createLTree<T>(
 		isExpandedMember: _isExpandedMember,
 		isSelectableMember: _isSelectableMember,
 		isDraggableMember: _isDraggableMember,
+		getIsDraggableCallback: _getIsDraggableCallback,
 		isDropAllowedMember: _isDropAllowedMember,
 		allowedDropPositionsMember: _allowedDropPositionsMember,
 		hasChildrenMember: _hasChildrenMember,
@@ -123,6 +129,8 @@ export function createLTree<T>(
 		searchValueMember: _searchValueMember,
 		getSearchValueCallback: _getSearchValueCallback,
 		getAllowedDropPositionsCallback: _getAllowedDropPositionsCallback,
+		isCollapsibleMember: _isCollapsibleMember,
+		getIsCollapsibleCallback: _getIsCollapsibleCallback,
 		orderMember: _orderMember,
 		isSorted: false,
 
@@ -246,6 +254,7 @@ export function createLTree<T>(
 
 				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
 				if (!shouldCalculateIsDraggable) node.isDraggable = row[_isDraggableMember];
+				if (!shouldCalculateIsCollapsible) node.isCollapsible = row[_isCollapsibleMember];
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = row[_isDropAllowedMember];
 				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = row[_allowedDropPositionsMember];
 
@@ -680,6 +689,18 @@ export function createLTree<T>(
 			}
 
 			return node.allowedDropPositions;
+		},
+
+		getNodeIsDraggable(node: LTreeNode<T>): boolean {
+			if (this.getIsDraggableCallback) return this.getIsDraggableCallback(node);
+			if (!shouldCalculateIsDraggable && node.data) return node.data[_isDraggableMember];
+			return node.isDraggable;
+		},
+
+		getNodeIsCollapsible(node: LTreeNode<T>): boolean {
+			if (this.getIsCollapsibleCallback) return this.getIsCollapsibleCallback(node);
+			if (!shouldCalculateIsCollapsible && node.data) return node.data[_isCollapsibleMember];
+			return node.isCollapsible;
 		},
 
 		refresh(): void {
