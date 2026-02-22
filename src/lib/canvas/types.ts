@@ -170,6 +170,36 @@ export interface NodeRenderSlots<T> {
 	renderBadge?: RenderSlotCallback<T>;
 }
 
+// ── Focus Options ───────────────────────────────────────────────────
+
+/** Where the focused node should appear in the viewport */
+export type FocusAnchor =
+	| 'center'
+	| 'top-left' | 'top-center' | 'top-right'
+	| 'center-left' | 'center-right'
+	| 'bottom-left' | 'bottom-center' | 'bottom-right'
+	| { x: number; y: number };  // normalized 0–1
+
+/** How zoom should be handled when focusing */
+export type FocusZoom =
+	| number    // exact zoom level (clamped to [0.05, 3.0])
+	| 'keep'    // maintain current zoom
+	| 'auto';   // clamp current zoom to [0.8, 1.5] (default)
+
+/** Options for focusOnPath / focusOnNode */
+export interface FocusOptions {
+	/** Where in the viewport the node should appear. Default: 'center' */
+	anchor?: FocusAnchor;
+	/** Zoom behavior. Default: 'auto' */
+	zoom?: FocusZoom;
+	/** Padding in px from viewport edge for edge anchors. Default: 40 */
+	padding?: number;
+	/** Whether to animate the transition. Default: true */
+	animate?: boolean;
+	/** Whether to update selectedPath. Default: true */
+	select?: boolean;
+}
+
 // ── Drop Zone Types ──────────────────────────────────────────────────────
 
 export interface DropZoneRect {

@@ -1,4 +1,4 @@
-import type { LayoutNode, DropPosition, ClickBehavior } from './types.js';
+import type { LayoutNode, DropPosition, ClickBehavior, FocusOptions, FocusAnchor, FocusZoom } from './types.js';
 import {
 	getDropZones,
 	hitTestDropZone,
@@ -8,6 +8,7 @@ import {
 
 export interface InteractionConfig {
 	getClickBehavior: () => ClickBehavior;
+	getDragDropMode: () => string;
 	animDuration: number;
 }
 
@@ -211,7 +212,7 @@ export function createInteractionManager<T>(
 			return;
 		}
 
-		if (dragSrcNode && !isDragging) {
+		if (dragSrcNode && !isDragging && config.getDragDropMode() !== 'none') {
 			if (Math.abs(mx - dragStartX) > 5 || Math.abs(my - dragStartY) > 5) isDragging = true;
 		}
 
@@ -364,17 +365,86 @@ export function createInteractionManager<T>(
 		callbacks.requestRedraw();
 	}
 
-	function focusOnNode(ln: LayoutNode<T>) {
+	function resolveAnchor(
+		anchor: FocusAnchor,
+		viewportW: number,
+		viewportH: number,
+		padding: number,
+		nodeScreenW: number,
+		nodeScreenH: number
+	): { screenX: number; screenY: number } {
+		// Half-node offsets so the full card stays inside the viewport
+		const hw = nodeScreenW / 2;
+		const hh = nodeScreenH / 2;
+
+		if (typeof anchor === 'object') {
+			// Normalized 0–1 coordinates, interpolated within padded viewport
+			const usableW = viewportW - padding * 2 - nodeScreenW;
+			const usableH = viewportH - padding * 2 - nodeScreenH;
+			return {
+				screenX: padding + hw + anchor.x * usableW,
+				screenY: padding + hh + anchor.y * usableH
+			};
+		}
+		const cx = viewportW / 2;
+		const cy = viewportH / 2;
+		switch (anchor) {
+			case 'top-left':       return { screenX: padding + hw,              screenY: padding + hh };
+			case 'top-center':     return { screenX: cx,                        screenY: padding + hh };
+			case 'top-right':      return { screenX: viewportW - padding - hw,  screenY: padding + hh };
+			case 'center-left':    return { screenX: padding + hw,              screenY: cy };
+			case 'center-right':   return { screenX: viewportW - padding - hw,  screenY: cy };
+			case 'bottom-left':    return { screenX: padding + hw,              screenY: viewportH - padding - hh };
+			case 'bottom-center':  return { screenX: cx,                        screenY: viewportH - padding - hh };
+			case 'bottom-right':   return { screenX: viewportW - padding - hw,  screenY: viewportH - padding - hh };
+			case 'center':
+			default:               return { screenX: cx,                        screenY: cy };
+		}
+	}
+
+	function resolveZoom(zoomOption: FocusZoom, currentZoom: number): number {
+		if (typeof zoomOption === 'number') {
+			return Math.max(0.05, Math.min(3.0, zoomOption));
+		}
+		if (zoomOption === 'keep') return currentZoom;
+		// 'auto' — clamp to [0.8, 1.5]
+		return Math.max(0.8, Math.min(1.5, currentZoom));
+	}
+
+	function focusOnNode(ln: LayoutNode<T>, options?: FocusOptions) {
 		const container = callbacks.getContainer();
 		if (!container) return;
 		const rect = container.getBoundingClientRect();
-		const targetZoom = Math.max(0.8, Math.min(1.5, zoom));
-		const targetPanX = rect.width / 2 - ln.cx * targetZoom;
-		const targetPanY = rect.height / 2 - ln.cy * targetZoom;
-		animFrom = { panX, panY, zoom };
-		animTo = { panX: targetPanX, panY: targetPanY, zoom: targetZoom };
-		animStartTime = performance.now();
-		requestAnimationFrame(animateStep);
+
+		const anchor = options?.anchor ?? 'center';
+		const zoomOpt = options?.zoom ?? 'auto';
+		const padding = options?.padding ?? 40;
+		const animate = options?.animate ?? true;
+		const select = options?.select ?? true;
+
+		if (select) {
+			callbacks.onSelectionChange(ln.node.path);
+		}
+
+		const targetZoom = resolveZoom(zoomOpt, zoom);
+		const { screenX, screenY } = resolveAnchor(
+			anchor, rect.width, rect.height, padding,
+			ln.w * targetZoom, ln.h * targetZoom
+		);
+		const targetPanX = screenX - ln.cx * targetZoom;
+		const targetPanY = screenY - ln.cy * targetZoom;
+
+		if (animate) {
+			animFrom = { panX, panY, zoom };
+			animTo = { panX: targetPanX, panY: targetPanY, zoom: targetZoom };
+			animStartTime = performance.now();
+			requestAnimationFrame(animateStep);
+		} else {
+			panX = targetPanX;
+			panY = targetPanY;
+			zoom = targetZoom;
+			callbacks.requestRedraw();
+		}
 	}
 
 	/** Scroll to a node without changing the level-axis pan.
@@ -412,12 +482,60 @@ export function createInteractionManager<T>(
 		requestAnimationFrame(animateStep);
 	}
 
-	function focusOnPath(path: string) {
+	/** Pan the minimum amount needed to make the node fully visible on both axes.
+	 *  If already visible, does nothing. Does not change zoom. */
+	function ensureVisible(ln: LayoutNode<T>) {
+		const container = callbacks.getContainer();
+		if (!container) return;
+		const rect = container.getBoundingClientRect();
+		const margin = 40;
+
+		const nodeL = ln.x * zoom + panX;
+		const nodeT = ln.y * zoom + panY;
+		const nodeR = (ln.x + ln.w) * zoom + panX;
+		const nodeB = (ln.y + ln.h) * zoom + panY;
+
+		let targetPanX = panX;
+		let targetPanY = panY;
+
+		// Horizontal: nudge just enough so the full node + margin is visible
+		if (nodeL < margin) {
+			targetPanX = panX + (margin - nodeL);
+		} else if (nodeR > rect.width - margin) {
+			targetPanX = panX - (nodeR - (rect.width - margin));
+		}
+
+		// Vertical: same
+		if (nodeT < margin) {
+			targetPanY = panY + (margin - nodeT);
+		} else if (nodeB > rect.height - margin) {
+			targetPanY = panY - (nodeB - (rect.height - margin));
+		}
+
+		if (targetPanX === panX && targetPanY === panY) {
+			callbacks.requestRedraw();
+			return;
+		}
+
+		animFrom = { panX, panY, zoom };
+		animTo = { panX: targetPanX, panY: targetPanY, zoom };
+		animStartTime = performance.now();
+		requestAnimationFrame(animateStep);
+	}
+
+	function ensurePathVisible(path: string) {
 		const nodes = callbacks.getLayoutNodes();
 		const ln = nodes.find(n => n.node.path === path);
 		if (ln) {
-			callbacks.onSelectionChange(path);
-			focusOnNode(ln);
+			ensureVisible(ln);
+		}
+	}
+
+	function focusOnPath(path: string, options?: FocusOptions) {
+		const nodes = callbacks.getLayoutNodes();
+		const ln = nodes.find(n => n.node.path === path);
+		if (ln) {
+			focusOnNode(ln, options);
 		}
 	}
 
@@ -476,6 +594,8 @@ export function createInteractionManager<T>(
 		focusOnPath,
 		scrollToNode,
 		scrollToPath,
+		ensureVisible,
+		ensurePathVisible,
 		screenToWorld,
 		setPan,
 		setZoom,

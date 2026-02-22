@@ -21,7 +21,8 @@
 		MeasureNodeHeightCallback,
 		GetNodeLabelCallback,
 		LodLevel,
-		CanvasLevelConfig
+		CanvasLevelConfig,
+		FocusOptions
 	} from './types.js';
 	import { createTextCache } from './canvas-text.js';
 	import { computeLayout } from './canvas-layout.js';
@@ -74,6 +75,7 @@
 		groupSiblings?: boolean;
 		showDotGrid?: boolean;
 		clickBehavior?: ClickBehavior;
+		collapsible?: boolean;
 		nodeHeight?: number;
 		nodeMinWidth?: number;
 		nodePaddingX?: number;
@@ -153,6 +155,7 @@
 		groupSiblings = $bindable(true),
 		showDotGrid = $bindable(false),
 		clickBehavior = $bindable('expand'),
+		collapsible = true,
 		nodeHeight = $bindable(28),
 		nodeMinWidth = $bindable(100),
 		nodePaddingX = $bindable(14),
@@ -493,7 +496,7 @@
 			}),
 			requestRedraw,
 			onNodeClick: (ln, chevronHit) => {
-				const shouldToggle = ln.node.hasChildren && (
+				const shouldToggle = collapsible && ln.node.hasChildren && (
 					clickBehavior !== 'select' || chevronHit
 				);
 				if (shouldToggle) {
@@ -531,6 +534,7 @@
 		},
 		{
 			getClickBehavior: () => clickBehavior,
+			getDragDropMode: () => dragDropMode,
 			animDuration: 400
 		}
 	);
@@ -773,7 +777,7 @@
 	function navigateToPath(path: string) {
 		selectedPath = path;
 		doLayout(); // ensure node is in layout (may have been expanded)
-		interaction.scrollToPath(path);
+		interaction.ensurePathVisible(path);
 	}
 
 	// ── Effects ─────────────────────────────────────────────────────────
@@ -850,7 +854,7 @@
 		interaction.zoomToFit();
 	}
 
-	export function focusOnPath(path: string) {
+	export function focusOnPath(path: string, options?: FocusOptions) {
 		if (!ctrlRef) return;
 		const node = ctrlRef.getNodeByPath(path);
 		if (!node) return;
@@ -858,7 +862,7 @@
 			ctrlRef.expandNodes(node.parentPath);
 			doLayout();
 		}
-		interaction.focusOnPath(path);
+		interaction.focusOnPath(path, options);
 	}
 
 	/** Scroll to a node without changing level-axis pan.

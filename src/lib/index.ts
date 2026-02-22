@@ -37,7 +37,8 @@ export type {
     CanvasLevelConfig,
     RenderNodeCallback, RenderSlotCallback,
     MeasureNodeWidthCallback, MeasureNodeHeightCallback, GetNodeLabelCallback,
-    LodLevel, Orientation, GrowthDirection, ClickBehavior, InitialViewport, LayoutNode, GroupBox, NodeRenderSlots
+    LodLevel, Orientation, GrowthDirection, ClickBehavior, InitialViewport, LayoutNode, GroupBox, NodeRenderSlots,
+    FocusAnchor, FocusZoom, FocusOptions
 } from "./canvas/types.js"
 
 // Default renderers (for composition)

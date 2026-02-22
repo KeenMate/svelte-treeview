@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { tick } from 'svelte';
 	import CanvasTree from '$lib/canvas/CanvasTree.svelte';
 	import type { TreeController } from '$lib/core/TreeController.svelte.js';
 	import type { LTreeNode } from '$lib/ltree/ltree-node.svelte.js';
 	import type {
 		CanvasRenderContext,
 		MeasureNodeWidthCallback,
-		GrowthDirection
+		GrowthDirection,
+		FocusOptions
 	} from '$lib/canvas/types.js';
 
 	// ── Types ──────────────────────────────────────────────────────────────
@@ -326,6 +326,14 @@
 	let visibleCount = $state(0);
 	let totalCount = $state(0);
 
+	// ── Focus test target ───────────────────────────────────────────────
+	// NYR(4) vs CGY(29) — Round of 32
+	const FOCUS_TARGET = '1.1.2.1.1';
+
+	function focus(opts?: FocusOptions) {
+		canvasTreeRef?.focusOnPath(FOCUS_TARGET, opts);
+	}
+
 	// ── Zoom to fit on initial load ──────────────────────────────────────
 
 	// Auto zoom-to-fit disabled to test initialViewport behavior
@@ -532,26 +540,60 @@
 		<div class="controls">
 			<span class="orientation-toggle">
 				<button class="btn orient-btn" class:orient-active={growthDirection === 'left'}
-					onclick={() => { growthDirection = 'left'; console.log('direction → left, initialViewport:', initialViewport); canvasTreeRef?.setGrowthDirection('left'); }}>Left</button>
+					onclick={() => { growthDirection = 'left'; canvasTreeRef?.setGrowthDirection('left'); }}>Left</button>
 				<button class="btn orient-btn" class:orient-active={growthDirection === 'right'}
-					onclick={() => { growthDirection = 'right'; console.log('direction → right, initialViewport:', initialViewport); canvasTreeRef?.setGrowthDirection('right'); }}>Right</button>
+					onclick={() => { growthDirection = 'right'; canvasTreeRef?.setGrowthDirection('right'); }}>Right</button>
 				<button class="btn orient-btn" class:orient-active={growthDirection === 'down'}
-					onclick={() => { growthDirection = 'down'; console.log('direction → down, initialViewport:', initialViewport); canvasTreeRef?.setGrowthDirection('down'); }}>Down</button>
+					onclick={() => { growthDirection = 'down'; canvasTreeRef?.setGrowthDirection('down'); }}>Down</button>
 				<button class="btn orient-btn" class:orient-active={growthDirection === 'up'}
-					onclick={() => { growthDirection = 'up'; console.log('direction → up, initialViewport:', initialViewport); canvasTreeRef?.setGrowthDirection('up'); }}>Up</button>
+					onclick={() => { growthDirection = 'up'; canvasTreeRef?.setGrowthDirection('up'); }}>Up</button>
 			</span>
 
-			<span class="orientation-toggle">
-				<button class="btn orient-btn" class:orient-active={initialViewport === 'root'}
-					onclick={() => { initialViewport = 'root'; console.log('initialViewport → root, growthDirection:', growthDirection); canvasTreeRef?.setGrowthDirection(growthDirection); }}>Root</button>
-				<button class="btn orient-btn" class:orient-active={initialViewport === 'origin'}
-					onclick={() => { initialViewport = 'origin'; console.log('initialViewport → origin, growthDirection:', growthDirection); canvasTreeRef?.setGrowthDirection(growthDirection); }}>Origin</button>
-			</span>
-
-			<button class="btn" onclick={() => canvasTreeRef?.focusOnPath('1')}>Focus Final</button>
 			<button class="btn" onclick={() => canvasTreeRef?.expandAll()}>Expand All</button>
 			<button class="btn" onclick={() => canvasTreeRef?.collapseAll()}>Collapse All</button>
 			<button class="btn secondary" onclick={() => canvasTreeRef?.zoomToFit()}>Zoom to Fit</button>
+		</div>
+
+		<div class="focus-test-section">
+			<h3>focusOnPath Test — NYR vs CGY (Round of 32, path: {FOCUS_TARGET})</h3>
+			<div class="focus-test-grid">
+				<div class="focus-group">
+					<span class="focus-group-label">Anchor</span>
+					<button class="btn focus-btn" onclick={() => focus()}>center (default)</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'top-left' })}>top-left</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'top-center' })}>top-center</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'top-right' })}>top-right</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'center-left' })}>center-left</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'center-right' })}>center-right</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'bottom-left' })}>bottom-left</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'bottom-center' })}>bottom-center</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'bottom-right' })}>bottom-right</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: { x: 0.2, y: 0.3 } })}>custom (0.2, 0.3)</button>
+				</div>
+				<div class="focus-group">
+					<span class="focus-group-label">Zoom</span>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 'auto' })}>auto (default)</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 'keep' })}>keep</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 0.3 })}>0.3</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 0.5 })}>0.5</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 1 })}>1.0</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 1.5 })}>1.5</button>
+					<button class="btn focus-btn" onclick={() => focus({ zoom: 2 })}>2.0</button>
+				</div>
+				<div class="focus-group">
+					<span class="focus-group-label">Behavior</span>
+					<button class="btn focus-btn" onclick={() => focus({ animate: false })}>no animation</button>
+					<button class="btn focus-btn" onclick={() => focus({ select: false })}>no select</button>
+					<button class="btn focus-btn" onclick={() => focus({ animate: false, select: false })}>no anim + no select</button>
+				</div>
+				<div class="focus-group">
+					<span class="focus-group-label">Combined</span>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'center-right', zoom: 1 })}>center-right, zoom 1</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'top-right', zoom: 1 })}>top-right, zoom 1</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'top-left', zoom: 0.5, padding: 80 })}>top-left, zoom 0.5, pad 80</button>
+					<button class="btn focus-btn" onclick={() => focus({ anchor: 'center-left', zoom: 'keep', animate: false })}>center-left, keep zoom, instant</button>
+				</div>
+			</div>
 		</div>
 
 		<div class="metrics">
@@ -578,7 +620,9 @@
 				bind:growthDirection
 				{initialViewport}
 				groupSiblings={false}
-				clickBehavior="expand-and-focus"
+				clickBehavior="select"
+				dragDropMode="none"
+				collapsible={false}
 				nodeHeight={CARD_H}
 				nodeMinWidth={CARD_W}
 				nodePaddingX={PAD}
@@ -662,6 +706,57 @@
 	.orient-btn:last-child { border-radius: 0 6px 6px 0; }
 	.orient-btn:hover { background: #cbd5e0; }
 	.orient-active { background: #667eea !important; color: white !important; }
+
+	/* ── Focus Test Section ───────────────────────────────────────────── */
+
+	.focus-test-section {
+		margin-bottom: 1rem;
+		padding: 1rem;
+		background: #f8fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 10px;
+	}
+
+	.focus-test-section h3 {
+		margin: 0 0 0.75rem;
+		font-size: 0.9rem;
+		color: #334155;
+		font-weight: 600;
+	}
+
+	.focus-test-grid {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.focus-group {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+	}
+
+	.focus-group-label {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: #64748b;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		min-width: 70px;
+	}
+
+	.focus-btn {
+		font-size: 0.75rem !important;
+		padding: 0.3rem 0.6rem !important;
+		background: #e2e8f0;
+		color: #334155;
+	}
+
+	.focus-btn:hover {
+		background: #667eea;
+		color: white;
+	}
 
 	/* ── Detail Card ──────────────────────────────────────────────────── */
 
