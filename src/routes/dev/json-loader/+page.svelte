@@ -2,12 +2,13 @@
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import TreeProvider from '$lib/components/TreeProvider.svelte';
+	import CanvasTree from '$lib/canvas/CanvasTree.svelte';
 	import { TreeController } from '$lib/core/TreeController.svelte.js';
 	import type { LTreeNode } from '$lib/ltree/types';
 
 	const STORAGE_KEY = 'svelte-treeview-json-loader-config';
 
-	type RendererType = 'tree' | 'canvas' | 'flat';
+	type RendererType = 'tree' | 'canvas' | 'sunburst' | 'flat';
 
 	// Default config values
 	const defaultConfig = {
@@ -84,8 +85,98 @@
 	let canvasGroupPadding = $state(8);
 	let canvasMaxGridCols = $state(10);
 
+	// Sunburst renderer state
+	let sunburstRingWidth = $state(100);
+	let sunburstRef: ReturnType<typeof CanvasTree> | undefined = $state();
+	let sunburstSelectedPath = $state<string | null>(null);
+	let sunburstLayoutTime = $state(0);
+	let sunburstDrawTime = $state(0);
+	let sunburstVisibleCount = $state(0);
+	let sunburstTotalCount = $state(0);
+
 	// Flat card view state
 	let flatSelectedPath = $state<string | null>(null);
+
+	// Search state
+	let searchQuery = $state('');
+	let searchMode = $state<'search' | 'filter'>('search');
+	let searchResultCount = $state(0);
+	let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function applySearch(query: string) {
+		const q = query.trim();
+
+		if (renderer === 'tree') {
+			if (searchMode === 'filter') {
+				treeRef?.filterNodes(q);
+				searchResultCount = -1; // filter mode doesn't return count
+			} else {
+				const results = treeRef?.searchNodes(q) ?? [];
+				searchResultCount = results.length;
+			}
+		} else if (renderer === 'sunburst') {
+			if (!sunburstRef) return;
+			if (!q) {
+				sunburstRef.clearSearch();
+				searchResultCount = 0;
+				return;
+			}
+			if (searchMode === 'filter') {
+				sunburstRef.filterNodes(q);
+				searchResultCount = -1;
+			} else {
+				const results = sunburstRef.searchNodes(q);
+				searchResultCount = results.length;
+			}
+		} else if (renderer === 'canvas') {
+			if (!canvasCtrlRef) return;
+			if (!q) {
+				canvasCtrlRef.filterNodes('');
+				searchResultCount = 0;
+				canvasRecomputeAndDraw();
+				return;
+			}
+			if (searchMode === 'filter') {
+				canvasCtrlRef.filterNodes(q);
+				searchResultCount = -1;
+				canvasRecomputeAndDraw();
+			} else {
+				const results = canvasCtrlRef.searchNodes(q);
+				searchResultCount = results.length;
+				canvasRecomputeAndDraw();
+			}
+		}
+	}
+
+	function onSearchInput(e: Event) {
+		const val = (e.target as HTMLInputElement).value;
+		searchQuery = val;
+		if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = setTimeout(() => applySearch(val), 250);
+	}
+
+	function clearSearchQuery() {
+		searchQuery = '';
+		searchResultCount = 0;
+		if (renderer === 'tree') {
+			treeRef?.filterNodes('');
+		} else if (renderer === 'sunburst') {
+			sunburstRef?.clearSearch();
+		} else if (renderer === 'canvas') {
+			canvasCtrlRef?.filterNodes('');
+			canvasRecomputeAndDraw();
+		}
+	}
+
+	// Clear search when renderer changes
+	let prevRenderer = renderer;
+	$effect(() => {
+		if (renderer !== prevRenderer) {
+			prevRenderer = renderer;
+			searchQuery = '';
+			searchResultCount = 0;
+		}
+	});
 
 	// Data state
 	let jsonData = $state<any[]>([]);
@@ -1542,6 +1633,7 @@
 				<select id="renderer" bind:value={renderer}>
 					<option value="tree">Standard Tree (DOM)</option>
 					<option value="canvas">Canvas Dendrogram</option>
+					<option value="sunburst">Sunburst (CanvasTree)</option>
 					<option value="flat">Flat Card View</option>
 				</select>
 			</div>
@@ -1717,6 +1809,14 @@
 					<span style="font-size: 0.75em">{canvasZoomLodSimple}</span>
 				</div>
 			</div>
+		{:else if renderer === 'sunburst'}
+			<h3>Sunburst Options</h3>
+			<div class="config-grid">
+				<div class="form-group">
+					<label for="sunburstRingWidth">Ring Width: {sunburstRingWidth}px</label>
+					<input type="range" id="sunburstRingWidth" bind:value={sunburstRingWidth} min="40" max="200" step="10" style="width: 160px" />
+				</div>
+			</div>
 		{/if}
 
 		{#if availableMembers.length > 0}
@@ -1818,7 +1918,41 @@
 	<!-- Tree Display -->
 	{#if jsonData.length > 0 && !jsonError}
 		<div class="card">
-			<h2>Tree Preview</h2>
+			<div class="tree-preview-header">
+				<h2>Tree Preview</h2>
+				<div class="search-bar">
+					<div class="search-input-wrap">
+						<svg class="search-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+							<path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+						</svg>
+						<input
+							type="text"
+							placeholder="{searchMode === 'filter' ? 'Filter' : 'Search'} nodes..."
+							value={searchQuery}
+							oninput={onSearchInput}
+							class="search-input"
+						/>
+						{#if searchQuery}
+							<button class="search-clear" onclick={clearSearchQuery} title="Clear">&times;</button>
+						{/if}
+					</div>
+					<div class="search-mode-switch">
+						<button
+							class="search-mode-btn"
+							class:search-mode-active={searchMode === 'search'}
+							onclick={() => { searchMode = 'search'; if (searchQuery.trim()) applySearch(searchQuery); }}
+						>Search</button>
+						<button
+							class="search-mode-btn"
+							class:search-mode-active={searchMode === 'filter'}
+							onclick={() => { searchMode = 'filter'; if (searchQuery.trim()) applySearch(searchQuery); }}
+						>Filter</button>
+					</div>
+					{#if searchQuery && searchMode === 'search' && searchResultCount > 0}
+						<span class="search-result-count">{searchResultCount} match{searchResultCount !== 1 ? 'es' : ''}</span>
+					{/if}
+				</div>
+			</div>
 
 			{#if renderer === 'tree'}
 				<div class="controls">
@@ -1846,6 +1980,9 @@
 							{progressiveRender}
 							{initialBatchSize}
 							{maxBatchSize}
+							shouldUseInternalSearchIndex={true}
+							searchValueMember={displayMember || undefined}
+							displayValueMember={displayMember || undefined}
 							bind:selectedNode
 							bind:insertResult
 						>
@@ -1900,6 +2037,9 @@
 						{sortCallback}
 						{isSorted}
 						{expandLevel}
+						shouldUseInternalSearchIndex={true}
+						searchValueMember={displayMember || undefined}
+						displayValueMember={displayMember || undefined}
 					>
 						{#snippet children(ctrl)}
 							{@const _init = captureCanvasCtrl(ctrl)}
@@ -1925,6 +2065,87 @@
 							{/if}
 						{/snippet}
 					</TreeProvider>
+				{/key}
+
+			{:else if renderer === 'sunburst'}
+				<div class="controls">
+					<button class="btn" onclick={() => sunburstRef?.expandAll()}>Expand All</button>
+					<button class="btn" onclick={() => sunburstRef?.collapseAll()}>Collapse All</button>
+					<button class="btn secondary" onclick={() => sunburstRef?.zoomToFit()}>Zoom to Fit</button>
+				</div>
+
+				<div class="canvas-metrics">
+					<span>Layout: <strong>{sunburstLayoutTime.toFixed(1)}ms</strong></span>
+					<span>Draw: <strong>{sunburstDrawTime.toFixed(1)}ms</strong></span>
+					<span>Visible: <strong>{sunburstVisibleCount}</strong>/{sunburstTotalCount}</span>
+				</div>
+
+				{#key treeKey}
+					<div class="canvas-wrapper">
+						<CanvasTree
+							bind:this={sunburstRef}
+							data={jsonData}
+							{idMember}
+							{pathMember}
+							parentPathMember={parentPathMember || undefined}
+							levelMember={levelMember || undefined}
+							hasChildrenMember={hasChildrenMember || undefined}
+							isExpandedMember={isExpandedMember || undefined}
+							orderMember={orderMember || undefined}
+							{treePathSeparator}
+							{sortCallback}
+							{isSorted}
+							{expandLevel}
+							displayValueMember={displayMember || undefined}
+							searchValueMember={displayMember || undefined}
+							shouldUseInternalSearchIndex={true}
+							layoutMode="sunburst"
+							{sunburstRingWidth}
+							dragDropMode="none"
+							getIsCollapsibleCallback={(node) => (node.level ?? 0) >= 3}
+							bind:selectedPath={sunburstSelectedPath}
+							bind:layoutTime={sunburstLayoutTime}
+							bind:drawTime={sunburstDrawTime}
+							bind:visibleCount={sunburstVisibleCount}
+							bind:totalCount={sunburstTotalCount}
+							showDotGrid={false}
+						>
+							{#snippet tooltipSnippet(node, label)}
+								<strong>{label}</strong>
+								{#if node.data}
+									{@const d = node.data as Record<string, any>}
+									{#if d.organizationDataSourceUid}
+										<span class="canvas-tree-tooltip-meta">UID: {d.organizationDataSourceUid}</span>
+									{/if}
+									{#if d.organizationOrgData}
+										{@const org = d.organizationOrgData as Record<string, any>}
+										{#if org.orgtype_1}
+											<span class="canvas-tree-tooltip-meta">Type: {org.orgtype_1}</span>
+										{/if}
+										{#if org.manager}
+											<span class="canvas-tree-tooltip-meta">Manager: {org.manager}</span>
+										{/if}
+										{#if org.cost_center}
+											<span class="canvas-tree-tooltip-meta">Cost Center: {org.cost_center}</span>
+										{/if}
+										{#if org.location}
+											<span class="canvas-tree-tooltip-meta">Location: {org.location}</span>
+										{/if}
+									{/if}
+									{#if node.hasChildren}
+										<span class="canvas-tree-tooltip-meta">Children: {Object.keys(node.children).length}{node.isExpanded ? ' (expanded)' : ''}</span>
+									{/if}
+									<span class="canvas-tree-tooltip-meta">Level: {node.level} | Path: {node.path}</span>
+								{/if}
+							{/snippet}
+						</CanvasTree>
+					</div>
+
+					{#if sunburstSelectedPath}
+						<div class="output" style="margin-top: 1rem;">
+							<p class="output-label">Selected: {sunburstSelectedPath}</p>
+						</div>
+					{/if}
 				{/key}
 
 			{:else if renderer === 'flat'}
@@ -2171,7 +2392,7 @@
 	/* Canvas renderer */
 	.canvas-wrapper {
 		width: 100%;
-		height: 500px;
+		height: 1000px;
 		border: 1px solid #e2e8f0;
 		border-radius: 8px;
 		overflow: hidden;
@@ -2266,5 +2487,114 @@
 		color: #94a3b8;
 		flex-shrink: 0;
 		margin-left: 1rem;
+	}
+
+	/* Search bar */
+	.tree-preview-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.tree-preview-header h2 {
+		margin: 0;
+		flex-shrink: 0;
+	}
+
+	.search-bar {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.search-input-wrap {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.search-icon {
+		position: absolute;
+		left: 8px;
+		color: #a0aec0;
+		pointer-events: none;
+	}
+
+	.search-input {
+		padding: 0.4rem 2rem 0.4rem 1.8rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 6px;
+		font-size: 0.85rem;
+		width: 220px;
+		background: #fff;
+		color: #2d3748;
+		transition: border-color 0.15s;
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: #667eea;
+		box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+	}
+
+	.search-input::placeholder {
+		color: #a0aec0;
+	}
+
+	.search-clear {
+		position: absolute;
+		right: 4px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: #a0aec0;
+		font-size: 1.1rem;
+		line-height: 1;
+		padding: 2px 6px;
+		border-radius: 3px;
+	}
+
+	.search-clear:hover {
+		color: #4a5568;
+		background: #edf2f7;
+	}
+
+	.search-mode-switch {
+		display: inline-flex;
+		border: 1px solid #e2e8f0;
+		border-radius: 6px;
+		overflow: hidden;
+	}
+
+	.search-mode-btn {
+		padding: 0.35rem 0.7rem;
+		font-size: 0.8rem;
+		border: none;
+		background: #edf2f7;
+		color: #4a5568;
+		cursor: pointer;
+		transition: all 0.15s;
+		white-space: nowrap;
+	}
+
+	.search-mode-btn:not(:last-child) {
+		border-right: 1px solid #e2e8f0;
+	}
+
+	.search-mode-btn:hover:not(.search-mode-active) {
+		background: #e2e8f0;
+	}
+
+	.search-mode-active {
+		background: #667eea;
+		color: white;
+	}
+
+	.search-result-count {
+		font-size: 0.8rem;
+		color: #718096;
+		white-space: nowrap;
 	}
 </style>

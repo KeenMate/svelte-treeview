@@ -375,6 +375,267 @@ export function drawConnections<T>(
 	}
 }
 
+// ── Balanced Layout Connections ──────────────────────────────────────────
+
+/**
+ * Draw connections for the balanced (H) layout:
+ * - Root (depth 0): left arm children connected via root left edge, right arm via right edge
+ * - Subtrees: standard H-tree elbows, direction auto-detected (left or right growing)
+ */
+export function drawBalancedConnections<T>(
+	ctx: CanvasRenderingContext2D,
+	layoutNodes: LayoutNode<T>[],
+	vl: number,
+	vt: number,
+	vr: number,
+	vb: number,
+	theme: CanvasTheme,
+	columnGap: number,
+	levelSpacingV: number
+): void {
+	const M = 50;
+	ctx.strokeStyle = theme.connColor;
+	ctx.lineWidth = theme.connWidth;
+
+	for (const n of layoutNodes) {
+		if (n.children.length === 0) continue;
+
+		if (n.depth === 0) {
+			// Root: split children into left arm (cx < root cx) and right arm (cx > root cx)
+			const leftChildren = n.children.filter(c => c.cx < n.cx);
+			const rightChildren = n.children.filter(c => c.cx >= n.cx);
+
+			// Right arm: root right edge → horizontal midpoint → vertical rail → children left edge
+			if (rightChildren.length > 0) {
+				const first = rightChildren[0];
+				const last = rightChildren[rightChildren.length - 1];
+				const parentEdgeX = n.isVirtual ? n.cx : n.x + n.w;
+				const childEdgeX = first.x;
+				const midX = (parentEdgeX + childEdgeX) / 2;
+
+				ctx.beginPath();
+				ctx.moveTo(parentEdgeX, n.cy);
+				ctx.lineTo(midX, n.cy);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(midX, first.cy);
+				ctx.lineTo(midX, last.cy);
+				ctx.stroke();
+				for (const child of rightChildren) {
+					ctx.beginPath();
+					ctx.moveTo(midX, child.cy);
+					ctx.lineTo(child.x, child.cy);
+					ctx.stroke();
+				}
+			}
+
+			// Left arm: root left edge → horizontal midpoint → vertical rail → children right edge
+			if (leftChildren.length > 0) {
+				const first = leftChildren[0];
+				const last = leftChildren[leftChildren.length - 1];
+				const parentEdgeX = n.isVirtual ? n.cx : n.x;
+				const childEdgeX = first.x + first.w; // right edge of left-arm child
+				const midX = (parentEdgeX + childEdgeX) / 2;
+
+				ctx.beginPath();
+				ctx.moveTo(parentEdgeX, n.cy);
+				ctx.lineTo(midX, n.cy);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(midX, first.cy);
+				ctx.lineTo(midX, last.cy);
+				ctx.stroke();
+				for (const child of leftChildren) {
+					ctx.beginPath();
+					ctx.moveTo(midX, child.cy);
+					ctx.lineTo(child.x + child.w, child.cy);
+					ctx.stroke();
+				}
+			}
+			continue;
+		}
+
+		// depth >= 1: auto-detect direction from parent-child X relationship
+		const first = n.children[0];
+		const last = n.children[n.children.length - 1];
+		const growsRight = first.cx > n.cx;
+
+		const parentEdgeX = growsRight ? n.x + n.w : n.x;
+		const childEdgeX = growsRight ? first.x : first.x + first.w;
+
+		const connTop = Math.min(n.cy, first.cy);
+		const connBottom = Math.max(n.cy, last.cy);
+		const connLeft = Math.min(parentEdgeX, childEdgeX);
+		const connRight = Math.max(parentEdgeX, childEdgeX);
+		if (connRight < vl - M || connLeft > vr + M || connBottom < vt - M || connTop > vb + M) continue;
+
+		const midX = (parentEdgeX + childEdgeX) / 2;
+		ctx.beginPath();
+		ctx.moveTo(parentEdgeX, n.cy);
+		ctx.lineTo(midX, n.cy);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(midX, first.cy);
+		ctx.lineTo(midX, last.cy);
+		ctx.stroke();
+		for (const child of n.children) {
+			const cEdge = growsRight ? child.x : child.x + child.w;
+			ctx.beginPath();
+			ctx.moveTo(midX, child.cy);
+			ctx.lineTo(cEdge, child.cy);
+			ctx.stroke();
+		}
+	}
+}
+
+// ── Fishbone Layout Connections ──────────────────────────────────────────
+
+/**
+ * Ishikawa fishbone connections:
+ * - Spine: horizontal (or vertical) line running from branches to root (the "head")
+ * - Ribs: diagonal ~45° lines from each depth-1 branch to the spine
+ * - Branch elbows: standard tree elbows within each branch subtree
+ *
+ * After layout mirroring, root is at the right (H) or bottom (V).
+ */
+export function drawFishboneConnections<T>(
+	ctx: CanvasRenderingContext2D,
+	layoutNodes: LayoutNode<T>[],
+	isVertical: boolean,
+	vl: number,
+	vt: number,
+	vr: number,
+	vb: number,
+	theme: CanvasTheme
+): void {
+	const M = 50;
+	ctx.strokeStyle = theme.connColor;
+	ctx.lineWidth = theme.connWidth;
+
+	// Find root (depth 0)
+	let root: LayoutNode<T> | null = null;
+	for (const n of layoutNodes) {
+		if (n.depth === 0) { root = n; break; }
+	}
+	if (!root || root.children.length === 0) {
+		// No root or no branches — draw standard elbows for any remaining connections
+		drawFishboneBranchElbows(ctx, layoutNodes, isVertical, vl, vt, vr, vb, M);
+		return;
+	}
+
+	if (!isVertical) {
+		// ── Horizontal fishbone: root at right, branches to the left ──
+		const spineY = root.cy;
+
+		// Compute spine left extent: leftmost rib attachment point
+		let spineLeft = root.x;
+		for (const child of root.children) {
+			const dy = Math.abs(child.cy - spineY);
+			const attachX = child.x + child.w + dy;
+			spineLeft = Math.min(spineLeft, attachX, child.x);
+		}
+
+		// Draw spine line
+		ctx.beginPath();
+		ctx.moveTo(spineLeft - 20, spineY);
+		ctx.lineTo(root.x, spineY);
+		ctx.stroke();
+
+		// Draw diagonal ribs: child right edge → spine attachment point
+		for (const child of root.children) {
+			const dy = Math.abs(child.cy - spineY);
+			const attachX = Math.min(child.x + child.w + dy, root.x);
+			ctx.beginPath();
+			ctx.moveTo(child.x + child.w, child.cy);
+			ctx.lineTo(attachX, spineY);
+			ctx.stroke();
+		}
+	} else {
+		// ── Vertical fishbone: root at bottom, branches upward ──
+		const spineX = root.cx;
+
+		let spineTop = root.y;
+		for (const child of root.children) {
+			const dx = Math.abs(child.cx - spineX);
+			const attachY = child.y + child.h + dx;
+			spineTop = Math.min(spineTop, attachY, child.y);
+		}
+
+		// Draw spine line
+		ctx.beginPath();
+		ctx.moveTo(spineX, spineTop - 20);
+		ctx.lineTo(spineX, root.y);
+		ctx.stroke();
+
+		// Draw diagonal ribs: child bottom edge → spine attachment point
+		for (const child of root.children) {
+			const dx = Math.abs(child.cx - spineX);
+			const attachY = Math.min(child.y + child.h + dx, root.y);
+			ctx.beginPath();
+			ctx.moveTo(child.cx, child.y + child.h);
+			ctx.lineTo(spineX, attachY);
+			ctx.stroke();
+		}
+	}
+
+	// Draw branch elbows for depth >= 1
+	drawFishboneBranchElbows(ctx, layoutNodes, isVertical, vl, vt, vr, vb, M);
+}
+
+/** Draw standard elbow connections for fishbone branch subtrees (depth >= 1) */
+function drawFishboneBranchElbows<T>(
+	ctx: CanvasRenderingContext2D,
+	layoutNodes: LayoutNode<T>[],
+	isVertical: boolean,
+	vl: number, vt: number, vr: number, vb: number,
+	M: number
+): void {
+	for (const n of layoutNodes) {
+		if (n.children.length === 0 || n.depth === 0) continue;
+
+		const first = n.children[0];
+		const last = n.children[n.children.length - 1];
+
+		if (!isVertical) {
+			// Horizontal fishbone branches grow vertically
+			const growsDown = first.cy > n.cy;
+			const parentEdgeY = growsDown ? n.y + n.h : n.y;
+			const childEdgeY = (c: LayoutNode<T>) => growsDown ? c.y : c.y + c.h;
+
+			const connTop = Math.min(parentEdgeY, childEdgeY(first), childEdgeY(last));
+			const connBottom = Math.max(parentEdgeY, childEdgeY(first), childEdgeY(last));
+			const connLeft = Math.min(n.cx, first.cx);
+			const connRight = Math.max(n.cx, last.cx);
+			if (connRight < vl - M || connLeft > vr + M || connBottom < vt - M || connTop > vb + M) continue;
+
+			const midY = (parentEdgeY + childEdgeY(first)) / 2;
+			ctx.beginPath(); ctx.moveTo(n.cx, parentEdgeY); ctx.lineTo(n.cx, midY); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(first.cx, midY); ctx.lineTo(last.cx, midY); ctx.stroke();
+			for (const child of n.children) {
+				ctx.beginPath(); ctx.moveTo(child.cx, midY); ctx.lineTo(child.cx, childEdgeY(child)); ctx.stroke();
+			}
+		} else {
+			// Vertical fishbone branches grow horizontally
+			const growsRight = first.cx > n.cx;
+			const parentEdgeX = growsRight ? n.x + n.w : n.x;
+			const childEdgeX = (c: LayoutNode<T>) => growsRight ? c.x : c.x + c.w;
+
+			const connTop = Math.min(n.cy, first.cy);
+			const connBottom = Math.max(n.cy, last.cy);
+			const connLeft = Math.min(parentEdgeX, childEdgeX(first), childEdgeX(last));
+			const connRight = Math.max(parentEdgeX, childEdgeX(first), childEdgeX(last));
+			if (connRight < vl - M || connLeft > vr + M || connBottom < vt - M || connTop > vb + M) continue;
+
+			const midX = (parentEdgeX + childEdgeX(first)) / 2;
+			ctx.beginPath(); ctx.moveTo(parentEdgeX, n.cy); ctx.lineTo(midX, n.cy); ctx.stroke();
+			ctx.beginPath(); ctx.moveTo(midX, first.cy); ctx.lineTo(midX, last.cy); ctx.stroke();
+			for (const child of n.children) {
+				ctx.beginPath(); ctx.moveTo(midX, child.cy); ctx.lineTo(childEdgeX(child), child.cy); ctx.stroke();
+			}
+		}
+	}
+}
+
 // ── Group Boxes ─────────────────────────────────────────────────────────
 
 export function drawGroupBoxes(
@@ -431,17 +692,20 @@ export function drawDotGrid(
 	const gridSize = theme.gridSize * zoom;
 	if (gridSize <= 6) return;
 
+	// Cap total dots to prevent freeze at intermediate zoom levels
+	const cols = Math.ceil(cw / gridSize);
+	const rows = Math.ceil(ch / gridSize);
+	if (cols * rows > 10000) return;
+
 	ctx.fillStyle = theme.gridColor;
-	ctx.beginPath();
 	const startX = panX % gridSize;
 	const startY = panY % gridSize;
+	// Use fillRect instead of arc — direct draw, no path accumulation
 	for (let gx = startX; gx < cw; gx += gridSize) {
 		for (let gy = startY; gy < ch; gy += gridSize) {
-			ctx.moveTo(gx + 0.75, gy);
-			ctx.arc(gx, gy, 0.75, 0, Math.PI * 2);
+			ctx.fillRect(gx - 0.75, gy - 0.75, 1.5, 1.5);
 		}
 	}
-	ctx.fill();
 }
 
 // ── Minimap ─────────────────────────────────────────────────────────────
@@ -502,6 +766,7 @@ export function drawMinimap<T>(
 
 	// Nodes as tiny rectangles
 	for (const n of layoutNodes) {
+		if (n.isVirtual) continue;
 		const nx = mmX + MINIMAP_PAD + n.x * mmScale;
 		const ny = mmY + MINIMAP_PAD + n.y * mmScale;
 		const nw = Math.max(1.5, n.w * mmScale);

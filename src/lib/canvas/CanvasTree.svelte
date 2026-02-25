@@ -1,5 +1,5 @@
 <script lang="ts" generics="T">
-	import { onDestroy } from 'svelte';
+	import { type Snippet, onDestroy } from 'svelte';
 	import TreeProvider from '../components/TreeProvider.svelte';
 	import { TreeController, type TreeControllerProps } from '../core/TreeController.svelte.js';
 	import type { LTreeNode } from '../ltree/ltree-node.svelte.js';
@@ -28,6 +28,7 @@
 	import { createTextCache } from './canvas-text.js';
 	import { computeLayout } from './canvas-layout.js';
 	import { drawRadialConnections } from './canvas-layout-radial.js';
+	import { drawSunburstNodes, buildSunburstHitTester } from './canvas-layout-sunburst.js';
 	import type { CanvasTheme } from './canvas-theme.js';
 	import { defaultCanvasTheme, readCssTheme, resolveTheme } from './canvas-theme.js';
 	import {
@@ -84,9 +85,16 @@
 		// Balanced layout
 		balancedSplit?: 'even' | 'weighted';
 
+		// Fishbone layout
+		fishboneCrossNav?: boolean;
+
 		// Radial layout
 		radialStartAngle?: number;
 		radialSpacing?: number;
+
+		// Sunburst layout
+		sunburstRingWidth?: number;
+		sunburstRootTitle?: string;
 		groupSiblings?: boolean;
 		showDotGrid?: boolean;
 		clickBehavior?: ClickBehavior;
@@ -135,6 +143,9 @@
 		visibleCount?: number;
 		totalCount?: number;
 
+		// Custom tooltip snippet — receives the LTreeNode and label
+		tooltipSnippet?: Snippet<[LTreeNode<T>, string]>;
+
 		// Theme overrides (highest priority, over CSS variables and defaults)
 		theme?: Partial<CanvasTheme>;
 	}
@@ -172,8 +183,11 @@
 		growthDirection = $bindable('right'),
 		initialViewport = 'root',
 		balancedSplit = 'even',
+		fishboneCrossNav = false,
 		radialStartAngle = 0,
 		radialSpacing,
+		sunburstRingWidth = 100,
+		sunburstRootTitle,
 		groupSiblings = $bindable(true),
 		showDotGrid = $bindable(false),
 		clickBehavior = $bindable('expand'),
@@ -222,6 +236,9 @@
 		visibleCount = $bindable(0),
 		totalCount = $bindable(0),
 
+		// Tooltip
+		tooltipSnippet,
+
 		// Theme overrides
 		theme: themePropOverrides,
 	}: Props = $props();
@@ -232,6 +249,10 @@
 	let containerEl: HTMLDivElement | undefined = $state();
 	let ctrlRef: TreeController<T> | null = null;
 	let rafId: number | null = null;
+	/** Tooltip state — explicitly updated at end of each draw() for reliable reactivity */
+	let tooltipLn = $state<LayoutNode<T> | null>(null);
+	let tooltipX = $state(0);
+	let tooltipY = $state(0);
 
 	// Layout data (non-reactive for performance)
 	let layoutNodes: LayoutNode<T>[] = [];
@@ -239,6 +260,7 @@
 	let layoutWidth = 0;
 	let layoutHeight = 0;
 	let levelXArr: number[] = [0];
+	let cachedSunburstHitTester: ((wx: number, wy: number) => LayoutNode<T> | null) | null = null;
 
 	// Search state
 	let matchedPaths: Set<string> = new Set();
@@ -299,6 +321,7 @@
 
 	function doLayout() {
 		if (!ctrlRef) return;
+		const _lt0 = performance.now();
 		const result = computeLayout(
 			ctrlRef,
 			growthDirection,
@@ -321,7 +344,9 @@
 			{
 				balancedSplit,
 				radialStartAngle,
-				radialSpacing: radialSpacing ?? columnGap * 3
+				radialSpacing: radialSpacing ?? columnGap * 3,
+				sunburstRingWidth,
+				sunburstRootTitle
 			}
 		);
 		layoutNodes = result.nodes;
@@ -331,13 +356,31 @@
 		levelXArr = result.levelXArr;
 		layoutTime = result.time;
 		totalCount = result.nodes.length;
+
+		// Build cached sunburst hit tester (ring-indexed for performance)
+		if (layoutMode === 'sunburst' && layoutNodes.length > 0) {
+			const rootLn = layoutNodes.find(n => n.depth === 0);
+			if (rootLn) {
+				cachedSunburstHitTester = buildSunburstHitTester(layoutNodes, rootLn.cx, rootLn.cy);
+			} else {
+				cachedSunburstHitTester = null;
+			}
+		} else {
+			cachedSunburstHitTester = null;
+		}
+		console.log(`[doLayout] ${(performance.now() - _lt0).toFixed(1)}ms | ${layoutNodes.length} nodes | mode=${layoutMode}`);
 	}
 
 	// ── Draw ────────────────────────────────────────────────────────────
 
+	// Performance logging
+	let _perfLogCounter = 0;
+	const _PERF_LOG_EVERY = 60; // log every N frames
+
 	function draw() {
 		if (!canvasEl || !containerEl) return;
 		const t0 = performance.now();
+		const doLog = (++_perfLogCounter % _PERF_LOG_EVERY) === 0;
 		const ctx = canvasEl.getContext('2d')!;
 		const dpr = window.devicePixelRatio || 1;
 		const rect = containerEl.getBoundingClientRect();
@@ -362,8 +405,10 @@
 		// Background
 		ctx.fillStyle = theme.bg;
 		ctx.fillRect(0, 0, cw, ch);
+		let tGrid = t0;
 		if (showDotGrid) {
 			drawDotGrid(ctx, cw, ch, iState.panX, iState.panY, iState.zoom, theme);
+			tGrid = performance.now();
 		}
 
 		ctx.save();
@@ -381,8 +426,10 @@
 		const isReversed = growthDirection === 'left' || growthDirection === 'up';
 		const isSearchActive = matchedPaths.size > 0;
 
-		// Connections
-		if (layoutMode === 'balanced') {
+		// Connections (sunburst uses adjacent arcs, no lines needed)
+		if (layoutMode === 'sunburst') {
+			// no connection lines
+		} else if (layoutMode === 'balanced') {
 			drawBalancedConnections(ctx, layoutNodes, vl, vt, vr, vb, theme, columnGap, levelSpacingV);
 		} else if (layoutMode === 'radial') {
 			drawRadialConnections(ctx, layoutNodes, vl, vt, vr, vb, theme);
@@ -391,80 +438,98 @@
 		} else if (layoutMode !== 'box') {
 			drawConnections(ctx, layoutNodes, levelXArr, isV, isReversed, columnGap, levelSpacingV, vl, vt, vr, vb, theme);
 		}
+		const tConn = performance.now();
 
 		// Group boxes
 		drawGroupBoxes(ctx, groupBoxes, getDepthColor, zoomLodSimple, zoomLodText, iState.zoom, vl, vt, vr, vb);
+		const tBoxes = performance.now();
 
 		// Nodes
-		const lodText = iState.zoom >= zoomLodText;
-		const lodSimple = iState.zoom < zoomLodSimple;
 		let visible = 0;
 
-		const visualConfig: CanvasVisualConfig = {
-			nodeHeight,
-			nodeMinWidth,
-			nodePaddingX,
-			colorBarWidth,
-			font: fontStr,
-			fontBold,
-			getDepthColor,
-			growthDirection
-		};
+		if (layoutMode === 'sunburst') {
+			// Sunburst: find center from root node and draw arcs
+			const rootLn = layoutNodes.find(n => n.depth === 0);
+			const scx = rootLn ? rootLn.cx : 0;
+			const scy = rootLn ? rootLn.cy : 0;
+			visible = drawSunburstNodes(
+				ctx, layoutNodes, scx, scy,
+				getDepthColor, (node, ln) => ln?.labelOverride ?? getLabel(node),
+				iState.hoveredNode as LayoutNode<T> | null,
+				selectedPath, fontStr, iState.zoom,
+				vl, vt, vr, vb, theme
+			);
+		} else {
+			const lodText = iState.zoom >= zoomLodText;
+			const lodSimple = iState.zoom < zoomLodSimple;
 
-		const slots: NodeRenderSlots<T> = {
-			renderNode,
-			renderBackground,
-			renderColorBar,
-			renderBody,
-			renderChevron,
-			renderBadge
-		};
-
-		for (const n of layoutNodes) {
-			if (n.isVirtual) continue;
-			if (n.x + n.w < vl - M || n.x > vr + M || n.y + n.h < vt - M || n.y > vb + M) continue;
-			visible++;
-
-			const depthColor = getDepthColor(n.depth);
-			const isSelected = n.node.path === selectedPath;
-			const isMatch = isSearchActive && matchedPaths.has(n.node.path);
-			const isCurrent = isMatch && currentResultIndex >= 0 && searchResults[currentResultIndex]?.path === n.node.path;
-			const isDragSrc = iState.dragSrcNode?.node.path === n.node.path && iState.isDragging;
-			const isDropTgt = iState.dropTarget?.node.path === n.node.path && iState.isDragging;
-			const isHovered = iState.hoveredNode?.node.path === n.node.path && !iState.isDragging;
-			const isSearchDimmed = isSearchActive && !isMatch;
-
-			// LOD: simple
-			if (lodSimple) {
-				drawNodeSimple(ctx, n, depthColor, isSelected, isMatch, isCurrent, isSearchDimmed, theme);
-				continue;
-			}
-
-			ctx.globalAlpha = isDragSrc ? 0.3 : isSearchDimmed ? 0.25 : 1;
-
-			// LOD: medium
-			if (!lodText) {
-				drawNodeMedium(ctx, n, depthColor, isSelected, isDropTgt, isMatch, isCurrent, colorBarWidth, isV, theme);
-				ctx.globalAlpha = 1;
-				continue;
-			}
-
-			// LOD: full detail — use slot-based rendering
-			const state: CanvasNodeState = {
-				isSelected,
-				isHovered,
-				isDragSource: isDragSrc,
-				isDropTarget: isDropTgt,
-				isSearchMatch: isMatch,
-				isCurrentSearchResult: isCurrent,
-				isSearchDimmed
+			const visualConfig: CanvasVisualConfig = {
+				nodeHeight,
+				nodeMinWidth,
+				nodePaddingX,
+				colorBarWidth,
+				font: fontStr,
+				fontBold,
+				getDepthColor,
+				growthDirection
 			};
 
-			const lod: LodLevel = 'full';
-			drawNode(ctx, n, getLabel(n.node), state, lod, visualConfig, slots, theme);
+			const slots: NodeRenderSlots<T> = {
+				renderNode,
+				renderBackground,
+				renderColorBar,
+				renderBody,
+				renderChevron,
+				renderBadge
+			};
 
-			ctx.globalAlpha = 1;
+			for (const n of layoutNodes) {
+				if (n.isVirtual) continue;
+				if (n.x + n.w < vl - M || n.x > vr + M || n.y + n.h < vt - M || n.y > vb + M) continue;
+				visible++;
+
+				const depthColor = getDepthColor(n.depth);
+				const isSelected = n.node.path === selectedPath;
+				const isMatch = isSearchActive && matchedPaths.has(n.node.path);
+				const isCurrent = isMatch && currentResultIndex >= 0 && searchResults[currentResultIndex]?.path === n.node.path;
+				const isDragSrc = iState.dragSrcNode?.node.path === n.node.path && iState.isDragging;
+				const isDropTgt = iState.dropTarget?.node.path === n.node.path && iState.isDragging;
+				const isHovered = iState.hoveredNode?.node.path === n.node.path && !iState.isDragging;
+				const isSearchDimmed = isSearchActive && !isMatch;
+
+				// LOD: simple
+				if (lodSimple) {
+					drawNodeSimple(ctx, n, depthColor, isSelected, isMatch, isCurrent, isSearchDimmed, theme);
+					continue;
+				}
+
+				ctx.globalAlpha = isDragSrc ? 0.3 : isSearchDimmed ? 0.25 : 1;
+
+				// LOD: medium
+				if (!lodText) {
+					drawNodeMedium(ctx, n, depthColor, isSelected, isDropTgt, isMatch, isCurrent, colorBarWidth, isV, theme);
+					ctx.globalAlpha = 1;
+					continue;
+				}
+
+				// LOD: full detail — use slot-based rendering
+				const state: CanvasNodeState = {
+					isSelected,
+					isHovered,
+					isDragSource: isDragSrc,
+					isDropTarget: isDropTgt,
+					isSearchMatch: isMatch,
+					isCurrentSearchResult: isCurrent,
+					isSearchDimmed
+				};
+
+				const lod: LodLevel = 'full';
+				drawNode(ctx, n, getLabel(n.node), state, lod, visualConfig, slots, theme);
+
+				ctx.globalAlpha = 1;
+			}
 		}
+		const tNodes = performance.now();
 
 		// Drop zone buttons
 		if (iState.isDragging && iState.dropTarget) {
@@ -492,6 +557,7 @@
 		}
 
 		// Minimap
+		const tMm0 = performance.now();
 		drawMinimap(
 			ctx, layoutNodes, groupBoxes,
 			layoutWidth, layoutHeight,
@@ -500,9 +566,25 @@
 			cw, ch,
 			theme
 		);
+		const tMm1 = performance.now();
 
 		visibleCount = visible;
 		drawTime = performance.now() - t0;
+
+		if (doLog) {
+			console.log(
+				`[draw] total=${drawTime.toFixed(1)}ms | grid=${(tGrid - t0).toFixed(1)} conn=${(tConn - tGrid).toFixed(1)} boxes=${(tBoxes - tConn).toFixed(1)} nodes=${(tNodes - tBoxes).toFixed(1)} minimap=${(tMm1 - tMm0).toFixed(1)} | visible=${visible}/${layoutNodes.length} zoom=${iState.zoom.toFixed(3)}`
+			);
+		}
+
+		// Sync tooltip state to reactive $state for HTML overlay
+		// Compare by path, not reference — tooltipLn is a $state proxy, tt is plain
+		const tt = iState.tooltipNode as LayoutNode<T> | null;
+		if (tt?.node.path !== tooltipLn?.node.path || iState.tooltipScreenX !== tooltipX || iState.tooltipScreenY !== tooltipY) {
+			tooltipLn = tt;
+			tooltipX = iState.tooltipScreenX;
+			tooltipY = iState.tooltipScreenY;
+		}
 	}
 
 	function requestRedraw() {
@@ -515,8 +597,10 @@
 
 	function recomputeAndDraw() {
 		if (!ctrlRef) return;
+		const _rc0 = performance.now();
 		doLayout();
 		requestRedraw();
+		console.log(`[recomputeAndDraw] layout+schedule: ${(performance.now() - _rc0).toFixed(1)}ms`);
 	}
 
 	// ── Interaction Manager ─────────────────────────────────────────────
@@ -533,21 +617,48 @@
 			}),
 			requestRedraw,
 			onNodeClick: (ln, chevronHit) => {
+				// Sunburst accordion: clicking any node collapses its expanded siblings
+				// (only if they are collapsible — respect isCollapsible check)
+				let accordionChanged = false;
+				if (layoutMode === 'sunburst' && ctrlRef) {
+					const siblings = ctrlRef.getSiblings(ln.node.path);
+					for (const sib of siblings) {
+						if (sib.path !== ln.node.path && sib.isExpanded && ctrlRef.getNodeIsCollapsible(sib)) {
+							ctrlRef.collapseNodes(sib.path);
+							accordionChanged = true;
+						}
+					}
+				}
+
 				const nodeCollapsible = ctrlRef?.getNodeIsCollapsible(ln.node) ?? true;
 				const shouldToggle = collapsible && nodeCollapsible && ln.node.hasChildren && (
 					clickBehavior !== 'select' || chevronHit
 				);
+				const wasExpanded = ln.node.isExpanded;
 				if (shouldToggle) {
-					if (ln.node.isExpanded) ctrlRef!.collapseNodes(ln.node.path);
+					if (wasExpanded) ctrlRef!.collapseNodes(ln.node.path);
 					else ctrlRef!.expandNodes(ln.node.path);
-					recomputeAndDraw();
+					accordionChanged = true;
+				}
+				if (accordionChanged) recomputeAndDraw();
+
+				// Sunburst: after expanding, focus on the first child
+				if (layoutMode === 'sunburst' && shouldToggle && !wasExpanded) {
+					const children = ctrlRef!.getChildren(ln.node.path);
+					if (children.length > 0) {
+						const firstChildLn = layoutNodes.find(n => n.node.path === children[0].path);
+						if (firstChildLn) interaction.focusOnNode(firstChildLn, { select: false });
+					}
 				}
 				onNodeClickCb?.(ln.node);
 			},
 			onDragDrop: (src, target, position) => {
+				console.log('[CanvasTree] onDragDrop', { src: src.node.path, target: target.node.path, position, hasCtrl: !!ctrlRef });
 				if (ctrlRef) {
 					const result = ctrlRef.moveNode(src.node.path, target.node.path, position);
+					console.log('[CanvasTree] moveNode result:', result);
 					if (result.success) {
+						console.log('[CanvasTree] recomputeAndDraw after move');
 						recomputeAndDraw();
 						onNodeDropCb?.(src.node, target.node, position);
 					}
@@ -568,7 +679,15 @@
 			onSelectionChange: (path) => {
 				selectedPath = path;
 			},
-			getNodeLabel: (ln) => getLabel(ln.node)
+			getNodeLabel: (ln) => getLabel(ln.node),
+			onTooltipPositionChange: (_node, x, y) => {
+				tooltipX = x;
+				tooltipY = y;
+			},
+			hitTestOverride: () => {
+				if (layoutMode !== 'sunburst') return null;
+				return cachedSunburstHitTester;
+			}
 		},
 		{
 			getClickBehavior: () => clickBehavior,
@@ -866,6 +985,188 @@
 				return;
 			}
 
+			if (layoutMode === 'fishbone') {
+				// Fishbone has a fundamentally different spatial structure:
+				// - Spine (depth 1) nodes spread along one axis
+				// - Branch (depth 2+) nodes spread perpendicular to spine
+				// Generic treeForward/treeBack mapping doesn't work here.
+				const isH = !(growthDirection === 'up' || growthDirection === 'down');
+				const spineAxis: 'x' | 'y' = isH ? 'x' : 'y';
+				const branchAxis: 'x' | 'y' = isH ? 'y' : 'x';
+				// After mirror: spine goes away from root in the forward direction
+				const spineForwardKey = isH ? 'ArrowLeft' : 'ArrowUp';
+				const spineBackKey = isH ? 'ArrowRight' : 'ArrowDown';
+				const branchKey1 = isH ? 'ArrowUp' : 'ArrowLeft';       // toward smaller branch-axis coordinate
+				const branchKey2 = isH ? 'ArrowDown' : 'ArrowRight';    // toward larger branch-axis coordinate
+
+				if (currentLn.depth === 0) {
+					// Root: only enter spine (forward direction)
+					if (e.key === spineForwardKey) {
+						const kids = currentLn.children || [];
+						if (kids.length > 0) {
+							const best = kids.reduce((a, b) => {
+								const da = (a.cx - currentLn.cx) ** 2 + (a.cy - currentLn.cy) ** 2;
+								const db = (b.cx - currentLn.cx) ** 2 + (b.cy - currentLn.cy) ** 2;
+								return da < db ? a : b;
+							});
+							navigateToPath(best.node.path);
+						}
+					}
+				} else if (currentLn.depth === 1) {
+					// Spine node
+					// Determine which side of the fishbone this spine node is on
+					const rootLn = layoutNodes.find(ln => ln.depth === 0);
+					const myBranchPos = branchAxis === 'y' ? currentLn.cy : currentLn.cx;
+					const rootBranchPos = rootLn ? (branchAxis === 'y' ? rootLn.cy : rootLn.cx) : myBranchPos;
+					const mySpineSide = myBranchPos < rootBranchPos ? 'before' : 'after';
+					const allSpine = layoutNodes.filter(ln => ln.depth === 1);
+
+					if (e.key === spineForwardKey || e.key === spineBackKey) {
+						// Left/Right: same-side spine siblings, sorted by spine-axis distance
+						const forward = e.key === spineBackKey;
+						const mySpinePos = spineAxis === 'x' ? currentLn.cx : currentLn.cy;
+						const sameSide = allSpine.filter(ln => {
+							const lnBranchPos = branchAxis === 'y' ? ln.cy : ln.cx;
+							const lnSide = lnBranchPos < rootBranchPos ? 'before' : 'after';
+							return lnSide === mySpineSide;
+						});
+						const inDir = sameSide.filter(ln => {
+							if (ln.node.path === currentLn.node.path) return false;
+							const lnPos = spineAxis === 'x' ? ln.cx : ln.cy;
+							return forward ? lnPos > mySpinePos + 1 : lnPos < mySpinePos - 1;
+						});
+						inDir.sort((a, b) => {
+							const aPos = spineAxis === 'x' ? a.cx : a.cy;
+							const bPos = spineAxis === 'x' ? b.cx : b.cy;
+							return forward ? aPos - bPos : bPos - aPos;
+						});
+						const neighbor = inDir[0] ?? null;
+						if (neighbor) {
+							navigateToPath(neighbor.node.path);
+						} else if (e.key === spineBackKey && currentLn.parent) {
+							navigateToPath(currentLn.parent.node.path);
+						}
+					} else if (e.key === branchKey1 || e.key === branchKey2) {
+						const wantBefore = e.key === branchKey1;
+						const children = currentLn.children || [];
+
+						// Check if children are in the pressed direction
+						const childrenInDir = children.filter(c => {
+							const cPos = branchAxis === 'y' ? c.cy : c.cx;
+							return wantBefore ? cPos < myBranchPos : cPos > myBranchPos;
+						});
+
+						if (childrenInDir.length > 0) {
+							// Enter branch children
+							const best = childrenInDir.reduce((a, b) => {
+								const da = Math.abs((spineAxis === 'x' ? a.cx : a.cy) - (spineAxis === 'x' ? currentLn.cx : currentLn.cy));
+								const db = Math.abs((spineAxis === 'x' ? b.cx : b.cy) - (spineAxis === 'x' ? currentLn.cx : currentLn.cy));
+								return da < db ? a : b;
+							});
+							navigateToPath(best.node.path);
+						} else {
+							// Cross to other side: nearest spine node on opposite side by spine-axis
+							const oppositeSide = mySpineSide === 'before' ? 'after' : 'before';
+							const otherSide = allSpine.filter(ln => {
+								const lnBranchPos = branchAxis === 'y' ? ln.cy : ln.cx;
+								const lnSide = lnBranchPos < rootBranchPos ? 'before' : 'after';
+								return lnSide === oppositeSide;
+							});
+							const mySpinePos = spineAxis === 'x' ? currentLn.cx : currentLn.cy;
+							otherSide.sort((a, b) => {
+								const da = Math.abs((spineAxis === 'x' ? a.cx : a.cy) - mySpinePos);
+								const db = Math.abs((spineAxis === 'x' ? b.cx : b.cy) - mySpinePos);
+								return da - db;
+							});
+							const nearest = otherSide[0] ?? null;
+							if (nearest) {
+								navigateToPath(nearest.node.path);
+							}
+						}
+					}
+				} else {
+					// Branch node (depth 2+)
+					// Helpers: walk up to depth-1 ancestor and determine spine side
+					const getSpineAncestor = (ln: LayoutNode<T>): LayoutNode<T> => {
+						let a = ln;
+						while (a.parent && a.depth > 1) a = a.parent;
+						return a;
+					};
+					const getSpineSide = (ln: LayoutNode<T>): 'before' | 'after' => {
+						const coord = branchAxis === 'y' ? ln.cy : ln.cx;
+						const spine = getSpineAncestor(ln);
+						const spineCoord = branchAxis === 'y' ? spine.cy : spine.cx;
+						return coord < spineCoord ? 'before' : 'after';
+					};
+
+					const spineAnc = getSpineAncestor(currentLn);
+					const mySide = getSpineSide(currentLn);
+					if (e.key === spineForwardKey || e.key === spineBackKey) {
+						// Left/Right: same-side siblings at same depth across all spine branches
+						const forward = e.key === spineBackKey;
+						const sameSideSiblings = layoutNodes.filter(ln =>
+							ln.depth === currentLn.depth && getSpineSide(ln) === mySide
+						);
+						const neighbor = findNearest(currentLn, sameSideSiblings, spineAxis, forward);
+						if (neighbor) {
+							navigateToPath(neighbor.node.path);
+						} else if (e.key === spineBackKey) {
+							// No more same-side siblings toward root — go to spine ancestor
+							navigateToPath(spineAnc.node.path);
+						}
+					} else if (e.key === branchKey1 || e.key === branchKey2) {
+						// Up/Down: parent/child within branch, then cross-spine
+						const wantBefore = e.key === branchKey1;
+						const myPos = branchAxis === 'y' ? currentLn.cy : currentLn.cx;
+						const parent = currentLn.parent;
+						const parentPos = parent ? (branchAxis === 'y' ? parent.cy : parent.cx) : null;
+						const parentIsBefore = parentPos !== null && parentPos < myPos;
+						const parentIsAfter = parentPos !== null && parentPos > myPos;
+						const parentIsBranch = parent !== null && parent.depth > 1;
+						const children = currentLn.children || [];
+
+						// Check if children exist in the desired direction
+						const childrenInDir = children.filter(c => {
+							const cPos = branchAxis === 'y' ? c.cy : c.cx;
+							return wantBefore ? cPos < myPos : cPos > myPos;
+						});
+
+						// Priority 1: Parent is in that direction (branch or spine — return to spine before crossing)
+						if ((wantBefore ? parentIsBefore : parentIsAfter) && parent) {
+							navigateToPath(parent.node.path);
+						}
+						// Priority 2: Children in that direction → go to nearest child
+						else if (childrenInDir.length > 0) {
+							const best = childrenInDir.reduce((a, b) => {
+								const da = Math.abs((spineAxis === 'x' ? a.cx : a.cy) - (spineAxis === 'x' ? currentLn.cx : currentLn.cy));
+								const db = Math.abs((spineAxis === 'x' ? b.cx : b.cy) - (spineAxis === 'x' ? currentLn.cx : currentLn.cy));
+								return da < db ? a : b;
+							});
+							navigateToPath(best.node.path);
+						}
+						// Priority 3: Cross to other side of spine (gated by fishboneCrossNav)
+						else if (fishboneCrossNav) {
+							const oppositeSide = mySide === 'before' ? 'after' : 'before';
+							const crossCandidates = layoutNodes.filter(ln =>
+								ln.depth === currentLn.depth && getSpineSide(ln) === oppositeSide
+							);
+							const nearest = findNearest(currentLn, crossCandidates, spineAxis, true)
+								|| findNearest(currentLn, crossCandidates, spineAxis, false);
+							if (nearest) {
+								navigateToPath(nearest.node.path);
+							} else if (parent) {
+								navigateToPath(parent.node.path);
+							}
+						}
+						// Priority 4: Fallback — go to parent (always available when P3 skipped)
+						else if (parent) {
+							navigateToPath(parent.node.path);
+						}
+					}
+				}
+				return;
+			}
+
 			if (action === 'crossPrev' || action === 'crossNext') {
 				const { axis, forward } = resolveAxis(action);
 				const neighbor = findSpatialNeighborAtDepth(currentLn, axis, forward);
@@ -924,7 +1225,9 @@
 		void [columnGap, gridNodeMaxW, nodeHeight, nodeGap, levelSpacingV,
 			nodePaddingX, nodeMinWidth, colorBarWidth, fontSize, fontFamily,
 			gridGap, groupPadding, maxGridCols, depthColors, levelConfig,
-			zoomLodText, zoomLodSimple, balancedSplit, radialStartAngle, radialSpacing];
+			zoomLodText, zoomLodSimple, balancedSplit, radialStartAngle, radialSpacing,
+			sunburstRingWidth, sunburstRootTitle];
+		console.log('[effect:relayout] triggered — changeTracker or config changed');
 		doLayout();
 		requestRedraw();
 	});
@@ -992,8 +1295,84 @@
 
 	export function expandAll(nodePath?: string | null) {
 		if (!ctrlRef) return;
-		ctrlRef.expandAll(nodePath);
+		if (layoutMode === 'sunburst') {
+			sunburstExpandAll(ctrlRef, nodePath ?? null);
+		} else {
+			ctrlRef.expandAll(nodePath);
+		}
 		recomputeAndDraw();
+	}
+
+	/** Sunburst-aware expand: at each parent, check if children would overflow
+	 *  into sub-rings. If they fit → expand ALL. If overflow → only the biggest.
+	 *  This adapts to the angular space available at each depth. */
+	function sunburstExpandAll(ctrl: TreeController<T>, nodePath: string | null) {
+		const MIN_ARC = 40; // matches MIN_ARC_PX in canvas-layout-sunburst.ts
+		const MIN_EXPAND_SWEEP = 0.15; // ~8.6°, stop recursing into narrower slices
+		const rw = sunburstRingWidth;
+
+		function countAllDescendants(node: LTreeNode<T>): number {
+			const children = Object.values(node.children);
+			if (children.length === 0) return 0;
+			let total = children.length;
+			for (const child of children) total += countAllDescendants(child);
+			return total;
+		}
+
+		function expandNode(node: LTreeNode<T>, depth: number, parentSweep: number) {
+			if (!node.hasChildren) return;
+			ctrl.expandNodes(node.path);
+
+			const children = ctrl.getChildren(node.path);
+			if (children.length === 0) return;
+
+			const childDepth = depth + 1;
+			const midR = childDepth * rw + rw / 2;
+			const capacity = Math.floor(parentSweep * midR / MIN_ARC);
+
+			// Count total descendants for sweep distribution
+			const descCounts: { child: LTreeNode<T>; count: number }[] = [];
+			let totalDesc = 0;
+			for (const child of children) {
+				const count = Math.max(1, countAllDescendants(child));
+				descCounts.push({ child, count });
+				totalDesc += count;
+			}
+
+			if (children.length <= capacity) {
+				// Fits without overflow → expand ALL children
+				for (const { child, count } of descCounts) {
+					const childSweep = parentSweep * (count / totalDesc);
+					// Only recurse deeper if child's slice is wide enough to be readable
+					if (childSweep >= MIN_EXPAND_SWEEP) {
+						expandNode(child, childDepth, childSweep);
+					}
+				}
+			} else {
+				// Would overflow → only expand the biggest child
+				descCounts.sort((a, b) => b.count - a.count);
+				const biggest = descCounts[0];
+				// Collapse collapsible siblings
+				for (const child of children) {
+					if (child.path !== biggest.child.path && child.isExpanded && ctrl.getNodeIsCollapsible(child)) {
+						ctrl.collapseNodes(child.path);
+					}
+				}
+				const biggestSweep = parentSweep * (biggest.count / totalDesc);
+				if (biggestSweep >= MIN_EXPAND_SWEEP) {
+					expandNode(biggest.child, childDepth, biggestSweep);
+				}
+			}
+		}
+
+		if (nodePath) {
+			const node = ctrl.tree.getNodeByPath(nodePath);
+			if (node) expandNode(node, node.level ?? 0, Math.PI * 2);
+		} else {
+			for (const root of ctrl.tree.tree) {
+				expandNode(root, 0, Math.PI * 2);
+			}
+		}
 	}
 
 	export function collapseAll(nodePath?: string | null) {
@@ -1154,15 +1533,16 @@
 			></canvas>
 		</div>
 
-		{@const iState = interaction.getState()}
-
-		{#if iState.tooltipNode && !ctrl.contextMenuVisible}
-			{@const tn = iState.tooltipNode as LayoutNode<T>}
-			<div class="canvas-tree-tooltip" style="position: fixed; left: {iState.tooltipScreenX}px; top: {iState.tooltipScreenY}px;">
-				<strong>{getLabel(tn.node)}</strong>
-				<span class="canvas-tree-tooltip-meta">Path: {tn.node.path}</span>
-				{#if tn.node.hasChildren}
-					<span class="canvas-tree-tooltip-meta">Children: {Object.keys(tn.node.children).length}{tn.node.isExpanded ? ' (expanded)' : ''}</span>
+		{#if tooltipLn && !ctrl.contextMenuVisible}
+			<div class="canvas-tree-tooltip" style="position: fixed; left: {tooltipX}px; top: {tooltipY}px;">
+				{#if tooltipSnippet}
+					{@render tooltipSnippet(tooltipLn.node, getLabel(tooltipLn.node))}
+				{:else}
+					<strong>{getLabel(tooltipLn.node)}</strong>
+					<span class="canvas-tree-tooltip-meta">Path: {tooltipLn.node.path}</span>
+					{#if tooltipLn.node.hasChildren}
+						<span class="canvas-tree-tooltip-meta">Children: {Object.keys(tooltipLn.node.children).length}{tooltipLn.node.isExpanded ? ' (expanded)' : ''}</span>
+					{/if}
 				{/if}
 			</div>
 		{/if}
