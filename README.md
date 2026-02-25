@@ -1040,6 +1040,36 @@ window.components['svelte-treeview'].perf.enable()
 
 **Important**: See the [$state.raw() tip](#quick-start) above - using `$state()` instead of `$state.raw()` for tree data can cause 5,000x slowdown!
 
+## CanvasTree (Canvas-Based Rendering)
+
+`CanvasTree` renders the tree on an HTML5 Canvas for high-performance visualization of large hierarchies. It supports multiple layout modes, keyboard navigation, drag & drop, and custom node rendering.
+
+### Layout Modes
+
+| Mode | Description |
+|------|-------------|
+| `tree` | Standard hierarchical tree (default) |
+| `balanced` | Root centered with two symmetric arms |
+| `fishbone` | Spine with alternating branches above/below |
+| `radial` | Star / concentric rings from center |
+| `box` | Space-filling treemap |
+
+### Fishbone Navigation
+
+In fishbone layout, keyboard navigation follows the fishbone structure:
+
+- **Left/Right**: Navigate between same-side nodes along the spine axis. Spine nodes stay on their side; branch nodes traverse same-depth peers across all spine branches.
+- **Up/Down**: Navigate parent/child within a branch. From spine nodes, enters branch children on the pressed side.
+- **Cross-spine** (optional): When `fishboneCrossNav={true}`, Up/Down crosses to the opposite side of the spine when no more nodes exist in the current direction.
+
+```svelte
+<CanvasTree
+  {data}
+  layoutMode="fishbone"
+  fishboneCrossNav={false}  <!-- default: stops at spine boundary -->
+/>
+```
+
 ## Development Setup & Contributing
 
 For developers working on the project, you can use either standard npm commands or the provided Makefile:

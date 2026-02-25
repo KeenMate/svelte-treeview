@@ -104,16 +104,16 @@
 		let firstIdx = 0;
 		let lastIdx = 0;
 
-		function nextName() {
+		function nextName(path: string) {
 			const first = FIRST_NAMES[firstIdx % FIRST_NAMES.length];
 			const last = LAST_NAMES[lastIdx % LAST_NAMES.length];
 			firstIdx += 7; // prime-ish step for variety
 			lastIdx += 11;
-			return { first, last, full: `${first} ${last}`, initials: `${first[0]}${last[0]}` };
+			return { first, last, full: `[${path}] ${first} ${last}`, initials: `${first[0]}${last[0]}` };
 		}
 
 		// CEO
-		const ceo = nextName();
+		const ceo = nextName('1');
 		nodes.push({
 			id: id++, path: '1', parentPath: '', level: 1,
 			name: ceo.full, title: 'CEO', department: 'Executive',
@@ -126,7 +126,7 @@
 
 		departments.forEach((dept, di) => {
 			const deptPath = `1.${di + 1}`;
-			const head = nextName();
+			const head = nextName(deptPath);
 			const titles = TITLES[dept];
 
 			// Department head
@@ -142,7 +142,7 @@
 			const leadCount = 2 + (di % 2);
 			for (let li = 0; li < leadCount; li++) {
 				const leadPath = `${deptPath}.${li + 1}`;
-				const lead = nextName();
+				const lead = nextName(leadPath);
 				const memberCount = 2 + ((di + li) % 3);
 
 				nodes.push({
@@ -157,7 +157,7 @@
 				// Team members
 				for (let mi = 0; mi < memberCount; mi++) {
 					const memberPath = `${leadPath}.${mi + 1}`;
-					const member = nextName();
+					const member = nextName(memberPath);
 					const titleIdx = Math.min(2 + li + mi, titles.length - 1);
 
 					nodes.push({
@@ -706,13 +706,13 @@
 			</span>
 
 			<span class="orientation-toggle">
-				{#each /** @type {LayoutMode[]} */ (['tree', 'balanced', 'fishbone', 'radial', 'box']) as mode}
+				{#each /** @type {LayoutMode[]} */ (['tree', 'balanced', 'fishbone', 'sunburst', 'box']) as mode}
 					<button class="btn orient-btn" class:orient-active={layoutMode === mode}
 						onclick={() => layoutMode = mode}>{mode[0].toUpperCase() + mode.slice(1)}</button>
 				{/each}
 			</span>
 
-			{#if layoutMode !== 'radial' && layoutMode !== 'box'}
+			{#if layoutMode !== 'sunburst' && layoutMode !== 'box'}
 				<span class="orientation-toggle">
 					<button class="btn orient-btn" class:orient-active={growthDirection === 'right'}
 						onclick={() => { growthDirection = 'right'; canvasTreeRef?.setGrowthDirection('right'); }}>Right</button>

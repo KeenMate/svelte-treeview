@@ -26,6 +26,9 @@ export interface InteractionCallbacks<T> {
 	onHoverChange: (ln: LayoutNode<T> | null) => void;
 	onSelectionChange: (path: string | null) => void;
 	getNodeLabel: (ln: LayoutNode<T>) => string;
+	hitTestOverride?: () => ((wx: number, wy: number) => LayoutNode<T> | null) | null;
+	/** Update tooltip position without triggering a full canvas redraw */
+	onTooltipPositionChange?: (node: LayoutNode<T>, x: number, y: number) => void;
 }
 
 export interface InteractionState {
@@ -69,6 +72,7 @@ export function createInteractionManager<T>(
 	let dropPosition: DropPosition = 'child';
 
 	let hoveredNode: LayoutNode<T> | null = null;
+	let panClickNode: LayoutNode<T> | null = null;
 	let isMinimapPanning = false;
 
 	// Tooltip
@@ -76,6 +80,12 @@ export function createInteractionManager<T>(
 	let tooltipScreenX = 0;
 	let tooltipScreenY = 0;
 	let tooltipTimer: ReturnType<typeof setTimeout> | null = null;
+	let lastClientX = 0;
+	let lastClientY = 0;
+
+	// Hover throttle: only run hit test once per animation frame
+	let hoverRafPending = false;
+	let pendingHoverEvent: MouseEvent | null = null;
 
 	// Animation
 	let animFrom: { panX: number; panY: number; zoom: number } | null = null;
@@ -86,15 +96,43 @@ export function createInteractionManager<T>(
 		return [(sx - panX) / zoom, (sy - panY) / zoom];
 	}
 
+	let _hitTestCount = 0;
+	let _hitTestTime = 0;
+	let _hitTestLogTimer: ReturnType<typeof setInterval> | null = null;
+
+	function _startHitTestLog() {
+		if (_hitTestLogTimer) return;
+		_hitTestLogTimer = setInterval(() => {
+			if (_hitTestCount > 0) {
+				console.log(`[hitTest] ${_hitTestCount} calls in 1s, total=${_hitTestTime.toFixed(1)}ms, avg=${(_hitTestTime / _hitTestCount).toFixed(2)}ms`);
+				_hitTestCount = 0;
+				_hitTestTime = 0;
+			}
+		}, 1000);
+	}
+
 	function hitTest(wx: number, wy: number): LayoutNode<T> | null {
-		const nodes = callbacks.getLayoutNodes();
-		for (let i = nodes.length - 1; i >= 0; i--) {
-			const n = nodes[i];
-			if (wx >= n.x && wx <= n.x + n.w && wy >= n.y && wy <= n.y + n.h) {
-				return n;
+		const ht0 = performance.now();
+		const override = callbacks.hitTestOverride?.();
+		let result: LayoutNode<T> | null;
+		if (override) {
+			result = override(wx, wy);
+		} else {
+			result = null;
+			const nodes = callbacks.getLayoutNodes();
+			for (let i = nodes.length - 1; i >= 0; i--) {
+				const n = nodes[i];
+				if (n.isVirtual) continue;
+				if (wx >= n.x && wx <= n.x + n.w && wy >= n.y && wy <= n.y + n.h) {
+					result = n;
+					break;
+				}
 			}
 		}
-		return null;
+		_hitTestCount++;
+		_hitTestTime += performance.now() - ht0;
+		_startHitTestLog();
+		return result;
 	}
 
 	function isChevronHit(ln: LayoutNode<T>, wx: number, wy: number): boolean {
@@ -173,12 +211,15 @@ export function createInteractionManager<T>(
 
 		const [wx, wy] = screenToWorld(mx, my);
 		const hit = hitTest(wx, wy);
-		if (hit) {
+		if (hit && config.getDragDropMode() !== 'none') {
 			dragSrcNode = hit;
 			dragStartX = mx;
 			dragStartY = my;
 			isDragging = false;
 		} else {
+			// No hit or drag-drop disabled: pan the canvas
+			// Track the hit node so a click (no movement) still fires node selection
+			panClickNode = hit;
 			isPanning = true;
 			panStartX = mx;
 			panStartY = my;
@@ -242,38 +283,63 @@ export function createInteractionManager<T>(
 			return;
 		}
 
-		// Hover
-		const [wx, wy] = screenToWorld(mx, my);
-		const hit = hitTest(wx, wy);
+		// Hover — throttle hit test to once per animation frame
+		lastClientX = e.clientX;
+		lastClientY = e.clientY;
 
-		// Update cursor for chevron hit in select mode
-		if (config.getClickBehavior() === 'select' && hit) {
-			canvas.style.cursor = isChevronHit(hit, wx, wy) ? 'pointer' : 'default';
+		// Fast path: tooltip follow doesn't need hit test or redraw
+		if (tooltipNode && !hoverRafPending) {
+			tooltipScreenX = e.clientX + 16;
+			tooltipScreenY = e.clientY - 4;
+			callbacks.onTooltipPositionChange?.(tooltipNode, tooltipScreenX, tooltipScreenY);
 		}
 
-		if (hit !== hoveredNode) {
-			hoveredNode = hit;
-			clearTooltip();
-			if (config.getClickBehavior() !== 'select') {
-				canvas.style.cursor = hit ? 'pointer' : 'default';
-			}
-			if (!hit) {
-				canvas.style.cursor = 'default';
-			}
-			callbacks.onHoverChange(hit);
+		// Throttle hit test: queue one per animation frame
+		pendingHoverEvent = e;
+		if (!hoverRafPending) {
+			hoverRafPending = true;
+			requestAnimationFrame(() => {
+				hoverRafPending = false;
+				const pe = pendingHoverEvent;
+				if (!pe) return;
+				pendingHoverEvent = null;
 
-			if (hit) {
-				const capClientX = e.clientX;
-				const capClientY = e.clientY;
-				tooltipTimer = setTimeout(() => {
-					tooltipNode = hit;
-					tooltipScreenX = capClientX + 16;
-					tooltipScreenY = capClientY - 4;
+				const c = callbacks.getCanvas();
+				if (!c) return;
+				const r = c.getBoundingClientRect();
+				const hmx = pe.clientX - r.left;
+				const hmy = pe.clientY - r.top;
+				const [wx, wy] = screenToWorld(hmx, hmy);
+				const hit = hitTest(wx, wy);
+
+				// Update cursor for chevron hit in select mode
+				if (config.getClickBehavior() === 'select' && hit) {
+					c.style.cursor = isChevronHit(hit, wx, wy) ? 'pointer' : 'default';
+				}
+
+				if (hit !== hoveredNode) {
+					hoveredNode = hit;
+					clearTooltip();
+					if (config.getClickBehavior() !== 'select') {
+						c.style.cursor = hit ? 'pointer' : 'default';
+					}
+					if (!hit) {
+						c.style.cursor = 'default';
+					}
+					callbacks.onHoverChange(hit);
+
+					if (hit) {
+						tooltipTimer = setTimeout(() => {
+							tooltipNode = hit;
+							tooltipScreenX = lastClientX + 16;
+							tooltipScreenY = lastClientY - 4;
+							callbacks.requestRedraw();
+						}, 400);
+					}
+
 					callbacks.requestRedraw();
-				}, 400);
-			}
-
-			callbacks.requestRedraw();
+				}
+			});
 		}
 	}
 
@@ -290,6 +356,23 @@ export function createInteractionManager<T>(
 		}
 		if (isPanning) {
 			isPanning = false;
+			const panDist = Math.abs(mx - panStartX) + Math.abs(my - panStartY);
+			if (panDist < 5 && panClickNode) {
+				// No real pan movement — treat as a click on the node
+				const hit = panClickNode;
+				panClickNode = null;
+				callbacks.onSelectionChange(hit.node.path);
+				clearTooltip();
+				callbacks.onCloseContextMenu();
+				const [cwx, cwy] = screenToWorld(mx, my);
+				const chevronHit = isChevronHit(hit, cwx, cwy);
+				callbacks.onNodeClick(hit, chevronHit);
+				if (config.getClickBehavior() === 'expand-and-focus') {
+					focusOnNode(hit);
+				}
+				callbacks.requestRedraw();
+			}
+			panClickNode = null;
 			return;
 		}
 

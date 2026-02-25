@@ -1,12 +1,17 @@
 import type { LTreeNode } from '../ltree/ltree-node.svelte.js';
 import type { TreeController } from '../core/TreeController.svelte.js';
-import type { LayoutNode, GroupBox, LayoutResult, LayoutConfig, CanvasLevelConfig, GrowthDirection } from './types.js';
+import type { LayoutNode, GroupBox, LayoutResult, LayoutConfig, LayoutModeConfig, CanvasLevelConfig, GrowthDirection, LayoutMode } from './types.js';
+import { computeLayoutBalanced } from './canvas-layout-balanced.js';
+import { computeLayoutFishbone } from './canvas-layout-fishbone.js';
+import { computeLayoutRadial } from './canvas-layout-radial.js';
+import { computeLayoutBox } from './canvas-layout-box.js';
+import { computeLayoutSunburst } from './canvas-layout-sunburst.js';
 
 const LEVEL_SPACING_H = 180;
 const GRID_NODE_W = 120;
 
 /** Resolve a config value for a given depth, falling back to the global value */
-function resolveLevel<K extends keyof CanvasLevelConfig>(
+export function resolveLevel<K extends keyof CanvasLevelConfig>(
 	overrides: CanvasLevelConfig[] | undefined,
 	depth: number,
 	key: K,
@@ -16,7 +21,7 @@ function resolveLevel<K extends keyof CanvasLevelConfig>(
 }
 
 /** Measure the maximum node width at each depth level */
-function measureDepthWidths<T>(
+export function measureDepthWidths<T>(
 	ctrl: TreeController<T>,
 	measureNodeWidth: (node: LTreeNode<T>) => number,
 	config: LayoutConfig
@@ -55,7 +60,7 @@ function gridCols(count: number, maxGridCols: number): number {
 }
 
 /** Finalize layout: compute bounding box dimensions */
-function finishLayout<T>(
+export function finishLayout<T>(
 	nodes: LayoutNode<T>[],
 	groupBoxes: GroupBox[],
 	t0: number
@@ -531,8 +536,29 @@ export function computeLayout<T>(
 	growthDirection: GrowthDirection,
 	grouped: boolean,
 	measureNodeWidth: (node: LTreeNode<T>) => number,
-	config: LayoutConfig
+	config: LayoutConfig,
+	layoutMode: LayoutMode = 'tree',
+	modeConfig?: LayoutModeConfig
 ): LayoutResult<T> {
+	// Dispatch to layout-mode-specific implementations
+	if (layoutMode === 'balanced') {
+		return computeLayoutBalanced(ctrl, growthDirection, measureNodeWidth, config, modeConfig?.balancedSplit ?? 'even');
+	}
+	if (layoutMode === 'fishbone') {
+		return computeLayoutFishbone(ctrl, growthDirection, measureNodeWidth, config);
+	}
+	if (layoutMode === 'radial') {
+		return computeLayoutRadial(ctrl, measureNodeWidth, config, modeConfig?.radialStartAngle ?? 0, modeConfig?.radialSpacing ?? 120);
+	}
+	if (layoutMode === 'box') {
+		return computeLayoutBox(ctrl, measureNodeWidth, config);
+	}
+	if (layoutMode === 'sunburst') {
+		return computeLayoutSunburst(ctrl, measureNodeWidth, config,
+			modeConfig?.sunburstRingWidth ?? 60, modeConfig?.radialStartAngle ?? 0, modeConfig?.sunburstRootTitle);
+	}
+
+	// Default: 'tree' layout
 	// Use grouped layout if global groupSiblings is true OR any level overrides it to true
 	const anyLevelGrouped = config.levelOverrides?.some(l => l.groupSiblings === true) ?? false;
 	const useGrouped = grouped || anyLevelGrouped;

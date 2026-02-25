@@ -27,6 +27,15 @@ export interface LayoutNode<T> {
 	depth: number;
 	/** Used in grouped layouts for connection lines to group boxes */
 	connectionTargets?: { x: number; y: number }[];
+	/** Virtual node (e.g. balanced layout multi-root placeholder) — not rendered or clickable */
+	isVirtual?: boolean;
+	/** Override label for virtual/synthetic nodes (e.g. multi-root sunburst center) */
+	labelOverride?: string;
+	/** Sunburst arc geometry (radians, px from center) */
+	arcStartAngle?: number;
+	arcEndAngle?: number;
+	arcInnerR?: number;
+	arcOuterR?: number;
 }
 
 /** A group box drawn around collapsed sibling nodes */
@@ -64,6 +73,15 @@ export interface CanvasLevelConfig {
 	gridNodeMaxW?: number;
 }
 
+/** Layout-mode-specific configuration */
+export interface LayoutModeConfig {
+	balancedSplit: 'even' | 'weighted';
+	radialStartAngle: number;
+	radialSpacing: number;
+	sunburstRingWidth: number;
+	sunburstRootTitle?: string;
+}
+
 /** Configuration for the layout engine */
 export interface LayoutConfig {
 	nodeHeight: number;
@@ -83,6 +101,7 @@ export interface LayoutConfig {
 
 export type Orientation = 'horizontal' | 'vertical';
 export type GrowthDirection = 'right' | 'left' | 'down' | 'up';
+export type LayoutMode = 'tree' | 'balanced' | 'fishbone' | 'radial' | 'box' | 'sunburst';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type InitialViewport = 'root' | 'origin';
 

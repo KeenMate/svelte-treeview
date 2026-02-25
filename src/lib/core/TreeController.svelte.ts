@@ -198,9 +198,9 @@ export class TreeController<T> {
 	treePathSeparator = $state<string>('.');
 
 	// DATA (bidirectional / output)
-	data = $state<T[]>([]);
-	selectedNode = $state<LTreeNode<T> | null | undefined>(null);
-	insertResult = $state<InsertArrayResult<T> | null | undefined>(null);
+	data = $state.raw<T[]>([]);
+	selectedNode = $state.raw<LTreeNode<T> | null | undefined>(null);
+	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
 	isRendering = $state(false);
 
@@ -255,7 +255,7 @@ export class TreeController<T> {
 	contextMenuVisible = $state(false);
 	contextMenuX = $state(0);
 	contextMenuY = $state(0);
-	contextMenuNode: LTreeNode<T> | null = $state(null);
+	contextMenuNode: LTreeNode<T> | null = $state.raw(null);
 	isDebugMenuActive = $state(false);
 
 	// Scroll highlight
@@ -267,12 +267,12 @@ export class TreeController<T> {
 	// Drag and drop
 	draggedNode: LTreeNode<any> | null = $state.raw(null);
 	isDragInProgress = $state(false);
-	hoveredNodeForDrop = $state<LTreeNode<any> | null>(null);
+	hoveredNodeForDrop = $state.raw<LTreeNode<any> | null>(null);
 	activeDropPosition = $state<DropPosition | null>(null);
 	currentDropOperation = $state<DropOperation>('move');
 
 	// Touch drag
-	touchDragState = $state<{
+	touchDragState = $state.raw<{
 		node: LTreeNode<any> | null;
 		startX: number;
 		startY: number;
@@ -290,8 +290,8 @@ export class TreeController<T> {
 	touchTimer: ReturnType<typeof setTimeout> | null = null;
 
 	// Progressive flat rendering
-	flatRenderedIds = $state<Set<string>>(new Set());
-	flatRenderQueue = $state<string[]>([]);
+	flatRenderedIds = $state.raw<Set<string>>(new Set());
+	flatRenderQueue = $state.raw<string[]>([]);
 	flatRenderAnimationFrame: number | null = null;
 	currentBatchSize: number = 0;
 
