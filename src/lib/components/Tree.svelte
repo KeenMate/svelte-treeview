@@ -639,7 +639,7 @@
 			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 			{#if controller.useFlatRendering}
 				<div class="ltree-tree ltree-flat-mode">
-					{#each controller.flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren)}
+					{#each controller.flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
 						<Node
 							{node}
 							children={nodeTemplate}

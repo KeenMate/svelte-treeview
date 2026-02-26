@@ -542,18 +542,21 @@ export function createLTree<T>(
 
 		collapseAll(nodePath?: string | null | undefined): void {
 			perfStart(`[${_treeId}] collapseAll`);
-			function setExpandedRecursive(node: LTreeNode<T>, value: boolean) {
-				node.isExpanded = value;
+			const self = this;
+			function collapseRecursive(node: LTreeNode<T>) {
+				if (node.isExpanded && self.getNodeIsCollapsible(node)) {
+					node.isExpanded = false;
+				}
 				for (const key in node.children) {
-					setExpandedRecursive(node.children[key], value);
+					collapseRecursive(node.children[key]);
 				}
 			}
 
 			if (isEmptyString(nodePath)) {
-				setExpandedRecursive(root, false);
+				collapseRecursive(root);
 			} else {
 				const target = this.getNodeByPath(nodePath!);
-				if (target) setExpandedRecursive(target, false);
+				if (target) collapseRecursive(target);
 			}
 
 			this._emitTreeChanged();
@@ -1072,6 +1075,7 @@ export function createLTree<T>(
 
 			// Merge updates into existing data
 			node.data = { ...node.data, ...dataUpdates };
+			node._rev = (node._rev || 0) + 1;
 
 			// Re-index for search if needed
 			if (indexer && _shouldUseInternalSearchIndex) {

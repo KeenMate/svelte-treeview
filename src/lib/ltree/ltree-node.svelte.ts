@@ -36,6 +36,8 @@ export interface LTreeNode<T> {
 	isSelected: boolean;
 
 	isSelectable: boolean;
+
+	_rev: number;
 }
 
 export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
@@ -65,6 +67,8 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		isSelected: false,
 
 		isSelectable: true,
+
+		_rev: 0,
 		...data
 	};
 }
