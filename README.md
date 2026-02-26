@@ -6,6 +6,16 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
+## v5.0: Core/Renderer Split
+
+> [!IMPORTANT]
+> **In version 5, the tree core (data structure, expand/collapse, search, drag & drop logic) has been completely separated from the renderer.** The architecture is open for you to build your own custom renderers on top of the same core via `TreeProvider` and `TreeController`.
+
+This means you can:
+- Use the built-in HTML `Tree` renderer as-is for common use cases
+- Create entirely custom visualizations (Canvas, WebGL, SVG, etc.) powered by the same tree core
+- For canvas rendering, install the companion package: [`@keenmate/svelte-treeview-canvas`](https://github.com/keenmate/svelte-treeview-canvas)
+
 ## New in v4.7: Per-Node Drop Position Restrictions
 
 > [!NOTE]

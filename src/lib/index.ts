@@ -28,29 +28,6 @@ export {
     perfSummary
 } from "./perf-logger"
 
-// Canvas tree component
-export { default as CanvasTree } from "./canvas/CanvasTree.svelte"
-
-// Canvas types (for users writing custom render callbacks)
-export type {
-    CanvasRenderContext, CanvasNodeBounds, CanvasNodeState, CanvasVisualConfig,
-    CanvasLevelConfig,
-    RenderNodeCallback, RenderSlotCallback,
-    MeasureNodeWidthCallback, MeasureNodeHeightCallback, GetNodeLabelCallback,
-    LodLevel, Orientation, GrowthDirection, LayoutMode, ClickBehavior, InitialViewport, LayoutNode, GroupBox, NodeRenderSlots,
-    FocusAnchor, FocusZoom, FocusOptions
-} from "./canvas/types.js"
-
-// Default renderers (for composition)
-export {
-    defaultRenderBackground, defaultRenderColorBar,
-    defaultRenderBody, defaultRenderChevron, defaultRenderBadge
-} from "./canvas/canvas-renderer.js"
-
-// Canvas theming
-export type { CanvasTheme } from "./canvas/canvas-theme.js"
-export { defaultCanvasTheme } from "./canvas/canvas-theme.js"
-
 // Export global API type and ensure registration runs
 export type { GlobalTreeviewAPI } from "./global-api"
 import "./global-api"

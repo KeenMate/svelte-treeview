@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v4.7.0 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v5.0.0-rc01 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -142,4 +142,10 @@ DRAG_DROP_POSITIONS:
 - Floating mode: only shows allowed position buttons
 - undefined/empty = all positions allowed (default)
 
-RECENT: v4.7.0 - Per-node drop position restrictions (allowedDropPositionsMember, getAllowedDropPositionsCallback)
+CANVAS_PACKAGE:
+- Canvas rendering (CanvasTree, layouts, themes) is in a separate package: @keenmate/svelte-treeview-canvas
+- Located at ../svelte-treeview-canvas
+- Peer-depends on this package (@keenmate/svelte-treeview ^5.0.0)
+- Canvas examples (org-chart, nhl-playoffs, canvas-dendrogram, layout-modes, json-loader) are in that package
+
+RECENT: v5.0.0-rc01 - Core/renderer split: tree logic separated from rendering, enabling custom renderers (HTML Tree or your own). Canvas rendering extracted to @keenmate/svelte-treeview-canvas.

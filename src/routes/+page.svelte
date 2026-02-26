@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 
-	const version = 'v4.6.0';
+	const version = 'v5.0.0-rc01';
 
 	const examples = [
 		{
@@ -56,36 +56,13 @@
 			href: '/examples/performance',
 			icon: '⚡',
 			title: 'Performance Test',
-			badge: 'new',
 			description: 'Compare recursive vs flat rendering modes with configurable node counts.'
 		},
 		{
 			href: '/examples/custom-layout',
 			icon: '🧩',
 			title: 'Custom Layout',
-			badge: 'new',
 			description: 'Build custom UIs (breadcrumbs, badge clouds) on the headless TreeController via TreeProvider.'
-		},
-		{
-			href: '/examples/canvas-dendrogram',
-			icon: '🖼️',
-			title: 'Canvas Dendrogram',
-			badge: 'new',
-			description: 'Canvas 2D dendrogram for 5000+ nodes with pan, zoom, click expand/collapse, and drag-drop.'
-		},
-		{
-			href: '/custom-renderers',
-			icon: '🎭',
-			title: 'Custom Canvas Renderers',
-			badge: 'new',
-			description: 'CanvasTree examples with custom renderNode callbacks: org charts, playoff brackets, and more.'
-		},
-		{
-			href: '/dev/json-loader',
-			icon: '🔧',
-			title: 'JSON Loader',
-			badge: 'debug',
-			description: 'Load custom JSON files, configure settings, and test tree rendering performance.'
 		},
 		{
 			href: '/dev/logging',
