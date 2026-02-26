@@ -1028,6 +1028,7 @@ export function createLTree<T>(
 
 			// Merge updates into existing data
 			node.data = { ...node.data, ...dataUpdates };
+			node._rev = (node._rev || 0) + 1;
 
 			// Re-index for search if needed
 			if (indexer && _shouldUseInternalSearchIndex) {

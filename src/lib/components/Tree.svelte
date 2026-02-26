@@ -1532,7 +1532,7 @@
 			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 			{#if useFlatRendering}
 				<div class="ltree-tree ltree-flat-mode">
-					{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren)}
+					{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
 						<Node
 							{node}
 							children={nodeTemplate}
