@@ -241,11 +241,29 @@ export function createLTree<T>(
 
 			perfStart(`[${_treeId}] insertArray:conversion`);
 
+			const conversionFailures: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [];
+
 			let mappedData = data.map((row, index) => {
 				const node = createLTreeNode<T>();
 				node.treeId = _treeId || '';
 				node.id = _idMember ? getField(row, _idMember) : undefined;
-				node.path = _pathMember ? getField(row, _pathMember) : '';
+				const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
+
+				// Validate path - must be a non-empty string
+				if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
+					node.path = '';
+					node.data = row;
+					const pathDesc = rawPath === '' ? 'empty string'
+						: rawPath == null ? 'undefined/null'
+						: `non-string (${typeof rawPath})`;
+					conversionFailures.push({
+						node,
+						originalData: row,
+						error: `Item at index ${index} has invalid path (${pathDesc}). Check that pathMember="${_pathMember}" matches your data. First item keys: ${index === 0 ? JSON.stringify(Object.keys(row as any)) : '(see index 0)'}`
+					});
+					return null;
+				}
+				node.path = rawPath;
 
 				if (shouldCalculateParentPath) {
 					node.parentPath = getParentPath(node.path, this.treePathSeparator);
@@ -269,7 +287,7 @@ export function createLTree<T>(
 
 				node.data = row;
 				return node;
-			});
+			}).filter((node): node is LTreeNode<T> => node !== null);
 			const conversionTime = perfEnd(`[${_treeId}] insertArray:conversion`, data.length);
 
 			perfStart(`[${_treeId}] insertArray:sort`);
@@ -282,7 +300,15 @@ export function createLTree<T>(
 
 			perfStart(`[${_treeId}] insertArray:insert`);
 
-			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [];
+			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [...conversionFailures];
+
+			// Warn early about data mapping issues (most common user error)
+			if (conversionFailures.length > 0) {
+				console.warn(
+					`[Tree ${_treeId}] ${conversionFailures.length} of ${data.length} items have invalid paths (pathMember="${_pathMember}"). These items will be skipped.\n` +
+					`First failure: ${conversionFailures[0].error}`
+				);
+			}
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
 
 			let realIndex: number = 0; // this is used to avoid scenario, when node cannot found a parent
