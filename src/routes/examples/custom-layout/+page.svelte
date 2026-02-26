@@ -3,8 +3,8 @@
 	import TreeProvider from '$lib/components/TreeProvider.svelte';
 	import Node from '$lib/components/Node.svelte';
 	import { TreeController } from '$lib/core/TreeController.svelte.js';
-	import type { LTreeNode } from '$lib/ltree/types';
-	import type { DropPosition } from '$lib/ltree/types';
+	import type { LTreeNode } from '$lib/ltree/types.js';
+	import type { DropPosition } from '$lib/ltree/types.js';
 
 	// ── Sample data ────────────────────────────────────────────────────────
 	const sampleData = [
@@ -86,7 +86,7 @@
 	<div class="dg-row">
 		<div class="dg-node-wrapper"
 			ondragover={() => { if (ctrl.isDragInProgress && !isDragging) ctrl.hoveredNodeForDrop = node; }}
-			ondragleave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) { ctrl.hoveredNodeForDrop = null; ctrl.activeDropPosition = null; } }}
+			ondragleave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as globalThis.Node)) { ctrl.hoveredNodeForDrop = null; ctrl.activeDropPosition = null; } }}
 		>
 			{#if showZones}<div class="dg-hitbox"></div>{/if}
 			<button
@@ -145,7 +145,7 @@
 	<div class="vdg-subtree">
 		<div class="vdg-node-wrapper"
 			ondragover={() => { if (ctrl.isDragInProgress && !isDragging) ctrl.hoveredNodeForDrop = node; }}
-			ondragleave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) { ctrl.hoveredNodeForDrop = null; ctrl.activeDropPosition = null; } }}
+			ondragleave={(e) => { if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as globalThis.Node)) { ctrl.hoveredNodeForDrop = null; ctrl.activeDropPosition = null; } }}
 		>
 			{#if showZones}<div class="vdg-hitbox"></div>{/if}
 			<button
@@ -222,7 +222,7 @@
 				expandLevel={3}
 				bind:selectedNode={selectedStd}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
 				{/snippet}
 			</Tree>
@@ -254,7 +254,7 @@
 			isSorted={true}
 			expandLevel={99}
 		>
-			{#snippet children(ctrl)}
+			{#snippet children(ctrl: any)}
 				{@const currentPath = breadcrumbPath.join('.')}
 				{@const parentNode = currentPath ? ctrl.getNodeByPath(currentPath) : null}
 				{@const visibleNodes = currentPath
@@ -348,8 +348,8 @@
 			isSorted={true}
 			expandLevel={99}
 		>
-			{#snippet children(ctrl)}
-				{@const leaves = ctrl.tree.visibleFlatNodes.filter(n => !n.hasChildren)}
+			{#snippet children(ctrl: any)}
+				{@const leaves = ctrl.tree.visibleFlatNodes.filter((n: any) => !n.hasChildren)}
 				<div class="badge-cloud">
 					{#each leaves as node (node.id)}
 						<button
@@ -398,7 +398,7 @@
 			shouldUseInternalSearchIndex={true}
 			searchValueMember="name"
 		>
-			{#snippet children(ctrl)}
+			{#snippet children(ctrl: any)}
 				{@const stats = ctrl.statistics}
 				<div class="api-grid">
 					<div class="api-panel">
@@ -444,7 +444,7 @@
 									flatMode={true}
 									flatIndentSize={'1.5rem'}
 								>
-									{#snippet children(nodeData)}
+									{#snippet children(nodeData: any)}
 										<span>{nodeData.data?.icon} {nodeData.data?.name}</span>
 									{/snippet}
 								</Node>
@@ -487,7 +487,7 @@
 				}
 			}}
 		>
-			{#snippet children(ctrl)}
+			{#snippet children(ctrl: any)}
 				<div class="dg-controls">
 					<button class="btn" onclick={() => expandAllDendro()}>Expand All</button>
 					<button class="btn secondary" onclick={() => collapseAllDendro()}>Collapse All</button>
@@ -543,7 +543,7 @@
 				}
 			}}
 		>
-			{#snippet children(ctrl)}
+			{#snippet children(ctrl: any)}
 				<div class="dg-controls">
 					<button class="btn" onclick={() => expandAllDendro()}>Expand All</button>
 					<button class="btn secondary" onclick={() => collapseAllDendro()}>Collapse All</button>

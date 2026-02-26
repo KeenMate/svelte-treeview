@@ -9,14 +9,14 @@ import {
     disableLogging,
     setCategoryLevel,
     LOGGING_CATEGORIES
-} from './logger';
+} from './logger.js';
 
 import {
     enablePerfLogging,
     disablePerfLogging,
     setPerfThreshold,
     isPerfLoggingEnabled
-} from './perf-logger';
+} from './perf-logger.js';
 
 // Import generated constants (created by scripts/generate-constants.js)
 import {
@@ -26,7 +26,7 @@ import {
     LICENSE,
     REPOSITORY,
     HOMEPAGE
-} from './constants.generated';
+} from './constants.generated.js';
 
 // Global API interface
 export interface GlobalTreeviewAPI {
@@ -43,7 +43,7 @@ export interface GlobalTreeviewAPI {
         enableLogging: () => void;
         disableLogging: () => void;
         setLogLevel: (level: string) => void;
-        setCategoryLevel: (category: string, level: string) => void;
+        setCategoryLevel: (category: string, level?: string) => void;
         getCategories: () => string[];
     };
     perf: {
@@ -79,8 +79,8 @@ if (typeof window !== 'undefined') {
         logging: {
             enableLogging,
             disableLogging,
-            setLogLevel,
-            setCategoryLevel,
+            setLogLevel: setLogLevel as (level: string) => void,
+            setCategoryLevel: setCategoryLevel as (category: string, level?: string) => void,
             getCategories: () => [...LOGGING_CATEGORIES]
         },
         perf: {

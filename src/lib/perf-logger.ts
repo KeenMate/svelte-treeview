@@ -18,13 +18,12 @@
  *   setPerfThreshold(10); // Only log operations taking >10ms
  */
 
-// @ts-ignore - Vendored library without type definitions
 import log from './vendor/loglevel/index.js';
-// @ts-ignore - Vendored library without type definitions
 import prefix from './vendor/loglevel/prefix.js';
+import type { Logger } from './vendor/loglevel/index.js';
 
 // Performance logger instance
-export const perfLogger = log.getLogger('LTREE:PERF');
+export const perfLogger: Logger = log.getLogger('LTREE:PERF');
 
 // Threshold for logging (0 = log everything)
 let perfThreshold = 0;

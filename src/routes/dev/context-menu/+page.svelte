@@ -142,7 +142,7 @@
 							});
 							alert(`Successfully created folder "${name}" in ${node.data.name}`);
 							closeMenuCallback(); // Close on success
-						} catch (error) {
+						} catch (error: any) {
 							alert(`Failed to create folder: ${error.message}`);
 							// Menu stays open on error so user can try again
 						}
@@ -244,7 +244,7 @@
 						await new Promise(resolve => setTimeout(resolve, 2000));
 						alert(`Backup completed successfully for ${node.data.name}`);
 						closeMenuCallback(); // Close after successful backup
-					} catch (error) {
+					} catch (error: any) {
 						alert(`Backup failed: ${error.message}`);
 						// Menu stays open so user can retry
 					}
@@ -320,7 +320,7 @@
 						contextMenuCallback={createContextMenu}
 						shouldDisplayContextMenuInDebugMode={debugContextMenu}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<div class="d-flex align-items-center context-menu-target">
 								<span class="me-2">
 									{#if node.data.type === 'folder'}📁
@@ -512,7 +512,7 @@
 						contextMenuCallback={createAdvancedContextMenu}
 						shouldDisplayContextMenuInDebugMode={debugContextMenu2}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<div class="d-flex align-items-center context-menu-target">
 								<span class="me-2">
 									{#if node.data.type === 'server'}🖥️

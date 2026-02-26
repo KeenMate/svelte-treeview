@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode } from '$lib/ltree/types';
+	import type { LTreeNode } from '$lib/ltree/types.js';
 
 	// Sample hierarchical data
 	const sampleData = [
@@ -69,7 +69,7 @@
 				bind:selectedNode
 				onNodeClicked={handleNodeClick}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
 				{/snippet}
 			</Tree>
@@ -112,7 +112,7 @@
 					isSorted={true}
 					{expandLevel}
 				>
-					{#snippet nodeTemplate(node)}
+					{#snippet nodeTemplate(node: any)}
 						<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>
 					{/snippet}
 				</Tree>
@@ -150,7 +150,7 @@
 				isSorted={true}
 				expandLevel={3}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>
 				{/snippet}
 			</Tree>
@@ -184,7 +184,7 @@
 				isSorted={true}
 				expandLevel={1}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>
 				{/snippet}
 			</Tree>

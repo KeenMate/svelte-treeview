@@ -82,7 +82,7 @@
 
 	// Tree configuration
 	let currentExample = $state('basic'); // 'basic' or 'filesystem' or 'large'
-	let data = $state(sampleData);
+	let data: any[] = $state(sampleData);
 	let idMember = $state('id');
 	let pathMember = $state('path');
 	let displayValueMember = $state('name');
@@ -121,7 +121,7 @@
 			}
 
 			// Then drive first, then folders, then files
-			const typeOrder = { drive: 0, folder: 1, file: 2 };
+			const typeOrder: Record<string, number> = { drive: 0, folder: 1, file: 2 };
 			const aOrder = typeOrder[a.data.type] ?? 3;
 			const bOrder = typeOrder[b.data.type] ?? 3;
 
@@ -204,7 +204,7 @@
 						shouldToggleOnNodeClick={true}
 						{onNodeClicked}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<div class="d-flex align-items-center">
 								<span class="me-2">
 									{#if node.data.type === 'drive'}💿

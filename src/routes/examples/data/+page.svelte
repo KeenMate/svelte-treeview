@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, InsertArrayResult } from '$lib/ltree/types';
+	import type { LTreeNode, InsertArrayResult } from '$lib/ltree/types.js';
 
 	type FileItem = {
 		id: number;
@@ -101,7 +101,7 @@ const data = [
 						isSorted={true}
 						expandLevel={3}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.name} <code style="font-size: 0.8em;">({node.path})</code></span>
 						{/snippet}
 					</Tree>
@@ -139,7 +139,7 @@ const data = [
 						expandLevel={3}
 						treePathSeparator="/"
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -165,7 +165,7 @@ const data = [
 						expandLevel={3}
 						treePathSeparator="::"
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -265,7 +265,7 @@ const data = [
 						expandLevel={3}
 						bind:insertResult
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -277,20 +277,21 @@ const data = [
 			<div class="output">
 				<p class="output-label">Insert Result:</p>
 				<pre>{JSON.stringify({
-					successfulNodesCount: insertResult.successfulNodesCount,
-					failedNodesCount: insertResult.failedNodesCount,
-					failedNodes: insertResult.failedNodes.map(f => ({
-						item: f.item,
-						reason: f.reason
+					successful: insertResult.successful,
+					failed: insertResult.failed.length,
+					total: insertResult.total,
+					failedDetails: insertResult.failed.map((f: any) => ({
+						originalData: f.originalData,
+						error: f.error
 					}))
 				}, null, 2)}</pre>
 			</div>
 		{/if}
 
 		<div class="code-block">
-			<pre>{`<script>
+			<pre>{`${"<"}script>
   let insertResult;
-</script>
+${"<"}/script>
 
 <Tree
   data={data}
@@ -366,7 +367,7 @@ const data = [
 
 		<div class="code-block">
 			<pre>{`// Accessing node properties in nodeContent snippet
-{#snippet nodeTemplate(node)}
+{#snippet nodeTemplate(node: any)}
   <span>
     {node.data?.name}
     <small>Level: {node.level}, Path: {node.path}</small>

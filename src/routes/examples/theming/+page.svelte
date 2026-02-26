@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode } from '$lib/ltree/types';
+	import type { LTreeNode } from '$lib/ltree/types.js';
 
 	type FileItem = {
 		id: number;
@@ -129,7 +129,7 @@
 						isSorted={true}
 						expandLevel={3}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -148,7 +148,7 @@
 						isSorted={true}
 						expandLevel={3}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -169,7 +169,7 @@
 						isSorted={true}
 						expandLevel={3}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -188,7 +188,7 @@
 						isSorted={true}
 						expandLevel={3}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -227,7 +227,7 @@
 
 		<div class="code-block">
 			<pre>{`<Tree ...>
-  {#snippet nodeTemplate(node)}
+  {#snippet nodeTemplate(node: any)}
     <span class:ltree-selected-bold={node.isSelected}>
       {node.data?.name}
     </span>

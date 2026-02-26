@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types';
+	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
 
 	type FileItem = {
 		id: number;
@@ -349,7 +349,7 @@
 						{dropZoneStart}
 						{dropZoneMaxWidth}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 							<small style="color: #999; margin-left: 0.5rem; font-size: 0.75em;">(#{node.data?.sortOrder})</small>
 						{/snippet}
@@ -378,7 +378,7 @@
 						{dropZoneStart}
 						{dropZoneMaxWidth}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
 							<small style="color: #999; margin-left: 0.5rem; font-size: 0.75em;">(#{node.data?.sortOrder})</small>
 						{/snippet}
@@ -435,7 +435,7 @@
 				{dropZoneMode}
 				{dropZoneLayout}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
 					{#if node.data?.allowedDropPositions}
 						<small style="color: #888; margin-left: 0.5rem; font-size: 0.7em;">
@@ -494,7 +494,7 @@ const data = [
 				onNodeDragStart={handleTouchDragStart}
 				onNodeDrop={handleTouchDrop}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
 				{/snippet}
 			</Tree>

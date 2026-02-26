@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getParentPath, getRelativePath, getPathSegments, getLevel } from './ltree-helpers';
+import { getParentPath, getRelativePath, getPathSegments, getLevel } from './ltree-helpers.js';
 
 describe('ltree-helpers', () => {
 	describe('getParentPath', () => {

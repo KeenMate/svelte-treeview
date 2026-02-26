@@ -9,12 +9,12 @@ export { createTreeController } from "./core/createTreeController.js"
 
 // Export types
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
-export type { Ltree, DropPosition, DragDropMode, DropOperation, ContextMenuItem, InsertArrayResult, TreeChange, ApplyChangesResult } from "./ltree/types"
+export type { Ltree, DropPosition, DragDropMode, DropOperation, ContextMenuItem, InsertArrayResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
 export type { RenderStats } from "./components/RenderCoordinator.svelte"
 export type { NodeCallbacks, NodeConfig } from "./core/TreeController.svelte"
 
 // Export logging utilities
-export { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from "./logger"
+export { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from "./logger.js"
 
 // Export performance logging utilities
 export {
@@ -26,8 +26,8 @@ export {
     perfEnd,
     perfMeasure,
     perfSummary
-} from "./perf-logger"
+} from "./perf-logger.js"
 
 // Export global API type and ensure registration runs
-export type { GlobalTreeviewAPI } from "./global-api"
-import "./global-api"
+export type { GlobalTreeviewAPI } from "./global-api.js"
+import "./global-api.js"

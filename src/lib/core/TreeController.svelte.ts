@@ -744,13 +744,17 @@ export class TreeController<T> {
 	copyNodeWithDescendants(
 		sourceNode: LTreeNode<T>,
 		targetParentPath: string,
-		transformData: (data: T) => T
+		transformData: (data: T) => T,
+		siblingPath?: string,
+		position?: 'before' | 'after'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
 		this._skipInsertArray = true;
 		const result = this.tree?.copyNodeWithDescendants(
 			sourceNode,
 			targetParentPath,
-			transformData
+			transformData,
+			siblingPath,
+			position
 		) || { success: false, count: 0, error: 'Tree not initialized' };
 		tick().then(() => {
 			this._skipInsertArray = false;

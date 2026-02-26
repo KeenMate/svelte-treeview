@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, ContextMenuItem } from '$lib/ltree/types';
+	import type { LTreeNode, ContextMenuItem } from '$lib/ltree/types.js';
 
 	type FileItem = {
 		id: number;
@@ -143,7 +143,7 @@
 				contextMenuCallback={getContextMenu}
 				shouldDisplayContextMenuInDebugMode={debugMode}
 			>
-				{#snippet nodeTemplate(node)}
+				{#snippet nodeTemplate(node: any)}
 					<span>
 						{node.data?.icon} {node.data?.name}
 						{#if node.data?.readonly}

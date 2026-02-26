@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createLTree } from './ltree.svelte';
-import type { LTreeNode } from './ltree-node.svelte';
+import { createLTree } from './ltree.svelte.js';
+import { type LTreeNode, createLTreeNode } from './ltree-node.svelte.js';
 
 describe('LTree Sorting', () => {
 	function createTestLTree() {
@@ -11,13 +11,19 @@ describe('LTree Sorting', () => {
 			undefined, // levelMember
 			undefined, // hasChildrenMember
 			undefined, // isExpandedMember
-			undefined, // isSelectedMember
+			undefined, // isSelectableMember
 			undefined, // isDraggableMember
+			undefined, // getIsDraggableCallback
 			undefined, // isDropAllowedMember
+			undefined, // allowedDropPositionsMember
 			'name', // displayValueMember
 			undefined, // getDisplayValueCallback
 			undefined, // searchValueMember
 			undefined, // getSearchValueCallback
+			undefined, // getAllowedDropPositionsCallback
+			undefined, // isCollapsibleMember
+			undefined, // getIsCollapsibleCallback
+			undefined, // orderMember
 			'test-tree',
 			'.', // treePathSeparator
 			2, // expandLevel
@@ -44,7 +50,7 @@ describe('LTree Sorting', () => {
 			];
 
 			// Convert to LTreeNode format
-			const nodes: LTreeNode<any>[] = testData.map(item => ({
+			const nodes: LTreeNode<any>[] = testData.map(item => createLTreeNode({
 				id: item.id,
 				path: item.path,
 				parentPath: ltree.treePathSeparator === '.' ?
@@ -52,14 +58,7 @@ describe('LTree Sorting', () => {
 					'',
 				pathSegment: item.path.split(ltree.treePathSeparator).pop() || '',
 				level: item.path.split(ltree.treePathSeparator).length,
-				children: {},
 				data: item,
-				isExpanded: false,
-				isSelected: false,
-				isSelectable: true,
-				isDraggable: true,
-				isDropAllowed: true,
-				hasChildren: false,
 				treeId: 'test-tree'
 			}));
 
@@ -88,20 +87,13 @@ describe('LTree Sorting', () => {
 				{ id: '1.2', path: '1.2', name: 'Beta' }
 			];
 
-			const nodes: LTreeNode<any>[] = testData.map(item => ({
+			const nodes: LTreeNode<any>[] = testData.map(item => createLTreeNode({
 				id: item.id,
 				path: item.path,
 				parentPath: '1',
 				pathSegment: item.path.split('.').pop() || '',
 				level: 2,
-				children: {},
 				data: item,
-				isExpanded: false,
-				isSelected: false,
-				isSelectable: true,
-				isDraggable: true,
-				isDropAllowed: true,
-				hasChildren: false,
 				treeId: 'test-tree'
 			}));
 
@@ -119,20 +111,13 @@ describe('LTree Sorting', () => {
 				{ id: '1', path: '1', name: 'Root' }
 			];
 
-			const nodes: LTreeNode<any>[] = testData.map(item => ({
+			const nodes: LTreeNode<any>[] = testData.map(item => createLTreeNode({
 				id: item.id,
 				path: item.path,
 				parentPath: item.path === '1' ? '' : '1',
 				pathSegment: item.path.split('.').pop() || '',
 				level: item.path.split('.').length,
-				children: {},
 				data: item,
-				isExpanded: false,
-				isSelected: false,
-				isSelectable: true,
-				isDraggable: true,
-				isDropAllowed: true,
-				hasChildren: false,
 				treeId: 'test-tree'
 			}));
 
@@ -162,22 +147,15 @@ describe('LTree Sorting', () => {
 
 			const nodes: LTreeNode<any>[] = testData.map(item => {
 				const segments = item.path.split('.');
-				return {
+				return createLTreeNode({
 					id: item.id,
 					path: item.path,
 					parentPath: segments.length > 1 ? segments.slice(0, -1).join('.') : '',
 					pathSegment: segments[segments.length - 1],
 					level: segments.length,
-					children: {},
 					data: item,
-					isExpanded: false,
-					isSelected: false,
-					isSelectable: true,
-					isDraggable: true,
-					isDropAllowed: true,
-					hasChildren: false,
 					treeId: 'test-tree'
-				};
+				});
 			});
 
 			const sorted = ltree._defaultSort(ltree, nodes);
@@ -229,28 +207,21 @@ describe('LTree Sorting', () => {
 
 			const nodes: LTreeNode<any>[] = testData.map(item => {
 				const segments = item.path.split('.');
-				return {
+				return createLTreeNode({
 					id: item.id,
 					path: item.path,
 					parentPath: segments.length > 1 ? segments.slice(0, -1).join('.') : '',
 					pathSegment: segments[segments.length - 1],
 					level: segments.length,
-					children: {},
 					data: item,
-					isExpanded: false,
-					isSelected: false,
-					isSelectable: true,
-					isDraggable: true,
-					isDropAllowed: true,
-					hasChildren: false,
 					treeId: 'test-tree'
-				};
+				});
 			});
 
 			const sorted = ltree._defaultSort(ltree, nodes);
 
 			// Verify that all level 1 nodes come before level 2 nodes
-			const levels = sorted.map(node => node.level);
+			const levels = sorted.map(node => node.level!);
 			let currentLevel = 1;
 			for (const level of levels) {
 				expect(level).toBeGreaterThanOrEqual(currentLevel);

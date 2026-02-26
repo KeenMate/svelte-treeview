@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode } from '$lib/ltree/types';
+	import type { LTreeNode } from '$lib/ltree/types.js';
 	import { untrack } from 'svelte';
 
 	type LocationItem = {
@@ -342,7 +342,7 @@
 						searchValueMember="name"
 						bind:searchText={searchText}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span class="location-node">
 								<span class="location-name">{node.data?.name}</span>
 								{#if node.data?.population}
@@ -384,7 +384,7 @@
 		</div>
 
 		<div class="code-block">
-			<pre>{`<script>
+			<pre>{`${"<"}script>
   let searchText = $state('');
   let treeRef;
   let results = $state([]);
@@ -399,7 +399,7 @@
     currentIndex = (currentIndex + 1) % results.length;
     treeRef.scrollToPath(results[currentIndex].path);
   }
-</script>
+${"<"}/script>
 
 <input bind:value={searchText} />
 <button on:click={goToNext}>Next</button>

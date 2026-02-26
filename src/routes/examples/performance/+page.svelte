@@ -572,7 +572,7 @@
               renderStats = stats;
             }}
           >
-            {#snippet nodeTemplate(node)}
+            {#snippet nodeTemplate(node: any)}
               <span>{node.data?.name ?? node.path}</span>
             {/snippet}
           </Tree>

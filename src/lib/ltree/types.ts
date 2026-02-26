@@ -1,8 +1,8 @@
 import type { Index, SearchOptions } from 'flexsearch';
-import type { LTreeNode, DropPosition } from './ltree-node.svelte';
+import type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 
 // Re-export LTreeNode and DropPosition for convenience
-export type { LTreeNode, DropPosition } from './ltree-node.svelte';
+export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 
 export type Tuple<T, U> = [T, U];
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
@@ -94,7 +94,7 @@ export interface Ltree<T> {
 	get tree(): LTreeNode<T>[];
 	/** Flat array of all visible nodes in render order (depth-first, respects isExpanded) */
 	get visibleFlatNodes(): LTreeNode<T>[];
-	get statistics(): { nodeCount: number; maxLevel: number };
+	get statistics(): { nodeCount: number; maxLevel: number; filteredNodeCount: number; isIndexing: boolean; pendingIndexCount: number };
 
 	insertArray(data: T[]): InsertArrayResult<T>;
 

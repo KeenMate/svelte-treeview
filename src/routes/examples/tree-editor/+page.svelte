@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode } from '$lib/ltree/types';
+	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
 
 	interface EditorNode {
 		id: number;
@@ -163,7 +163,7 @@
 		}
 	}
 
-	async function beforeDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent): Promise<boolean | { position: string } | void> {
+	async function beforeDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent): Promise<boolean | { position: DropPosition } | void> {
 		const isFolder = (node: LTreeNode<EditorNode> | null) =>
 			node?.data?.icon?.includes('📁') || node?.data?.icon?.includes('📂');
 		const isImage = (node: LTreeNode<EditorNode> | null) =>
@@ -187,7 +187,7 @@
 			}
 			if (choice === 'sibling') {
 				addLog(`User chose to drop as sibling of "${dropNode.data?.name}"`);
-				return { position: 'after' as const };
+				return { position: 'after' as DropPosition };
 			}
 		}
 
@@ -302,7 +302,7 @@
 						{dropZoneStart}
 						{dropZoneMaxWidth}
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span class:selected-node={selectedNode?.path === node.path}>
 								{node.data?.icon} {node.data?.name}
 							</span>
@@ -524,7 +524,7 @@
   onNodeDrop={handleDrop}
   bind:selectedNode
 >
-  {#snippet nodeTemplate(node)}
+  {#snippet nodeTemplate(node: any)}
     <span>{node.data?.name}</span>
   {/snippet}
 </Tree>`}</pre>

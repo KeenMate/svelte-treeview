@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from '$lib/logger';
-  import { initLogger, dataLogger, renderLogger, indexLogger, dragLogger, uiLogger } from '$lib/logger';
-  import { enablePerfLogging, disablePerfLogging, setPerfThreshold, isPerfLoggingEnabled, perfStart, perfEnd } from '$lib/perf-logger';
+  import { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from '$lib/logger.js';
+  import { initLogger, dataLogger, renderLogger, indexLogger, dragLogger, uiLogger } from '$lib/logger.js';
+  import { enablePerfLogging, disablePerfLogging, setPerfThreshold, isPerfLoggingEnabled, perfStart, perfEnd } from '$lib/perf-logger.js';
   // Import global API to register window.components
-  import '$lib/global-api';
+  import '$lib/global-api.js';
 
   let currentLevel = $state('silent');
   let categoryLevels = $state<Record<string, string>>(
@@ -16,12 +16,12 @@
 
   function handleGlobalLevel(level: string) {
     currentLevel = level;
-    setLogLevel(level);
+    setLogLevel(level as any);
   }
 
   function handleCategoryLevel(category: string, level: string) {
     categoryLevels[category] = level;
-    setCategoryLevel(category, level);
+    setCategoryLevel(category as any, level as any);
   }
 
   function enableAll() {

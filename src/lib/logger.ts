@@ -28,10 +28,9 @@
  */
 
 // Import vendored libraries via ES module wrappers
-// @ts-ignore - Vendored library without type definitions
 import log from './vendor/loglevel/index.js';
-// @ts-ignore - Vendored library without type definitions
 import prefix from './vendor/loglevel/prefix.js';
+import type { Logger } from './vendor/loglevel/index.js';
 
 // Define color scheme
 const COLORS: Record<string, string> = {
@@ -93,15 +92,15 @@ function createColorMethodFactory(originalFactory: any) {
 }
 
 // Create category-specific loggers
-export const initLogger = log.getLogger('LTREE:INIT');
-export const dataLogger = log.getLogger('LTREE:DATA');
-export const renderLogger = log.getLogger('LTREE:RENDER');
-export const indexLogger = log.getLogger('LTREE:INDEX');
-export const dragLogger = log.getLogger('LTREE:DRAG');
-export const uiLogger = log.getLogger('LTREE:UI');
+export const initLogger: Logger = log.getLogger('LTREE:INIT');
+export const dataLogger: Logger = log.getLogger('LTREE:DATA');
+export const renderLogger: Logger = log.getLogger('LTREE:RENDER');
+export const indexLogger: Logger = log.getLogger('LTREE:INDEX');
+export const dragLogger: Logger = log.getLogger('LTREE:DRAG');
+export const uiLogger: Logger = log.getLogger('LTREE:UI');
 
 // Apply prefix and color styling to all category loggers
-const allLoggers = [
+const allLoggers: Logger[] = [
     initLogger,
     dataLogger,
     renderLogger,
@@ -168,7 +167,7 @@ export const setCategoryLevel = (
     category: 'LTREE:INIT' | 'LTREE:DATA' | 'LTREE:RENDER' | 'LTREE:INDEX' | 'LTREE:DRAG' | 'LTREE:UI',
     level: 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'silent' = 'debug'
 ) => {
-    const loggerMap: Record<string, typeof initLogger> = {
+    const loggerMap: Record<string, Logger> = {
         'LTREE:INIT': initLogger,
         'LTREE:DATA': dataLogger,
         'LTREE:RENDER': renderLogger,

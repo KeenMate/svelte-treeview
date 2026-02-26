@@ -15,6 +15,11 @@ import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
 import { perfStart, perfEnd, perfSummary } from '../perf-logger.js';
 
+/** Helper to safely access a property on a generic data item using a string member name */
+function getField(item: unknown, member: string): any {
+	return (item as Record<string, unknown>)[member];
+}
+
 export function createLTree<T>(
 	_idMember: string,
 	_pathMember: string,
@@ -33,7 +38,7 @@ export function createLTree<T>(
 	_searchValueMember?: string | null | undefined,
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
-	_getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('./types').DropPosition[] | null | undefined,
+	_getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('./types.js').DropPosition[] | null | undefined,
 
 	_isCollapsibleMember?: string | null | undefined,
 	_getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean,
@@ -101,7 +106,7 @@ export function createLTree<T>(
 			_getSearchValueCallback,
 			_indexerBatchSize || 25, // batch size with fallback
 			_indexerTimeout || 50, // timeout with fallback
-			opts.shouldDisplayDebugInformation
+			opts?.shouldDisplayDebugInformation ?? false
 		);
 	}
 
@@ -109,6 +114,7 @@ export function createLTree<T>(
 		// Properties
 		treePathSeparator: _treePathSeparator || '.',
 		root,
+		filteredRoot,
 		get changeTracker() {
 			return changeTracker;
 		},
@@ -133,6 +139,7 @@ export function createLTree<T>(
 		getIsCollapsibleCallback: _getIsCollapsibleCallback,
 		orderMember: _orderMember,
 		isSorted: false,
+		shouldDisplayDebugInformation: opts?.shouldDisplayDebugInformation ?? false,
 
 		// Properties for filtering
 		filteredTree,
@@ -184,7 +191,7 @@ export function createLTree<T>(
 			function traverse(node: LTreeNode<T>) {
 				// Get children and optionally sort them
 				let children = Object.values(node.children);
-				if (self.isSorted && children.length > 0) {
+				if (self.isSorted && self.sortCallback && children.length > 0) {
 					children = self.sortCallback(children);
 				}
 
@@ -236,29 +243,29 @@ export function createLTree<T>(
 
 			let mappedData = data.map((row, index) => {
 				const node = createLTreeNode<T>();
-				node.treeId = _treeId;
-				node.id = _idMember ? row[_idMember] : undefined;
-				node.path = _pathMember ? row[_pathMember] : undefined;
+				node.treeId = _treeId || '';
+				node.id = _idMember ? getField(row, _idMember) : undefined;
+				node.path = _pathMember ? getField(row, _pathMember) : '';
 
 				if (shouldCalculateParentPath) {
 					node.parentPath = getParentPath(node.path, this.treePathSeparator);
-				} else node.parentPath = row[_parentPathMember];
+				} else node.parentPath = getField(row, _parentPathMember!);
 
-				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath, this.treePathSeparator), 0, 1, this.treePathSeparator);
+				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator), 0, 1, this.treePathSeparator);
 
-				if (!shouldCalculateLevel) node.level = row[_levelMember];
+				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
-				if (!shouldCalculateIsExpanded) node.isExpanded = row[_isExpandedMember];
-				else if (_expandLevel) node.isExpanded = node.level <= _expandLevel;
+				if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
-				if (!shouldCalculateIsSelectable) node.isSelectable = row[_isSelectableMember];
-				if (!shouldCalculateIsDraggable) node.isDraggable = row[_isDraggableMember];
-				if (!shouldCalculateIsCollapsible) node.isCollapsible = row[_isCollapsibleMember];
-				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = row[_isDropAllowedMember];
-				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = row[_allowedDropPositionsMember];
+				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
+				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
+				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
+				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
 
-				if (!shouldCalculateHasChildren) node.hasChildren = row[_hasChildrenMember];
+				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
 
 				node.data = row;
 				return node;
@@ -295,7 +302,7 @@ export function createLTree<T>(
 			}
 
 			mappedData.forEach((node, index) => {
-				const result = this.insertTreeNode(node.parentPath, node, true);
+				const result = this.insertTreeNode(node.parentPath ?? '', node, true);
 				if (result) {
 					failedNodes.push({
 						node: node,
@@ -351,7 +358,7 @@ export function createLTree<T>(
 			const insertTime = perfEnd(`[${_treeId}] insertArray:insert`, data.length);
 
 			// Log performance summary
-			perfSummary(_treeId, {
+			perfSummary(_treeId || 'unknown', {
 				'Conversion': conversionTime,
 				'Sort': sortTime,
 				'Insert': insertTime
@@ -414,7 +421,7 @@ export function createLTree<T>(
 
 			perfStart(`[${_treeId}] filterNodes:search`);
 			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
-			const foundPaths = resultIndices.map((row) => flatTreeNodes[row].path);
+			const foundPaths = resultIndices.map((row) => flatTreeNodes[row as number].path);
 			perfEnd(`[${_treeId}] filterNodes:search`, resultIndices.length);
 
 			this.createFilteredTree(foundPaths);
@@ -430,7 +437,7 @@ export function createLTree<T>(
 			}
 
 			const resultIndices = searchIndex!.search(_searchText!, _searchOptions);
-			const foundNodes = resultIndices.map((row) => flatTreeNodes[row]);
+			const foundNodes = resultIndices.map((row) => flatTreeNodes[row as number]);
 
 			return foundNodes;
 		},
@@ -666,7 +673,7 @@ export function createLTree<T>(
 		},
 
 		getNodeDisplayValue(node: LTreeNode<T>): string {
-			if (!shouldCalculateDisplayValue) return node.data[_displayValueMember];
+			if (!shouldCalculateDisplayValue && node.data) return getField(node.data, _displayValueMember!);
 
 			if (this.getDisplayValueCallback) return this.getDisplayValueCallback(node);
 
@@ -674,21 +681,21 @@ export function createLTree<T>(
 		},
 
 		getNodeSearchValue(node: LTreeNode<T>): string {
-			if (!shouldCalculateSearchValue) return node.data[_searchValueMember];
+			if (!shouldCalculateSearchValue && node.data) return getField(node.data, _searchValueMember!);
 
 			if (this.getSearchValueCallback) return this.getSearchValueCallback(node);
 
 			return '[N/A]';
 		},
 
-		getNodeAllowedDropPositions(node: LTreeNode<T>): import('./types').DropPosition[] | null | undefined {
+		getNodeAllowedDropPositions(node: LTreeNode<T>): import('./types.js').DropPosition[] | null | undefined {
 			// Priority: callback > member > node property
 			if (this.getAllowedDropPositionsCallback) {
 				return this.getAllowedDropPositionsCallback(node);
 			}
 
 			if (!shouldCalculateAllowedDropPositions && node.data) {
-				return node.data[_allowedDropPositionsMember];
+				return getField(node.data, _allowedDropPositionsMember!);
 			}
 
 			return node.allowedDropPositions;
@@ -696,13 +703,13 @@ export function createLTree<T>(
 
 		getNodeIsDraggable(node: LTreeNode<T>): boolean {
 			if (this.getIsDraggableCallback) return this.getIsDraggableCallback(node);
-			if (!shouldCalculateIsDraggable && node.data) return node.data[_isDraggableMember];
+			if (!shouldCalculateIsDraggable && node.data) return getField(node.data, _isDraggableMember!);
 			return node.isDraggable;
 		},
 
 		getNodeIsCollapsible(node: LTreeNode<T>): boolean {
 			if (this.getIsCollapsibleCallback) return this.getIsCollapsibleCallback(node);
-			if (!shouldCalculateIsCollapsible && node.data) return node.data[_isCollapsibleMember];
+			if (!shouldCalculateIsCollapsible && node.data) return getField(node.data, _isCollapsibleMember!);
 			return node.isCollapsible;
 		},
 
@@ -761,8 +768,8 @@ export function createLTree<T>(
 				sorted = [...children].sort((a, b) => {
 					// If orderMember is provided, use it
 					if (this.orderMember && a.data && b.data) {
-						const aOrder = a.data[this.orderMember] ?? 0;
-						const bOrder = b.data[this.orderMember] ?? 0;
+						const aOrder = getField(a.data, this.orderMember) ?? 0;
+						const bOrder = getField(b.data, this.orderMember) ?? 0;
 						if (aOrder !== bOrder) {
 							return aOrder - bOrder;
 						}
@@ -889,27 +896,28 @@ export function createLTree<T>(
 
 			// If orderMember is defined and position is before/after, calculate order
 			if (this.orderMember && position !== 'child' && sourceNode.data) {
+				const om = this.orderMember;
 				const siblings = Object.values(newParent.children) as LTreeNode<T>[];
-				const targetOrder = targetNode.data?.[this.orderMember] ?? 0;
+				const targetOrder = (targetNode.data ? getField(targetNode.data, om) : 0) ?? 0;
 
 				if (position === 'before') {
 					// Find order value just before target
 					const siblingOrders = siblings
-						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
-						.map(s => s.data![this.orderMember] as number)
+						.filter(s => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
+						.map(s => getField(s.data!, om) as number)
 						.filter(o => o < targetOrder)
 						.sort((a, b) => b - a);
 					const prevOrder = siblingOrders[0] ?? targetOrder - 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((prevOrder + targetOrder) / 2);
+					(sourceNode.data as any)[om] = Math.floor((prevOrder + targetOrder) / 2);
 				} else {
 					// Find order value just after target
 					const siblingOrders = siblings
-						.filter(s => s !== sourceNode && s.data?.[this.orderMember] !== undefined)
-						.map(s => s.data![this.orderMember] as number)
+						.filter(s => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
+						.map(s => getField(s.data!, om) as number)
 						.filter(o => o > targetOrder)
 						.sort((a, b) => a - b);
 					const nextOrder = siblingOrders[0] ?? targetOrder + 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((targetOrder + nextOrder) / 2);
+					(sourceNode.data as any)[om] = Math.floor((targetOrder + nextOrder) / 2);
 				}
 			}
 
@@ -1011,8 +1019,11 @@ export function createLTree<T>(
 				pathSegment = id?.toString() || `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 			}
 
+			// At this point pathSegment is guaranteed to be a string
+			const segment: string = pathSegment!;
+
 			// Calculate full path
-			const newPath = parentPath ? `${parentPath}${this.treePathSeparator}${pathSegment}` : pathSegment;
+			const newPath: string = parentPath ? `${parentPath}${this.treePathSeparator}${segment}` : segment;
 
 			// Check if path already exists
 			if (this.getNodeByPath(newPath)) {
@@ -1021,10 +1032,10 @@ export function createLTree<T>(
 
 			// Create the node
 			const newNode = createLTreeNode<T>();
-			newNode.treeId = _treeId;
+			newNode.treeId = _treeId || '';
 			newNode.id = _idMember && data ? (data as any)[_idMember] : undefined;
 			newNode.path = newPath;
-			newNode.pathSegment = pathSegment;
+			newNode.pathSegment = segment;
 			newNode.parentPath = parentPath || null;
 			newNode.level = getLevel(newPath, this.treePathSeparator);
 			newNode.data = data;
@@ -1099,7 +1110,7 @@ export function createLTree<T>(
 		 * @param changes - Array of create/update/delete operations
 		 * @returns Object with count of successful operations and array of failures
 		 */
-		applyChanges(changes: import('./types').TreeChange<T>[]): import('./types').ApplyChangesResult {
+		applyChanges(changes: import('./types.js').TreeChange<T>[]): import('./types.js').ApplyChangesResult {
 			const failures: Array<{ index: number; operation: string; path: string; error: string }> = [];
 			let successCount = 0;
 
@@ -1225,26 +1236,27 @@ export function createLTree<T>(
 					const parent = targetParentPath ? this.getNodeByPath(targetParentPath) : root;
 					if (parent) {
 						const siblings = Object.values(parent.children) as LTreeNode<T>[];
-						const siblingOrder = siblingNode.data?.[this.orderMember] ?? 0;
+						const oKey = this.orderMember!;
+						const siblingOrder = (siblingNode.data as any)?.[oKey] ?? 0;
 
 						if (position === 'before') {
 							// Find order value just before sibling
 							const siblingOrders = siblings
-								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
-								.map(s => s.data![this.orderMember] as number)
+								.filter(s => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
+								.map(s => (s.data as any)[oKey] as number)
 								.filter(o => o < siblingOrder)
 								.sort((a, b) => b - a);
 							const prevOrder = siblingOrders[0] ?? siblingOrder - 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((prevOrder + siblingOrder) / 2);
+							(rootNode.data as any)[oKey] = Math.floor((prevOrder + siblingOrder) / 2);
 						} else {
 							// Find order value just after sibling
 							const siblingOrders = siblings
-								.filter(s => s !== rootNode && s.data?.[this.orderMember] !== undefined)
-								.map(s => s.data![this.orderMember] as number)
+								.filter(s => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
+								.map(s => (s.data as any)[oKey] as number)
 								.filter(o => o > siblingOrder)
 								.sort((a, b) => a - b);
 							const nextOrder = siblingOrders[0] ?? siblingOrder + 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((siblingOrder + nextOrder) / 2);
+							(rootNode.data as any)[oKey] = Math.floor((siblingOrder + nextOrder) / 2);
 						}
 
 						// Re-sort siblings
@@ -1324,15 +1336,15 @@ export function createLTree<T>(
 
 				// Then sort by parent path
 				if (a.parentPath !== b.parentPath) {
-					if (a.parentPath === '') return -1;
-					if (b.parentPath === '') return 1;
-					return a.parentPath.localeCompare(b.parentPath);
+					if (!a.parentPath) return -1;
+					if (!b.parentPath) return 1;
+					return a.parentPath.localeCompare(b.parentPath!);
 				}
 
 				// If orderMember is provided, use it for sibling ordering
 				if (self.orderMember && a.data && b.data) {
-					const aOrder = a.data[self.orderMember] ?? 0;
-					const bOrder = b.data[self.orderMember] ?? 0;
+					const aOrder = (a.data as any)[self.orderMember] ?? 0;
+					const bOrder = (b.data as any)[self.orderMember] ?? 0;
 					if (aOrder !== bOrder) {
 						return aOrder - bOrder;
 					}

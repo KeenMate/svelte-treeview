@@ -160,7 +160,7 @@ export class Indexer<T> {
 	private indexItem(item: { node: LTreeNode<T>; index: number }): void {
 		// Type-safe indexing - customize based on your item structure
 		const searchValue = !this.shouldCalculateSearchValue
-			? this.searchValueMember && item.node.data[this.searchValueMember]?.toString()
+			? this.searchValueMember && (item.node.data as any)?.[this.searchValueMember]?.toString()
 			: this.getSearchValueCallback && this.getSearchValueCallback(item.node);
 
 		if (isNotEmptyString(searchValue)) {

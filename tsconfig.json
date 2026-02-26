@@ -11,5 +11,8 @@
 		"strict": true,
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext"
-	}
+	},
+	"exclude": [
+		"src/lib/vendor/**"
+	]
 }

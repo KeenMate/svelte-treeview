@@ -11,7 +11,7 @@
 	// Callbacks and config come from context, drag state comes as props
 	interface Props {
 		node: LTreeNode<T>;
-		children?: Snippet<[T]>; // Keep the general children slot for backward compatibility
+		children?: Snippet<[LTreeNode<T>]>; // Keep the general children slot for backward compatibility
 
 		// Progressive rendering
 		progressiveRender?: boolean;

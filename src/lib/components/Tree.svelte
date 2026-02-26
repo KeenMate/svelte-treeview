@@ -446,9 +446,11 @@
 	export function copyNodeWithDescendants(
 		sourceNode: LTreeNode<T>,
 		targetParentPath: string,
-		transformData: (data: T) => T
+		transformData: (data: T) => T,
+		siblingPath?: string,
+		position?: 'before' | 'after'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
-		return controller.copyNodeWithDescendants(sourceNode, targetParentPath, transformData);
+		return controller.copyNodeWithDescendants(sourceNode, targetParentPath, transformData, siblingPath, position);
 	}
 
 	export function getExpandedPaths(): string[] {

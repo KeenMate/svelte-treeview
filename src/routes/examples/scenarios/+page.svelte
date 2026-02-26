@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types';
+	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types.js';
 
 	type ScenarioNode = {
 		id: number;
@@ -644,7 +644,7 @@
 						expandLevel={3}
 						dragDropMode="cross"
 					>
-						{#snippet nodeTemplate(node)}
+						{#snippet nodeTemplate(node: any)}
 							<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 						{/snippet}
 					</Tree>
@@ -674,7 +674,7 @@
 							onNodeDrop={handleDropA}
 							isLoading={isLoadingA}
 						>
-							{#snippet nodeTemplate(node)}
+							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
 						</Tree>
@@ -692,7 +692,7 @@
 							onNodeDrop={handleDropB}
 							isLoading={isLoadingB}
 						>
-							{#snippet nodeTemplate(node)}
+							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
 						</Tree>
@@ -712,7 +712,7 @@
 							selectedNode={selectedNodeC}
 							isLoading={isLoadingC}
 						>
-							{#snippet nodeTemplate(node)}
+							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
 						</Tree>
@@ -730,7 +730,7 @@
 							onNodeDrop={handleDropD}
 							isLoading={isLoadingD}
 						>
-							{#snippet nodeTemplate(node)}
+							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
 							{#snippet dropPlaceholder()}
@@ -754,7 +754,7 @@
 							onNodeDrop={handleDropE}
 							isLoading={isLoadingE}
 						>
-							{#snippet nodeTemplate(node)}
+							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
 							{#snippet dropPlaceholder()}
