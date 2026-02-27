@@ -346,6 +346,41 @@
     });
   }
 
+  // updateNode test
+  let updateNodePath = $state('');
+  let lastUpdateTime = $state<number | null>(null);
+  let updateCounter = 0;
+
+  function timedUpdateNode() {
+    let targetPath = updateNodePath.trim();
+    if (!targetPath) {
+      // Pick a random node from level 1 or 2
+      const candidates = treeData.filter(n => n.level === 1 || n.level === 2);
+      if (candidates.length === 0) {
+        console.log('[Performance Test] No nodes to update');
+        return;
+      }
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      targetPath = pick.path;
+    }
+
+    updateCounter++;
+    const newName = `UPDATED #${updateCounter} (${new Date().toLocaleTimeString()})`;
+    console.log(`[Performance Test] Updating node: ${targetPath} → "${newName}"`);
+
+    const start = performance.now();
+    const result = treeRef?.updateNode(targetPath, { name: newName });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        lastUpdateTime = performance.now() - start;
+        console.log(`[Performance Test] updateNode (${targetPath}): ${lastUpdateTime.toFixed(2)}ms, success: ${result?.success}`);
+        if (!result?.success) {
+          console.warn(`[Performance Test] updateNode failed: ${result?.error}`);
+        }
+      });
+    });
+  }
+
   // Track previous flat rendering state to detect changes
   let prevFlatRendering = useFlatRendering;
 
@@ -502,6 +537,12 @@
           <span class="label">Expand/Collapse</span>
         </div>
       {/if}
+      {#if lastUpdateTime !== null}
+        <div class="metric expand-time">
+          <span class="value">{lastUpdateTime.toFixed(2)} ms</span>
+          <span class="label">Update Node</span>
+        </div>
+      {/if}
       {#if progressiveRender}
         <div class="metric" class:rendering={isRendering}>
           <span class="value">
@@ -538,6 +579,13 @@
         <button class="btn secondary" onclick={() => treeRef?.expandAll()}>Expand All</button>
         <button class="btn secondary" onclick={() => treeRef?.collapseAll()}>Collapse All</button>
       </div>
+      <div class="tree-controls">
+        <input type="text" bind:value={updateNodePath} placeholder="Node path (empty = random)" class="path-input" />
+        <button class="btn" onclick={timedUpdateNode}>Update Node (timed)</button>
+        {#if lastUpdateTime !== null}
+          <span class="update-time">{lastUpdateTime.toFixed(2)} ms</span>
+        {/if}
+      </div>
       <div class="tree-container tree-container-tall">
         {#key treeKey}
           <Tree
@@ -573,7 +621,7 @@
             }}
           >
             {#snippet nodeTemplate(node)}
-              <span>{node.data?.name ?? node.path}</span>
+              <span class="node-label"><span class="node-path">[{node.path}]</span> {node.data?.name ?? node.path}</span>
             {/snippet}
           </Tree>
         {/key}
@@ -717,6 +765,26 @@
 
   .btn.active {
     background: #48bb78;
+  }
+
+  .path-input {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    width: 220px;
+    font-family: monospace;
+  }
+
+  .update-time {
+    font-weight: 600;
+    color: #48bb78;
+  }
+
+  .node-path {
+    color: #a0aec0;
+    font-size: 0.8em;
+    font-family: monospace;
   }
 
   ol {
