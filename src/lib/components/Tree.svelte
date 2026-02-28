@@ -1488,7 +1488,13 @@
 
 	// Empty tree drop handlers
 	function handleEmptyTreeDragOver(event: DragEvent) {
+		if (dragDropMode === 'none') return;
 		if (event.dataTransfer?.types.includes("application/svelte-treeview")) {
+			// Check mode: for cross-tree drags, only allow if mode permits
+			const isCrossTree = !draggedNode; // If draggedNode is null, it's from another tree
+			if (isCrossTree && dragDropMode === 'self') return;
+			if (!isCrossTree && dragDropMode === 'cross') return;
+
 			event.preventDefault();
 			isDropPlaceholderActive = true;
 			if (event.dataTransfer) {
@@ -1509,12 +1515,18 @@
 	}
 
 	function handleEmptyTreeDrop(event: DragEvent) {
+		if (dragDropMode === 'none') return;
 		event.preventDefault();
 		isDropPlaceholderActive = false;
 
 		const draggedNodeData = event.dataTransfer?.getData('application/svelte-treeview');
 		if (draggedNodeData) {
 			const droppedNode = JSON.parse(draggedNodeData);
+			// Respect dragDropMode for empty tree drops too
+			const isCrossTree = droppedNode?.treeId !== treeId;
+			if (isCrossTree && dragDropMode === 'self') return;
+			if (!isCrossTree && dragDropMode === 'cross') return;
+
 			// Call onNodeDrop with null as dropNode to indicate "root level drop"
 			_handleDrop(null, droppedNode, 'child', event);
 		}

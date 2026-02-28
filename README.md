@@ -680,7 +680,6 @@ Without both requirements, no search indexing will occur.
 | `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
 | `initialBatchSize` | `number` | `20` | First batch size for progressive rendering |
 | `maxBatchSize` | `number` | `500` | Maximum batch size cap |
-| `flatIndentSize` | `string` | `'1.5rem'` | Indentation size per level in flat mode |
 
 #### Drag & Drop Properties
 | Prop | Type | Default | Description |

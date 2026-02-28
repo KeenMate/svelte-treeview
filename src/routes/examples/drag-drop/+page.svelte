@@ -295,6 +295,7 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
+						dragDropMode="both"
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{allowCopy}
@@ -324,6 +325,7 @@
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						expandLevel={3}
+						dragDropMode="both"
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
 						{allowCopy}
@@ -385,6 +387,7 @@
 				sortCallback={sortByOrder}
 				isSorted={true}
 				expandLevel={3}
+				dragDropMode="both"
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
 				{dropZoneLayout}

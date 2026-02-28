@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.7.2] - 2026-02-28
+
+### Changed
+- **Unified visual rendering across all three modes** (recursive, progressive, virtual):
+  - All modes now use the same `--tree-node-indent-per-level` CSS variable for indentation
+  - Removed `flatIndentSize` prop — no longer needed since both modes share the same CSS variable
+  - Inter-node gaps now match exactly between modes (2px only at parent→first-child boundaries)
+  - Removed `will-change: transform` from virtual scroll container (caused sub-pixel rendering shift)
+
+### Fixed
+- **Empty tree drop placeholder ignoring `dragDropMode`**: The empty tree placeholder accepted drops even when `dragDropMode` was `'none'`, `'self'`, or `'cross'`. Now respects the mode setting consistently
+- **Sort order mismatch between rendering modes**: `visibleFlatNodes` had inverted sort logic compared to recursive mode
+- **Drag-drop example missing `dragDropMode`**: Added `dragDropMode="both"` to all trees in the drag-drop example page (required since default changed to `'none'` in v4.7.1)
+
 ## [4.7.1] - 2026-02-17
 
 ### Changed
