@@ -129,6 +129,8 @@ export interface Ltree<T> {
 	getSiblings(path: string): LTreeNode<T>[];
 	refreshSiblings(parentPath: string): void;
 	refreshNode(path: string): void;
+	bumpNodeRev(node: LTreeNode<T>): void;
+	getNodeSignal(id: string): { readonly value: number } | undefined;
 
 	// Tree editor mutation methods
 	moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child'): { success: boolean; error?: string };

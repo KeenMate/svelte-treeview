@@ -4,7 +4,7 @@
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import { createLTree } from '../ltree/ltree.svelte.js';
 	import { type Ltree, type InsertArrayResult, type ContextMenuItem, type DropPosition, type DragDropMode, type DropOperation } from '../ltree/types.js';
-	import { setContext, tick } from 'svelte';
+	import { setContext, tick, untrack } from 'svelte';
 	import { createRenderCoordinator, type RenderCoordinator, type RenderStats } from './RenderCoordinator.svelte.js';
 	import { uiLogger, dragLogger } from '../logger.js';
 	import { perfStart, perfEnd } from '../perf-logger.js';
@@ -71,6 +71,12 @@
 	let flatRenderQueue = $state<string[]>([]);
 	let flatRenderAnimationFrame: number | null = null;
 	let currentBatchSize: number = 0; // Exponential: doubles each batch up to maxBatchSize
+
+	// Virtual scrolling state
+	let vsScrollTop = $state(0);
+	let vsMeasuredRowHeight = $state<number | null>(null);
+	let vsContainerRef = $state<HTMLDivElement | undefined>();
+	let vsDetectedHeight = $state<string | null>(null);
 
 	// Drop placeholder state for empty trees
 	let isDropPlaceholderActive = $state(false);
@@ -151,13 +157,22 @@
 		/**
 		 * Use flat/centralized rendering instead of recursive node rendering.
 		 * This significantly improves performance for large trees by:
-		 * - Removing the {#key changeTracker} block that destroys all nodes on any change
 		 * - Using a single flat loop instead of recursive component instantiation
 		 * - Allowing Svelte's keyed {#each} to efficiently diff only changed nodes
+		 * - Per-node reactive signals for O(1) data-only updates (updateNode, selection)
 		 */
 		useFlatRendering?: boolean;
 		/** Indentation per level in flat rendering mode (CSS value, default: '1.5rem') */
 		flatIndentSize?: string;
+
+		/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
+		virtualScroll?: boolean;
+		/** Explicit row height in px. Auto-measured from first row if not set. */
+		virtualRowHeight?: number;
+		/** Extra rows above/below viewport (default: 5) */
+		virtualOverscan?: number;
+		/** CSS height for scroll container. Auto-detected from parent if not set, fallback 400px. */
+		virtualContainerHeight?: string;
 
 		// DRAG AND DROP
 		dragDropMode?: DragDropMode;
@@ -260,6 +275,12 @@
 		// Flat rendering mode
 		useFlatRendering = true,
 		flatIndentSize = '1.5rem',
+
+		// Virtual scrolling (flat mode only)
+		virtualScroll = false,
+		virtualRowHeight = undefined,
+		virtualOverscan = 5,
+		virtualContainerHeight = undefined,
 
 		// DRAG AND DROP
 		dragDropMode = 'none',
@@ -455,6 +476,65 @@
 			await tick();
 		}
 
+		// Helper: find DOM element and apply highlight
+		const applyHighlight = (elementId: string): boolean => {
+			const element = document.getElementById(elementId);
+			const contentDiv = element?.querySelector('.ltree-node-content') as HTMLElement | null;
+			if (!contentDiv) return false;
+
+			if (currentHighlight) {
+				currentHighlight.element.classList.remove(scrollHighlightClass!);
+				clearTimeout(currentHighlight.timeoutId);
+				currentHighlight = null;
+			}
+			contentDiv.classList.add(scrollHighlightClass!);
+			const timeoutId = setTimeout(() => {
+				contentDiv.classList.remove(scrollHighlightClass!);
+				currentHighlight = null;
+			}, scrollHighlightTimeout);
+			currentHighlight = { element: contentDiv, timeoutId };
+			return true;
+		};
+
+		// Virtual scroll: index-based scrolling instead of DOM query
+		if (vsActive && vsContainerRef) {
+			const nodeIndex = allFlatNodes.findIndex(n => n.path === path);
+			if (nodeIndex === -1) {
+				console.warn(`[Tree ${treeId}] Node not found in flat nodes for path: ${path}`);
+				perfEnd(`[${treeId}] scrollToPath`);
+				return false;
+			}
+
+			// Scroll virtual container to center the node
+			const targetScroll = nodeIndex * vsRowHeight
+				- (vsContainerRef.clientHeight / 2)
+				+ vsRowHeight / 2;
+			vsContainerRef.scrollTo({
+				top: Math.max(0, targetScroll),
+				behavior: scrollOptions?.behavior || 'smooth'
+			});
+
+			// Wait for scroll + re-render — need multiple frames for
+			// rAF-throttled scroll handler → reactive update → DOM render
+			await tick();
+			await new Promise(r => requestAnimationFrame(r));
+			await tick();
+			await new Promise(r => requestAnimationFrame(r));
+
+			if (highlight && scrollHighlightClass) {
+				const elementId = `${treeId}-${node.id}`;
+				if (!applyHighlight(elementId)) {
+					// Element might not be rendered yet — retry after another frame
+					await tick();
+					await new Promise(r => requestAnimationFrame(r));
+					applyHighlight(elementId);
+				}
+			}
+
+			perfEnd(`[${treeId}] scrollToPath`);
+			return true;
+		}
+
 		// Find the DOM element using the generated ID
 		const elementId = `${treeId}-${node.id}`;
 		const element = document.getElementById(elementId);
@@ -485,20 +565,7 @@
 
 		// Highlight the node temporarily if requested
 		if (highlight && scrollHighlightClass) {
-			// Clear previous highlight immediately (for rapid next/prev navigation)
-			if (currentHighlight) {
-				currentHighlight.element.classList.remove(scrollHighlightClass);
-				clearTimeout(currentHighlight.timeoutId);
-				currentHighlight = null;
-			}
-
-			contentDiv.classList.add(scrollHighlightClass);
-			const timeoutId = setTimeout(() => {
-				contentDiv.classList.remove(scrollHighlightClass);
-				currentHighlight = null;
-			}, scrollHighlightTimeout);
-
-			currentHighlight = { element: contentDiv, timeoutId };
+			applyHighlight(elementId);
 		}
 
 		perfEnd(`[${treeId}] scrollToPath`);
@@ -571,6 +638,10 @@
 				| "scrollHighlightClass"
 				| "contextMenuXOffset"
 				| "contextMenuYOffset"
+				| "virtualScroll"
+				| "virtualRowHeight"
+				| "virtualOverscan"
+				| "virtualContainerHeight"
 			>
 		>
 	) {
@@ -621,6 +692,10 @@
 		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
 		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
 		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
+		if (updates.virtualScroll !== undefined) virtualScroll = updates.virtualScroll;
+		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;
+		if (updates.virtualOverscan !== undefined) virtualOverscan = updates.virtualOverscan;
+		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
 	}
 
 	treeId = treeId || generateTreeId();
@@ -747,7 +822,7 @@
 
 	$effect(() => {
 		if (tree && data) {
-			if (_skipInsertArray) {
+			if (untrack(() => _skipInsertArray)) {
 				_skipInsertArray = false; // Reset for next time
 				return;
 			}
@@ -757,6 +832,9 @@
 			flatRenderedIds = new Set();
 			flatRenderQueue = [];
 			currentBatchSize = 0; // Reset exponential batch size
+			// Reset virtual scroll measurements
+			vsMeasuredRowHeight = null;
+			vsDetectedHeight = null;
 			insertResult = tree.insertArray(data);
 		}
 	});
@@ -863,12 +941,77 @@
 		});
 	}
 
-	// Derived: nodes to render in flat mode (filtered by progressive state)
-	const flatNodesToRender = $derived(
+	// Derived: all flat nodes (with progressive render filter if active)
+	const allFlatNodes = $derived(
 		useFlatRendering && progressiveRender
 			? tree?.visibleFlatNodes?.filter(n => flatRenderedIds.has(n.id)) ?? []
 			: tree?.visibleFlatNodes ?? []
 	);
+
+	// Virtual scrolling derived computations
+	const vsRowHeight = $derived(virtualRowHeight ?? vsMeasuredRowHeight ?? 32);
+	const vsActive = $derived(virtualScroll && useFlatRendering);
+	const vsContainerStyle = $derived(
+		virtualContainerHeight ?? vsDetectedHeight ?? '400px'
+	);
+	const vsTotalCount = $derived(allFlatNodes.length);
+	const vsTotalHeight = $derived(vsTotalCount * vsRowHeight);
+	const vsStartIndex = $derived(
+		vsActive
+			? Math.max(0, Math.floor(vsScrollTop / vsRowHeight) - virtualOverscan)
+			: 0
+	);
+	const vsEndIndex = $derived(
+		vsActive
+			? Math.min(vsTotalCount,
+				Math.ceil((vsScrollTop + (vsContainerRef?.clientHeight ?? 0)) / vsRowHeight) + virtualOverscan)
+			: vsTotalCount
+	);
+	const vsOffsetY = $derived(vsStartIndex * vsRowHeight);
+
+	// Final nodes to render — virtual window or all
+	const flatNodesToRender = $derived(
+		vsActive ? allFlatNodes.slice(vsStartIndex, vsEndIndex) : allFlatNodes
+	);
+
+	// Virtual scroll: rAF-throttled scroll handler
+	let vsRafPending = false;
+	function handleVirtualScroll(event: Event) {
+		if (vsRafPending) return;
+		vsRafPending = true;
+		requestAnimationFrame(() => {
+			vsScrollTop = (event.target as HTMLElement).scrollTop;
+			vsRafPending = false;
+		});
+	}
+
+	// Auto-measure row height from first rendered node
+	$effect(() => {
+		if (!vsActive || virtualRowHeight || vsMeasuredRowHeight) return;
+		if (allFlatNodes.length === 0) return;
+		tick().then(() => {
+			if (vsContainerRef) {
+				const firstNode = vsContainerRef.querySelector('.ltree-node');
+				if (firstNode) {
+					const height = firstNode.getBoundingClientRect().height;
+					if (height > 0) vsMeasuredRowHeight = height;
+				}
+			}
+		});
+	});
+
+	// Auto-detect container height from parent element
+	$effect(() => {
+		if (!vsActive || virtualContainerHeight || vsDetectedHeight) return;
+		tick().then(() => {
+			if (vsContainerRef?.parentElement) {
+				const parentHeight = vsContainerRef.parentElement.clientHeight;
+				if (parentHeight > 100) {
+					vsDetectedHeight = parentHeight + 'px';
+				}
+			}
+		});
+	});
 
 	// $inspect("tree change tracker", tree?.changeTracker?.toString());
 
@@ -887,10 +1030,12 @@
 			const previousNode = tree.getNodeByPath(selectedNode.path);
 			if (previousNode) {
 				previousNode.isSelected = false;
+				tree.bumpNodeRev(previousNode);
 			} else selectedNode = null;
 		}
 
 		node.isSelected = true;
+		tree.bumpNodeRev(node);
 		selectedNode = node;
 
 		uiLogger.debug(`Node selected: ${node.path}`, {
@@ -900,10 +1045,7 @@
 		});
 
 		onNodeClicked?.(node);
-
-		// if (!node.hasChildren) {
-		tree.refresh();
-		// }
+		// NO tree.refresh() — fine-grained signals handle re-rendering
 	}
 
 	function _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
@@ -1531,46 +1673,102 @@
 		{#if tree?.root}
 			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 			{#if useFlatRendering}
-				<div class="ltree-tree ltree-flat-mode">
-					{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
-						<Node
-							{node}
-							children={nodeTemplate}
-							progressiveRender={false}
-							isDraggedNode={draggedNode?.path === node.path}
-							{isDragInProgress}
-							hoveredNodeForDropPath={hoveredNodeForDrop?.path}
-							{activeDropPosition}
-							dropOperation={currentDropOperation}
-							flatMode={true}
-							{flatIndentSize}
-						/>
-					{:else}
-						<!-- Empty state when tree has no items -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							class="ltree-empty-state"
-							class:ltree-drop-placeholder={isDropPlaceholderActive}
-							ondragenter={handleEmptyTreeDragOver}
-							ondragover={handleEmptyTreeDragOver}
-							ondragleave={handleEmptyTreeDragLeave}
-							ondrop={handleEmptyTreeDrop}
-							ontouchend={handleEmptyTreeTouchEnd}
-						>
-							{#if isDropPlaceholderActive}
-								{#if dropPlaceholder}
-									{@render dropPlaceholder()}
+				{#if vsActive}
+					<!-- Virtual scrolling mode -->
+					<div
+						class="ltree-tree ltree-flat-mode ltree-virtual-scroll"
+						style="height: {vsContainerStyle}; overflow-y: auto;"
+						bind:this={vsContainerRef}
+						onscroll={handleVirtualScroll}
+					>
+						<!-- Spacer for correct scrollbar -->
+						<div style="height: {vsTotalHeight}px; position: relative;">
+							<!-- Rendered window at correct offset -->
+							<div style="transform: translateY({vsOffsetY}px);">
+								{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+									<Node
+										{node}
+										children={nodeTemplate}
+										progressiveRender={false}
+										isDraggedNode={draggedNode?.path === node.path}
+										{isDragInProgress}
+										hoveredNodeForDropPath={hoveredNodeForDrop?.path}
+										{activeDropPosition}
+										dropOperation={currentDropOperation}
+										flatMode={true}
+										{flatIndentSize}
+									/>
 								{:else}
-									<div class="ltree-drop-placeholder-content">
-										Drop here to add
+									<!-- Empty state when tree has no items -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div
+										class="ltree-empty-state"
+										class:ltree-drop-placeholder={isDropPlaceholderActive}
+										ondragenter={handleEmptyTreeDragOver}
+										ondragover={handleEmptyTreeDragOver}
+										ondragleave={handleEmptyTreeDragLeave}
+										ondrop={handleEmptyTreeDrop}
+										ontouchend={handleEmptyTreeTouchEnd}
+									>
+										{#if isDropPlaceholderActive}
+											{#if dropPlaceholder}
+												{@render dropPlaceholder()}
+											{:else}
+												<div class="ltree-drop-placeholder-content">
+													Drop here to add
+												</div>
+											{/if}
+										{:else}
+											{@render noDataFound?.()}
+										{/if}
 									</div>
-								{/if}
-							{:else}
-								{@render noDataFound?.()}
-							{/if}
+								{/each}
+							</div>
 						</div>
-					{/each}
-				</div>
+					</div>
+				{:else}
+					<!-- Non-virtual flat rendering -->
+					<div class="ltree-tree ltree-flat-mode">
+						{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+							<Node
+								{node}
+								children={nodeTemplate}
+								progressiveRender={false}
+								isDraggedNode={draggedNode?.path === node.path}
+								{isDragInProgress}
+								hoveredNodeForDropPath={hoveredNodeForDrop?.path}
+								{activeDropPosition}
+								dropOperation={currentDropOperation}
+								flatMode={true}
+								{flatIndentSize}
+							/>
+						{:else}
+							<!-- Empty state when tree has no items -->
+							<!-- svelte-ignore a11y_no_static_element_interactions -->
+							<div
+								class="ltree-empty-state"
+								class:ltree-drop-placeholder={isDropPlaceholderActive}
+								ondragenter={handleEmptyTreeDragOver}
+								ondragover={handleEmptyTreeDragOver}
+								ondragleave={handleEmptyTreeDragLeave}
+								ondrop={handleEmptyTreeDrop}
+								ontouchend={handleEmptyTreeTouchEnd}
+							>
+								{#if isDropPlaceholderActive}
+									{#if dropPlaceholder}
+										{@render dropPlaceholder()}
+									{:else}
+										<div class="ltree-drop-placeholder-content">
+											Drop here to add
+										</div>
+									{/if}
+								{:else}
+									{@render noDataFound?.()}
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			{:else}
 				<!-- Recursive rendering mode: uses {#key} block for forced re-renders -->
 				{#key tree.changeTracker}

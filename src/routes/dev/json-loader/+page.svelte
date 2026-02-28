@@ -22,7 +22,10 @@
 		useFlatRendering: true,
 		progressiveRender: true,
 		initialBatchSize: 20,
-		maxBatchSize: 500
+		maxBatchSize: 500,
+		virtualScroll: false,
+		virtualContainerHeight: '500px',
+		virtualOverscan: 5
 	};
 
 	// Configuration state - Mappings
@@ -46,6 +49,9 @@
 	let progressiveRender = $state(defaultConfig.progressiveRender);
 	let initialBatchSize = $state(defaultConfig.initialBatchSize);
 	let maxBatchSize = $state(defaultConfig.maxBatchSize);
+	let virtualScroll = $state(defaultConfig.virtualScroll);
+	let virtualContainerHeight = $state(defaultConfig.virtualContainerHeight);
+	let virtualOverscan = $state(defaultConfig.virtualOverscan);
 
 	// Data state
 	let jsonData = $state<any[]>([]);
@@ -78,6 +84,9 @@
 				progressiveRender = config.progressiveRender ?? defaultConfig.progressiveRender;
 				initialBatchSize = config.initialBatchSize ?? defaultConfig.initialBatchSize;
 				maxBatchSize = config.maxBatchSize ?? defaultConfig.maxBatchSize;
+				virtualScroll = config.virtualScroll ?? defaultConfig.virtualScroll;
+				virtualContainerHeight = config.virtualContainerHeight ?? defaultConfig.virtualContainerHeight;
+				virtualOverscan = config.virtualOverscan ?? defaultConfig.virtualOverscan;
 			}
 		} catch (e) {
 			console.warn('Failed to load config from localStorage', e);
@@ -90,7 +99,8 @@
 				idMember, pathMember, parentPathMember, levelMember,
 				hasChildrenMember, isExpandedMember, orderMember, treePathSeparator,
 				displayMember, sortMember, expandLevel, isSorted,
-				useFlatRendering, progressiveRender, initialBatchSize, maxBatchSize
+				useFlatRendering, progressiveRender, initialBatchSize, maxBatchSize,
+				virtualScroll, virtualContainerHeight, virtualOverscan
 			};
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 		} catch (e) {
@@ -116,6 +126,9 @@
 		progressiveRender = defaultConfig.progressiveRender;
 		initialBatchSize = defaultConfig.initialBatchSize;
 		maxBatchSize = defaultConfig.maxBatchSize;
+		virtualScroll = defaultConfig.virtualScroll;
+		virtualContainerHeight = defaultConfig.virtualContainerHeight;
+		virtualOverscan = defaultConfig.virtualOverscan;
 	}
 
 	function redrawTree() {
@@ -130,7 +143,8 @@
 		// Touch all config values to track them
 		void [idMember, pathMember, parentPathMember, levelMember, hasChildrenMember,
 			isExpandedMember, orderMember, treePathSeparator, displayMember, sortMember,
-			expandLevel, isSorted, useFlatRendering, progressiveRender, initialBatchSize, maxBatchSize];
+			expandLevel, isSorted, useFlatRendering, progressiveRender, initialBatchSize, maxBatchSize,
+			virtualScroll, virtualContainerHeight, virtualOverscan];
 		saveConfigToStorage();
 	});
 
@@ -474,6 +488,13 @@
 
 			<div class="form-group">
 				<label class="checkbox-label">
+					<input type="checkbox" bind:checked={virtualScroll} disabled={!useFlatRendering} />
+					Virtual Scroll
+				</label>
+			</div>
+
+			<div class="form-group">
+				<label class="checkbox-label">
 					<input type="checkbox" bind:checked={progressiveRender} />
 					Progressive Render
 				</label>
@@ -488,6 +509,18 @@
 				<label for="maxBatchSize">Max Batch</label>
 				<input type="number" id="maxBatchSize" bind:value={maxBatchSize} min="100" max="2000" step="100" style="width: 80px" />
 			</div>
+
+			{#if virtualScroll}
+				<div class="form-group">
+					<label for="virtualContainerHeight">Container Height</label>
+					<input type="text" id="virtualContainerHeight" bind:value={virtualContainerHeight} style="width: 80px" />
+				</div>
+
+				<div class="form-group">
+					<label for="virtualOverscan">Overscan</label>
+					<input type="number" id="virtualOverscan" bind:value={virtualOverscan} min="0" max="50" step="1" style="width: 80px" />
+				</div>
+			{/if}
 		</div>
 
 		{#if availableMembers.length > 0}
@@ -596,7 +629,7 @@
 				<button class="btn secondary" onclick={() => treeRef?.collapseAll()}>Collapse All</button>
 			</div>
 
-			<div class="tree-container tree-container-tall">
+			<div class="tree-container" class:tree-container-tall={!virtualScroll}>
 				{#key treeKey}
 					<Tree
 						bind:this={treeRef}
@@ -613,6 +646,9 @@
 						{isSorted}
 						{expandLevel}
 						{useFlatRendering}
+						{virtualScroll}
+						{virtualContainerHeight}
+						{virtualOverscan}
 						{progressiveRender}
 						{initialBatchSize}
 						{maxBatchSize}

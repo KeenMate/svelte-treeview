@@ -167,6 +167,7 @@ h1 {
     max-height: 500px;
     overflow-x: visible;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding-top: 2rem;
     padding-bottom: 2rem;
 }

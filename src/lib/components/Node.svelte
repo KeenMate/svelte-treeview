@@ -80,6 +80,11 @@
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
 
+	// Per-node reactive signal — each NodeSignal has its own $state, so
+	// bumping one signal only re-renders THIS Node, not all siblings.
+	const nodeSignal = tree.getNodeSignal(String(node.id));
+	const nodeRev = $derived(nodeSignal?.value ?? 0);
+
 	// Drag over state
 	let isDraggedOver = $state(false);
 
@@ -240,7 +245,8 @@
 			const newState = !node.isExpanded
 			uiLogger.debug(`${newState ? 'Expanding' : 'Collapsing'} node: ${node.path}`)
 			node.isExpanded = newState
-			tree.refresh()
+			tree.bumpNodeRev(node) // re-render expand/collapse icon via {#key nodeRev}
+			tree.refresh() // structural: recompute visibleFlatNodes
 		}
 	}
 
@@ -253,6 +259,7 @@
 	}
 </script>
 
+{#key nodeRev}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="ltree-node"
@@ -420,3 +427,4 @@
 		</div>
 	{/if}
 </div>
+{/key}

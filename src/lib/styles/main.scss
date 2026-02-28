@@ -103,8 +103,16 @@ $body-color: #212529 !default;
 	}
 }
 
+// Virtual scroll container
+.ltree-virtual-scroll {
+	overflow-y: auto !important;
+	overflow-x: visible;
+	overscroll-behavior: contain;
+	will-change: transform;
+}
+
 // Ensure all tree ancestors allow overflow for drop zones
-.ltree-tree,
+.ltree-tree:not(.ltree-virtual-scroll),
 .ltree-node,
 .ltree-node-row,
 .ltree-children {

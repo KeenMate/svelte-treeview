@@ -179,7 +179,9 @@ export class Indexer<T> {
 		indexLogger.info(`[${this.treeId}] Indexing complete. Processed ${this.totalItemsProcessed} items.`);
 
 		if (this.onCompleteCallback) {
-			this.onCompleteCallback();
+			const cb = this.onCompleteCallback;
+			this.onCompleteCallback = undefined;
+			cb();
 		}
 	}
 

@@ -100,6 +100,29 @@ export function createLTree<T>(
 		);
 	}
 
+	// Per-node reactive signals for O(1) fine-grained updates.
+	// Each NodeSignal is an independent $state — bumping one only notifies
+	// the single Node component that reads it. Stored in a plain Map
+	// (not $state) to avoid proxy overhead.
+	class NodeSignal {
+		value = $state(0);
+		bump() { this.value++; }
+	}
+	let nodeSignals = new Map<string, NodeSignal>();
+
+	function _bumpRev(node: LTreeNode<T>): void {
+		node._rev = (node._rev || 0) + 1;
+	}
+
+	function _bumpNodeRev(node: LTreeNode<T>): void {
+		// Signal only — do NOT bump _rev. _rev is part of the {#each} key,
+		// so bumping it would cause {#each} to detect a key change and
+		// destroy/recreate the component (O(n) diffing). We only want the
+		// per-node signal to fire, which is O(1).
+		const signal = nodeSignals.get(String(node.id));
+		if (signal) signal.bump();
+	}
+
 	return {
 		// Properties
 		treePathSeparator: _treePathSeparator || '.',
@@ -214,6 +237,13 @@ export function createLTree<T>(
 
 		insertArray: function (data: T[], noEmitChanges: boolean = false): InsertArrayResult<T> {
 			data = data || [];
+
+			// Create per-node signals for O(1) reactive updates
+			nodeSignals = new Map();
+			for (let i = 0; i < data.length; i++) {
+				const id = _idMember ? data[i][_idMember] : i;
+				nodeSignals.set(String(id), new NodeSignal());
+			}
 
 			// Clear any pending indexing from previous calls
 			indexer?.clearQueue();
@@ -515,7 +545,10 @@ export function createLTree<T>(
 			perfStart(`[${_treeId}] expandAll`);
 			if (isEmptyString(nodePath))
 				flatTreeNodes.forEach((row) => {
-					row.isExpanded = true;
+					if (!row.isExpanded) {
+						row.isExpanded = true;
+						_bumpRev(row);
+					}
 				});
 
 			this._emitTreeChanged();
@@ -526,7 +559,10 @@ export function createLTree<T>(
 			perfStart(`[${_treeId}] collapseAll`);
 			if (isEmptyString(nodePath))
 				flatTreeNodes.forEach((row) => {
-					row.isExpanded = false;
+					if (row.isExpanded) {
+						row.isExpanded = false;
+						_bumpRev(row);
+					}
 				});
 
 			this._emitTreeChanged();
@@ -572,6 +608,7 @@ export function createLTree<T>(
 					// Only mark as changed if actually changing from collapsed to expanded
 					if (!node.isExpanded) {
 						node.isExpanded = true;
+						_bumpRev(node);
 						hasChanges = true;
 					}
 				}
@@ -599,6 +636,7 @@ export function createLTree<T>(
 					// Only mark as changed if actually changing from expanded to collapsed
 					if (node.isExpanded) {
 						node.isExpanded = false;
+						_bumpRev(node);
 						hasChanges = true;
 					}
 				}
@@ -667,6 +705,14 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 		},
 
+		getNodeSignal(id: string): { readonly value: number } | undefined {
+			return nodeSignals.get(id);
+		},
+
+		bumpNodeRev(node: LTreeNode<T>): void {
+			_bumpNodeRev(node);
+		},
+
 		/**
 		 * Get direct children of a node at the given path
 		 * @param parentPath - Path to parent node (empty string for root)
@@ -732,6 +778,7 @@ export function createLTree<T>(
 				newChildren[segment] = child;
 			});
 			parent.children = newChildren;
+			_bumpRev(parent);
 
 			this._emitTreeChanged();
 		},
@@ -742,9 +789,10 @@ export function createLTree<T>(
 		 * @param path - Path to the node to refresh
 		 */
 		refreshNode(path: string): void {
-			// For now, just trigger a tree change
-			// Future optimization: only re-render the specific subtree
-			this._emitTreeChanged();
+			const node = this.getNodeByPath(path);
+			if (node) {
+				_bumpNodeRev(node);
+			}
 		},
 
 		/**
@@ -782,6 +830,7 @@ export function createLTree<T>(
 			// Remove source from current parent
 			const sourceSegment = segmentPrefix + sourceNode.pathSegment;
 			delete sourceParent.children[sourceSegment];
+			_bumpRev(sourceParent);
 
 			// Update source parent's hasChildren
 			if (Object.keys(sourceParent.children).length === 0) {
@@ -835,6 +884,7 @@ export function createLTree<T>(
 
 			// Update all descendants' paths recursively
 			this._updateDescendantPaths(sourceNode, oldPath, newPath);
+			_bumpRev(sourceNode);
 
 			// Insert into new parent
 			newParent.children[segmentPrefix + newSegment] = sourceNode;
@@ -920,6 +970,7 @@ export function createLTree<T>(
 			// Remove from parent
 			const segment = segmentPrefix + node.pathSegment;
 			delete parent.children[segment];
+			_bumpRev(parent);
 
 			// Update parent's hasChildren
 			if (Object.keys(parent.children).length === 0) {
@@ -989,6 +1040,11 @@ export function createLTree<T>(
 				(data as any)[_pathMember] = newPath;
 			}
 
+			// Create per-node signal for O(1) reactive updates
+			if (newNode.id !== undefined) {
+				nodeSignals.set(String(newNode.id), new NodeSignal());
+			}
+
 			// Add to parent
 			const targetParent = parent || root;
 			targetParent.children[segmentPrefix + pathSegment] = newNode;
@@ -1028,7 +1084,6 @@ export function createLTree<T>(
 
 			// Merge updates into existing data
 			node.data = { ...node.data, ...dataUpdates };
-			node._rev = (node._rev || 0) + 1;
 
 			// Re-index for search if needed
 			if (indexer && _shouldUseInternalSearchIndex) {
@@ -1038,12 +1093,15 @@ export function createLTree<T>(
 				}
 			}
 
-			// Re-sort siblings if order was updated
+			// Re-sort siblings if order was updated (structural change)
 			if (orderMemberUpdated) {
+				_bumpRev(node);
 				this.refreshSiblings(node.parentPath || '');
+				return { success: true, node };
 			}
 
-			this._emitTreeChanged();
+			// Data-only change — signal only, skip _emitTreeChanged for O(1) update
+			_bumpNodeRev(node);
 			return { success: true, node };
 		},
 
@@ -1237,7 +1295,11 @@ export function createLTree<T>(
 			const pathSet = new Set(paths);
 			const traverse = (node: LTreeNode<T>) => {
 				if (node.path) {
-					node.isExpanded = pathSet.has(node.path);
+					const shouldExpand = pathSet.has(node.path);
+					if (node.isExpanded !== shouldExpand) {
+						node.isExpanded = shouldExpand;
+						_bumpRev(node);
+					}
 				}
 				for (const child of Object.values(node.children)) {
 					traverse(child);
