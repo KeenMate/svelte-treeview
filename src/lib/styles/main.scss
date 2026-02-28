@@ -108,7 +108,6 @@ $body-color: #212529 !default;
 	overflow-y: auto !important;
 	overflow-x: visible;
 	overscroll-behavior: contain;
-	will-change: transform;
 }
 
 // Ensure all tree ancestors allow overflow for drop zones

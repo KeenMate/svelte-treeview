@@ -54,7 +54,7 @@
 	let virtualOverscan = $state(defaultConfig.virtualOverscan);
 
 	// Data state
-	let jsonData = $state<any[]>([]);
+	let jsonData = $state.raw<any[]>([]);
 	let jsonError = $state<string | null>(null);
 	let fileName = $state<string | null>(null);
 

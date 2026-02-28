@@ -168,8 +168,6 @@ h1 {
     overflow-x: visible;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-top: 2rem;
-    padding-bottom: 2rem;
 }
 
 /* Side-by-side trees */

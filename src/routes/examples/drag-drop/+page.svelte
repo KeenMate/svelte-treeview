@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type FileItem = {
 		id: number;
@@ -228,6 +230,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🎯 Drag & Drop Examples</h1>
 		<p class="subtitle">Desktop and mobile drag and drop between trees</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Two Trees Side by Side -->
@@ -281,7 +284,7 @@
 		<div class="trees-side-by-side">
 			<div>
 				<h3>Source Tree (Reorganizable)</h3>
-				<div class="tree-container tree-container-tall">
+				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 					<Tree
 						bind:this={sourceTreeRef}
 						treeId="source-tree"
@@ -299,6 +302,7 @@
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -310,7 +314,7 @@
 
 			<div>
 				<h3>Target Tree {targetData.length === 0 ? '(Empty - Drop Here!)' : ''}</h3>
-				<div class="tree-container tree-container-tall">
+				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 					<Tree
 						bind:this={targetTreeRef}
 						treeId="target-tree"
@@ -327,6 +331,7 @@
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -368,7 +373,7 @@
 			</ul>
 		</div>
 
-		<div class="tree-container tree-container-tall">
+		<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 			<Tree
 				bind:this={restrictedTreeRef}
 				treeId="restricted-tree"
@@ -383,6 +388,7 @@
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
 				{dropZoneLayout}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node)}
 					<span>{node.data?.icon} {node.data?.name}</span>

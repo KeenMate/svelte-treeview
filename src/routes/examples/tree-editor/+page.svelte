@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	interface EditorNode {
 		id: number;
@@ -271,6 +273,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>Tree Editor</h1>
 		<p class="subtitle">Add, remove, and move nodes with drag-and-drop</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Main Editor -->
@@ -283,7 +286,7 @@
 
 		<div class="editor-layout">
 			<div class="tree-section">
-				<div class="tree-container tree-container-tall">
+				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 					<Tree
 						bind:this={treeRef}
 						data={treeData}
@@ -300,6 +303,7 @@
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span class:selected-node={selectedNode?.path === node.path}>

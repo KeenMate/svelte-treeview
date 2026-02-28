@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	// Sample hierarchical data
 	const sampleData = [
@@ -51,6 +53,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🌲 Basic Examples</h1>
 		<p class="subtitle">Tree rendering, expand/collapse, and node selection</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Simple Tree -->
@@ -58,7 +61,7 @@
 		<h2>Simple Tree</h2>
 		<p class="description">A basic tree with hierarchical data. Click nodes to select them.</p>
 
-		<div class="tree-container tree-container-tall">
+		<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 			<Tree
 				data={sampleData}
 				idMember="id"
@@ -68,6 +71,7 @@
 				expandLevel={2}
 				bind:selectedNode
 				onNodeClicked={handleNodeClick}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node)}
 					<span>{node.data?.icon} {node.data?.name}</span>
@@ -111,6 +115,7 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					{expandLevel}
+					{...getTreeProps()}
 				>
 					{#snippet nodeTemplate(node)}
 						<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>
@@ -140,7 +145,7 @@
 			<button class="btn" onclick={scrollToPath}>Scroll to Path</button>
 		</div>
 
-		<div class="tree-container tree-container-tall">
+		<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 			<Tree
 				bind:this={scrollTreeRef}
 				data={sampleData}
@@ -149,6 +154,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={3}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node)}
 					<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>
@@ -174,7 +180,7 @@
 			<button class="btn btn-secondary" onclick={() => expandCollapseTreeRef?.collapseNodes('1')}>Collapse "Documents" (1)</button>
 		</div>
 
-		<div class="tree-container tree-container-tall">
+		<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 			<Tree
 				bind:this={expandCollapseTreeRef}
 				data={sampleData}
@@ -183,6 +189,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={1}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node)}
 					<span>{node.data?.icon} {node.data?.name} <code style="font-size: 0.8em; color: #718096;">({node.path})</code></span>

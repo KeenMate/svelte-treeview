@@ -2,6 +2,8 @@
 	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type ScenarioNode = {
 		id: number;
@@ -602,6 +604,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>Business Scenarios</h1>
 		<p class="subtitle">Real-world tree manipulation workflows with database integration</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Scenario Tabs -->
@@ -632,7 +635,7 @@
 			<!-- Source Tree (shared) -->
 			<div>
 				<h3>Source Tree (drag from here)</h3>
-				<div class="tree-container">
+				<div class="tree-container" class:scrollable={!getTreeProps().virtualScroll}>
 					<Tree
 						treeId="source-tree"
 						data={sourceData}
@@ -643,6 +646,7 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="cross"
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -659,7 +663,7 @@
 						<span class="unsaved-badge">{unsavedCountE} unsaved</span>
 					{/if}
 				</h3>
-				<div class="tree-container">
+				<div class="tree-container" class:scrollable={!getTreeProps().virtualScroll}>
 					{#if activeTab === 'A'}
 						<Tree
 							bind:this={treeRefA}
@@ -672,6 +676,7 @@
 							expandLevel={3}
 							onNodeDrop={handleDropA}
 							isLoading={isLoadingA}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -689,6 +694,7 @@
 							expandLevel={3}
 							onNodeDrop={handleDropB}
 							isLoading={isLoadingB}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -708,6 +714,7 @@
 							onNodeClicked={onNodeClickC}
 							selectedNode={selectedNodeC}
 							isLoading={isLoadingC}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -725,6 +732,7 @@
 							expandLevel={3}
 							onNodeDrop={handleDropD}
 							isLoading={isLoadingD}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -748,6 +756,7 @@
 							expandLevel={3}
 							onNodeDrop={handleDropE}
 							isLoading={isLoadingE}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -1028,9 +1037,12 @@ async function saveAll() {
 		border-radius: 4px;
 		padding: 0.5rem;
 		min-height: 300px;
+		background: #fafafa;
+	}
+
+	.tree-container.scrollable {
 		max-height: 400px;
 		overflow: auto;
-		background: #fafafa;
 	}
 
 	.controls {

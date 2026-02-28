@@ -147,7 +147,7 @@ export function createLTree<T>(
 		getSearchValueCallback: _getSearchValueCallback,
 		getAllowedDropPositionsCallback: _getAllowedDropPositionsCallback,
 		orderMember: _orderMember,
-		isSorted: false,
+		isSorted: opts?.isSorted ?? false,
 
 		// Properties for filtering
 		filteredTree,
@@ -197,11 +197,8 @@ export function createLTree<T>(
 			const self = this;
 
 			function traverse(node: LTreeNode<T>) {
-				// Get children and optionally sort them
-				let children = Object.values(node.children);
-				if (self.isSorted && children.length > 0) {
-					children = self.sortCallback(children);
-				}
+				// Get children in natural tree key order (same as recursive mode)
+				const children = Object.values(node.children);
 
 				for (const child of children) {
 					result.push(child);

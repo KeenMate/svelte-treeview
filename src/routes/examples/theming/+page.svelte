@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type FileItem = {
 		id: number;
@@ -32,6 +34,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🎨 Theming Examples</h1>
 		<p class="subtitle">CSS variables, custom styles, and visual customization</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- CSS Variables Reference -->
@@ -128,6 +131,7 @@
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -147,6 +151,7 @@
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -168,6 +173,7 @@
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -187,6 +193,7 @@
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.icon} {node.data?.name}</span>

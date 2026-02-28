@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, ContextMenuItem } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type FileItem = {
 		id: number;
@@ -117,6 +119,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>📋 Context Menu Examples</h1>
 		<p class="subtitle">Right-click context menus with callbacks, icons, and dynamic items</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Dynamic Context Menu -->
@@ -132,7 +135,7 @@
 			<button class="btn btn-secondary" onclick={clearLog}>Clear Log</button>
 		</div>
 
-		<div class="tree-container tree-container-tall">
+		<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 			<Tree
 				data={sampleData}
 				idMember="id"
@@ -142,6 +145,7 @@
 				expandLevel={3}
 				contextMenuCallback={getContextMenu}
 				shouldDisplayContextMenuInDebugMode={debugMode}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node)}
 					<span>

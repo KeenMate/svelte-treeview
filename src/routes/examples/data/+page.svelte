@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, InsertArrayResult } from '$lib/ltree/types';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type FileItem = {
 		id: number;
@@ -61,6 +63,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>📊 Data Structure Examples</h1>
 		<p class="subtitle">Path-based hierarchy, custom separators, and validation</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Path-Based Data Structure -->
@@ -100,6 +103,7 @@ const data = [
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.name} <code style="font-size: 0.8em;">({node.path})</code></span>
@@ -138,6 +142,7 @@ const data = [
 						isSorted={true}
 						expandLevel={3}
 						treePathSeparator="/"
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.name}</span>
@@ -164,6 +169,7 @@ const data = [
 						isSorted={true}
 						expandLevel={3}
 						treePathSeparator="::"
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.name}</span>
@@ -264,6 +270,7 @@ const data = [
 						isSorted={true}
 						expandLevel={3}
 						bind:insertResult
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node)}
 							<span>{node.data?.name}</span>

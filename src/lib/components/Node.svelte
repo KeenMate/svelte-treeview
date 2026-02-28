@@ -26,7 +26,7 @@
 
 		// Flat rendering mode
 		flatMode?: boolean; // When true, don't render children (Tree handles flat rendering)
-		flatIndentSize?: string; // CSS value for per-level indentation in flat mode
+		flatGap?: boolean; // When true in flat mode, add margin-top to match recursive .ltree-children gap
 	}
 
 	// Destructure props using Svelte 5 syntax
@@ -47,7 +47,7 @@
 
 		// Flat rendering mode
 		flatMode = false,
-		flatIndentSize = '1.5rem',
+		flatGap = false,
 	}: Props = $props()
 
 	// Get stable references from context (avoids prop drilling and re-renders from inline functions)
@@ -157,9 +157,14 @@
 	// In flat mode, children rendering is handled by Tree.svelte, so we skip these computations
 	const childrenArray = $derived(!flatMode ? Object.values(node?.children || []) : [])
 	const hasChildren = $derived(node?.hasChildren || false)
+	// In recursive mode, each nested Node compounds one level of margin-left.
+	// In flat mode, all nodes are siblings so we multiply level × indent explicitly.
+	// Both use the same CSS variable so theming works identically across modes.
+	// flatGap replicates the recursive .ltree-children { margin-top: 2px } gap
+	// — only applied before first-child nodes (where level > previous node's level).
 	const indentStyle = $derived(
 		flatMode
-			? `margin-left: calc(${(node?.level || 1) - 1} * ${flatIndentSize})`
+			? `margin-left: calc(${node?.level || 1} * var(--tree-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
 			: `margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
 	)
 

@@ -67,8 +67,8 @@
 
 	// Progressive rendering for flat mode
 	// Track which node IDs we've rendered and progressively add new ones
-	let flatRenderedIds = $state<Set<string>>(new Set());
-	let flatRenderQueue = $state<string[]>([]);
+	let flatRenderedIds = $state.raw<Set<string>>(new Set());
+	let flatRenderQueue = $state.raw<string[]>([]);
 	let flatRenderAnimationFrame: number | null = null;
 	let currentBatchSize: number = 0; // Exponential: doubles each batch up to maxBatchSize
 
@@ -162,9 +162,6 @@
 		 * - Per-node reactive signals for O(1) data-only updates (updateNode, selection)
 		 */
 		useFlatRendering?: boolean;
-		/** Indentation per level in flat rendering mode (CSS value, default: '1.5rem') */
-		flatIndentSize?: string;
-
 		/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
 		virtualScroll?: boolean;
 		/** Explicit row height in px. Auto-measured from first row if not set. */
@@ -274,7 +271,6 @@
 
 		// Flat rendering mode
 		useFlatRendering = true,
-		flatIndentSize = '1.5rem',
 
 		// Virtual scrolling (flat mode only)
 		virtualScroll = false,
@@ -932,8 +928,6 @@
 
 			// Double batch size for next iteration (capped at maxBatchSize)
 			currentBatchSize = Math.min(batchSize * 2, maxBatchSize);
-
-			// console.log(`[Flat Progressive] Rendered batch of ${batch.length}, next batch: ${currentBatchSize}, ${remaining.length} remaining`);
 
 			if (remaining.length > 0) {
 				scheduleFlatRenderBatch();
@@ -1685,7 +1679,8 @@
 						<div style="height: {vsTotalHeight}px; position: relative;">
 							<!-- Rendered window at correct offset -->
 							<div style="transform: translateY({vsOffsetY}px);">
-								{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+								{#each flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+									{@const prevNode = (vsStartIndex + i) > 0 ? allFlatNodes[vsStartIndex + i - 1] : null}
 									<Node
 										{node}
 										children={nodeTemplate}
@@ -1696,7 +1691,7 @@
 										{activeDropPosition}
 										dropOperation={currentDropOperation}
 										flatMode={true}
-										{flatIndentSize}
+										flatGap={prevNode != null && node.level > prevNode.level}
 									/>
 								{:else}
 									<!-- Empty state when tree has no items -->
@@ -1729,7 +1724,8 @@
 				{:else}
 					<!-- Non-virtual flat rendering -->
 					<div class="ltree-tree ltree-flat-mode">
-						{#each flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+						{#each flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+							{@const prevNode = i > 0 ? flatNodesToRender[i - 1] : null}
 							<Node
 								{node}
 								children={nodeTemplate}
@@ -1740,7 +1736,7 @@
 								{activeDropPosition}
 								dropOperation={currentDropOperation}
 								flatMode={true}
-								{flatIndentSize}
+								flatGap={prevNode != null && node.level > prevNode.level}
 							/>
 						{:else}
 							<!-- Empty state when tree has no items -->
