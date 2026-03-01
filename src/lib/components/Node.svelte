@@ -54,20 +54,18 @@
 	const callbacks = getContext<NodeCallbacks<T>>('NodeCallbacks');
 	const config = getContext<NodeConfig>('NodeConfig');
 
-	// Destructure config for convenience (these are stable references)
-	const {
-		shouldToggleOnNodeClick,
-		expandIconClass,
-		collapseIconClass,
-		leafIconClass,
-		selectedNodeClass,
-		dragOverNodeClass,
-		dropZoneMode,
-		dropZoneLayout,
-		dropZoneStart,
-		dropZoneMaxWidth,
-		allowCopy,
-	} = config;
+	// Use $derived so values track mutations on the shared config proxy
+	const shouldToggleOnNodeClick = $derived(config.shouldToggleOnNodeClick);
+	const expandIconClass = $derived(config.expandIconClass);
+	const collapseIconClass = $derived(config.collapseIconClass);
+	const leafIconClass = $derived(config.leafIconClass);
+	const selectedNodeClass = $derived(config.selectedNodeClass);
+	const dragOverNodeClass = $derived(config.dragOverNodeClass);
+	const dropZoneMode = $derived(config.dropZoneMode);
+	const dropZoneLayout = $derived(config.dropZoneLayout);
+	const dropZoneStart = $derived(config.dropZoneStart);
+	const dropZoneMaxWidth = $derived(config.dropZoneMaxWidth);
+	const allowCopy = $derived(config.allowCopy);
 
 	// Compute if THIS node is the one being hovered for drop
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
@@ -117,7 +115,14 @@
 
 		// Calculate the ideal position based on mouse position
 		let idealPosition: DropPosition;
-		if (x > width / 2) {
+		// Convert dropZoneStart to pixels: number = percentage, string = as-is (px or %)
+		const startPx = typeof dropZoneStart === 'number'
+			? (dropZoneStart / 100) * width
+			: dropZoneStart.endsWith('px')
+				? parseFloat(dropZoneStart)
+				: (parseFloat(dropZoneStart) / 100) * width;
+
+		if (x > startPx) {
 			idealPosition = 'child';
 		} else if (y < height / 2) {
 			idealPosition = 'above';
