@@ -778,9 +778,9 @@
 		setContext('RenderCoordinator', renderCoordinator);
 	}
 
-	// Create stable config object - updated when props change
-	// Using $state.raw to avoid deep reactivity on the config object itself
-	let nodeConfig = $state.raw<NodeConfig>({
+	// Create stable config object - using $state so the proxy is reactive
+	// and $derived() in Node.svelte picks up property mutations via Object.assign
+	let nodeConfig = $state<NodeConfig>({
 		shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
 		expandIconClass: expandIconClass ?? 'ltree-icon-expand',
 		collapseIconClass: collapseIconClass ?? 'ltree-icon-collapse',
@@ -795,9 +795,9 @@
 	});
 	setContext('NodeConfig', nodeConfig);
 
-	// Update config when props change (rarely happens, but supports dynamic updates)
+	// Mutate (don't replace) so the context reference stays the same
 	$effect(() => {
-		nodeConfig = {
+		Object.assign(nodeConfig, {
 			shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
 			expandIconClass: expandIconClass ?? 'ltree-icon-expand',
 			collapseIconClass: collapseIconClass ?? 'ltree-icon-collapse',
@@ -809,7 +809,7 @@
 			dropZoneStart: dropZoneStart ?? 33,
 			dropZoneMaxWidth: dropZoneMaxWidth ?? 120,
 			allowCopy: allowCopy ?? false,
-		};
+		});
 	});
 
 	$effect(() => {
