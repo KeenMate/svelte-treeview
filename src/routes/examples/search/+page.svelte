@@ -573,15 +573,6 @@
 		padding: 2rem;
 	}
 
-	kbd {
-		background: #edf2f7;
-		border: 1px solid #cbd5e0;
-		border-radius: 3px;
-		padding: 0.1em 0.4em;
-		font-size: 0.9em;
-		font-family: inherit;
-	}
-
 	.controls {
 		display: flex;
 		gap: 0.5rem;

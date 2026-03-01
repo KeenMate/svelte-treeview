@@ -213,6 +213,17 @@ pre {
     line-height: 1.6;
 }
 
+/* Keyboard shortcuts */
+kbd {
+    background: #edf2f7;
+    border: 1px solid #cbd5e0;
+    border-radius: 3px;
+    padding: 0.1em 0.4em;
+    font-size: 0.9em;
+    font-family: inherit;
+    color: #2d3748;
+}
+
 /* Inline code */
 code {
     background: #edf2f7;

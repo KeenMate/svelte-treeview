@@ -516,11 +516,16 @@
   });
 
   // Measure render time
+  // Capture renderStart at schedule time so async rAF callback uses the correct value.
+  // Guard against stale callbacks: only write if renderTime is still null.
   $effect(() => {
     if (treeData.length > 0 && metrics.renderStart && !metrics.renderTime) {
+      const capturedStart = metrics.renderStart;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          metrics.renderTime = performance.now() - metrics.renderStart!;
+          if (!metrics.renderTime && metrics.renderStart === capturedStart) {
+            metrics.renderTime = performance.now() - capturedStart;
+          }
         });
       });
     }
@@ -580,7 +585,7 @@
           Container Height:
           <input type="text" bind:value={virtualContainerHeight} style="width: 80px" />
         </label>
-        <label>
+        <label title="Extra rows rendered above and below the viewport to prevent flicker during fast scrolling">
           Overscan:
           <input type="number" bind:value={virtualOverscan} min="0" max="50" step="1" />
         </label>

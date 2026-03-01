@@ -675,6 +675,7 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							onNodeDrop={handleDropA}
+							dragDropMode="cross"
 							isLoading={isLoadingA}
 							{...getTreeProps()}
 						>
@@ -693,6 +694,7 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							onNodeDrop={handleDropB}
+							dragDropMode="both"
 							isLoading={isLoadingB}
 							{...getTreeProps()}
 						>
@@ -711,6 +713,7 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							onNodeDrop={handleDropC}
+							dragDropMode="cross"
 							onNodeClicked={onNodeClickC}
 							selectedNode={selectedNodeC}
 							isLoading={isLoadingC}
@@ -731,6 +734,7 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							onNodeDrop={handleDropD}
+							dragDropMode="cross"
 							isLoading={isLoadingD}
 							{...getTreeProps()}
 						>
@@ -755,6 +759,7 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							onNodeDrop={handleDropE}
+							dragDropMode="both"
 							isLoading={isLoadingE}
 							{...getTreeProps()}
 						>
@@ -927,43 +932,6 @@ async function saveAll() {
 </div>
 
 <style>
-	.container {
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 2rem;
-	}
-
-	.example-header {
-		margin-bottom: 2rem;
-	}
-
-	.example-header h1 {
-		margin: 0.5rem 0;
-		font-size: 2rem;
-	}
-
-	.subtitle {
-		color: #666;
-		margin: 0;
-	}
-
-	.back-link {
-		color: #667eea;
-		text-decoration: none;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
-	.card {
-		background: white;
-		border-radius: 8px;
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
 	.tabs {
 		display: flex;
 		gap: 0.5rem;
@@ -1020,9 +988,6 @@ async function saveAll() {
 	}
 
 	.trees-side-by-side {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 1.5rem;
 		margin-bottom: 1rem;
 	}
 
@@ -1032,55 +997,19 @@ async function saveAll() {
 		color: #374151;
 	}
 
-	.tree-container {
-		border: 1px solid #e2e8f0;
-		border-radius: 4px;
-		padding: 0.5rem;
-		min-height: 300px;
-		background: #fafafa;
-	}
-
 	.tree-container.scrollable {
 		max-height: 400px;
 		overflow: auto;
 	}
 
 	.controls {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		flex-wrap: wrap;
 		padding-top: 1rem;
 		border-top: 1px solid #e2e8f0;
-	}
-
-	.btn {
-		padding: 0.5rem 1rem;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: 500;
-		background: #667eea;
-		color: white;
-		transition: background 0.2s;
-	}
-
-	.btn:hover:not(:disabled) {
-		background: #5a67d8;
 	}
 
 	.btn:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
-	}
-
-	.btn-secondary {
-		background: #e2e8f0;
-		color: #475569;
-	}
-
-	.btn-secondary:hover:not(:disabled) {
-		background: #cbd5e1;
 	}
 
 	.btn-danger {
@@ -1100,25 +1029,12 @@ async function saveAll() {
 	}
 
 	.controls input[type="text"] {
-		padding: 0.5rem;
-		border: 1px solid #e2e8f0;
-		border-radius: 4px;
 		width: 150px;
-	}
-
-	.hint {
-		color: #64748b;
-		font-size: 0.875rem;
-		font-style: italic;
 	}
 
 	.output {
 		background: #1e293b;
 		color: #e2e8f0;
-		border-radius: 4px;
-		padding: 1rem;
-		font-family: monospace;
-		font-size: 0.875rem;
 		max-height: 200px;
 		overflow: auto;
 	}
@@ -1126,6 +1042,9 @@ async function saveAll() {
 	.output pre {
 		margin: 0;
 		white-space: pre-wrap;
+		background: transparent;
+		border: none;
+		color: inherit;
 	}
 
 	.empty-log {
@@ -1134,18 +1053,8 @@ async function saveAll() {
 		margin: 0;
 	}
 
-	.code-block {
-		background: #1e293b;
-		color: #e2e8f0;
-		border-radius: 4px;
-		padding: 1rem;
-		overflow-x: auto;
-	}
-
 	.code-block pre {
 		margin: 0;
-		font-family: 'Fira Code', monospace;
-		font-size: 0.875rem;
 	}
 
 	details {
@@ -1184,26 +1093,7 @@ async function saveAll() {
 		margin-right: 0.25rem;
 	}
 
-	footer {
-		margin-top: 2rem;
-		padding-top: 1rem;
-		border-top: 1px solid #e2e8f0;
-	}
-
-	footer a {
-		color: #667eea;
-		text-decoration: none;
-	}
-
-	footer a:hover {
-		text-decoration: underline;
-	}
-
 	@media (max-width: 768px) {
-		.trees-side-by-side {
-			grid-template-columns: 1fr;
-		}
-
 		.tabs {
 			flex-wrap: wrap;
 		}

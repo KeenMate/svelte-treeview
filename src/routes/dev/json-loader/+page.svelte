@@ -351,6 +351,53 @@
 		}
 	}
 
+	// Search state
+	let searchText = $state('');
+	let searchResults = $state<LTreeNode<any>[]>([]);
+	let currentResultIndex = $state(0);
+	let useContainerScroll = $state(true);
+
+	function handleSearchKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			if (e.shiftKey) {
+				goToPrevious();
+			} else {
+				goToNext();
+			}
+		}
+	}
+
+	function goToNext() {
+		if (searchResults.length === 0) return;
+		currentResultIndex = (currentResultIndex + 1) % searchResults.length;
+		scrollToResult();
+	}
+
+	function goToPrevious() {
+		if (searchResults.length === 0) return;
+		currentResultIndex = (currentResultIndex - 1 + searchResults.length) % searchResults.length;
+		scrollToResult();
+	}
+
+	function scrollToResult() {
+		const node = searchResults[currentResultIndex];
+		if (node && treeRef) {
+			treeRef.scrollToPath(node.path, { expand: true, highlight: true, containerScroll: useContainerScroll });
+		}
+	}
+
+	$effect(() => {
+		if (searchText.trim() && treeRef) {
+			const results = treeRef.searchNodes(searchText);
+			searchResults = results ?? [];
+			currentResultIndex = 0;
+		} else {
+			searchResults = [];
+			currentResultIndex = 0;
+		}
+	});
+
 	// Detect available members from first data item
 	let availableMembers = $derived(
 		jsonData.length > 0 ? Object.keys(jsonData[0]) : []
@@ -623,9 +670,44 @@
 	{#if jsonData.length > 0 && !jsonError}
 		<div class="card">
 			<h2>Tree Preview</h2>
+			<p class="description">
+				Use <kbd>Enter</kbd> for next, <kbd>Shift+Enter</kbd> for previous.
+			</p>
 
 			<div class="controls">
-				<button class="btn" onclick={() => treeRef?.expandAll()}>Expand All</button>
+				<input
+					type="text"
+					bind:value={searchText}
+					placeholder="Search..."
+					onkeydown={handleSearchKeydown}
+					style="flex: 1; min-width: 200px;"
+				/>
+				<button
+					class="btn"
+					onclick={goToPrevious}
+					disabled={searchResults.length === 0}
+					title="Previous result (Shift+Enter)"
+				>
+					&larr; Prev
+				</button>
+				<span class="result-indicator">
+					{#if searchResults.length > 0}
+						{currentResultIndex + 1} of {searchResults.length}
+					{:else if searchText.trim()}
+						No results
+					{:else}
+						&mdash;
+					{/if}
+				</span>
+				<button
+					class="btn"
+					onclick={goToNext}
+					disabled={searchResults.length === 0}
+					title="Next result (Enter)"
+				>
+					Next &rarr;
+				</button>
+				<button class="btn secondary" onclick={() => treeRef?.expandAll()}>Expand All</button>
 				<button class="btn secondary" onclick={() => treeRef?.collapseAll()}>Collapse All</button>
 			</div>
 
@@ -652,6 +734,9 @@
 						{progressiveRender}
 						{initialBatchSize}
 						{maxBatchSize}
+						shouldUseInternalSearchIndex={true}
+						searchValueMember={displayMember}
+						bind:searchText
 						bind:selectedNode
 						bind:insertResult
 					>
@@ -856,5 +941,12 @@
 
 	.note.warning .note-title {
 		color: #b45309;
+	}
+
+	.result-indicator {
+		font-size: 0.875rem;
+		color: #718096;
+		min-width: 5rem;
+		text-align: center;
 	}
 </style>
