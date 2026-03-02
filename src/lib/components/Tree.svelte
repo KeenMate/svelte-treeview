@@ -30,6 +30,7 @@
 		leafIconClass: string;
 		selectedNodeClass: string | null | undefined;
 		dragOverNodeClass: string | null | undefined;
+		dragDropMode: DragDropMode;
 		dropZoneMode: 'floating' | 'glow';
 		dropZoneLayout: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 		dropZoneStart: number | string;
@@ -86,6 +87,10 @@
 	let hoveredNodeForDrop = $state<LTreeNode<any> | null>(null);
 	let activeDropPosition = $state<DropPosition | null>(null);
 	let currentDropOperation = $state<DropOperation>('move');
+
+	// Floating drop zone overlay state (position: fixed to escape overflow clipping)
+	let floatingZoneRect = $state<{ top: number; left: number; width: number; height: number } | null>(null);
+	let floatingHoveredZone = $state<'above' | 'below' | 'child' | null>(null);
 
 	// Flag to skip insertArray during internal mutations (addNode, moveNode, removeNode)
 	let _skipInsertArray = false;
@@ -399,10 +404,12 @@
 	export function copyNodeWithDescendants(
 		sourceNode: LTreeNode<T>,
 		targetParentPath: string,
-		transformData: (data: T) => T
+		transformData: (data: T) => T,
+		siblingPath?: string,
+		position?: 'above' | 'below'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
 		_skipInsertArray = true;
-		const result = tree?.copyNodeWithDescendants(sourceNode, targetParentPath, transformData) || { success: false, count: 0, error: 'Tree not initialized' };
+		const result = tree?.copyNodeWithDescendants(sourceNode, targetParentPath, transformData, siblingPath, position) || { success: false, count: 0, error: 'Tree not initialized' };
 		tick().then(() => { _skipInsertArray = false; });
 		return result;
 	}
@@ -694,7 +701,14 @@
 		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
 	}
 
-	treeId = treeId || generateTreeId();
+	// Stable auto-generated treeId — survives parent re-renders that reset prop to undefined
+	const _autoTreeId = generateTreeId();
+	treeId = treeId || _autoTreeId;
+
+	// Keep treeId stable when parent re-renders without passing treeId prop
+	$effect.pre(() => {
+		if (!treeId) treeId = _autoTreeId;
+	});
 
 
 	// svelte-ignore non_reactive_update
@@ -778,8 +792,10 @@
 		setContext('RenderCoordinator', renderCoordinator);
 	}
 
-	// Create stable config object - using $state so the proxy is reactive
-	// and $derived() in Node.svelte picks up property mutations via Object.assign
+	// Create stable config object shared via context.
+	// Must use $state (not $state.raw) so property mutations are tracked reactively.
+	// We mutate individual properties in the $effect below so that Node components
+	// (which hold the same proxy reference via getContext) see the updates.
 	let nodeConfig = $state<NodeConfig>({
 		shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
 		expandIconClass: expandIconClass ?? 'ltree-icon-expand',
@@ -787,6 +803,7 @@
 		leafIconClass: leafIconClass ?? 'ltree-icon-leaf',
 		selectedNodeClass,
 		dragOverNodeClass,
+		dragDropMode: dragDropMode ?? 'none',
 		dropZoneMode: dropZoneMode ?? 'glow',
 		dropZoneLayout: dropZoneLayout ?? 'around',
 		dropZoneStart: dropZoneStart ?? 33,
@@ -795,22 +812,26 @@
 	});
 	setContext('NodeConfig', nodeConfig);
 
-	// Mutate (don't replace) so the context reference stays the same
+	// Mutate the shared config proxy when props change
 	$effect(() => {
-		Object.assign(nodeConfig, {
-			shouldToggleOnNodeClick: shouldToggleOnNodeClick ?? true,
-			expandIconClass: expandIconClass ?? 'ltree-icon-expand',
-			collapseIconClass: collapseIconClass ?? 'ltree-icon-collapse',
-			leafIconClass: leafIconClass ?? 'ltree-icon-leaf',
-			selectedNodeClass,
-			dragOverNodeClass,
-			dropZoneMode: dropZoneMode ?? 'glow',
-			dropZoneLayout: dropZoneLayout ?? 'around',
-			dropZoneStart: dropZoneStart ?? 33,
-			dropZoneMaxWidth: dropZoneMaxWidth ?? 120,
-			allowCopy: allowCopy ?? false,
-		});
+		nodeConfig.shouldToggleOnNodeClick = shouldToggleOnNodeClick ?? true;
+		nodeConfig.expandIconClass = expandIconClass ?? 'ltree-icon-expand';
+		nodeConfig.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse';
+		nodeConfig.leafIconClass = leafIconClass ?? 'ltree-icon-leaf';
+		nodeConfig.selectedNodeClass = selectedNodeClass;
+		nodeConfig.dragOverNodeClass = dragOverNodeClass;
+		nodeConfig.dragDropMode = dragDropMode ?? 'none';
+		nodeConfig.dropZoneMode = dropZoneMode ?? 'glow';
+		nodeConfig.dropZoneLayout = dropZoneLayout ?? 'around';
+		nodeConfig.dropZoneStart = dropZoneStart ?? 33;
+		nodeConfig.dropZoneMaxWidth = dropZoneMaxWidth ?? 120;
+		nodeConfig.allowCopy = allowCopy ?? false;
 	});
+
+	// Format dropZoneStart for CSS variable - number = percentage, string = as-is
+	const formattedDropZoneStart = $derived(
+		typeof dropZoneStart === 'number' ? `${dropZoneStart}%` : dropZoneStart
+	);
 
 	$effect(() => {
 		tree.filterNodes(searchText);
@@ -1081,6 +1102,10 @@
 	}
 
 	function _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
+		if (dragDropMode === 'none') {
+			event.preventDefault();
+			return;
+		}
 		dragLogger.debug(`Drag started: ${node.path}`, {
 			ctrlKey: event.ctrlKey,
 			allowCopy,
@@ -1102,6 +1127,8 @@
 		activeDropPosition = null;
 		isDropPlaceholderActive = false;
 		currentDropOperation = 'move';
+		floatingZoneRect = null;
+		floatingHoveredZone = null;
 	}
 
 	/**
@@ -1231,6 +1258,15 @@
 				activeDropPosition = calculateDropPosition(event, nodeElement);
 			}
 
+			// Capture node row rect for floating drop zone overlay
+			if (dropZoneMode === 'floating') {
+				const nodeRow = (event.target as Element).closest('.ltree-node-row');
+				if (nodeRow) {
+					const r = nodeRow.getBoundingClientRect();
+					floatingZoneRect = { top: r.top, left: r.left, width: r.width, height: r.height };
+				}
+			}
+
 			// Update current operation based on Ctrl key
 			currentDropOperation = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
 
@@ -1284,6 +1320,7 @@
 	// Zone drop handler - receives explicit position from drop zone panels
 	function _onZoneDrop(node: LTreeNode<T>, position: DropPosition, event: DragEvent) {
 		event.preventDefault();
+		console.log(`[ZoneDrop] dropNode=${node.path}, position=${position}, treeId=${treeId}`);
 
 		let isCrossTreeDrag = false;
 		if (!draggedNode) {
@@ -1295,9 +1332,12 @@
 		}
 
 		if (!draggedNode) {
+			console.warn(`[ZoneDrop] No draggedNode found, aborting`);
 			_onNodeDragEnd(event);
 			return;
 		}
+
+		console.log(`[ZoneDrop] draggedNode=${draggedNode.path} (treeId=${draggedNode.treeId}), isCrossTree=${isCrossTreeDrag}`);
 
 		// Check if drop is allowed by mode
 		const dropAllowed = isCrossTreeDrag
@@ -1305,6 +1345,7 @@
 			: isDropAllowedByMode(draggedNode?.treeId);
 
 		if (!dropAllowed) {
+			console.warn(`[ZoneDrop] Drop not allowed by mode=${dragDropMode}`);
 			_onNodeDragEnd(event);
 			return;
 		}
@@ -1312,14 +1353,53 @@
 		// For cross-tree, always allow; for same-tree, check it's not the same node
 		if (isCrossTreeDrag || draggedNode !== node) {
 			_handleDrop(node, draggedNode, position, event);
+		} else {
+			console.warn(`[ZoneDrop] Same node — skipped`);
 		}
 
 		// Reset drag state
 		_onNodeDragEnd(event);
 	}
 
+	// Floating drop zone overlay helpers
+	function isFloatingPositionAllowed(position: DropPosition): boolean {
+		if (!hoveredNodeForDrop) return false;
+		const allowed = tree.getNodeAllowedDropPositions(hoveredNodeForDrop);
+		if (!allowed || allowed.length === 0) return true;
+		return allowed.includes(position);
+	}
+
+	function handleFloatingZoneDragOver(position: DropPosition, event: DragEvent) {
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
+		floatingHoveredZone = position;
+		// Keep rect fresh (handles scroll while cursor on zone)
+		if (hoveredNodeForDrop && treeContainerRef) {
+			const nodeEl = treeContainerRef.querySelector(`#${treeId}-${hoveredNodeForDrop.id}`);
+			const nodeRow = nodeEl?.querySelector('.ltree-node-row');
+			if (nodeRow) {
+				const r = nodeRow.getBoundingClientRect();
+				floatingZoneRect = { top: r.top, left: r.left, width: r.width, height: r.height };
+			}
+		}
+		if (hoveredNodeForDrop) _onNodeDragOver(hoveredNodeForDrop, event);
+	}
+
+	function handleFloatingZoneDragLeave() {
+		floatingHoveredZone = null;
+	}
+
+	function handleFloatingZoneDrop(position: DropPosition, event: DragEvent) {
+		event.stopPropagation();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = (allowCopy && event.ctrlKey) ? 'copy' : 'move';
+		console.log(`[FloatingZoneDrop] position=${position}, hoveredNode=${hoveredNodeForDrop?.path ?? 'null'}`);
+		floatingHoveredZone = null;
+		if (hoveredNodeForDrop) _onZoneDrop(hoveredNodeForDrop, position, event);
+	}
+
 	// Touch drag handlers for mobile support
 	function _onTouchStart(node: LTreeNode<any>, event: TouchEvent) {
+		if (dragDropMode === 'none') return;
 		if (!node?.isDraggable) return;
 
 		const touch = event.touches[0];
@@ -1549,6 +1629,11 @@
 	}
 
 	function handleTreeDragLeave(event: DragEvent) {
+		// Don't reset if moving to a child element (including fixed-position floating zones)
+		if (event.relatedTarget instanceof Node && (event.currentTarget as HTMLElement).contains(event.relatedTarget as globalThis.Node)) {
+			return;
+		}
+
 		const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 		const x = event.clientX;
 		const y = event.clientY;
@@ -1560,6 +1645,8 @@
 				isDragInProgress = false;
 				hoveredNodeForDrop = null;
 				activeDropPosition = null;
+				floatingZoneRect = null;
+				floatingHoveredZone = null;
 			}
 		}
 	}
@@ -1849,6 +1936,40 @@
 	</div>
 
 	{@render treeFooter?.()}
+
+	<!-- Floating drop zones overlay (position: fixed to escape overflow containers) -->
+	{#if dropZoneMode === 'floating' && isDragInProgress && hoveredNodeForDrop && floatingZoneRect}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="ltree-drop-zones ltree-drop-zones-{dropZoneLayout}"
+			style="position: fixed; top: {floatingZoneRect.top}px; left: {floatingZoneRect.left}px; width: {floatingZoneRect.width}px; height: {floatingZoneRect.height}px; z-index: 10000; --drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {dropZoneMaxWidth}px;"
+		>
+			{#if isFloatingPositionAllowed('above')}
+				<div class="ltree-drop-zone ltree-drop-above"
+					class:ltree-drop-zone-active={floatingHoveredZone === 'above'}
+					ondragover={(e) => handleFloatingZoneDragOver('above', e)}
+					ondragleave={handleFloatingZoneDragLeave}
+					ondrop={(e) => handleFloatingZoneDrop('above', e)}
+				>↑ Above</div>
+			{/if}
+			{#if isFloatingPositionAllowed('below')}
+				<div class="ltree-drop-zone ltree-drop-below"
+					class:ltree-drop-zone-active={floatingHoveredZone === 'below'}
+					ondragover={(e) => handleFloatingZoneDragOver('below', e)}
+					ondragleave={handleFloatingZoneDragLeave}
+					ondrop={(e) => handleFloatingZoneDrop('below', e)}
+				>↓ Below</div>
+			{/if}
+			{#if isFloatingPositionAllowed('child')}
+				<div class="ltree-drop-zone ltree-drop-child"
+					class:ltree-drop-zone-active={floatingHoveredZone === 'child'}
+					ondragover={(e) => handleFloatingZoneDragOver('child', e)}
+					ondragleave={handleFloatingZoneDragLeave}
+					ondrop={(e) => handleFloatingZoneDrop('child', e)}
+				>→ Child</div>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Context Menu -->
 	{#if contextMenuVisible && contextMenuNode}

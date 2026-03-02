@@ -44,6 +44,7 @@
 	let dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('around');
 	let dropZoneStart = $state<number | string>('33%');
 	let dropZoneMaxWidth = $state(120);
+	let dragDropModeSource = $state<'none' | 'self' | 'cross' | 'both'>('both');
 	let allowCopy = $state(false); // Enable Ctrl+drag to copy
 
 	// Load settings from localStorage on mount
@@ -57,6 +58,7 @@
 				if (config.start !== undefined) dropZoneStart = config.start;
 				if (config.maxWidth !== undefined) dropZoneMaxWidth = config.maxWidth;
 				if (config.allowCopy !== undefined) allowCopy = config.allowCopy;
+				if (config.dragDropModeSource) dragDropModeSource = config.dragDropModeSource;
 			} catch (e) {
 				// Ignore invalid JSON
 			}
@@ -65,7 +67,7 @@
 
 	// Save settings to localStorage when they change
 	$effect(() => {
-		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, allowCopy };
+		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, allowCopy, dragDropModeSource };
 		localStorage.setItem('dropZoneConfig', JSON.stringify(config));
 	});
 
@@ -119,6 +121,7 @@
 			copyPosition = position as 'above' | 'below';
 		}
 
+
 		// Copy the node and all its descendants with new IDs
 		const result = targetTreeRef.copyNodeWithDescendants(
 			draggedNode,
@@ -134,7 +137,12 @@
 		);
 
 		if (result.success) {
-			addLog(`[CROSS-TREE] Copied ${result.count} node(s) to "${parentPath || 'root'}"${siblingPath ? ` ${copyPosition} "${siblingPath}"` : ''}`);
+			addLog(`[CROSS-TREE ${operation.toUpperCase()}] ${operation === 'move' ? 'Moved' : 'Copied'} ${result.count} node(s) to "${parentPath || 'root'}"${siblingPath ? ` ${copyPosition} "${siblingPath}"` : ''}`);
+
+			// Move = remove from source tree
+			if (operation === 'move') {
+				sourceTreeRef.removeNode(draggedNode.path);
+			}
 		} else {
 			addLog(`Error: ${result.error}`);
 		}
@@ -249,6 +257,14 @@
 
 		<div class="controls" style="align-items: center;">
 			<label style="display: flex; align-items: center; gap: 0.5rem;">
+				Source Drag Mode:
+				<select bind:value={dragDropModeSource}>
+					<option value="none">none (disabled)</option>
+					<option value="cross">cross (to other trees only)</option>
+					<option value="both">both (self + cross)</option>
+				</select>
+			</label>
+			<label style="display: flex; align-items: center; gap: 0.5rem;">
 				Drop Zone Mode:
 				<select bind:value={dropZoneMode}>
 					<option value="glow">Glow (border indicators)</option>
@@ -295,7 +311,7 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
-						dragDropMode="both"
+						dragDropMode={dragDropModeSource}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{allowCopy}

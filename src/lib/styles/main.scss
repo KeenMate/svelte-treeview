@@ -74,6 +74,36 @@ $light-color: #f8f9fa !default;
 $border-color: #dee2e6 !default;
 $body-color: #212529 !default;
 
+// Mixin: expand horizontal zone layout when zones are hidden (used by "above" and "below" layouts)
+@mixin zone-horizontal-expansion {
+	// Two zones: first present zone gets left half
+	&:not(:has(.ltree-drop-child)) .ltree-drop-above,
+	&:not(:has(.ltree-drop-below)) .ltree-drop-above,
+	&:not(:has(.ltree-drop-above)) .ltree-drop-below {
+		left: var(--drop-zone-start, 33%);
+		right: calc((100% - var(--drop-zone-start, 33%)) / 2);
+		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+	}
+
+	// Two zones: second present zone gets right half
+	&:not(:has(.ltree-drop-child)) .ltree-drop-below,
+	&:not(:has(.ltree-drop-below)) .ltree-drop-child,
+	&:not(:has(.ltree-drop-above)) .ltree-drop-child {
+		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
+		right: 0;
+		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+	}
+
+	// Single zone: full width
+	&:not(:has(.ltree-drop-below)):not(:has(.ltree-drop-child)) .ltree-drop-above,
+	&:not(:has(.ltree-drop-above)):not(:has(.ltree-drop-child)) .ltree-drop-below,
+	&:not(:has(.ltree-drop-above)):not(:has(.ltree-drop-below)) .ltree-drop-child {
+		left: var(--drop-zone-start, 33%);
+		right: 0;
+		border-radius: $drop-zone-border-radius;
+	}
+}
+
 :root {
 	--tree-node-indent-per-level: #{$tree-node-indent-per-level};
 	--ltree-primary: #{$primary-color};
@@ -586,12 +616,8 @@ $body-color: #212529 !default;
 }
 
 // Drop Zone Container - wraps all zones with CSS variable for start position
+// Position is set inline (fixed) by Tree.svelte for the floating overlay
 .ltree-drop-zones {
-	position: absolute;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
 	pointer-events: none; // Let children handle pointer events
 	overflow: visible;
 }
@@ -675,6 +701,14 @@ $body-color: #212529 !default;
 		transform: translateY(100%);
 		// border-radius: 0 0 4px 0;
 	}
+
+	// Zone expansion: when a zone is hidden, remaining zones fill the gap
+	&:not(:has(.ltree-drop-child)) .ltree-drop-below {
+		right: 0;
+	}
+	&:not(:has(.ltree-drop-below)) .ltree-drop-child {
+		left: var(--drop-zone-start, 33%);
+	}
 }
 
 // Layout: "above" - All 3 zones in a row above the node
@@ -703,6 +737,9 @@ $body-color: #212529 !default;
 		right: 0;
 		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
 	}
+
+	// Zone expansion: when a zone is hidden, remaining zones fill the gap
+	@include zone-horizontal-expansion;
 }
 
 // Layout: "below" - All 3 zones in a row below the node
@@ -731,6 +768,9 @@ $body-color: #212529 !default;
 		right: 0;
 		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
 	}
+
+	// Zone expansion: when a zone is hidden, remaining zones fill the gap
+	@include zone-horizontal-expansion;
 }
 
 // Layout: "wave" - Zones stacked vertically (above/child/below)

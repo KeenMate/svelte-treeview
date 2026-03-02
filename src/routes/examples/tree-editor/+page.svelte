@@ -480,6 +480,14 @@
 					<td>Remove a node (and optionally its descendants)</td>
 				</tr>
 				<tr>
+					<td><code>updateNode(path, dataUpdates)</code></td>
+					<td>Update data properties of a node in place</td>
+				</tr>
+				<tr>
+					<td><code>copyNodeWithDescendants(node, parentPath, transformFn)</code></td>
+					<td>Deep-copy a node and its subtree under a new parent</td>
+				</tr>
+				<tr>
 					<td><code>getNodeByPath(path)</code></td>
 					<td>Get a node by its path</td>
 				</tr>
@@ -494,6 +502,22 @@
 				<tr>
 					<td><code>refreshSiblings(parentPath)</code></td>
 					<td>Re-sort siblings using orderMember</td>
+				</tr>
+				<tr>
+					<td><code>refreshNode(path)</code></td>
+					<td>Force re-render of a single node</td>
+				</tr>
+				<tr>
+					<td><code>getExpandedPaths()</code></td>
+					<td>Get all currently expanded node paths</td>
+				</tr>
+				<tr>
+					<td><code>setExpandedPaths(paths)</code></td>
+					<td>Restore expanded state from a saved list of paths</td>
+				</tr>
+				<tr>
+					<td><code>getAllData()</code></td>
+					<td>Get all node data as a flat array</td>
 				</tr>
 			</tbody>
 		</table>
@@ -521,6 +545,7 @@
 		<div class="code-block">
 			<pre>{`<script lang="ts">
   import Tree from '@keenmate/svelte-treeview';
+  import type { LTreeNode, DropPosition, DropOperation } from '@keenmate/svelte-treeview';
 
   interface MyNode {
     id: number;
@@ -530,7 +555,7 @@
   }
 
   let treeRef: Tree<MyNode>;
-  let selectedNode = $state(null);
+  let selectedNode = $state<LTreeNode<MyNode> | null>(null);
 
   // Add a new node
   function addChild() {
@@ -545,8 +570,9 @@
 
   // Move node above sibling
   function moveUp() {
+    if (!selectedNode) return;
     const siblings = treeRef.getSiblings(selectedNode.path);
-    const index = siblings.findIndex(s => s.path === selectedNode.path);
+    const index = siblings.findIndex(s => s.path === selectedNode!.path);
     if (index > 0) {
       treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'above');
     }
@@ -554,12 +580,24 @@
 
   // Remove selected node
   function remove() {
+    if (!selectedNode) return;
     treeRef.removeNode(selectedNode.path);
     selectedNode = null;
   }
 
   // Handle drag-drop
-  function handleDrop(dropNode, draggedNode, position, event) {
+  // dragDropMode: 'none' | 'self' | 'cross' | 'both'
+  //   none  — disabled (default)
+  //   self  — reorder within same tree only
+  //   cross — between different trees only
+  //   both  — same-tree and cross-tree
+  function handleDrop(
+    dropNode: LTreeNode<MyNode> | null,
+    draggedNode: LTreeNode<MyNode>,
+    position: DropPosition,
+    event: DragEvent | TouchEvent,
+    operation: DropOperation
+  ) {
     if (dropNode) {
       treeRef.moveNode(draggedNode.path, dropNode.path, position);
     }
@@ -570,6 +608,7 @@
   bind:this={treeRef}
   data={data}
   orderMember="sortOrder"
+  dragDropMode="both"
   onNodeDrop={handleDrop}
   bind:selectedNode
 >

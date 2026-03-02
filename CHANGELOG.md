@@ -5,9 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.7.2] - 2026-03-01
+## [4.8.0] - Unreleased
 
 ### Changed
+- **Floating drop zones auto-expand when positions are restricted**: When a node disallows certain drop positions (e.g. no "child" on a file), the remaining floating zones now expand to fill the available space instead of leaving a visible gap. Uses CSS `:not(:has())` selectors to detect which zone elements are absent from the DOM — no JavaScript overhead. Supports all horizontal layouts: "around" (bottom row expands), "above" and "below" (zones split into halves or full width depending on how many are visible), with correct border-radius adjustments
+- **Drag and Drop Disabled by Default**: `dragDropMode` now defaults to `'none'` instead of `'both'`. Most trees are read-only, so this is a safer default. To enable drag and drop, explicitly set `dragDropMode="both"` (or `"self"` / `"cross"`)
 - **`dropZoneStart` now controls glow mode child threshold**: Previously glow mode used a hardcoded 50% (`width / 2`) to determine when to snap to the "child" drop position. Now it uses the same `dropZoneStart` prop as floating mode, accepting both percentage and pixel values
 - **Unified visual rendering across all three modes** (recursive, progressive, virtual):
   - All modes now use the same `--tree-node-indent-per-level` CSS variable for indentation
@@ -16,26 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `will-change: transform` from virtual scroll container (caused sub-pixel rendering shift)
 
 ### Fixed
+- **Cross-tree `copyNodeWithDescendants` ignoring drop position**: The `Tree.svelte` exported `copyNodeWithDescendants()` wrapper only forwarded 3 of 5 parameters (`sourceNode`, `targetParentPath`, `transformData`) to the underlying ltree method — the `siblingPath` and `position` parameters were silently dropped. This caused cross-tree drag-and-drop to always append nodes at the end regardless of where the user dropped them (above/below a sibling). Same-tree drops were unaffected because the internal `_handleDrop` calls the ltree method directly, bypassing the wrapper. The fix adds the missing `siblingPath` and `position` parameters to the exported wrapper and forwards them through
 - **`treeId` becoming undefined on prop changes**: Auto-generated `treeId` was lost when parent re-rendered with spread props, causing `scrollToPath` and DOM ID lookups to fail. Now uses stable fallback via `$effect.pre`
 - **Empty tree drop placeholder ignoring `dragDropMode`**: The empty tree placeholder accepted drops even when `dragDropMode` was `'none'`, `'self'`, or `'cross'`. Now respects the mode setting consistently
 - **Sort order mismatch between rendering modes**: `visibleFlatNodes` had inverted sort logic compared to recursive mode
-- **Drag-drop example missing `dragDropMode`**: Added `dragDropMode="both"` to all trees in the drag-drop example page (required since default changed to `'none'` in v4.7.1)
+- **Drag-drop example missing `dragDropMode`**: Added `dragDropMode="both"` to all trees in the drag-drop example page (required since default changed to `'none'`)
 - **Tree-editor example missing `dragDropMode`**: Added `dragDropMode="both"` to tree-editor example (same issue as drag-drop page)
+- Removed development `console.log` statements from `Tree.svelte` and `ltree.svelte.ts`
 
 ### Examples
 - **Search example**: Added filter/search mode toggle (funnel vs magnifying glass icon) matching the performance page pattern
 - **Tree-editor example**: Added `type` field to node data and display node type behind each node title
 - **Shared CSS**: Moved search bar and `kbd` styles to `examples-shared.css` for reuse across all example pages
-
-## [4.7.1] - 2026-02-17
-
-### Changed
-- **Drag and Drop Disabled by Default**: `dragDropMode` now defaults to `'none'` instead of `'both'`
-  - Most trees are read-only, so this is a safer default
-  - To enable drag and drop, explicitly set `dragDropMode="both"` (or `"self"` / `"cross"`)
-
-### Fixed
-- Removed development `console.log` statements from `Tree.svelte` and `ltree.svelte.ts`
 
 ## [4.7.0] - 2026-02-11
 

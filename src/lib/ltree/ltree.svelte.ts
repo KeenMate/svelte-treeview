@@ -900,7 +900,9 @@ export function createLTree<T>(
 						.filter(o => o < targetOrder)
 						.sort((a, b) => b - a);
 					const belowOrder = siblingOrders[0] ?? targetOrder - 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((belowOrder + targetOrder) / 2);
+					const newOrder = Math.floor((belowOrder + targetOrder) / 2);
+					console.log(`[moveNode] position=above, targetOrder=${targetOrder}, belowOrder=${belowOrder}, newOrder=${newOrder}, siblingOrders=`, siblings.map(s => ({ path: s.path, order: s.data?.[this.orderMember] })));
+					(sourceNode.data as any)[this.orderMember] = newOrder;
 				} else {
 					// Find order value just above target
 					const siblingOrders = siblings
@@ -909,12 +911,25 @@ export function createLTree<T>(
 						.filter(o => o > targetOrder)
 						.sort((a, b) => a - b);
 					const aboveOrder = siblingOrders[0] ?? targetOrder + 20;
-					(sourceNode.data as any)[this.orderMember] = Math.floor((targetOrder + aboveOrder) / 2);
+					const newOrder = Math.floor((targetOrder + aboveOrder) / 2);
+					console.log(`[moveNode] position=below, targetOrder=${targetOrder}, aboveOrder=${aboveOrder}, newOrder=${newOrder}, siblingOrders=`, siblings.map(s => ({ path: s.path, order: s.data?.[this.orderMember] })));
+					(sourceNode.data as any)[this.orderMember] = newOrder;
 				}
+			} else if (position !== 'child') {
+				console.log(`[moveNode] position=${position}, but orderMember=${this.orderMember}, sourceNode.data=${!!sourceNode.data} — order NOT calculated`);
 			}
 
 			// Re-sort siblings if needed
 			this.refreshSiblings(newParentPath);
+
+			// Log final sibling order after refresh
+			{
+				const parent = newParentPath ? this.getNodeByPath(newParentPath) : root;
+				if (parent) {
+					const finalOrder = Object.values(parent.children).map((s: any) => ({ path: s.path, order: s.data?.[this.orderMember] }));
+					console.log(`[moveNode] Final sibling order after refreshSiblings:`, finalOrder);
+				}
+			}
 
 			return { success: true };
 		},
@@ -1228,6 +1243,7 @@ export function createLTree<T>(
 			// Handle positioning relative to sibling if specified
 			if (siblingPath && position && rootNode.data) {
 				const siblingNode = this.getNodeByPath(siblingPath);
+				console.log(`[copyNodeWithDescendants] Positioning: siblingPath=${siblingPath}, position=${position}, siblingFound=${!!siblingNode}, orderMember=${this.orderMember}`);
 				if (siblingNode && this.orderMember) {
 					// Get the parent to access siblings
 					const parent = targetParentPath ? this.getNodeByPath(targetParentPath) : root;
@@ -1243,7 +1259,9 @@ export function createLTree<T>(
 								.filter(o => o < siblingOrder)
 								.sort((a, b) => b - a);
 							const belowOrder = siblingOrders[0] ?? siblingOrder - 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((belowOrder + siblingOrder) / 2);
+							const newOrder = Math.floor((belowOrder + siblingOrder) / 2);
+							console.log(`[copyNodeWithDescendants] position=above, siblingOrder=${siblingOrder}, belowOrder=${belowOrder}, newOrder=${newOrder}`);
+							(rootNode.data as any)[this.orderMember] = newOrder;
 						} else {
 							// Find order value just above sibling
 							const siblingOrders = siblings
@@ -1252,13 +1270,25 @@ export function createLTree<T>(
 								.filter(o => o > siblingOrder)
 								.sort((a, b) => a - b);
 							const aboveOrder = siblingOrders[0] ?? siblingOrder + 20;
-							(rootNode.data as any)[this.orderMember] = Math.floor((siblingOrder + aboveOrder) / 2);
+							const newOrder = Math.floor((siblingOrder + aboveOrder) / 2);
+							console.log(`[copyNodeWithDescendants] position=below, siblingOrder=${siblingOrder}, aboveOrder=${aboveOrder}, newOrder=${newOrder}`);
+							(rootNode.data as any)[this.orderMember] = newOrder;
 						}
 
 						// Re-sort siblings
 						this.refreshSiblings(targetParentPath);
+
+						// Log final order
+						const finalOrder = Object.values(parent.children).map((s: any) => ({ path: s.path, order: s.data?.[this.orderMember] }));
+						console.log(`[copyNodeWithDescendants] Final sibling order:`, finalOrder);
 					}
+				} else if (!siblingNode) {
+					console.warn(`[copyNodeWithDescendants] Sibling not found at path: ${siblingPath}`);
+				} else if (!this.orderMember) {
+					console.warn(`[copyNodeWithDescendants] No orderMember set — cannot position`);
 				}
+			} else {
+				console.log(`[copyNodeWithDescendants] No positioning: siblingPath=${siblingPath}, position=${position}, hasData=${!!rootNode.data}`);
 			}
 
 			return { success: true, rootNode, count: totalCount };

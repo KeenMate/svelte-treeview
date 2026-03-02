@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types';
-	import { untrack } from 'svelte';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -199,74 +198,110 @@
 		{ id: 820, path: '8.20', name: 'Kitchener', population: '256K' },
 	];
 
-	// Search state
-	let searchText = $state('');
-	let treeRef: Tree<LocationItem>;
-	let searchResults = $state<LTreeNode<LocationItem>[]>([]);
-	let currentResultIndex = $state(0);
-	let useContainerScroll = $state(true);
-
 	function sortByName(items: LTreeNode<LocationItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
 
-	// Reactive search - automatically search when searchText changes
-	$effect(() => {
-		const query = searchText.trim();
-		// Use untrack to prevent reading treeRef/searchResults from creating dependencies
-		untrack(() => {
-			if (treeRef && query) {
-				const results = treeRef.searchNodes(query) || [];
-				searchResults = results;
-				currentResultIndex = results.length > 0 ? 0 : -1;
-				// Auto-scroll to first result
-				if (results.length > 0) {
-					treeRef.scrollToPath(results[0].path, { containerScroll: useContainerScroll });
-				}
-			} else {
-				searchResults = [];
-				currentResultIndex = -1;
-			}
-		});
-	});
+	// Tree ref and state
+	let treeRef: Tree<LocationItem>;
+	let searchText = $state('');
+	let useContainerScroll = $state(true);
 
-	function scrollToCurrentResult() {
-		if (searchResults.length > 0 && currentResultIndex >= 0) {
-			treeRef?.scrollToPath(searchResults[currentResultIndex].path, { containerScroll: useContainerScroll });
+	// Search mode: 'filter' filters the tree visually, 'search' navigates without filtering
+	type SearchMode = 'filter' | 'search';
+	let searchMode = $state<SearchMode>('filter');
+	let searchInputValue = $state('');
+	let searchResults = $state<LTreeNode<LocationItem>[]>([]);
+	let currentResultIndex = $state(-1);
+
+	function executeSearch() {
+		const query = searchInputValue.trim();
+		if (!query) {
+			searchResults = [];
+			currentResultIndex = -1;
+			return;
+		}
+		const results = treeRef?.searchNodes(query) ?? [];
+		searchResults = results;
+		if (results.length > 0) {
+			currentResultIndex = 0;
+			navigateToResult(0);
+		} else {
+			currentResultIndex = -1;
 		}
 	}
 
-	function goToPrevious() {
-		if (searchResults.length > 0) {
-			currentResultIndex = currentResultIndex <= 0
-				? searchResults.length - 1
-				: currentResultIndex - 1;
-			scrollToCurrentResult();
+	function navigateToResult(idx: number) {
+		if (searchResults.length === 0) return;
+		currentResultIndex = idx;
+		const node = searchResults[idx];
+		if (node?.path) {
+			treeRef?.scrollToPath(node.path, {
+				expand: true,
+				highlight: true,
+				scrollOptions: { behavior: 'smooth', block: 'center' },
+				containerScroll: useContainerScroll
+			});
 		}
 	}
 
-	function goToNext() {
-		if (searchResults.length > 0) {
-			currentResultIndex = currentResultIndex >= searchResults.length - 1
-				? 0
-				: currentResultIndex + 1;
-			scrollToCurrentResult();
+	function searchNext() {
+		if (searchResults.length === 0) {
+			executeSearch();
+			return;
+		}
+		const next = (currentResultIndex + 1) % searchResults.length;
+		navigateToResult(next);
+	}
+
+	function searchPrev() {
+		if (searchResults.length === 0) return;
+		const prev = (currentResultIndex - 1 + searchResults.length) % searchResults.length;
+		navigateToResult(prev);
+	}
+
+	function clearSearch() {
+		searchInputValue = '';
+		searchText = '';
+		searchResults = [];
+		currentResultIndex = -1;
+	}
+
+	function onSearchInput() {
+		if (searchMode === 'filter') {
+			searchText = searchInputValue;
+		}
+		// Both modes: search immediately on typing
+		const results = treeRef?.searchNodes(searchInputValue.trim()) ?? [];
+		searchResults = results;
+		if (results.length > 0) {
+			currentResultIndex = 0;
+			navigateToResult(0);
+		} else {
+			currentResultIndex = -1;
 		}
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
+	function onSearchKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
+			e.preventDefault();
 			if (e.shiftKey) {
-				goToPrevious();
+				searchPrev();
 			} else {
-				goToNext();
+				searchNext();
 			}
+		} else if (e.key === 'Escape') {
+			clearSearch();
 		}
+	}
+
+	function toggleSearchMode() {
+		clearSearch();
+		searchMode = searchMode === 'filter' ? 'search' : 'filter';
 	}
 
 	function scrollToResult(index: number) {
-		currentResultIndex = index;
-		scrollToCurrentResult();
+		navigateToResult(index);
 	}
 </script>
 
@@ -277,7 +312,7 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>🔍 Search & Filter</h1>
+		<h1>Search & Filter</h1>
 		<p class="subtitle">Internal search index with result navigation</p>
 		<RenderModeSwitch />
 	</header>
@@ -286,43 +321,52 @@
 	<div class="card">
 		<h2>Search & Navigate</h2>
 		<p class="description">
-			Type to filter the tree and navigate through results.
-			Use <kbd>Enter</kbd> for next, <kbd>Shift+Enter</kbd> for previous.
+			{#if searchMode === 'filter'}
+				Type to filter the tree — only matching nodes and their ancestors are shown.
+			{:else}
+				Type to find matches — the full tree stays visible, matched nodes are highlighted.
+			{/if}
+			Use <kbd>Enter</kbd> for next, <kbd>Shift+Enter</kbd> for previous, <kbd>Esc</kbd> to clear.
 		</p>
 
-		<div class="controls">
+		<div class="search-bar">
+			<button
+				class="search-mode-btn"
+				title={searchMode === 'filter' ? 'Filter mode — click to switch to Search' : 'Search mode — click to switch to Filter'}
+				aria-label="Toggle search mode"
+				onclick={toggleSearchMode}
+			>
+				{#if searchMode === 'filter'}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+				{:else}
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+				{/if}
+			</button>
+			<span class="search-mode-label">{searchMode === 'filter' ? 'Filter' : 'Search'}</span>
 			<input
 				type="text"
-				bind:value={searchText}
-				placeholder="Search... (try 'london' or 'san')"
-				onkeydown={handleKeydown}
-				style="flex: 1; min-width: 200px;"
+				bind:value={searchInputValue}
+				placeholder={searchMode === 'filter' ? "Filter nodes... (try 'london' or 'san')" : "Search nodes... (Enter to find)"}
+				class="search-input"
+				oninput={onSearchInput}
+				onkeydown={onSearchKeydown}
 			/>
-			<button
-				class="btn"
-				onclick={goToPrevious}
-				disabled={searchResults.length === 0}
-				title="Previous result (Shift+Enter)"
-			>
-				&larr; Prev
-			</button>
-			<span class="result-indicator">
-				{#if searchResults.length > 0}
-					{currentResultIndex + 1} of {searchResults.length}
-				{:else if searchText.trim()}
-					No results
-				{:else}
-					&mdash;
-				{/if}
-			</span>
-			<button
-				class="btn"
-				onclick={goToNext}
-				disabled={searchResults.length === 0}
-				title="Next result (Enter)"
-			>
-				Next &rarr;
-			</button>
+			{#if searchResults.length > 0}
+				<span class="search-counter">{currentResultIndex + 1}/{searchResults.length}</span>
+				<button class="search-nav-btn" title="Previous (Shift+Enter)" aria-label="Previous result" onclick={searchPrev}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+				</button>
+				<button class="search-nav-btn" title="Next (Enter)" aria-label="Next result" onclick={searchNext}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+				</button>
+			{:else if searchInputValue.trim() && (searchMode === 'filter' || currentResultIndex === -1)}
+				<span class="search-counter no-results">0 results</span>
+			{/if}
+			{#if searchInputValue}
+				<button class="search-nav-btn" title="Clear (Esc)" aria-label="Clear search" onclick={clearSearch}>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+				</button>
+			{/if}
 			<label class="scroll-option" title="When enabled, scrolls only within the tree container. When disabled, scrolls the entire page.">
 				<input type="checkbox" bind:checked={useContainerScroll} />
 				Container scroll
@@ -331,7 +375,7 @@
 
 		<div class="grid-2">
 			<div>
-				<h3>Tree (filtered)</h3>
+				<h3>Tree {searchMode === 'filter' && searchInputValue.trim() ? '(filtered)' : ''}</h3>
 				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 					<Tree
 						bind:this={treeRef}
@@ -375,7 +419,7 @@
 						</ul>
 					{:else}
 						<p class="empty-state">
-							{searchText.trim() ? 'No results found' : 'Type to search'}
+							{searchInputValue.trim() ? 'No results found' : 'Type to search'}
 						</p>
 					{/if}
 				</div>
@@ -383,39 +427,30 @@
 		</div>
 
 		<div class="note" style="margin-top: 1rem;">
-			<p class="note-title">Note</p>
-			<p>The search index is built asynchronously after page load. If no results appear immediately, wait a moment.</p>
+			<p class="note-title">Filter vs Search</p>
+			<p>
+				<strong>Filter</strong> (funnel icon): Hides non-matching nodes — only matches and their ancestors remain visible. Great for narrowing down large trees.<br/>
+				<strong>Search</strong> (magnifying glass icon): Keeps the full tree visible and navigates to matching nodes with highlighting. Better for finding specific nodes in context.
+			</p>
 		</div>
 
 		<div class="code-block">
-			<pre>{`<script>
-  let searchText = $state('');
-  let treeRef;
-  let results = $state([]);
-  let currentIndex = $state(0);
-
-  $effect(() => {
-    results = treeRef?.searchNodes(searchText) || [];
-    currentIndex = 0;
-  });
-
-  function goToNext() {
-    currentIndex = (currentIndex + 1) % results.length;
-    treeRef.scrollToPath(results[currentIndex].path);
-  }
-</script>
-
-<input bind:value={searchText} />
-<button on:click={goToNext}>Next</button>
-<span>{currentIndex + 1} of {results.length}</span>
-
+			<pre>{`<!-- Filter mode: bind searchText to filter the tree -->
 <Tree
-  bind:this={treeRef}
   bind:searchText
   shouldUseInternalSearchIndex={true}
   searchValueMember="name"
   ...
-/>`}</pre>
+/>
+
+<!-- Search mode: query the index, navigate with scrollToPath -->
+<script>
+  const results = treeRef.searchNodes('london');
+  treeRef.scrollToPath(results[0].path, {
+    highlight: true,
+    containerScroll: true
+  });
+</script>`}</pre>
 		</div>
 	</div>
 
@@ -524,11 +559,20 @@
 </div>
 
 <style>
-	.result-indicator {
-		min-width: 80px;
-		text-align: center;
-		font-weight: 500;
+	.scroll-option {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.75rem;
 		color: #4a5568;
+		cursor: pointer;
+		padding: 0.25rem 0.5rem;
+		margin-left: 0.25rem;
+		white-space: nowrap;
+	}
+
+	.scroll-option input {
+		margin: 0;
 	}
 
 	.results-list {
@@ -571,39 +615,6 @@
 		color: #718096;
 		text-align: center;
 		padding: 2rem;
-	}
-
-	.controls {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
-	}
-
-	.scroll-option {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.875rem;
-		color: #4a5568;
-		cursor: pointer;
-		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
-		background: #f7fafc;
-		border: 1px solid #e2e8f0;
-	}
-
-	.scroll-option:hover {
-		background: #edf2f7;
-	}
-
-	.scroll-option input {
-		margin: 0;
 	}
 
 	.location-node {

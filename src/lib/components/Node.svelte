@@ -61,19 +61,13 @@
 	const leafIconClass = $derived(config.leafIconClass);
 	const selectedNodeClass = $derived(config.selectedNodeClass);
 	const dragOverNodeClass = $derived(config.dragOverNodeClass);
+	const dragDropMode = $derived(config.dragDropMode);
 	const dropZoneMode = $derived(config.dropZoneMode);
-	const dropZoneLayout = $derived(config.dropZoneLayout);
 	const dropZoneStart = $derived(config.dropZoneStart);
-	const dropZoneMaxWidth = $derived(config.dropZoneMaxWidth);
 	const allowCopy = $derived(config.allowCopy);
 
 	// Compute if THIS node is the one being hovered for drop
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
-
-	// Format dropZoneStart - number = percentage, string = as-is
-	const formattedDropZoneStart = $derived(
-		typeof dropZoneStart === 'number' ? `${dropZoneStart}%` : dropZoneStart
-	)
 
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
@@ -85,9 +79,6 @@
 
 	// Drag over state
 	let isDraggedOver = $state(false);
-
-	// Track which drop zone is being hovered during drag (for floating mode)
-	let hoveredZone = $state<'above' | 'below' | 'child' | null>(null);
 
 	// Track glow position for glow mode
 	let glowPosition = $state<'above' | 'below' | 'child' | null>(null);
@@ -299,12 +290,12 @@
 			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''} {isDraggedOver && dragOverNodeClass ? dragOverNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
-			class:ltree-draggable={node?.isDraggable}
+			class:ltree-draggable={node?.isDraggable && dragDropMode !== 'none'}
 			class:ltree-glow-above={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'above' && isPositionAllowed('above')}
 			class:ltree-glow-below={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'below' && isPositionAllowed('below')}
 			class:ltree-glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child' && isPositionAllowed('child')}
 			class:ltree-drop-copy={isDragInProgress && isHoveredForDrop && dropOperation === 'copy'}
-			draggable={node?.isDraggable}
+			draggable={node?.isDraggable && dragDropMode !== 'none'}
 			onclick={(e) => {
 				e.stopPropagation();
 				_onNodeClicked();
@@ -314,7 +305,7 @@
 				callbacks.onNodeRightClicked(node, e);
 			}}
 			ondragstart={(e) => {
-				if (node?.isDraggable && e.dataTransfer) {
+				if (node?.isDraggable && dragDropMode !== 'none' && e.dataTransfer) {
 					e.dataTransfer.effectAllowed = allowCopy ? "copyMove" : "move";
 					e.dataTransfer.setData(
 						"application/svelte-treeview",
@@ -374,43 +365,6 @@
 				{tree.getNodeDisplayValue(node)}
 			{/if}
 		</div>
-
-		<!-- Drop zones: positioned relative to .ltree-node-row (outside content to avoid padding issues) -->
-		<!-- Only render floating drop zones when in 'floating' mode, filtered by allowedDropPositions -->
-		{#if dropZoneMode === 'floating' && isDragInProgress && isHoveredForDrop}
-			<div
-				class="ltree-drop-zones ltree-drop-zones-{dropZoneLayout}"
-				style="--drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {dropZoneMaxWidth}px;"
-			>
-				{#if isPositionAllowed('above')}
-					<div
-						class="ltree-drop-zone ltree-drop-above"
-						class:ltree-drop-zone-active={hoveredZone === 'above'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'above'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'above', e); }}
-					>↑ Above</div>
-				{/if}
-				{#if isPositionAllowed('below')}
-					<div
-						class="ltree-drop-zone ltree-drop-below"
-						class:ltree-drop-zone-active={hoveredZone === 'below'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'below'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'below', e); }}
-					>↓ Below</div>
-				{/if}
-				{#if isPositionAllowed('child')}
-					<div
-						class="ltree-drop-zone ltree-drop-child"
-						class:ltree-drop-zone-active={hoveredZone === 'child'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'child', e); }}
-					>→ Child</div>
-				{/if}
-			</div>
-		{/if}
 	</div>
 
 	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->
