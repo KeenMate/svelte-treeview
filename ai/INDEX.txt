@@ -15,7 +15,7 @@ tree-editing.txt         - addNode, moveNode, removeNode methods
 styling-theming.txt      - CSS variables, SCSS, classes
 events-callbacks.txt     - Events, callbacks, handlers
 typescript-types.txt     - Types and interfaces
-performance.txt          - Flat rendering, progressive render, optimization
+performance.txt          - Flat rendering, progressive render, virtual scroll, optimization
 advanced-patterns.txt    - Complex use cases and patterns
 
 KEYWORD INDEX
@@ -186,6 +186,14 @@ U
 update() → basic-setup.txt, advanced-patterns.txt
 useFlatRendering → performance.txt
 
+V
+-
+virtualScroll → performance.txt
+virtualRowHeight → performance.txt
+virtualOverscan → performance.txt
+virtualContainerHeight → performance.txt
+Virtual scrolling → performance.txt
+
 COMMON QUESTIONS
 ================
 
@@ -224,6 +232,9 @@ A: → typescript-types.txt
 
 Q: My tree is slow with thousands of items
 A: → performance.txt
+
+Q: How do I use virtual scroll for huge trees?
+A: → performance.txt (Virtual Scroll Mode)
 
 Q: How do I copy nodes instead of move?
 A: → drag-drop.txt (Ctrl+drag)
@@ -277,5 +288,6 @@ INTEGRATION
 PERFORMANCE
 - Flat rendering → performance.txt
 - Progressive render → performance.txt
+- Virtual scroll → performance.txt
 - $state.raw() → performance.txt
 - Large datasets → performance.txt

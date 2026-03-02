@@ -104,6 +104,7 @@ const data = [
 Behavior when restricted:
 - Glow mode: snaps to nearest allowed position
 - Floating mode: only shows buttons for allowed positions
+- Floating mode: remaining zones auto-expand to fill the gap (CSS-only, no JS overhead)
 
 DRAG DROP MODE
 --------------

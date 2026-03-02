@@ -149,11 +149,42 @@ Typical performance (5500 nodes):
 
 | Operation | Time |
 |-----------|------|
-| Initial render (flat) | ~25ms |
+| Initial render (virtual scroll) | ~5ms |
+| Initial render (flat/progressive) | ~25ms |
 | Initial render (recursive) | ~300ms |
 | Expand/collapse | ~100-150ms |
 | Search filtering | <50ms |
 | insertArray | <100ms |
+
+VIRTUAL SCROLL MODE (v4.8+)
+---------------------------
+Third rendering mode — only renders visible nodes + overscan:
+
+<Tree
+  virtualScroll={true}
+  virtualRowHeight={28}         <!-- Row height in px (auto-detected if omitted) -->
+  virtualOverscan={5}           <!-- Extra rows above/below viewport (default: 5) -->
+  virtualContainerHeight="600px" <!-- Container height (required for virtual scroll) -->
+/>
+
+When to use:
+- 10,000+ nodes where progressive rendering still creates too many DOM elements
+- Handles 50,000+ nodes without DOM bloat
+- Only visible rows + overscan are in the DOM at any time
+
+scrollToPath works with virtual scroll:
+- Uses index-based scrolling instead of DOM query
+- Has retry logic for timing issues when DOM isn't rendered yet
+
+RENDERING MODE COMPARISON
+-------------------------
+| Mode | Best for | Props |
+|------|----------|-------|
+| Recursive | <500 nodes | useFlatRendering={false} |
+| Progressive (default) | 500-10,000 nodes | useFlatRendering={true} progressiveRender={true} |
+| Virtual Scroll | 10,000+ nodes | virtualScroll={true} virtualContainerHeight="600px" |
+
+All three modes share the same indentation (--tree-node-indent-per-level) and gap logic.
 
 MEMORY OPTIMIZATION
 -------------------
@@ -168,9 +199,8 @@ let data = $state.raw<Item[]>([]);
 3. Limit initial expand:
 <Tree expandLevel={1} />
 
-4. Consider virtual scrolling (if needed):
-- Tree doesn't have built-in virtual scroll
-- For 50,000+ nodes, consider pagination
+4. Use virtual scroll for 10,000+ nodes:
+<Tree virtualScroll={true} virtualContainerHeight="600px" />
 
 AVOID O(n²) PATTERNS
 --------------------
@@ -265,7 +295,7 @@ Issue: Slow sorting
 Fix: Avoid O(n²) patterns, use isSorted={true} for pre-sorted data
 
 Issue: Memory issues with huge datasets
-Fix: Limit expandLevel, consider pagination
+Fix: Limit expandLevel, use virtualScroll={true} for 10,000+ nodes
 
 PROFILING
 ---------
@@ -285,6 +315,7 @@ BEST PRACTICES
 ✅ Use $state.raw() for 1000+ items
 ✅ Keep progressiveRender={true}
 ✅ Keep useFlatRendering={true}
+✅ Use virtualScroll={true} for 10,000+ nodes
 ✅ Limit expandLevel for large trees
 ✅ Debounce search input
 ✅ Use isSorted={true} for pre-sorted data

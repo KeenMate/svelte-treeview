@@ -11,13 +11,16 @@ describe('LTree Sorting', () => {
 			undefined, // levelMember
 			undefined, // hasChildrenMember
 			undefined, // isExpandedMember
-			undefined, // isSelectedMember
+			undefined, // isSelectableMember
 			undefined, // isDraggableMember
 			undefined, // isDropAllowedMember
+			undefined, // allowedDropPositionsMember
 			'name', // displayValueMember
 			undefined, // getDisplayValueCallback
 			undefined, // searchValueMember
 			undefined, // getSearchValueCallback
+			undefined, // getAllowedDropPositionsCallback
+			undefined, // orderMember
 			'test-tree',
 			'.', // treePathSeparator
 			2, // expandLevel

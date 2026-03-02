@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [4.8.0] - Unreleased
 
+### Added
+- **Virtual Scroll rendering mode**: Third rendering mode alongside recursive and progressive flat. Only renders visible nodes plus configurable overscan — handles 50,000+ nodes without DOM bloat. New props: `virtualScroll`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`
+- **Search bar with result navigation**: Dual-mode filter/search with result counter, prev/next navigation, Enter/Shift+Enter/Escape keyboard shortcuts, and round-robin cycling through matches
+- **`scrollToPath` retry logic for virtual scroll**: Shared highlight helper with retry mechanism for virtual scroll timing — fixes ~40% of missing highlights when DOM wasn't yet rendered after scroll
+- **`searchNodes()` public method**: Search the internal index and return matching nodes programmatically
+
 ### Changed
 - **Floating drop zones auto-expand when positions are restricted**: When a node disallows certain drop positions (e.g. no "child" on a file), the remaining floating zones now expand to fill the available space instead of leaving a visible gap. Uses CSS `:not(:has())` selectors to detect which zone elements are absent from the DOM — no JavaScript overhead. Supports all horizontal layouts: "around" (bottom row expands), "above" and "below" (zones split into halves or full width depending on how many are visible), with correct border-radius adjustments
 - **Drag and Drop Disabled by Default**: `dragDropMode` now defaults to `'none'` instead of `'both'`. Most trees are read-only, so this is a safer default. To enable drag and drop, explicitly set `dragDropMode="both"` (or `"self"` / `"cross"`)
@@ -24,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Sort order mismatch between rendering modes**: `visibleFlatNodes` had inverted sort logic compared to recursive mode
 - **Drag-drop example missing `dragDropMode`**: Added `dragDropMode="both"` to all trees in the drag-drop example page (required since default changed to `'none'`)
 - **Tree-editor example missing `dragDropMode`**: Added `dragDropMode="both"` to tree-editor example (same issue as drag-drop page)
+- **`updateNode` not triggering re-render in flat mode**: Flat/progressive rendering didn't pick up per-node updates
+- **`bodyClass` prop not applying custom class name** (#24)
 - Removed development `console.log` statements from `Tree.svelte` and `ltree.svelte.ts`
 
 ### Examples

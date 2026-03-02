@@ -6,7 +6,37 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## New in v4.7: Per-Node Drop Position Restrictions
+## New in v4.8: Virtual Scroll & Unified Rendering
+
+> [!NOTE]
+> **New virtual scroll mode renders only visible nodes — handle 50,000+ items without DOM bloat.**
+
+Three rendering modes, one consistent look:
+
+| Mode | Best for | How it works |
+|------|----------|-------------|
+| **Recursive** | Small trees (<500 nodes) | Traditional nested Svelte components |
+| **Progressive** (default) | Medium trees (500–10,000) | Flat rendering with exponential batching |
+| **Virtual Scroll** | Large trees (10,000+) | Only visible rows + overscan are in the DOM |
+
+```svelte
+<Tree
+  {data}
+  virtualScroll={true}
+  virtualRowHeight={28}
+  virtualOverscan={5}
+  virtualContainerHeight="600px"
+/>
+```
+
+**Also in this release:**
+- **Search result navigation** — dual-mode filter/search with result counter, prev/next (Enter/Shift+Enter), round-robin cycling
+- **Floating drop zones auto-expand** when positions are restricted — pure CSS `:not(:has())`, zero JS overhead
+- **Cross-tree drop positioning fixed** — above/below placement now works correctly between trees
+- **Unified indentation & gaps** across all three rendering modes
+- **Drag & drop disabled by default** — set `dragDropMode="both"` to enable
+
+## v4.7: Per-Node Drop Position Restrictions
 
 > [!NOTE]
 > **You can now restrict which drop positions (above/below/child) are allowed per node.**
