@@ -1842,6 +1842,7 @@ export class TreeController<T> {
 	// ── Empty tree drop handlers (used directly in template) ────────────
 
 	handleEmptyTreeDragOver = (event: DragEvent) => {
+		if (this.dragDropMode === 'none') return;
 		if (event.dataTransfer?.types.includes('application/svelte-treeview')) {
 			event.preventDefault();
 			this.isDropPlaceholderActive = true;
@@ -1863,6 +1864,7 @@ export class TreeController<T> {
 	handleEmptyTreeDrop = (event: DragEvent) => {
 		event.preventDefault();
 		this.isDropPlaceholderActive = false;
+		if (this.dragDropMode === 'none') return;
 
 		const draggedNodeData = event.dataTransfer?.getData('application/svelte-treeview');
 		if (draggedNodeData) {
@@ -1873,6 +1875,7 @@ export class TreeController<T> {
 	};
 
 	handleEmptyTreeTouchEnd = (event: TouchEvent) => {
+		if (this.dragDropMode === 'none') return;
 		if (this.draggedNode && this.isDropPlaceholderActive) {
 			this._handleDrop(null, this.draggedNode, 'child', event);
 			this.isDropPlaceholderActive = false;

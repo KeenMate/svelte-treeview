@@ -341,6 +341,7 @@
 	// ── Sync props → controller (one-way: parent prop changes flow in) ─
 	$effect(() => { controller.data = data; });
 	$effect(() => { controller.searchText = searchText; });
+	$effect(() => { if (treeId) controller.treeId = treeId; });
 	$effect(() => { controller.treePathSeparator = treePathSeparator ?? '.'; });
 	$effect(() => { controller.shouldDisplayDebugInformation = shouldDisplayDebugInformation ?? false; });
 	$effect(() => { controller.shouldDisplayContextMenuInDebugMode = shouldDisplayContextMenuInDebugMode ?? false; });

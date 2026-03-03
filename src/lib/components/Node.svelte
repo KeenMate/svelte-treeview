@@ -103,6 +103,7 @@
 
 	// Calculate glow position based on mouse position in the node row
 	// Respects allowedDropPositions - snaps to nearest allowed position
+	// Uses dropZoneStart to determine the child zone threshold
 	function calculateGlowPosition(event: DragEvent, element: HTMLElement): 'before' | 'after' | 'child' | null {
 		const rect = element.getBoundingClientRect();
 		const x = event.clientX - rect.left;
@@ -110,9 +111,14 @@
 		const width = rect.width;
 		const height = rect.height;
 
+		// Calculate child zone threshold from dropZoneStart
+		const childThreshold = typeof dropZoneStart === 'number'
+			? width * (dropZoneStart / 100)
+			: width / 2;
+
 		// Calculate the ideal position based on mouse position
 		let idealPosition: DropPosition;
-		if (x > width / 2) {
+		if (x > childThreshold) {
 			idealPosition = 'child';
 		} else if (y < height / 2) {
 			idealPosition = 'before';
