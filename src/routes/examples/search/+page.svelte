@@ -198,73 +198,86 @@
 	];
 
 	// Search state
+	type SearchMode = 'filter' | 'search';
+	let searchMode = $state<SearchMode>('filter');
+	let searchInputValue = $state('');
 	let searchText = $state('');
 	let treeRef: Tree<LocationItem>;
 	let searchResults = $state<LTreeNode<LocationItem>[]>([]);
-	let currentResultIndex = $state(0);
+	let currentResultIndex = $state(-1);
 	let useContainerScroll = $state(true);
 
 	function sortByName(items: LTreeNode<LocationItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
 
-	// Reactive search - automatically search when searchText changes
-	$effect(() => {
-		const query = searchText.trim();
-		// Use untrack to prevent reading treeRef/searchResults from creating dependencies
-		untrack(() => {
-			if (treeRef && query) {
-				const results = treeRef.searchNodes(query) || [];
-				searchResults = results;
-				currentResultIndex = results.length > 0 ? 0 : -1;
-				// Auto-scroll to first result
-				if (results.length > 0) {
-					treeRef.scrollToPath(results[0].path, { containerScroll: useContainerScroll });
-				}
-			} else {
-				searchResults = [];
-				currentResultIndex = -1;
-			}
-		});
-	});
+	function toggleSearchMode() {
+		clearSearch();
+		searchMode = searchMode === 'filter' ? 'search' : 'filter';
+	}
 
-	function scrollToCurrentResult() {
-		if (searchResults.length > 0 && currentResultIndex >= 0) {
-			treeRef?.scrollToPath(searchResults[currentResultIndex].path, { containerScroll: useContainerScroll });
+	function navigateToResult(idx: number) {
+		if (searchResults.length === 0) return;
+		currentResultIndex = idx;
+		const node = searchResults[idx];
+		if (node?.path) {
+			treeRef?.scrollToPath(node.path, {
+				expand: true,
+				highlight: true,
+				scrollOptions: { behavior: 'smooth', block: 'center' },
+				containerScroll: useContainerScroll
+			});
 		}
 	}
 
-	function goToPrevious() {
-		if (searchResults.length > 0) {
-			currentResultIndex = currentResultIndex <= 0
-				? searchResults.length - 1
-				: currentResultIndex - 1;
-			scrollToCurrentResult();
+	function onSearchInput() {
+		if (searchMode === 'filter') {
+			searchText = searchInputValue;
+		}
+		const results = treeRef?.searchNodes(searchInputValue.trim()) ?? [];
+		searchResults = results;
+		if (results.length > 0) {
+			currentResultIndex = 0;
+			navigateToResult(0);
+		} else {
+			currentResultIndex = -1;
 		}
 	}
 
-	function goToNext() {
-		if (searchResults.length > 0) {
-			currentResultIndex = currentResultIndex >= searchResults.length - 1
-				? 0
-				: currentResultIndex + 1;
-			scrollToCurrentResult();
-		}
+	function searchNext() {
+		if (searchResults.length === 0) return;
+		const next = (currentResultIndex + 1) % searchResults.length;
+		navigateToResult(next);
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
+	function searchPrev() {
+		if (searchResults.length === 0) return;
+		const prev = (currentResultIndex - 1 + searchResults.length) % searchResults.length;
+		navigateToResult(prev);
+	}
+
+	function clearSearch() {
+		searchInputValue = '';
+		searchText = '';
+		searchResults = [];
+		currentResultIndex = -1;
+	}
+
+	function onSearchKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
+			e.preventDefault();
 			if (e.shiftKey) {
-				goToPrevious();
+				searchPrev();
 			} else {
-				goToNext();
+				searchNext();
 			}
+		} else if (e.key === 'Escape') {
+			clearSearch();
 		}
 	}
 
 	function scrollToResult(index: number) {
-		currentResultIndex = index;
-		scrollToCurrentResult();
+		navigateToResult(index);
 	}
 </script>
 
@@ -283,43 +296,55 @@
 	<div class="card">
 		<h2>Search & Navigate</h2>
 		<p class="description">
-			Type to filter the tree and navigate through results.
-			Use <kbd>Enter</kbd> for next, <kbd>Shift+Enter</kbd> for previous.
+			Type to search the tree. <strong>Filter</strong> mode hides non-matching nodes.
+			<strong>Search</strong> mode keeps the tree visible and navigates to results.
+			Use <kbd>Enter</kbd> for next, <kbd>Shift+Enter</kbd> for previous, <kbd>Esc</kbd> to clear.
 		</p>
 
-		<div class="controls">
+		<div class="search-bar">
+			<button class="search-mode-btn" onclick={toggleSearchMode} title="Toggle filter/search mode">
+				{#if searchMode === 'filter'}
+					<!-- Funnel icon -->
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+						<path d="M1.5 1.5h13l-5 6v5l-3 2v-7z"/>
+					</svg>
+				{:else}
+					<!-- Magnifying glass icon -->
+					<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+						<circle cx="6.5" cy="6.5" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+						<line x1="10" y1="10" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+					</svg>
+				{/if}
+			</button>
+			<span class="search-mode-label">{searchMode === 'filter' ? 'Filter' : 'Search'}</span>
+
 			<input
 				type="text"
-				bind:value={searchText}
+				bind:value={searchInputValue}
+				oninput={onSearchInput}
+				onkeydown={onSearchKeydown}
 				placeholder="Search... (try 'london' or 'san')"
-				onkeydown={handleKeydown}
-				style="flex: 1; min-width: 200px;"
+				class="search-input"
 			/>
-			<button
-				class="btn"
-				onclick={goToPrevious}
-				disabled={searchResults.length === 0}
-				title="Previous result (Shift+Enter)"
-			>
-				&larr; Prev
-			</button>
-			<span class="result-indicator">
-				{#if searchResults.length > 0}
-					{currentResultIndex + 1} of {searchResults.length}
-				{:else if searchText.trim()}
-					No results
-				{:else}
-					&mdash;
-				{/if}
-			</span>
-			<button
-				class="btn"
-				onclick={goToNext}
-				disabled={searchResults.length === 0}
-				title="Next result (Enter)"
-			>
-				Next &rarr;
-			</button>
+
+			{#if searchResults.length > 0}
+				<span class="search-counter">{currentResultIndex + 1}/{searchResults.length}</span>
+				<button class="search-nav-btn" title="Previous (Shift+Enter)" onclick={searchPrev}>
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 2L1 7h10z"/></svg>
+				</button>
+				<button class="search-nav-btn" title="Next (Enter)" onclick={searchNext}>
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 10L1 5h10z"/></svg>
+				</button>
+			{:else if searchInputValue.trim()}
+				<span class="search-counter no-results">0 results</span>
+			{/if}
+
+			{#if searchInputValue}
+				<button class="search-nav-btn" title="Clear (Esc)" onclick={clearSearch}>
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+				</button>
+			{/if}
+
 			<label class="scroll-option" title="When enabled, scrolls only within the tree container. When disabled, scrolls the entire page.">
 				<input type="checkbox" bind:checked={useContainerScroll} />
 				Container scroll
@@ -385,25 +410,36 @@
 
 		<div class="code-block">
 			<pre>{`${"<"}script>
+  let searchInputValue = $state('');
   let searchText = $state('');
+  let searchMode = $state('filter'); // 'filter' | 'search'
   let treeRef;
   let results = $state([]);
-  let currentIndex = $state(0);
+  let currentIndex = $state(-1);
 
-  $effect(() => {
-    results = treeRef?.searchNodes(searchText) || [];
-    currentIndex = 0;
-  });
+  function onSearchInput() {
+    if (searchMode === 'filter') searchText = searchInputValue;
+    results = treeRef?.searchNodes(searchInputValue.trim()) ?? [];
+    if (results.length > 0) {
+      currentIndex = 0;
+      treeRef.scrollToPath(results[0].path, {
+        expand: true, highlight: true
+      });
+    }
+  }
 
-  function goToNext() {
-    currentIndex = (currentIndex + 1) % results.length;
-    treeRef.scrollToPath(results[currentIndex].path);
+  function searchNext() {
+    const next = (currentIndex + 1) % results.length;
+    currentIndex = next;
+    treeRef.scrollToPath(results[next].path, {
+      expand: true, highlight: true
+    });
   }
 ${"<"}/script>
 
-<input bind:value={searchText} />
-<button on:click={goToNext}>Next</button>
-<span>{currentIndex + 1} of {results.length}</span>
+<input bind:value={searchInputValue} oninput={onSearchInput} />
+<span>{currentIndex + 1}/{results.length}</span>
+<button onclick={searchNext}>Next</button>
 
 <Tree
   bind:this={treeRef}
@@ -520,11 +556,87 @@ ${"<"}/script>
 </div>
 
 <style>
-	.result-indicator {
-		min-width: 80px;
-		text-align: center;
+	.search-bar {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		flex-wrap: wrap;
+		padding: 0.5rem;
+		background: #f7fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 6px;
+	}
+
+	.search-mode-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border: 1px solid #cbd5e0;
+		border-radius: 4px;
+		background: white;
+		cursor: pointer;
+		color: #667eea;
+		transition: background-color 0.15s;
+	}
+
+	.search-mode-btn:hover {
+		background: #edf2f7;
+	}
+
+	.search-mode-label {
+		font-size: 0.8rem;
+		font-weight: 600;
+		color: #667eea;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		min-width: 40px;
+	}
+
+	.search-input {
+		flex: 1;
+		min-width: 200px;
+		padding: 0.4rem 0.75rem;
+		border: 1px solid #cbd5e0;
+		border-radius: 4px;
+		font-size: 0.9rem;
+	}
+
+	.search-input:focus {
+		outline: none;
+		border-color: #667eea;
+		box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+	}
+
+	.search-counter {
+		font-size: 0.85rem;
 		font-weight: 500;
 		color: #4a5568;
+		min-width: 50px;
+		text-align: center;
+	}
+
+	.search-counter.no-results {
+		color: #e53e3e;
+	}
+
+	.search-nav-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 28px;
+		height: 28px;
+		border: 1px solid #cbd5e0;
+		border-radius: 4px;
+		background: white;
+		cursor: pointer;
+		color: #4a5568;
+		transition: background-color 0.15s;
+	}
+
+	.search-nav-btn:hover {
+		background: #edf2f7;
 	}
 
 	.results-list {
@@ -576,18 +688,6 @@ ${"<"}/script>
 		padding: 0.1em 0.4em;
 		font-size: 0.9em;
 		font-family: inherit;
-	}
-
-	.controls {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		flex-wrap: wrap;
-	}
-
-	.btn:disabled {
-		opacity: 0.5;
-		cursor: not-allowed;
 	}
 
 	.scroll-option {

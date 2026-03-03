@@ -853,6 +853,13 @@ $body-color: #212529 !default;
 	color: var(--ltree-body-color);
 }
 
+// Virtual scroll container
+.ltree-virtual-scroll {
+	overflow-y: auto !important;
+	overflow-x: visible;
+	overscroll-behavior: contain;
+}
+
 // Tree Container
 .ltree-container {
 	position: relative;
