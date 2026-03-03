@@ -177,6 +177,8 @@ T
 -
 Touch drag → drag-drop.txt
 Tree → basic-setup.txt, typescript-types.txt
+TreeController → basic-setup.txt, advanced-patterns.txt
+TreeProvider → basic-setup.txt, advanced-patterns.txt
 treeId → basic-setup.txt
 treePathSeparator → data-handling.txt
 TypeScript → typescript-types.txt
@@ -185,6 +187,14 @@ U
 -
 update() → basic-setup.txt, advanced-patterns.txt
 useFlatRendering → performance.txt
+
+V
+-
+virtualScroll → performance.txt
+virtualRowHeight → performance.txt
+virtualOverscan → performance.txt
+virtualContainerHeight → performance.txt
+Virtual scroll → performance.txt
 
 COMMON QUESTIONS
 ================
@@ -230,6 +240,9 @@ A: → drag-drop.txt (Ctrl+drag)
 
 Q: How do I implement async drop validation?
 A: → drag-drop.txt (beforeDropCallback)
+
+Q: How do I handle trees with 10,000+ nodes?
+A: → performance.txt (virtual scroll, $state.raw())
 
 FEATURES BY CATEGORY
 ====================
@@ -277,5 +290,6 @@ INTEGRATION
 PERFORMANCE
 - Flat rendering → performance.txt
 - Progressive render → performance.txt
+- Virtual scroll → performance.txt
 - $state.raw() → performance.txt
 - Large datasets → performance.txt

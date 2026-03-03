@@ -86,6 +86,40 @@ const stats = treeRef.statistics;
 console.log('Indexing:', stats.isIndexing);
 console.log('Pending:', stats.pendingIndexCount);
 
+VIRTUAL SCROLL MODE
+-------------------
+For very large trees (10,000+ nodes), virtual scroll only renders
+visible rows + overscan, keeping DOM size at ~50 nodes:
+
+<Tree
+  virtualScroll={true}
+  virtualContainerHeight="500px"   <!-- CSS height (auto-detected if not set) -->
+  virtualOverscan={5}              <!-- Extra rows above/below viewport -->
+/>
+
+How it works:
+- Fixed-height container with overflow-y: auto
+- Full-height spacer div for correct scrollbar proportions
+- translateY(offset) positions visible window
+- rAF-throttled scroll handler prevents excessive updates
+- Auto-measures row height from first rendered node
+
+Virtual scroll requires flat rendering (useFlatRendering=true, the default).
+
+scrollToPath in virtual mode:
+- Uses index-based scrolling (finds node in flat array)
+- Centers target in viewport
+- Waits for scroll + re-render (multiple rAF cycles)
+- Applies highlight with retry
+
+RENDERING MODE COMPARISON
+-------------------------
+| Mode | DOM Nodes | Best For |
+|------|-----------|----------|
+| Recursive | All nodes | Small trees (<100) |
+| Flat | All nodes | Medium trees (100-10K) |
+| Virtual | ~50 nodes | Large trees (10K+) |
+
 SORTING PERFORMANCE
 -------------------
 Level-first sorting is critical:
@@ -151,6 +185,7 @@ Typical performance (5500 nodes):
 |-----------|------|
 | Initial render (flat) | ~25ms |
 | Initial render (recursive) | ~300ms |
+| Initial render (virtual) | ~5ms |
 | Expand/collapse | ~100-150ms |
 | Search filtering | <50ms |
 | insertArray | <100ms |
@@ -168,9 +203,8 @@ let data = $state.raw<Item[]>([]);
 3. Limit initial expand:
 <Tree expandLevel={1} />
 
-4. Consider virtual scrolling (if needed):
-- Tree doesn't have built-in virtual scroll
-- For 50,000+ nodes, consider pagination
+4. Use virtual scrolling for 10K+ nodes:
+<Tree virtualScroll={true} virtualContainerHeight="500px" />
 
 AVOID O(n²) PATTERNS
 --------------------
@@ -265,7 +299,7 @@ Issue: Slow sorting
 Fix: Avoid O(n²) patterns, use isSorted={true} for pre-sorted data
 
 Issue: Memory issues with huge datasets
-Fix: Limit expandLevel, consider pagination
+Fix: Limit expandLevel, use virtualScroll={true}
 
 PROFILING
 ---------
@@ -288,6 +322,7 @@ BEST PRACTICES
 ✅ Limit expandLevel for large trees
 ✅ Debounce search input
 ✅ Use isSorted={true} for pre-sorted data
+✅ Use virtualScroll={true} for 10K+ nodes
 ✅ Profile before optimizing
 
 ❌ Don't use $state() for large datasets

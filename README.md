@@ -690,6 +690,10 @@ Without both requirements, no search indexing will occur.
 | `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
 | `initialBatchSize` | `number` | `20` | First batch size for progressive rendering |
 | `maxBatchSize` | `number` | `500` | Maximum batch size cap |
+| `virtualScroll` | `boolean` | `false` | Enable virtual scrolling (flat mode only, renders visible + overscan rows) |
+| `virtualRowHeight` | `number` | auto | Explicit row height in px (auto-measured from first row if not set) |
+| `virtualOverscan` | `number` | `5` | Extra rows rendered above/below viewport |
+| `virtualContainerHeight` | `string` | auto/`'400px'` | CSS height for scroll container (auto-detected from parent if not set) |
 
 #### Drag & Drop Properties
 | Prop | Type | Default | Description |

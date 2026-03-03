@@ -72,6 +72,14 @@ Layout options:
 - 'wave' - Stacked vertically
 - 'wave2' - Diagonal wave pattern
 
+ZONE AUTO-EXPAND
+When some drop positions are restricted (via allowedDropPositions),
+hidden zones auto-expand using CSS :not(:has()) rules:
+- 3 zones visible: normal thirds
+- 2 zones visible: each gets half the space
+- 1 zone visible: full width
+Works in 'around', 'above', and 'below' layouts.
+
 DROP POSITION RESTRICTIONS
 --------------------------
 CRITICAL: Restrict which positions are allowed per node
