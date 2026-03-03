@@ -442,7 +442,6 @@
 									activeDropPosition={null}
 									dropOperation={'move'}
 									flatMode={true}
-									flatIndentSize={'1.5rem'}
 								>
 									{#snippet children(nodeData: any)}
 										<span>{nodeData.data?.icon} {nodeData.data?.name}</span>

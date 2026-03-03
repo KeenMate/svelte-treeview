@@ -110,7 +110,16 @@ export interface TreeControllerProps<T> {
 
 	// Flat rendering
 	useFlatRendering?: boolean;
-	flatIndentSize?: string;
+
+	// Virtual scrolling (flat mode only)
+	/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
+	virtualScroll?: boolean;
+	/** Explicit row height in px. Auto-measured from first row if not set. */
+	virtualRowHeight?: number;
+	/** Extra rows above/below viewport (default: 5) */
+	virtualOverscan?: number;
+	/** CSS height for scroll container. Auto-detected from parent if not set, fallback 400px. */
+	virtualContainerHeight?: string;
 
 	// DRAG AND DROP
 	dragDropMode?: DragDropMode;
@@ -209,7 +218,6 @@ export class TreeController<T> {
 	shouldDisplayContextMenuInDebugMode = $state(false);
 	isLoading = $state(false);
 	useFlatRendering = $state(true);
-	flatIndentSize = $state('1.5rem');
 	progressiveRender = $state(true);
 	initialBatchSize = $state(20);
 	maxBatchSize = $state(500);
@@ -248,6 +256,12 @@ export class TreeController<T> {
 	contextMenuYOffset = $state(0);
 
 	hasContextMenuSnippet = $state(false);
+
+	// Virtual scrolling
+	virtualScroll = $state(false);
+	virtualRowHeight = $state<number | undefined>(undefined);
+	virtualOverscan = $state(5);
+	virtualContainerHeight = $state<string | undefined>(undefined);
 
 	// ── Internal mutable state ──────────────────────────────────────────
 
@@ -295,6 +309,13 @@ export class TreeController<T> {
 	flatRenderAnimationFrame: number | null = null;
 	currentBatchSize: number = 0;
 
+	// Virtual scrolling state
+	vsScrollTop = $state(0);
+	vsMeasuredRowHeight = $state<number | null>(null);
+	vsContainerRef = $state<HTMLDivElement | undefined>();
+	vsDetectedHeight = $state<string | null>(null);
+	private vsRafPending = false;
+
 	// Drop placeholder
 	isDropPlaceholderActive = $state(false);
 
@@ -309,10 +330,36 @@ export class TreeController<T> {
 
 	// ── Derived ─────────────────────────────────────────────────────────
 
+	// Virtual scroll derived computations
+	vsRowHeight = $derived(this.virtualRowHeight ?? this.vsMeasuredRowHeight ?? 32);
+	vsActive = $derived(this.virtualScroll && this.useFlatRendering);
+	vsContainerStyle = $derived(this.virtualContainerHeight ?? this.vsDetectedHeight ?? '400px');
+	allFlatNodes = $derived(this.tree?.visibleFlatNodes ?? []);
+	vsTotalCount = $derived(this.allFlatNodes.length);
+	vsTotalHeight = $derived(this.vsTotalCount * this.vsRowHeight);
+	vsStartIndex = $derived(
+		this.vsActive
+			? Math.max(0, Math.floor(this.vsScrollTop / this.vsRowHeight) - this.virtualOverscan)
+			: 0
+	);
+	vsEndIndex = $derived(
+		this.vsActive
+			? Math.min(
+					this.vsTotalCount,
+					Math.ceil(
+						(this.vsScrollTop + (this.vsContainerRef?.clientHeight ?? 0)) / this.vsRowHeight
+					) + this.virtualOverscan
+				)
+			: this.vsTotalCount
+	);
+	vsOffsetY = $derived(this.vsStartIndex * this.vsRowHeight);
+
 	flatNodesToRender = $derived(
-		this.useFlatRendering && this.progressiveRender
-			? (this.tree?.visibleFlatNodes?.filter((n) => this.flatRenderedIds.has(String(n.id))) ?? [])
-			: (this.tree?.visibleFlatNodes ?? [])
+		this.vsActive
+			? this.allFlatNodes.slice(this.vsStartIndex, this.vsEndIndex)
+			: this.useFlatRendering && this.progressiveRender
+				? (this.tree?.visibleFlatNodes?.filter((n) => this.flatRenderedIds.has(String(n.id))) ?? [])
+				: (this.tree?.visibleFlatNodes ?? [])
 	);
 
 	get statistics() {
@@ -335,7 +382,6 @@ export class TreeController<T> {
 		this.isLoading = props.isLoading ?? false;
 
 		this.useFlatRendering = props.useFlatRendering ?? true;
-		this.flatIndentSize = props.flatIndentSize ?? '1.5rem';
 		this.progressiveRender = props.progressiveRender ?? true;
 		this.initialBatchSize = props.initialBatchSize ?? 20;
 		this.maxBatchSize = props.maxBatchSize ?? 500;
@@ -360,6 +406,12 @@ export class TreeController<T> {
 		this.contextMenuXOffset = props.contextMenuXOffset ?? 8;
 		this.contextMenuYOffset = props.contextMenuYOffset ?? 0;
 		this.hasContextMenuSnippet = props.hasContextMenuSnippet ?? false;
+
+		// Virtual scrolling
+		this.virtualScroll = props.virtualScroll ?? false;
+		this.virtualRowHeight = props.virtualRowHeight;
+		this.virtualOverscan = props.virtualOverscan ?? 5;
+		this.virtualContainerHeight = props.virtualContainerHeight;
 
 		// Store callbacks
 		this.onNodeClickedCb = props.onNodeClicked;
@@ -496,6 +548,9 @@ export class TreeController<T> {
 				this.flatRenderedIds = new Set();
 				this.flatRenderQueue = [];
 				this.currentBatchSize = 0;
+				// Reset virtual scroll measurements
+				this.vsMeasuredRowHeight = null;
+				this.vsDetectedHeight = null;
 				this.insertResult = this.tree.insertArray(this.data);
 			}
 		});
@@ -563,6 +618,34 @@ export class TreeController<T> {
 			}
 		});
 
+		// Virtual scroll: auto-measure row height from first rendered node
+		$effect(() => {
+			if (!this.vsActive || this.virtualRowHeight || this.vsMeasuredRowHeight) return;
+			if (this.allFlatNodes.length === 0) return;
+			tick().then(() => {
+				if (this.vsContainerRef) {
+					const firstNode = this.vsContainerRef.querySelector('.ltree-node');
+					if (firstNode) {
+						const height = firstNode.getBoundingClientRect().height;
+						if (height > 0) this.vsMeasuredRowHeight = height;
+					}
+				}
+			});
+		});
+
+		// Virtual scroll: auto-detect container height from parent element
+		$effect(() => {
+			if (!this.vsActive || this.virtualContainerHeight || this.vsDetectedHeight) return;
+			tick().then(() => {
+				if (this.vsContainerRef?.parentElement) {
+					const parentHeight = this.vsContainerRef.parentElement.clientHeight;
+					if (parentHeight > 100) {
+						this.vsDetectedHeight = parentHeight + 'px';
+					}
+				}
+			});
+		});
+
 		// Context menu global event listeners
 		$effect(() => {
 			if (this.contextMenuVisible) {
@@ -618,6 +701,17 @@ export class TreeController<T> {
 			}
 		});
 	}
+
+	// ── Virtual scroll handler ──────────────────────────────────────────
+
+	handleVirtualScroll = (event: Event) => {
+		if (this.vsRafPending) return;
+		this.vsRafPending = true;
+		requestAnimationFrame(() => {
+			this.vsScrollTop = (event.target as HTMLElement).scrollTop;
+			this.vsRafPending = false;
+		});
+	};
 
 	// ── Public API methods ──────────────────────────────────────────────
 
@@ -1073,6 +1167,45 @@ export class TreeController<T> {
 			await tick();
 		}
 
+		// Virtual scroll: index-based scrolling instead of DOM query
+		if (this.vsActive && this.vsContainerRef) {
+			const nodeIndex = this.allFlatNodes.findIndex(n => n.path === path);
+			if (nodeIndex === -1) {
+				console.warn(`[Tree ${this.treeId}] Node not found in flat nodes for path: ${path}`);
+				perfEnd(`[${this.treeId}] scrollToPath`);
+				return false;
+			}
+
+			// Scroll virtual container to center the node
+			const targetScroll = nodeIndex * this.vsRowHeight
+				- (this.vsContainerRef.clientHeight / 2)
+				+ this.vsRowHeight / 2;
+			this.vsContainerRef.scrollTo({
+				top: Math.max(0, targetScroll),
+				behavior: scrollOptions?.behavior || 'smooth'
+			});
+
+			// Wait for scroll + re-render — need multiple frames for
+			// rAF-throttled scroll handler → reactive update → DOM render
+			await tick();
+			await new Promise(r => requestAnimationFrame(r));
+			await tick();
+			await new Promise(r => requestAnimationFrame(r));
+
+			if (highlight && this.scrollHighlightClass) {
+				const elementId = `${this.treeId}-${node.id}`;
+				if (!this.applyHighlight(elementId)) {
+					// Element might not be rendered yet — retry after another frame
+					await tick();
+					await new Promise(r => requestAnimationFrame(r));
+					this.applyHighlight(elementId);
+				}
+			}
+
+			perfEnd(`[${this.treeId}] scrollToPath`);
+			return true;
+		}
+
 		const elementId = `${this.treeId}-${node.id}`;
 		const rootEl = containerElement || this.containerElement;
 		const element = rootEl
@@ -1106,23 +1239,40 @@ export class TreeController<T> {
 		}
 
 		if (highlight && this.scrollHighlightClass) {
-			if (this.currentHighlight) {
-				this.currentHighlight.element.classList.remove(this.scrollHighlightClass);
-				clearTimeout(this.currentHighlight.timeoutId);
-				this.currentHighlight = null;
-			}
-
-			contentDiv.classList.add(this.scrollHighlightClass);
-			const highlightClass = this.scrollHighlightClass;
-			const timeoutId = setTimeout(() => {
-				contentDiv.classList.remove(highlightClass);
-				this.currentHighlight = null;
-			}, this.scrollHighlightTimeout);
-
-			this.currentHighlight = { element: contentDiv, timeoutId };
+			this.applyHighlight(elementId);
 		}
 
 		perfEnd(`[${this.treeId}] scrollToPath`);
+		return true;
+	}
+
+	/**
+	 * Apply scroll highlight to a node element by ID.
+	 * Returns true if the element was found and highlighted, false otherwise.
+	 */
+	private applyHighlight(elementId: string): boolean {
+		const rootEl = this.containerElement;
+		const element = rootEl
+			? rootEl.querySelector(`#${CSS.escape(elementId)}`)
+			: document.getElementById(elementId);
+		const contentDiv = element?.querySelector('.ltree-node-content') as HTMLElement | null;
+
+		if (!contentDiv || !this.scrollHighlightClass) return false;
+
+		if (this.currentHighlight) {
+			this.currentHighlight.element.classList.remove(this.scrollHighlightClass);
+			clearTimeout(this.currentHighlight.timeoutId);
+			this.currentHighlight = null;
+		}
+
+		contentDiv.classList.add(this.scrollHighlightClass);
+		const highlightClass = this.scrollHighlightClass;
+		const timeoutId = setTimeout(() => {
+			contentDiv.classList.remove(highlightClass);
+			this.currentHighlight = null;
+		}, this.scrollHighlightTimeout);
+
+		this.currentHighlight = { element: contentDiv, timeoutId };
 		return true;
 	}
 
@@ -1142,6 +1292,11 @@ export class TreeController<T> {
 				updates.shouldDisplayContextMenuInDebugMode ?? false;
 		if (updates.isLoading !== undefined) this.isLoading = updates.isLoading ?? false;
 		if (updates.bodyClass !== undefined) this.bodyClass = updates.bodyClass;
+
+		if (updates.virtualScroll !== undefined) this.virtualScroll = updates.virtualScroll ?? false;
+		if (updates.virtualRowHeight !== undefined) this.virtualRowHeight = updates.virtualRowHeight;
+		if (updates.virtualOverscan !== undefined) this.virtualOverscan = updates.virtualOverscan ?? 5;
+		if (updates.virtualContainerHeight !== undefined) this.virtualContainerHeight = updates.virtualContainerHeight;
 
 		if (updates.shouldToggleOnNodeClick !== undefined)
 			this.shouldToggleOnNodeClick = updates.shouldToggleOnNodeClick ?? true;

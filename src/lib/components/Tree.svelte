@@ -94,8 +94,16 @@
 		 * - Allowing Svelte's keyed {#each} to efficiently diff only changed nodes
 		 */
 		useFlatRendering?: boolean;
-		/** Indentation per level in flat rendering mode (CSS value, default: '1.5rem') */
-		flatIndentSize?: string;
+
+		// VIRTUAL SCROLLING (flat mode only)
+		/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
+		virtualScroll?: boolean;
+		/** Explicit row height in px. Auto-measured from first row if not set. */
+		virtualRowHeight?: number;
+		/** Extra rows above/below viewport (default: 5) */
+		virtualOverscan?: number;
+		/** CSS height for scroll container. Auto-detected from parent if not set, fallback 400px. */
+		virtualContainerHeight?: string;
 
 		// DRAG AND DROP
 		dragDropMode?: DragDropMode;
@@ -200,7 +208,12 @@
 
 		// Flat rendering mode
 		useFlatRendering = true,
-		flatIndentSize = '1.5rem',
+
+		// Virtual scrolling (flat mode only)
+		virtualScroll = false,
+		virtualRowHeight = undefined,
+		virtualOverscan = 5,
+		virtualContainerHeight = undefined,
 
 		// DRAG AND DROP
 		dragDropMode = 'none',
@@ -276,7 +289,10 @@
 		onRenderProgress,
 		onRenderComplete,
 		useFlatRendering,
-		flatIndentSize,
+		virtualScroll,
+		virtualRowHeight,
+		virtualOverscan,
+		virtualContainerHeight,
 		dragDropMode,
 		dropZoneMode,
 		dropZoneLayout,
@@ -331,7 +347,10 @@
 	$effect(() => { controller.isLoading = isLoading ?? false; });
 	$effect(() => { controller.bodyClass = bodyClass; });
 	$effect(() => { controller.useFlatRendering = useFlatRendering ?? true; });
-	$effect(() => { controller.flatIndentSize = flatIndentSize ?? '1.5rem'; });
+	$effect(() => { controller.virtualScroll = virtualScroll ?? false; });
+	$effect(() => { controller.virtualRowHeight = virtualRowHeight; });
+	$effect(() => { controller.virtualOverscan = virtualOverscan ?? 5; });
+	$effect(() => { controller.virtualContainerHeight = virtualContainerHeight; });
 	$effect(() => { controller.progressiveRender = progressiveRender ?? true; });
 	$effect(() => { controller.initialBatchSize = initialBatchSize ?? 20; });
 	$effect(() => { controller.maxBatchSize = maxBatchSize ?? 500; });
@@ -525,6 +544,10 @@
 				| "beforeDropCallback"
 				| "onNodeDrop"
 				| "contextMenuCallback"
+				| "virtualScroll"
+				| "virtualRowHeight"
+				| "virtualOverscan"
+				| "virtualContainerHeight"
 				| "dragDropMode"
 				| "dropZoneMode"
 				| "bodyClass"
@@ -579,6 +602,10 @@
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
 		if (updates.contextMenuCallback !== undefined) contextMenuCallback = updates.contextMenuCallback;
+		if (updates.virtualScroll !== undefined) virtualScroll = updates.virtualScroll;
+		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;
+		if (updates.virtualOverscan !== undefined) virtualOverscan = updates.virtualOverscan;
+		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
 		if (updates.dragDropMode !== undefined) dragDropMode = updates.dragDropMode;
 		if (updates.dropZoneMode !== undefined) dropZoneMode = updates.dropZoneMode;
 		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
@@ -638,10 +665,66 @@
 
 	<div class={controller.bodyClass}>
 		{#if controller.tree?.root}
-			<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
-			{#if controller.useFlatRendering}
+			{#if controller.vsActive}
+				<!-- Virtual scrolling mode -->
+				<div
+					class="ltree-tree ltree-flat-mode ltree-virtual-scroll"
+					style="height: {controller.vsContainerStyle}; overflow-y: auto;"
+					bind:this={controller.vsContainerRef}
+					onscroll={controller.handleVirtualScroll}
+				>
+					<!-- Spacer for correct scrollbar -->
+					<div style="height: {controller.vsTotalHeight}px; position: relative;">
+						<!-- Rendered window at correct offset -->
+						<div style="transform: translateY({controller.vsOffsetY}px);">
+							{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+								{@const absoluteIndex = controller.vsStartIndex + i}
+								{@const prevNode = absoluteIndex > 0 ? controller.allFlatNodes[absoluteIndex - 1] : null}
+								<Node
+									{node}
+									children={nodeTemplate}
+									progressiveRender={false}
+									isDraggedNode={controller.draggedNode?.path === node.path}
+									isDragInProgress={controller.isDragInProgress}
+									hoveredNodeForDropPath={controller.hoveredNodeForDrop?.path}
+									activeDropPosition={controller.activeDropPosition}
+									dropOperation={controller.currentDropOperation}
+									flatMode={true}
+									flatGap={prevNode != null && (node.level ?? 0) > (prevNode.level ?? 0)}
+								/>
+							{:else}
+								<!-- Empty state when tree has no items -->
+								<!-- svelte-ignore a11y_no_static_element_interactions -->
+								<div
+									class="ltree-empty-state"
+									class:ltree-drop-placeholder={controller.isDropPlaceholderActive}
+									ondragenter={controller.handleEmptyTreeDragOver}
+									ondragover={controller.handleEmptyTreeDragOver}
+									ondragleave={controller.handleEmptyTreeDragLeave}
+									ondrop={controller.handleEmptyTreeDrop}
+									ontouchend={controller.handleEmptyTreeTouchEnd}
+								>
+									{#if controller.isDropPlaceholderActive}
+										{#if dropPlaceholder}
+											{@render dropPlaceholder()}
+										{:else}
+											<div class="ltree-drop-placeholder-content">
+												Drop here to add
+											</div>
+										{/if}
+									{:else}
+										{@render noDataFound?.()}
+									{/if}
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+			{:else if controller.useFlatRendering}
+				<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 				<div class="ltree-tree ltree-flat-mode">
-					{#each controller.flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+					{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
+						{@const prevNode = i > 0 ? controller.flatNodesToRender[i - 1] : null}
 						<Node
 							{node}
 							children={nodeTemplate}
@@ -652,7 +735,7 @@
 							activeDropPosition={controller.activeDropPosition}
 							dropOperation={controller.currentDropOperation}
 							flatMode={true}
-							flatIndentSize={controller.flatIndentSize}
+							flatGap={prevNode != null && (node.level ?? 0) > (prevNode.level ?? 0)}
 						/>
 					{:else}
 						<!-- Empty state when tree has no items -->
