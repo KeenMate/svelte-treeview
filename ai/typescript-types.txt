@@ -36,7 +36,7 @@ import type {
   // Core types
   LTreeNode,           // Tree node interface
   Ltree,               // Tree instance interface
-  DropPosition,        // 'above' | 'below' | 'child'
+  DropPosition,        // 'before' | 'after' | 'child'
 
   // Context menu
   ContextMenuItem,     // Menu item interface
@@ -77,14 +77,14 @@ interface LTreeNode<T> {
 
 DROPPOSITION TYPE
 -----------------
-type DropPosition = 'above' | 'below' | 'child';
+type DropPosition = 'before' | 'after' | 'child';
 
 Usage:
 import type { DropPosition } from '@keenmate/svelte-treeview';
 
 function getAllowedPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
   if (node.data?.type === 'file') {
-    return ['above', 'below'];
+    return ['before', 'after'];
   }
   return null;  // all positions
 }

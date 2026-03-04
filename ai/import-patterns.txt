@@ -101,7 +101,7 @@ import type {
   LTreeNode,           // Tree node interface
   Ltree,               // Tree instance interface
   ContextMenuItem,     // Context menu item
-  DropPosition,        // 'above' | 'below' | 'child'
+  DropPosition,        // 'before' | 'after' | 'child'
   InsertArrayResult,   // Insert operation result
   NodeCallbacks,       // Event callback types
   NodeConfig           // Node configuration types

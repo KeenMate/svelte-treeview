@@ -54,7 +54,9 @@
 	const callbacks = getContext<NodeCallbacks<T>>('NodeCallbacks');
 	const config = getContext<NodeConfig>('NodeConfig');
 
-	// Destructure config for convenience (these are stable references)
+	// Destructure config for convenience.
+	// Works reactively because nodeConfig uses $state() (not .raw()) and is mutated
+	// in-place via Object.assign, so the proxy reference stays the same.
 	const {
 		shouldToggleOnNodeClick,
 		expandIconClass,
@@ -62,29 +64,22 @@
 		leafIconClass,
 		selectedNodeClass,
 		dragOverNodeClass,
-		dropZoneMode,
-		dropZoneLayout,
 		dropZoneStart,
-		dropZoneMaxWidth,
 		allowCopy,
 	} = config;
 
+	// Read dropZoneMode through the proxy each time (not destructured) so it
+	// stays reactive in flat mode where nodes are NOT recreated on config change.
+	const dropZoneMode = $derived(config.dropZoneMode);
+
 	// Compute if THIS node is the one being hovered for drop
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
-
-	// Format dropZoneStart - number = percentage, string = as-is
-	const formattedDropZoneStart = $derived(
-		typeof dropZoneStart === 'number' ? `${dropZoneStart}%` : dropZoneStart
-	)
 
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
 
 	// Drag over state
 	let isDraggedOver = $state(false);
-
-	// Track which drop zone is being hovered during drag (for floating mode)
-	let hoveredZone = $state<'before' | 'after' | 'child' | null>(null);
 
 	// Track glow position for glow mode
 	let glowPosition = $state<'before' | 'after' | 'child' | null>(null);
@@ -372,42 +367,6 @@
 			{/if}
 		</div>
 
-		<!-- Drop zones: positioned relative to .ltree-node-row (outside content to avoid padding issues) -->
-		<!-- Only render floating drop zones when in 'floating' mode, filtered by allowedDropPositions -->
-		{#if dropZoneMode === 'floating' && isDragInProgress && isHoveredForDrop}
-			<div
-				class="ltree-drop-zones ltree-drop-zones-{dropZoneLayout}"
-				style="--drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {dropZoneMaxWidth}px;"
-			>
-				{#if isPositionAllowed('before')}
-					<div
-						class="ltree-drop-zone ltree-drop-before"
-						class:ltree-drop-zone-active={hoveredZone === 'before'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'before'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'before', e); }}
-					>↑ Before</div>
-				{/if}
-				{#if isPositionAllowed('after')}
-					<div
-						class="ltree-drop-zone ltree-drop-after"
-						class:ltree-drop-zone-active={hoveredZone === 'after'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'after'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'after', e); }}
-					>↓ After</div>
-				{/if}
-				{#if isPositionAllowed('child')}
-					<div
-						class="ltree-drop-zone ltree-drop-child"
-						class:ltree-drop-zone-active={hoveredZone === 'child'}
-						ondragover={(e) => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = 'child'; callbacks.onNodeDragOver(node, e); }}
-						ondragleave={() => { hoveredZone = null; }}
-						ondrop={(e) => { e.stopPropagation(); if (e.dataTransfer) e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move'; hoveredZone = null; callbacks.onZoneDrop(node, 'child', e); }}
-					>→ Child</div>
-				{/if}
-			</div>
-		{/if}
 	</div>
 
 	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->

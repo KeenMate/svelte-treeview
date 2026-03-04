@@ -2,6 +2,8 @@
 	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types.js';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type ScenarioNode = {
 		id: number;
@@ -602,6 +604,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>Business Scenarios</h1>
 		<p class="subtitle">Real-world tree manipulation workflows with database integration</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Scenario Tabs -->
@@ -643,6 +646,7 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="cross"
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -673,6 +677,7 @@
 							dragDropMode="cross"
 							onNodeDrop={handleDropA}
 							isLoading={isLoadingA}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -691,6 +696,7 @@
 							dragDropMode="cross"
 							onNodeDrop={handleDropB}
 							isLoading={isLoadingB}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -711,6 +717,7 @@
 							onNodeClicked={onNodeClickC}
 							selectedNode={selectedNodeC}
 							isLoading={isLoadingC}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -729,6 +736,7 @@
 							dragDropMode="cross"
 							onNodeDrop={handleDropD}
 							isLoading={isLoadingD}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
@@ -753,6 +761,7 @@
 							dragDropMode="cross"
 							onNodeDrop={handleDropE}
 							isLoading={isLoadingE}
+							{...getTreeProps()}
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>

@@ -169,7 +169,7 @@ Restrict which drop positions are allowed per node:
 // Using member property
 const data = [
   { path: '1', name: 'Trash', allowedDropPositions: ['child'] },
-  { path: '2', name: 'File.txt', allowedDropPositions: ['above', 'below'] },
+  { path: '2', name: 'File.txt', allowedDropPositions: ['before', 'after'] },
   { path: '3', name: 'Folder' }  // undefined = all positions
 ];
 
@@ -178,7 +178,7 @@ const data = [
 // Using callback
 <Tree
   getAllowedDropPositionsCallback={(node) => {
-    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'file') return ['before', 'after'];
     if (node.data.type === 'trash') return ['child'];
     return undefined;  // all positions
   }}

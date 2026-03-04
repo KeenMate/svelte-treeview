@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Canvas rendering extracted**: Canvas-based rendering (`CanvasTree`, layouts, themes) moved to separate package `@keenmate/svelte-treeview-canvas`.
 
 ### Added
+- **Render mode switch for examples**: Shared `RenderModeSwitch` component across all example pages. Three-button segmented control (Recursive / Progressive / Virtual) with localStorage persistence. All example `<Tree>` instances receive mode props via `{...getTreeProps()}`.
 - **Virtual scroll mode** (`virtualScroll`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`): Only renders visible nodes + overscan rows in a fixed-height scrollable container. Enables smooth scrolling through trees with 50,000+ nodes while maintaining ~50 DOM nodes. rAF-throttled scroll handler, auto-measures row height if not explicitly set.
 - **Virtual scroll `scrollToPath`**: Index-based scrolling that centers the target node in the viewport, waits for rAF-throttled scroll + re-render, applies highlight with retry logic.
 - **Search navigation UX**: Filter/search mode toggle on the search example page. Filter mode hides non-matching nodes, search mode keeps tree visible and navigates to highlighted results. Includes result counter, prev/next chevron buttons, Enter/Shift+Enter keyboard navigation (round-robin), Escape to clear.
@@ -25,9 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`_rev` change tracking** on nodes for efficient keyed rendering.
 
 ### Fixed
+- **Floating drop zones clipped by scrollable containers**: Moved floating drop zone rendering from `Node.svelte` (absolute positioning inside each node) to `Tree.svelte` (fixed positioning at tree level with `z-index: 10000`). Zones now escape `overflow: hidden` containers. Handler methods (`isFloatingPositionAllowed`, `handleFloatingZoneDragOver`, `handleFloatingZoneDragLeave`, `handleFloatingZoneDrop`) added to `TreeController`.
+- **Glow and floating drop zones showing simultaneously**: In flat rendering mode, `dropZoneMode` destructured from `NodeConfig` context was a stale snapshot (nodes aren't recreated). Changed to `$derived(config.dropZoneMode)` so it reads through the reactive proxy on each evaluation.
+- **"After" drop position placing node at end instead of between siblings**: `moveNode` and `addNode` converted root nodes' `parentPath` from `''` to `null` via `|| null`, while `insertArray` used `getParentPath()` which returns `''`. This mismatch caused `sortCallback` to skip the `sortOrder` comparison (`'' !== null` → entered parentPath branch → returned 0), preserving insertion order instead of respecting sort order.
 - **Empty tree drop placeholder ignoring `dragDropMode`**: `handleEmptyTreeDragOver/Drop/TouchEnd` now check `dragDropMode !== 'none'` before activating the drop placeholder.
 - **`treeId` not synced on prop changes**: Added `$effect` in `Tree.svelte` to sync `treeId` prop to controller after mount.
 - **`dropZoneStart` not used in glow mode**: `calculateGlowPosition` now uses `dropZoneStart` to compute the child zone threshold instead of hardcoded `width/2`.
+- **Sort order mismatch between recursive and flat modes**: `visibleFlatNodes` applied `sortCallback` during traversal while recursive mode relied on insertion-order `Object.values()`. Removed runtime sort from flat traversal to match recursive mode — both now use insertion-time sorting from `insertArray()`.
 - **Critical `$state()` vs `$state.raw()` performance regression**: TreeController's `data` property deep-proxied user data, causing **5,500x slowdown** with 8,000+ nodes. Changed `data`, `selectedNode`, `insertResult`, `contextMenuNode`, `hoveredNodeForDrop`, `touchDragState`, `flatRenderedIds`, `flatRenderQueue` to `$state.raw()`.
 
 ### Changed

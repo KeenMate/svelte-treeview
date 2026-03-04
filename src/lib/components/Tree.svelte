@@ -395,6 +395,11 @@
 	// Bidirectional: parent can also SET selectedNode
 	$effect(() => { controller.selectedNode = selectedNode; });
 
+	// ── Floating drop zone helpers ───────────────────────────────────────
+	const formattedDropZoneStart = $derived(
+		typeof controller.dropZoneStart === 'number' ? `${controller.dropZoneStart}%` : controller.dropZoneStart
+	);
+
 	// ── Export public methods (thin proxies) ────────────────────────────
 	export async function expandNodes(nodePath: string) {
 		controller.expandNodes(nodePath);
@@ -836,6 +841,40 @@
 	</div>
 
 	{@render treeFooter?.()}
+
+	<!-- Floating Drop Zones (position:fixed overlay, escapes overflow:hidden) -->
+	{#if controller.dropZoneMode === 'floating' && controller.isDragInProgress && controller.hoveredNodeForDrop && controller.floatingZoneRect}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="ltree-drop-zones ltree-drop-zones-{controller.dropZoneLayout}"
+			style="position: fixed; top: {controller.floatingZoneRect.top}px; left: {controller.floatingZoneRect.left}px; width: {controller.floatingZoneRect.width}px; height: {controller.floatingZoneRect.height}px; z-index: 10000; --drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {controller.dropZoneMaxWidth}px;"
+		>
+			{#if controller.isFloatingPositionAllowed('before')}
+				<div class="ltree-drop-zone ltree-drop-before"
+					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'before'}
+					ondragover={(e) => controller.handleFloatingZoneDragOver('before', e)}
+					ondragleave={() => controller.handleFloatingZoneDragLeave()}
+					ondrop={(e) => controller.handleFloatingZoneDrop('before', e)}
+				>↑ Before</div>
+			{/if}
+			{#if controller.isFloatingPositionAllowed('after')}
+				<div class="ltree-drop-zone ltree-drop-after"
+					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'after'}
+					ondragover={(e) => controller.handleFloatingZoneDragOver('after', e)}
+					ondragleave={() => controller.handleFloatingZoneDragLeave()}
+					ondrop={(e) => controller.handleFloatingZoneDrop('after', e)}
+				>↓ After</div>
+			{/if}
+			{#if controller.isFloatingPositionAllowed('child')}
+				<div class="ltree-drop-zone ltree-drop-child"
+					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'child'}
+					ondragover={(e) => controller.handleFloatingZoneDragOver('child', e)}
+					ondragleave={() => controller.handleFloatingZoneDragLeave()}
+					ondrop={(e) => controller.handleFloatingZoneDrop('child', e)}
+				>→ Child</div>
+			{/if}
+		</div>
+	{/if}
 
 	<!-- Context Menu -->
 	{#if controller.contextMenuVisible && controller.contextMenuNode}

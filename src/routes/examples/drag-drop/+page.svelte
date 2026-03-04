@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type FileItem = {
 		id: number;
@@ -276,6 +278,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🎯 Drag & Drop Examples</h1>
 		<p class="subtitle">Desktop and mobile drag and drop between trees</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Two Trees Side by Side -->
@@ -348,6 +351,7 @@
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -377,6 +381,7 @@
 						{dropZoneLayout}
 						{dropZoneStart}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<span>{node.data?.icon} {node.data?.name}</span>
@@ -434,6 +439,7 @@
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
 				{dropZoneLayout}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
@@ -493,6 +499,7 @@ const data = [
 				shouldDisplayDebugInformation={true}
 				onNodeDragStart={handleTouchDragStart}
 				onNodeDrop={handleTouchDrop}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>
@@ -527,11 +534,13 @@ const data = [
   data={data}
   idMember="id"
   pathMember="path"
-  sortCallback={sortByName}
-  onNodeDrop={(dropNode, draggedNode, position, event) => {
+  dragDropMode="self"
+  sortCallback={sortByOrder}
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
     // Handle the drop - position is 'before', 'after', or 'child'
     console.log('Dropped:', draggedNode.data?.name);
     console.log('Position:', position);
+    console.log('Operation:', operation); // 'move' or 'copy'
     console.log('On:', dropNode?.data?.name || 'empty tree');
   }}
 />`}</pre>
@@ -556,8 +565,8 @@ const data = [
 
 		<div class="note">
 			<p class="note-title">onNodeDrop Signature</p>
-			<p>The <code>position</code> parameter indicates where to drop: <code>'before'</code>, <code>'after'</code>, or <code>'child'</code>:</p>
-			<pre style="margin-top: 0.5rem;">{`onNodeDrop={(dropNode, draggedNode, position, event) => {
+			<p>The <code>position</code> parameter indicates where to drop: <code>'before'</code>, <code>'after'</code>, or <code>'child'</code>. The <code>operation</code> parameter is <code>'move'</code> or <code>'copy'</code> (Ctrl+drag):</p>
+			<pre style="margin-top: 0.5rem;">{`onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
   if (dropNode === null) {
     // Dropped on empty tree placeholder or root drop zone
     // Add as root node
@@ -566,6 +575,7 @@ const data = [
     // position: 'after' - insert as sibling after dropNode
     // position: 'child' - insert as child of dropNode
   }
+  // operation: 'move' (default) or 'copy' (Ctrl+drag with allowCopy)
 }}`}</pre>
 		</div>
 	</div>
@@ -585,7 +595,7 @@ const data = [
 			<tbody>
 				<tr>
 					<td><code>'none'</code></td>
-					<td>Drag and drop is disabled</td>
+					<td>Drag and drop is disabled (default)</td>
 				</tr>
 				<tr>
 					<td><code>'self'</code></td>
@@ -597,7 +607,7 @@ const data = [
 				</tr>
 				<tr>
 					<td><code>'both'</code></td>
-					<td>Allow both self and cross-tree drag and drop (default)</td>
+					<td>Allow both self and cross-tree drag and drop</td>
 				</tr>
 			</tbody>
 		</table>
@@ -607,7 +617,7 @@ const data = [
 <Tree
   data={targetData}
   dragDropMode="cross"
-  onNodeDrop={(dropNode, draggedNode, position, event) => {
+  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
     // Only triggered when dropping from a different tree
   }}
 />`}</pre>
@@ -644,9 +654,9 @@ const data = [
 					<td>Styles the drop placeholder area</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-indicators</code></td>
+					<td><code>ltree-drop-zones</code></td>
 					<td>Drag in progress over a node</td>
-					<td>Container for position indicators (before/child/after)</td>
+					<td>Container for floating drop zone buttons (before/child/after)</td>
 				</tr>
 				<tr>
 					<td><code>ltree-drop-before</code></td>
@@ -662,6 +672,21 @@ const data = [
 					<td><code>ltree-drop-after</code></td>
 					<td>Position indicator active</td>
 					<td>Shows drop will insert after the node</td>
+				</tr>
+				<tr>
+					<td><code>ltree-glow-before</code></td>
+					<td>Glow mode: drop position is "before"</td>
+					<td>Top border glow with arrow indicator</td>
+				</tr>
+				<tr>
+					<td><code>ltree-glow-after</code></td>
+					<td>Glow mode: drop position is "after"</td>
+					<td>Bottom border glow with arrow indicator</td>
+				</tr>
+				<tr>
+					<td><code>ltree-glow-child</code></td>
+					<td>Glow mode: drop position is "child"</td>
+					<td>Right border glow with background tint</td>
 				</tr>
 				<tr>
 					<td><code>ltree-touch-ghost</code></td>

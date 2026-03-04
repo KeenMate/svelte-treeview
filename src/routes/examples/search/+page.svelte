@@ -2,6 +2,8 @@
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
 	import { untrack } from 'svelte';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type LocationItem = {
 		id: number;
@@ -290,6 +292,7 @@
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🔍 Search & Filter</h1>
 		<p class="subtitle">Internal search index with result navigation</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- Unified Search Card -->
@@ -366,6 +369,7 @@
 						shouldUseInternalSearchIndex={true}
 						searchValueMember="name"
 						bind:searchText={searchText}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<span class="location-node">

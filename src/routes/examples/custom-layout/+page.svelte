@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import TreeProvider from '$lib/components/TreeProvider.svelte';
+	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import { getTreeProps } from '../render-mode.svelte.js';
 	import Node from '$lib/components/Node.svelte';
 	import { TreeController } from '$lib/core/TreeController.svelte.js';
 	import type { LTreeNode } from '$lib/ltree/types.js';
@@ -201,6 +203,7 @@
 			Build entirely different UIs on the same core TreeController.
 			Compare the standard <code>&lt;Tree&gt;</code> with custom layouts using <code>&lt;TreeProvider&gt;</code>.
 		</p>
+		<RenderModeSwitch />
 	</header>
 
 	<!-- ================================================================== -->
@@ -221,6 +224,7 @@
 				isSorted={true}
 				expandLevel={3}
 				bind:selectedNode={selectedStd}
+				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}
 					<span>{node.data?.icon} {node.data?.name}</span>

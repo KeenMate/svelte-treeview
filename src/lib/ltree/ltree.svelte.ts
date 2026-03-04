@@ -189,11 +189,9 @@ export function createLTree<T>(
 			const self = this;
 
 			function traverse(node: LTreeNode<T>) {
-				// Get children and optionally sort them
-				let children = Object.values(node.children);
-				if (self.isSorted && self.sortCallback && children.length > 0) {
-					children = self.sortCallback(children);
-				}
+				// Get children in natural tree key order (same as recursive mode).
+				// Sorting was already applied at insertion time in insertArray().
+				const children = Object.values(node.children);
 
 				for (const child of children) {
 					result.push(child);
@@ -905,7 +903,8 @@ export function createLTree<T>(
 			// Update source node's path and parentPath
 			sourceNode.path = newPath;
 			sourceNode.pathSegment = newSegment;
-			sourceNode.parentPath = newParentPath || null;
+			// Keep '' for root nodes (matching insertArray's getParentPath convention)
+			sourceNode.parentPath = newParentPath;
 			sourceNode.level = getLevel(newPath, this.treePathSeparator);
 
 			// Update the data object's path if pathMember is defined
@@ -1062,7 +1061,8 @@ export function createLTree<T>(
 			newNode.id = _idMember && data ? (data as any)[_idMember] : undefined;
 			newNode.path = newPath;
 			newNode.pathSegment = segment;
-			newNode.parentPath = parentPath || null;
+			// Keep '' for root nodes (matching insertArray's getParentPath convention)
+			newNode.parentPath = parentPath;
 			newNode.level = getLevel(newPath, this.treePathSeparator);
 			newNode.data = data;
 			newNode.isExpanded = _expandLevel ? newNode.level! <= _expandLevel : false;

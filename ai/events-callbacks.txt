@@ -37,7 +37,7 @@ DRAG EVENTS
   onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
     console.log('Dropped:', draggedNode.data.name);
     console.log('Target:', dropNode?.data.name);
-    console.log('Position:', position);  // 'above', 'below', 'child'
+    console.log('Position:', position);  // 'before', 'after', 'child'
     console.log('Operation:', operation);  // 'move', 'copy'
   }}
 />
@@ -60,7 +60,7 @@ Validate or modify drops before they happen:
 
     // Modify position
     if (position === 'child' && dropNode.data.type === 'file') {
-      return { position: 'below' };
+      return { position: 'after' };
     }
 
     // Modify operation
@@ -76,7 +76,7 @@ Validate or modify drops before they happen:
 Return values:
 - false → Cancel drop
 - true / undefined → Proceed normally
-- { position: 'above'|'below'|'child' } → Override position
+- { position: 'before'|'after'|'child' } → Override position
 - { operation: 'move'|'copy' } → Override operation
 - { position, operation } → Override both
 - Promise<...> → Async validation
@@ -119,7 +119,7 @@ Control which drop positions are allowed per node:
 
 <Tree
   getAllowedDropPositionsCallback={(node) => {
-    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'file') return ['before', 'after'];
     if (node.data.type === 'trash') return ['child'];
     return undefined;  // all positions
   }}
@@ -233,7 +233,7 @@ onNodeDrop:
 (
   dropNode: LTreeNode<T> | null,
   draggedNode: LTreeNode<T>,
-  position: 'above' | 'below' | 'child',
+  position: 'before' | 'after' | 'child',
   event: DragEvent,
   operation: 'move' | 'copy'
 ) => void
@@ -242,7 +242,7 @@ beforeDropCallback:
 (
   dropNode: LTreeNode<T> | null,
   draggedNode: LTreeNode<T>,
-  position: 'above' | 'below' | 'child',
+  position: 'before' | 'after' | 'child',
   event: DragEvent,
   operation: 'move' | 'copy'
 ) => boolean | { position?, operation? } | Promise<...>

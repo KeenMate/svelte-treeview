@@ -57,8 +57,8 @@ MOVE NODE
   }
 </script>
 
-<button onclick={() => moveNode('1.2', '2.1', 'above')}>
-  Move 1.2 above 2.1
+<button onclick={() => moveNode('1.2', '2.1', 'before')}>
+  Move 1.2 before 2.1
 </button>
 
 <button onclick={() => moveNode('1.2', '2', 'child')}>
@@ -66,15 +66,15 @@ MOVE NODE
 </button>
 
 moveNode signature:
-moveNode(sourcePath: string, targetPath: string, position: 'above' | 'below' | 'child')
+moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child')
 
 - sourcePath: Node to move (includes all descendants)
 - targetPath: Target node
 - position: Where relative to target
 
 Positions:
-- 'above': Insert as sibling before target
-- 'below': Insert as sibling after target
+- 'before': Insert as sibling before target
+- 'after': Insert as sibling after target
 - 'child': Insert as child of target
 
 REMOVE NODE
@@ -144,7 +144,7 @@ MOVE UP/DOWN
     const index = siblings.findIndex(s => s.path === nodePath);
 
     if (index > 0) {
-      treeRef.moveNode(nodePath, siblings[index - 1].path, 'above');
+      treeRef.moveNode(nodePath, siblings[index - 1].path, 'before');
     }
   }
 
@@ -153,7 +153,7 @@ MOVE UP/DOWN
     const index = siblings.findIndex(s => s.path === nodePath);
 
     if (index < siblings.length - 1) {
-      treeRef.moveNode(nodePath, siblings[index + 1].path, 'below');
+      treeRef.moveNode(nodePath, siblings[index + 1].path, 'after');
     }
   }
 </script>
@@ -179,7 +179,7 @@ copyNodeWithDescendants(
   sourcePath: string,
   targetParentPath?: string,
   siblingPath?: string,
-  position?: 'above' | 'below'
+  position?: 'before' | 'after'
 )
 
 NEW ITEM WORKFLOW

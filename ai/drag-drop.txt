@@ -3,7 +3,7 @@ DRAG AND DROP
 
 CRITICAL: Drag and drop is DISABLED by default
 - Set dragDropMode="both" to enable
-- Three drop positions: above, below, child
+- Three drop positions: before, after, child
 - Same-tree and cross-tree moves
 - Touch support for mobile
 - Copy operations with Ctrl+drag
@@ -15,7 +15,7 @@ BASIC DRAG AND DROP
 <script>
   function handleDrop(dropNode, draggedNode, position, event, operation) {
     console.log(`Dropped ${draggedNode.data.name}`);
-    console.log(`Position: ${position}`);  // 'above', 'below', 'child'
+    console.log(`Position: ${position}`);  // 'before', 'after', 'child'
     console.log(`Target: ${dropNode?.data.name}`);
     console.log(`Operation: ${operation}`);  // 'move' or 'copy'
   }
@@ -33,14 +33,14 @@ DROP POSITIONS
 --------------
 Three positions available when dropping:
 
-'above'  - Insert as sibling BEFORE the target node
-'below'  - Insert as sibling AFTER the target node
+'before' - Insert as sibling BEFORE the target node
+'after'  - Insert as sibling AFTER the target node
 'child'  - Insert as CHILD of the target node
 
 The position is calculated based on mouse Y position:
-- Top 25% of node → 'above'
+- Top 25% of node → 'before'
 - Middle 50% of node → 'child'
-- Bottom 25% of node → 'below'
+- Bottom 25% of node → 'after'
 
 DROP ZONE MODES
 ---------------
@@ -53,20 +53,20 @@ Two visual modes for drop zones:
 <Tree dropZoneMode="floating" />
 
 Glow mode classes:
-- ltree-glow-above - top border glow
-- ltree-glow-below - bottom border glow
+- ltree-glow-before - top border glow
+- ltree-glow-after - bottom border glow
 - ltree-glow-child - full border glow
 
 DROP ZONE LAYOUTS (Floating Mode)
 ---------------------------------
 <Tree
   dropZoneMode="floating"
-  dropZoneLayout="around"     <!-- Default: above on top, below/child on bottom -->
+  dropZoneLayout="around"     <!-- Default: before on top, after/child on bottom -->
   dropZoneStart={33}          <!-- Start position (percentage) -->
 />
 
 Layout options:
-- 'around' - Above on top, Below/Child on bottom
+- 'around' - Before on top, After/Child on bottom
 - 'above' - All 3 zones in row above node
 - 'below' - All 3 zones in row below node
 - 'wave' - Stacked vertically
@@ -86,14 +86,14 @@ CRITICAL: Restrict which positions are allowed per node
 
 Use case examples:
 - Trash folder: only 'child' (drop INTO, not around)
-- Files: only 'above'/'below' (can't drop INTO a file)
+- Files: only 'before'/'after' (can't drop INTO a file)
 - Folders: all positions (default)
 
 Method 1: Callback (dynamic logic)
 
 <Tree
   getAllowedDropPositionsCallback={(node) => {
-    if (node.data.type === 'file') return ['above', 'below'];
+    if (node.data.type === 'file') return ['before', 'after'];
     if (node.data.type === 'trash') return ['child'];
     return undefined;  // all positions allowed
   }}
@@ -103,7 +103,7 @@ Method 2: Member property (server data)
 
 const data = [
   { path: '1', name: 'Trash', allowedDropPositions: ['child'] },
-  { path: '2', name: 'File.txt', allowedDropPositions: ['above', 'below'] },
+  { path: '2', name: 'File.txt', allowedDropPositions: ['before', 'after'] },
   { path: '3', name: 'Folder' }  // undefined = all positions
 ];
 
@@ -177,7 +177,7 @@ Use beforeDropCallback for validation or modification:
 
     // Modify position
     if (position === 'child' && dropNode.data.type === 'file') {
-      return { position: 'below' };
+      return { position: 'after' };
     }
 
     // Proceed normally
@@ -190,7 +190,7 @@ Use beforeDropCallback for validation or modification:
 Return values:
 - false → Cancel the drop
 - true / undefined → Proceed normally
-- { position: 'above' } → Override position
+- { position: 'before' } → Override position
 - { operation: 'copy' } → Override operation
 - Promise<...> → Async validation
 
@@ -243,7 +243,7 @@ const data = [
 
 ORDER MEMBER (SIBLING ORDERING)
 -------------------------------
-CRITICAL: For proper above/below positioning
+CRITICAL: For proper before/after positioning
 
 const data = [
   { path: '1.1', name: 'First', sortOrder: 10 },
@@ -341,7 +341,7 @@ Move nodes programmatically:
     const siblings = treeRef.getSiblings(nodePath);
     const index = siblings.findIndex(s => s.path === nodePath);
     if (index > 0) {
-      treeRef.moveNode(nodePath, siblings[index - 1].path, 'above');
+      treeRef.moveNode(nodePath, siblings[index - 1].path, 'before');
     }
   }
 </script>
@@ -355,7 +355,7 @@ File manager:
   dragDropMode="self"
   orderMember="sortOrder"
   getAllowedDropPositionsCallback={(node) =>
-    node.data.type === 'file' ? ['above', 'below'] : undefined
+    node.data.type === 'file' ? ['before', 'after'] : undefined
   }
   onNodeDrop={handleDrop}
 />

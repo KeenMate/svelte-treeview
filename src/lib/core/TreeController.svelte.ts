@@ -188,7 +188,7 @@ export class TreeController<T> {
 
 	// ── Stable callback & config objects for Node context ───────────────
 	nodeCallbacks!: NodeCallbacks<T>;
-	nodeConfig = $state.raw<NodeConfig>({
+	nodeConfig = $state<NodeConfig>({
 		shouldToggleOnNodeClick: true,
 		expandIconClass: 'ltree-icon-expand',
 		collapseIconClass: 'ltree-icon-collapse',
@@ -284,6 +284,10 @@ export class TreeController<T> {
 	hoveredNodeForDrop = $state.raw<LTreeNode<any> | null>(null);
 	activeDropPosition = $state<DropPosition | null>(null);
 	currentDropOperation = $state<DropOperation>('move');
+
+	// Floating drop zones (rendered at Tree level with position:fixed)
+	floatingZoneRect = $state<{ top: number; left: number; width: number; height: number } | null>(null);
+	floatingHoveredZone = $state<'before' | 'after' | 'child' | null>(null);
 
 	// Touch drag
 	touchDragState = $state.raw<{
@@ -515,9 +519,10 @@ export class TreeController<T> {
 			this.tree.treePathSeparator = this.treePathSeparator;
 		});
 
-		// Update nodeConfig when visual props change
+		// Mutate (don't replace) nodeConfig so the context reference stays the same.
+		// Using $state() (not .raw()) so the proxy makes property reads reactive in Node.svelte.
 		$effect(() => {
-			this.nodeConfig = {
+			Object.assign(this.nodeConfig, {
 				shouldToggleOnNodeClick: this.shouldToggleOnNodeClick,
 				expandIconClass: this.expandIconClass,
 				collapseIconClass: this.collapseIconClass,
@@ -529,7 +534,7 @@ export class TreeController<T> {
 				dropZoneStart: this.dropZoneStart,
 				dropZoneMaxWidth: this.dropZoneMaxWidth,
 				allowCopy: this.allowCopy
-			};
+			});
 		});
 
 		// Filter when searchText changes
@@ -1430,6 +1435,8 @@ export class TreeController<T> {
 		this.activeDropPosition = null;
 		this.isDropPlaceholderActive = false;
 		this.currentDropOperation = 'move';
+		this.floatingZoneRect = null;
+		this.floatingHoveredZone = null;
 	}
 
 	private async _handleDrop(
@@ -1543,6 +1550,15 @@ export class TreeController<T> {
 			if (event.dataTransfer) {
 				event.dataTransfer.dropEffect = this.currentDropOperation;
 			}
+
+			// Capture node rect for floating drop zones (rendered at Tree level with position:fixed)
+			if (this.dropZoneMode === 'floating') {
+				const nodeRow = (event.target as Element).closest('.ltree-node-row');
+				if (nodeRow) {
+					const r = nodeRow.getBoundingClientRect();
+					this.floatingZoneRect = { top: r.top, left: r.left, width: r.width, height: r.height };
+				}
+			}
 		}
 	}
 
@@ -1610,6 +1626,38 @@ export class TreeController<T> {
 		}
 
 		this._onNodeDragEnd(event);
+	}
+
+	// ── Floating drop zone handlers (Tree-level overlay) ────────────────
+
+	isFloatingPositionAllowed(position: DropPosition): boolean {
+		if (!this.hoveredNodeForDrop) return false;
+		const allowed = this.tree.getNodeAllowedDropPositions(this.hoveredNodeForDrop);
+		if (!allowed || allowed.length === 0) return true; // All positions allowed by default
+		return allowed.includes(position);
+	}
+
+	handleFloatingZoneDragOver(position: 'before' | 'after' | 'child', event: DragEvent) {
+		event.preventDefault();
+		if (event.dataTransfer) {
+			event.dataTransfer.dropEffect = (this.allowCopy && event.ctrlKey) ? 'copy' : 'move';
+		}
+		this.floatingHoveredZone = position;
+		// Refresh rect from node row
+		if (this.hoveredNodeForDrop) {
+			this._onNodeDragOver(this.hoveredNodeForDrop, event);
+		}
+	}
+
+	handleFloatingZoneDragLeave() {
+		this.floatingHoveredZone = null;
+	}
+
+	handleFloatingZoneDrop(position: DropPosition, event: DragEvent) {
+		this.floatingHoveredZone = null;
+		if (this.hoveredNodeForDrop) {
+			this._onZoneDrop(this.hoveredNodeForDrop, position, event);
+		}
 	}
 
 	// ── Touch drag handlers ─────────────────────────────────────────────

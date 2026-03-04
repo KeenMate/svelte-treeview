@@ -75,10 +75,10 @@ PUBLIC_METHODS:
   - containerScroll: true scrolls only within nearest scrollable ancestor (prevents page scroll)
 - update(updates: Partial<Props>) - programmatically update props from vanilla JavaScript
 
-EVENTS: 
+EVENTS:
 - onNodeClicked(node)
-- onNodeDragStart(node, event) 
-- onNodeDrop(dropNode, draggedNode, event)
+- onNodeDragStart(node, event)
+- onNodeDrop(dropNode, draggedNode, position, event, operation)
 
 DEPENDENCIES:
 - peer: svelte ^5.0.0
@@ -135,7 +135,7 @@ EXAMPLES:
 - Snippet name: nodeTemplate (not nodeContent)
 
 DRAG_DROP_POSITIONS:
-- DropPosition type: 'above' | 'below' | 'child'
+- DropPosition type: 'before' | 'after' | 'child'
 - allowedDropPositionsMember: string property mapping for server data
 - getAllowedDropPositionsCallback: (node) => DropPosition[] | null for dynamic logic
 - Glow mode: snaps to nearest allowed position
