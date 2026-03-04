@@ -7,42 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added (ported from v4.8.0)
-- **Virtual scroll mode** (`virtualScroll`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`): Only renders visible nodes + overscan rows in a fixed-height scrollable container. Enables smooth scrolling through trees with 50,000+ nodes while maintaining ~50 DOM nodes. Uses rAF-throttled scroll handler and auto-measures row height if not explicitly set.
-- **Search navigation UX**: Filter/search mode toggle on the search example page. Filter mode hides non-matching nodes, search mode keeps tree visible and navigates to highlighted results. Includes result counter, prev/next chevron buttons, Enter/Shift+Enter keyboard navigation (round-robin), Escape to clear.
-- **CSS zone auto-expand**: Drop zones in floating mode now auto-expand when some positions are hidden (via `allowedDropPositions`). Uses `:not(:has())` CSS rules for "around", "above", and "below" layouts — remaining zones fill the gap when one or two are removed.
-- **Unified flat rendering indentation**: Both flat and recursive modes now use `--tree-node-indent-per-level` CSS variable for indentation. Added `flatGap` logic for parent→first-child gap matching.
-- **Virtual scroll `scrollToPath` support**: Index-based scrolling that centers the target node in the viewport, waits for rAF-throttled scroll + re-render, and applies highlight with retry logic for nodes not yet in DOM.
-- **`overscroll-behavior: contain`** on `.ltree-virtual-scroll` container to prevent page scroll when scrolling within the tree.
-
-### Fixed
-- **Empty tree drop placeholder ignoring `dragDropMode`**: `handleEmptyTreeDragOver`, `handleEmptyTreeDrop`, and `handleEmptyTreeTouchEnd` now check `dragDropMode !== 'none'` before activating the drop placeholder.
-- **`treeId` not synced on prop changes**: Added `$effect` in `Tree.svelte` to sync `treeId` prop to the controller when the parent changes it after mount.
-- **`dropZoneStart` not used in glow mode**: `calculateGlowPosition` now uses `dropZoneStart` to compute the child zone threshold instead of hardcoded `width/2`. Previously only affected floating mode via CSS variable.
-- **Critical performance regression: TreeController used `$state()` instead of `$state.raw()` for data and node objects**: The `data` property in `TreeController` was declared as `$state<T[]>([])`, which caused Svelte 5 to deep-proxy the entire user-provided data array and all nested node objects. This meant that even when consumers correctly used `$state.raw()` on their side, the library immediately re-wrapped the data in a deep reactive proxy internally. Every property access during `insertArray` (which iterates all nodes) went through the proxy layer, resulting in a measured **5,500x slowdown** — e.g. 18+ seconds for 8,000 nodes instead of ~3ms. Changed `data`, `selectedNode`, `insertResult`, `contextMenuNode`, `hoveredNodeForDrop`, `touchDragState`, `flatRenderedIds`, and `flatRenderQueue` from `$state()` to `$state.raw()`. The `flatRenderedIds` (Set) and `flatRenderQueue` (array) were especially impactful as they are accessed in the progressive rendering hot path — every `.has()` call on the proxied Set and every `.slice()`/spread on the proxied array during each `requestAnimationFrame` callback added unnecessary overhead.
-- **CanvasTree `initialViewport='root'` not centering on root node**: `panForDirection()` used a fixed `y=pad` (or `x=pad`) offset, so for large trees the root was off-screen. Now centers the viewport on the root's cross-axis position (vertical center for left/right directions, horizontal center for up/down directions).
-- **Sunburst accordion respects `isCollapsible`**: The accordion behavior (collapsing siblings on click) and `sunburstExpandAll` overflow branch now skip nodes where `isCollapsible` is false, preventing nodes from getting stuck in a collapsed state.
-- **Dot grid freeze at intermediate zoom**: `drawDotGrid` used `ctx.arc()` to build a single path with tens of thousands of subpaths, causing 3-8 second freezes at zoom levels where `gridSize` was just above the bailout threshold. Replaced with `ctx.fillRect()` (direct draw, no path accumulation) and added a 10,000-dot cap.
-- **Sunburst tooltip `$state` proxy equality mismatch**: Tooltip state sync compared a plain object with a `$state` proxy using `!==`, which always returned `true` and triggered unnecessary reactive updates every frame. Now compares by `node.path`.
-- **CanvasTree fishbone keyboard navigation**: Completely reworked arrow key navigation for fishbone layout mode
-  - **Spine nodes (depth 1)**: Left/Right now stays on the same side of the fishbone instead of jumping across sides. Navigation uses spine-axis distance only (not Euclidean), fixing incorrect jumps caused by the alternating branch-axis positions of fishbone spine nodes.
-  - **Spine Up/Down**: Pressing Up/Down from a spine node enters branch children in that direction, or crosses to the nearest opposite-side spine node.
-  - **Branch nodes (depth 2+)**: Left/Right now traverses same-depth nodes on the same side of the spine across all spine branches (not limited to same-parent siblings). Pressing past the last same-side sibling returns to the spine ancestor.
-  - **Branch Up/Down**: Navigates parent/child within the branch hierarchy. Cross-spine jumping at leaf nodes (depth 2+) is gated behind `fishboneCrossNav`; when disabled, pressing away from the spine at a leaf falls back to the parent node.
+### Architecture (Breaking)
+- **Core/Renderer split**: Tree logic (`TreeController`) fully separated from rendering. `Tree.svelte` is now a thin wrapper delegating to `TreeController`. New `TreeProvider` component enables custom renderers (Canvas, WebGL, SVG) on the same core.
+- **Drop position naming**: `'above'`/`'below'` renamed to `'before'`/`'after'` throughout (`DropPosition` type, CSS classes, events). `'child'` unchanged.
+- **Canvas rendering extracted**: Canvas-based rendering (`CanvasTree`, layouts, themes) moved to separate package `@keenmate/svelte-treeview-canvas`.
 
 ### Added
-- **Sunburst overflow-aware expandAll**: `sunburstExpandAll` now checks angular capacity at each depth — if children fit without overflow, all are expanded; if they'd overflow, only the biggest child is expanded. Includes a minimum sweep cutoff (0.15 rad) to prevent unreadable deep expansion.
-- **Sunburst auto-focus on expand**: When expanding a node in sunburst mode, the view animates to focus on the first child node.
-- **NHL Playoff Bracket example** (`/examples/nhl-playoffs`): 128-team, 7-round single-elimination bracket using `CanvasTree` with custom `renderNode` — matchup cards with team names, seeds, series scores, and round labels.
-- **Custom Canvas Renderers landing page** (`/custom-renderers`): Sub-landing page grouping CanvasTree examples that use custom `renderNode` callbacks (org chart, NHL bracket).
-- **CanvasTree `fishboneCrossNav` prop**: Optional boolean (default `false`) that enables branch-level leaf-escape crossing — when a deep leaf node (depth 2+) has no more children, pressing away from the spine jumps to the opposite side at the same depth. When disabled, pressing away at a leaf falls back to the parent instead. Spine-to-spine crossing (depth 1 Up/Down) always works regardless of this setting.
+- **Virtual scroll mode** (`virtualScroll`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`): Only renders visible nodes + overscan rows in a fixed-height scrollable container. Enables smooth scrolling through trees with 50,000+ nodes while maintaining ~50 DOM nodes. rAF-throttled scroll handler, auto-measures row height if not explicitly set.
+- **Virtual scroll `scrollToPath`**: Index-based scrolling that centers the target node in the viewport, waits for rAF-throttled scroll + re-render, applies highlight with retry logic.
+- **Search navigation UX**: Filter/search mode toggle on the search example page. Filter mode hides non-matching nodes, search mode keeps tree visible and navigates to highlighted results. Includes result counter, prev/next chevron buttons, Enter/Shift+Enter keyboard navigation (round-robin), Escape to clear.
+- **CSS zone auto-expand**: Floating drop zones auto-expand when positions are hidden (via `allowedDropPositions`). Uses `:not(:has())` CSS rules for "around", "above", "below" layouts.
+- **Unified flat rendering indentation**: Both flat and recursive modes use `--tree-node-indent-per-level` CSS variable. Added `flatGap` logic for parent-to-first-child gap matching.
+- **`overscroll-behavior: contain`** on `.ltree-virtual-scroll` container.
+- **`isCollapsibleMember` / `getIsCollapsibleCallback`**: Per-node collapsibility control.
+- **`getIsDraggableCallback`**: Dynamic per-node draggability.
+- **`applyChanges()` batch method**: Apply multiple tree edits in a single operation.
+- **`_rev` change tracking** on nodes for efficient keyed rendering.
+
+### Fixed
+- **Empty tree drop placeholder ignoring `dragDropMode`**: `handleEmptyTreeDragOver/Drop/TouchEnd` now check `dragDropMode !== 'none'` before activating the drop placeholder.
+- **`treeId` not synced on prop changes**: Added `$effect` in `Tree.svelte` to sync `treeId` prop to controller after mount.
+- **`dropZoneStart` not used in glow mode**: `calculateGlowPosition` now uses `dropZoneStart` to compute the child zone threshold instead of hardcoded `width/2`.
+- **Critical `$state()` vs `$state.raw()` performance regression**: TreeController's `data` property deep-proxied user data, causing **5,500x slowdown** with 8,000+ nodes. Changed `data`, `selectedNode`, `insertResult`, `contextMenuNode`, `hoveredNodeForDrop`, `touchDragState`, `flatRenderedIds`, `flatRenderQueue` to `$state.raw()`.
 
 ### Changed
-- **Custom Layout Example — Explicit Drop Zones for Dendrograms**: Replaced invisible spatial detection (left/right half of node) with visible drop zone pills (Before / After / Child) that appear around the hovered node during drag. Applies to both horizontal (#5) and vertical (#6) dendrogram examples.
-  - Zones are color-coded: green (Before), orange (After), purple (Child)
-  - Invisible hitbox div ensures smooth cursor travel from node to zone pill
-  - Added `ondragend` on viewport containers to properly reset drag state on cancel
-- **Custom Layout Example — TreeProvider dendrograms**: Updated card descriptions to reflect the new zone pill interaction
+- **Custom Layout Example — Explicit Drop Zones**: Replaced invisible spatial detection with visible drop zone pills (Before / After / Child) on dendrograms.
 
 ## [4.7.2] - 2026-02-17
 

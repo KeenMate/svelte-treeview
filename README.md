@@ -6,70 +6,38 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## v5.0: Core/Renderer Split
+## v5.0: Core/Renderer Split + Virtual Scroll
 
 > [!IMPORTANT]
 > **In version 5, the tree core (data structure, expand/collapse, search, drag & drop logic) has been completely separated from the renderer.** The architecture is open for you to build your own custom renderers on top of the same core via `TreeProvider` and `TreeController`.
 
-This means you can:
-- Use the built-in HTML `Tree` renderer as-is for common use cases
-- Create entirely custom visualizations (Canvas, WebGL, SVG, etc.) powered by the same tree core
-- For canvas rendering, install the companion package: [`@keenmate/svelte-treeview-canvas`](https://github.com/keenmate/svelte-treeview-canvas)
+**Key changes in v5:**
+- **Core/Renderer split**: Use the built-in HTML `Tree` renderer, or create custom visualizations (Canvas, WebGL, SVG) via `TreeProvider` + `TreeController`
+- **Virtual scroll**: Render 50,000+ node trees smoothly with `virtualScroll={true}` — only ~50 DOM nodes at any time
+- **Canvas companion**: For canvas rendering, install [`@keenmate/svelte-treeview-canvas`](https://github.com/keenmate/svelte-treeview-canvas)
+- **Drop position naming**: `'above'`/`'below'` renamed to `'before'`/`'after'` (CSS classes and events updated accordingly)
 
-## New in v4.7: Per-Node Drop Position Restrictions
+### Rendering Modes
 
-> [!NOTE]
-> **You can now restrict which drop positions (above/below/child) are allowed per node.**
+| Mode | Props | DOM Nodes | Best For |
+|------|-------|-----------|----------|
+| Recursive | `useFlatRendering={false}` | All | Small trees (<100 nodes) |
+| Flat (default) | `useFlatRendering={true}` | All | Medium trees (100–10K) |
+| Virtual | `virtualScroll={true}` | ~50 | Large trees (10K+) |
 
-Use `getAllowedDropPositionsCallback` for dynamic logic or `allowedDropPositionsMember` for server data:
-```typescript
-// Files can only have siblings, trash only accepts children
-function getAllowedDropPositions(node) {
-  if (node.data?.type === 'file') return ['above', 'below'];
-  if (node.data?.type === 'trash') return ['child'];
-  return undefined; // all positions allowed (default)
-}
-```
-
-## v4.6: Progressive Flat Rendering
-
-> [!NOTE]
-> **The tree now uses progressive flat rendering by default for significantly improved performance.**
-
-**What this means:**
-- The tree renders immediately with the first batch of nodes (~20 by default)
-- Remaining nodes are rendered progressively in subsequent frames
-- For large trees (5000+ nodes), you'll see nodes appear over ~100-500ms instead of a single long freeze
-- The UI remains responsive during rendering
-
-**Configuration options:**
 ```svelte
-<Tree
-  {data}
-  useFlatRendering={true}   <!-- Default: true (flat mode) -->
-  progressiveRender={true}  <!-- Default: true (batched rendering) -->
-  initialBatchSize={20}     <!-- First batch size (default: 20) -->
-  maxBatchSize={500}        <!-- Maximum batch size cap (default: 500) -->
-/>
+<!-- Virtual scroll for large trees -->
+<Tree {data} virtualScroll={true} virtualContainerHeight="500px" />
+
+<!-- Flat mode (default) with progressive batching -->
+<Tree {data} progressiveRender={true} initialBatchSize={20} maxBatchSize={500} />
 ```
-
-**Exponential batching:** The first batch renders 20 nodes instantly, then doubles each frame (20 → 40 → 80 → 160 → 320 → 500...) for optimal perceived performance.
-
-**To use the legacy recursive rendering:**
-```svelte
-<Tree
-  {data}
-  useFlatRendering={false}  <!-- Uses recursive Node components -->
-/>
-```
-
-Recursive mode may be preferred for very small trees or when you need the `{#key changeTracker}` behavior that recreates all nodes on any change.
 
 ## Features
 
 - **Svelte 5 Native**: Built specifically for Svelte 5 with full support for runes and modern Svelte patterns
-- **High Performance**: Flat rendering mode with progressive loading for 5000+ nodes
-- **Drag & Drop**: Built-in drag and drop with position control (above/below/child), touch support, and async validation
+- **High Performance**: Flat rendering with progressive loading, virtual scroll for 50,000+ nodes
+- **Drag & Drop**: Built-in drag and drop with position control (before/after/child), touch support, and async validation
 - **Tree Editing**: Built-in methods for add, move, remove operations with automatic path management
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
@@ -283,7 +251,7 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
   // Same-tree moves are auto-handled - this callback is for notification/custom logic
   function onDrop(dropNode, draggedNode, position, event, operation) {
     console.log(`Dropped ${draggedNode.data.name} ${position} ${dropNode?.data.name}`);
-    // position is 'above', 'below', or 'child'
+    // position is 'before', 'after', or 'child'
     // operation is 'move' or 'copy' (Ctrl+drag)
   }
 </script>
@@ -303,16 +271,16 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
 
 #### Drop Position Control
 
-When using `dropZoneMode="floating"` (default), users can choose where to drop:
-- **Above**: Insert as sibling before the target node
-- **Below**: Insert as sibling after the target node
+When using `dropZoneMode="floating"`, users can choose where to drop:
+- **Before**: Insert as sibling before the target node
+- **After**: Insert as sibling after the target node
 - **Child**: Insert as child of the target node
 
 #### Per-Node Drop Position Restrictions
 
 You can restrict which drop positions are allowed per node. This is useful for:
-- **Trash/Recycle Bin**: Only allow dropping INTO (child), not above/below
-- **Files**: Only allow above/below (can't drop INTO a file)
+- **Trash/Recycle Bin**: Only allow dropping INTO (child), not before/after
+- **Files**: Only allow before/after (can't drop INTO a file)
 - **Folders**: Allow all positions (default)
 
 ```svelte
@@ -321,7 +289,7 @@ You can restrict which drop positions are allowed per node. This is useful for:
 
   // Dynamic callback approach
   function getAllowedDropPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
-    if (node.data?.type === 'file') return ['above', 'below'];
+    if (node.data?.type === 'file') return ['before', 'after'];
     if (node.data?.type === 'trash') return ['child'];
     return undefined; // all positions allowed
   }
@@ -423,7 +391,7 @@ The tree provides built-in methods for programmatic editing:
 />
 ```
 
-**Note**: When using `orderMember`, the tree automatically calculates sort order values when moving nodes with 'above' or 'below' positions.
+**Note**: When using `orderMember`, the tree automatically calculates sort order values when moving nodes with 'before' or 'after' positions.
 
 ### With Context Menus
 
@@ -625,7 +593,7 @@ The component includes several pre-built classes for styling selected nodes:
 | `data` | `T[]` | **required** | Array of data objects |
 | `idMember` | `string` | **required** | Property name for unique identifiers |
 | `pathMember` | `string` | **required** | Property name for hierarchical paths |
-| `sortCallback` | `(items: T[]) => T[]` | default sort | Function to sort items (optional) |
+| `sortCallback` | `(items: LTreeNode<T>[]) => LTreeNode<T>[]` | `undefined` | Function to sort tree nodes |
 
 #### Data Mapping Properties
 | Prop | Type | Default | Description |
@@ -677,7 +645,7 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
 | `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
-| `orderMember` | `string \| null` | `null` | Property name for sort order (enables above/below positioning in drag-drop) |
+| `orderMember` | `string \| null` | `null` | Property name for sort order (enables before/after positioning in drag-drop) |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging |
@@ -715,7 +683,7 @@ Without both requirements, no search indexing will occur.
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is `'above'`, `'below'`, or `'child'`. Operation is `'move'` or `'copy'` |
+| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
 
 #### Visual Styling Properties
 | Prop | Type | Default | Description |
@@ -751,7 +719,7 @@ Without both requirements, no search indexing will occur.
 | `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
 | `update` | `updates: Partial<Props>` | Programmatically update component props from external JavaScript |
 | `addNode` | `parentPath: string, data: T, pathSegment?: string` | Add a new node under the specified parent |
-| `moveNode` | `sourcePath: string, targetPath: string, position: 'above' \| 'below' \| 'child'` | Move a node to a new location |
+| `moveNode` | `sourcePath: string, targetPath: string, position: 'before' \| 'after' \| 'child'` | Move a node to a new location |
 | `removeNode` | `path: string, includeDescendants?: boolean` | Remove a node (and optionally its descendants) |
 | `getNodeByPath` | `path: string` | Get a node by its path |
 | `getChildren` | `parentPath: string` | Get direct children of a node |
@@ -762,8 +730,11 @@ Without both requirements, no search indexing will occur.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `expand` | `boolean` | `true` | Automatically expand parent nodes to make target visible |
+| `expandTarget` | `boolean` | `false` | Also expand the target node itself (not just its ancestors) |
 | `highlight` | `boolean` | `true` | Apply temporary highlight animation to the target node |
 | `scrollOptions` | `ScrollIntoViewOptions` | `{ behavior: 'smooth', block: 'center' }` | Native browser scroll options |
+| `containerScroll` | `boolean` | `false` | Scroll only within nearest scrollable ancestor (prevents page scroll) |
+| `containerElement` | `HTMLElement` | `undefined` | Explicit scrollable container element to use for scrolling |
 
 **Usage Example:**
 ```typescript
@@ -779,6 +750,9 @@ await tree.scrollToPath('1.2.3', {
     block: 'start'
   }
 });
+
+// Scroll within a scrollable container (prevents page scroll)
+await tree.scrollToPath('1.2.3', { containerScroll: true });
 ```
 
 **Highlight Classes Example:**
@@ -1013,36 +987,40 @@ interface InsertArrayResult<T> {
 
 The component is optimized for large datasets:
 
+- **Virtual Scroll**: Renders only visible rows (~50 DOM nodes) for trees with 50,000+ nodes
 - **Flat Rendering Mode**: Single `{#each}` loop instead of recursive components (default, ~12x faster initial render)
 - **Progressive Rendering**: Batched rendering prevents UI freeze during initial load
-- **Context-Based Callbacks**: Stable function references eliminate unnecessary re-renders
-- **LTree**: Efficient hierarchical data structure
 - **Async Search Indexing**: Uses `requestIdleCallback` for non-blocking search index building
-- **Accurate Search Results**: Search index only includes successfully inserted nodes
-- **Search Indexing**: Uses FlexSearch for fast search operations
+- **LTree**: Efficient hierarchical data structure with FlexSearch integration
 
 ### Performance Benchmarks (5500 nodes)
 
 | Operation | Time |
 |-----------|------|
-| Initial render | ~25ms |
+| Initial render (flat) | ~25ms |
+| Initial render (virtual) | ~5ms |
 | Expand/collapse | ~100-150ms |
 | Search filtering | <50ms |
+| insertArray | <100ms |
 
-### v4.5+ Performance Improvements
+### Virtual Scroll
 
-**Flat Rendering Mode** (default) - Renders all visible nodes in a single loop:
+For trees with 10,000+ nodes, enable virtual scroll to keep DOM size constant:
+
 ```svelte
 <Tree
   {data}
-  useFlatRendering={true}
-  progressiveRender={true}
+  virtualScroll={true}
+  virtualContainerHeight="500px"
+  virtualOverscan={5}
 />
 ```
 
-**Optimized `insertArray` algorithm** - Fixed O(n²) bottleneck. Now loads 17,000+ nodes in under 100ms.
+Virtual scroll auto-measures row height from the first rendered node. Override with `virtualRowHeight={32}` if needed. Requires flat rendering mode (the default).
 
-**Performance Logging** - Built-in performance measurement for debugging:
+### Performance Logging
+
+Built-in performance measurement for debugging:
 ```typescript
 import { enablePerfLogging } from '@keenmate/svelte-treeview';
 enablePerfLogging();
