@@ -332,10 +332,10 @@
 
 			{#if searchResults.length > 0}
 				<span class="search-counter">{currentResultIndex + 1}/{searchResults.length}</span>
-				<button class="search-nav-btn" title="Previous (Shift+Enter)" onclick={searchPrev}>
+				<button class="search-nav-btn" title="Previous (Shift+Enter)" aria-label="Previous result" onclick={searchPrev}>
 					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 2L1 7h10z"/></svg>
 				</button>
-				<button class="search-nav-btn" title="Next (Enter)" onclick={searchNext}>
+				<button class="search-nav-btn" title="Next (Enter)" aria-label="Next result" onclick={searchNext}>
 					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 10L1 5h10z"/></svg>
 				</button>
 			{:else if searchInputValue.trim()}
@@ -343,7 +343,7 @@
 			{/if}
 
 			{#if searchInputValue}
-				<button class="search-nav-btn" title="Clear (Esc)" onclick={clearSearch}>
+				<button class="search-nav-btn" title="Clear (Esc)" aria-label="Clear search" onclick={clearSearch}>
 					<svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
 				</button>
 			{/if}
@@ -389,9 +389,14 @@
 					{#if searchResults.length > 0}
 						<ul>
 							{#each searchResults as result, i}
+								<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 								<li
 									class:active={i === currentResultIndex}
 									onclick={() => scrollToResult(i)}
+									onkeydown={(e) => { if (e.key === "Enter") scrollToResult(i); }}
+									role="option"
+									aria-selected={i === currentResultIndex}
+									tabindex="0"
 								>
 									<span class="result-name">{result.data?.name}</span>
 									<small class="result-path">{result.data?.population} - {result.level === 1 ? 'Country' : 'City'}</small>

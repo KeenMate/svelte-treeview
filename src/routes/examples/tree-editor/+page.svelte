@@ -9,34 +9,52 @@
 		id: number;
 		path: string;
 		name: string;
+		type: string;
 		icon: string;
 		sortOrder: number;
 	}
 
 	// Sample editable tree data with sort order
 	let treeData = $state<EditorNode[]>([
-		{ id: 1, path: '1', name: 'Root Folder', icon: '📁', sortOrder: 10 },
-		{ id: 2, path: '1.1', name: 'Documents', icon: '📂', sortOrder: 10 },
-		{ id: 8, path: '1.1.1', name: 'A', icon: '📄', sortOrder: 10 },
-		{ id: 9, path: '1.1.1.1', name: 'B', icon: '📄', sortOrder: 10 },
-		{ id: 3, path: '1.2', name: 'Images', icon: '🖼️', sortOrder: 20 },
-		{ id: 4, path: '1.3', name: 'Music', icon: '🎵', sortOrder: 30 },
-		{ id: 5, path: '2', name: 'Projects', icon: '🚀', sortOrder: 20 },
-		{ id: 6, path: '2.1', name: 'Web App', icon: '🌐', sortOrder: 10 },
-		{ id: 7, path: '2.2', name: 'Mobile App', icon: '📱', sortOrder: 20 }
+		{ id: 1, path: '1', name: 'Root Folder', type: 'folder', icon: '📁', sortOrder: 10 },
+		{ id: 2, path: '1.1', name: 'Documents', type: 'folder', icon: '📂', sortOrder: 10 },
+		{ id: 8, path: '1.1.1', name: 'Report.pdf', type: 'file', icon: '📄', sortOrder: 10 },
+		{ id: 9, path: '1.1.2', name: 'Notes.txt', type: 'file', icon: '📄', sortOrder: 20 },
+		{ id: 10, path: '1.1.3', name: 'Budget.xlsx', type: 'file', icon: '📄', sortOrder: 30 },
+		{ id: 3, path: '1.2', name: 'Images', type: 'folder', icon: '📂', sortOrder: 20 },
+		{ id: 11, path: '1.2.1', name: 'Vacation.jpg', type: 'image', icon: '🖼️', sortOrder: 10 },
+		{ id: 12, path: '1.2.2', name: 'Logo.png', type: 'image', icon: '🖼️', sortOrder: 20 },
+		{ id: 13, path: '1.2.3', name: 'Screenshot.png', type: 'image', icon: '🖼️', sortOrder: 30 },
+		{ id: 4, path: '1.3', name: 'Music', type: 'folder', icon: '📂', sortOrder: 30 },
+		{ id: 14, path: '1.3.1', name: 'Chill Mix.mp3', type: 'audio', icon: '🎵', sortOrder: 10 },
+		{ id: 15, path: '1.3.2', name: 'Focus.mp3', type: 'audio', icon: '🎵', sortOrder: 20 },
+		{ id: 5, path: '2', name: 'Projects', type: 'folder', icon: '📁', sortOrder: 20 },
+		{ id: 6, path: '2.1', name: 'Web App', type: 'folder', icon: '📂', sortOrder: 10 },
+		{ id: 16, path: '2.1.1', name: 'index.html', type: 'file', icon: '📄', sortOrder: 10 },
+		{ id: 17, path: '2.1.2', name: 'styles.css', type: 'file', icon: '📄', sortOrder: 20 },
+		{ id: 18, path: '2.1.3', name: 'app.js', type: 'file', icon: '📄', sortOrder: 30 },
+		{ id: 7, path: '2.2', name: 'Mobile App', type: 'folder', icon: '📂', sortOrder: 20 },
+		{ id: 19, path: '2.2.1', name: 'Main.swift', type: 'file', icon: '📄', sortOrder: 10 },
+		{ id: 20, path: '2.2.2', name: 'icon.png', type: 'image', icon: '🖼️', sortOrder: 20 }
 	]);
 
 	let treeRef: Tree<EditorNode>;
 	let selectedNode = $state<LTreeNode<EditorNode> | null>(null);
 	let activityLog = $state<string[]>([]);
 	let dropWarning = $state<string | null>(null);
-	let nextId = 100;
+	let nextId = 200;
 
 	// Form state for adding nodes
 	let newNodeName = $state('');
 	let newNodeIcon = $state('📄');
 
+	const iconToType: Record<string, string> = {
+		'📄': 'file', '📁': 'folder', '📂': 'folder', '🖼️': 'image',
+		'🎵': 'audio', '📝': 'note', '🚀': 'project'
+	};
+
 	// Drop zone configuration (with localStorage persistence)
+	let dropZoneMode = $state<'floating' | 'glow'>('floating');
 	let dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('wave');
 	let dropZoneStart = $state<number | string>('50%');
 	let dropZoneMaxWidth = $state(120);
@@ -47,6 +65,7 @@
 		if (saved) {
 			try {
 				const config = JSON.parse(saved);
+				if (config.mode) dropZoneMode = config.mode;
 				if (config.layout) dropZoneLayout = config.layout;
 				if (config.start !== undefined) dropZoneStart = config.start;
 				if (config.maxWidth !== undefined) dropZoneMaxWidth = config.maxWidth;
@@ -58,7 +77,7 @@
 
 	// Save settings to localStorage when they change
 	$effect(() => {
-		const config = { layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth };
+		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth };
 		localStorage.setItem('dropZoneConfig', JSON.stringify(config));
 	});
 
@@ -88,6 +107,7 @@
 			id: nextId++,
 			path: '', // Will be set by addNode
 			name: newNodeName.trim(),
+			type: iconToType[newNodeIcon] || 'file',
 			icon: newNodeIcon,
 			sortOrder: 100 // Will be placed at end
 		});
@@ -250,13 +270,26 @@
 
 	function resetTree() {
 		treeData = [
-			{ id: 1, path: '1', name: 'Root Folder', icon: '📁', sortOrder: 10 },
-			{ id: 2, path: '1.1', name: 'Documents', icon: '📂', sortOrder: 10 },
-			{ id: 3, path: '1.2', name: 'Images', icon: '🖼️', sortOrder: 20 },
-			{ id: 4, path: '1.3', name: 'Music', icon: '🎵', sortOrder: 30 },
-			{ id: 5, path: '2', name: 'Projects', icon: '🚀', sortOrder: 20 },
-			{ id: 6, path: '2.1', name: 'Web App', icon: '🌐', sortOrder: 10 },
-			{ id: 7, path: '2.2', name: 'Mobile App', icon: '📱', sortOrder: 20 }
+			{ id: 1, path: '1', name: 'Root Folder', type: 'folder', icon: '📁', sortOrder: 10 },
+			{ id: 2, path: '1.1', name: 'Documents', type: 'folder', icon: '📂', sortOrder: 10 },
+			{ id: 8, path: '1.1.1', name: 'Report.pdf', type: 'file', icon: '📄', sortOrder: 10 },
+			{ id: 9, path: '1.1.2', name: 'Notes.txt', type: 'file', icon: '📄', sortOrder: 20 },
+			{ id: 10, path: '1.1.3', name: 'Budget.xlsx', type: 'file', icon: '📄', sortOrder: 30 },
+			{ id: 3, path: '1.2', name: 'Images', type: 'folder', icon: '📂', sortOrder: 20 },
+			{ id: 11, path: '1.2.1', name: 'Vacation.jpg', type: 'image', icon: '🖼️', sortOrder: 10 },
+			{ id: 12, path: '1.2.2', name: 'Logo.png', type: 'image', icon: '🖼️', sortOrder: 20 },
+			{ id: 13, path: '1.2.3', name: 'Screenshot.png', type: 'image', icon: '🖼️', sortOrder: 30 },
+			{ id: 4, path: '1.3', name: 'Music', type: 'folder', icon: '📂', sortOrder: 30 },
+			{ id: 14, path: '1.3.1', name: 'Chill Mix.mp3', type: 'audio', icon: '🎵', sortOrder: 10 },
+			{ id: 15, path: '1.3.2', name: 'Focus.mp3', type: 'audio', icon: '🎵', sortOrder: 20 },
+			{ id: 5, path: '2', name: 'Projects', type: 'folder', icon: '📁', sortOrder: 20 },
+			{ id: 6, path: '2.1', name: 'Web App', type: 'folder', icon: '📂', sortOrder: 10 },
+			{ id: 16, path: '2.1.1', name: 'index.html', type: 'file', icon: '📄', sortOrder: 10 },
+			{ id: 17, path: '2.1.2', name: 'styles.css', type: 'file', icon: '📄', sortOrder: 20 },
+			{ id: 18, path: '2.1.3', name: 'app.js', type: 'file', icon: '📄', sortOrder: 30 },
+			{ id: 7, path: '2.2', name: 'Mobile App', type: 'folder', icon: '📂', sortOrder: 20 },
+			{ id: 19, path: '2.2.1', name: 'Main.swift', type: 'file', icon: '📄', sortOrder: 10 },
+			{ id: 20, path: '2.2.2', name: 'icon.png', type: 'image', icon: '🖼️', sortOrder: 20 }
 		];
 		selectedNode = null;
 		activityLog = [];
@@ -286,7 +319,7 @@
 
 		<div class="editor-layout">
 			<div class="tree-section">
-				<div class="tree-container tree-container-tall">
+				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
 					<Tree
 						bind:this={treeRef}
 						data={treeData}
@@ -296,19 +329,21 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
-						dragDropMode="self"
+						dragDropMode="both"
 						bind:selectedNode
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
 						onNodeDragStart={handleDragStart}
+						{dropZoneMode}
 						{dropZoneLayout}
 						{dropZoneStart}
-						{...getTreeProps()}
 						{dropZoneMaxWidth}
+						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<span class:selected-node={selectedNode?.path === node.path}>
 								{node.data?.icon} {node.data?.name}
+								<span class="node-type">{node.data?.type}</span>
 							</span>
 						{/snippet}
 					</Tree>
@@ -379,24 +414,34 @@
 				<div class="control-group">
 					<h3>Drop Zones</h3>
 					<div class="input-row">
-						<select bind:value={dropZoneLayout} style="flex: 1;">
-							<option value="around">Around</option>
-							<option value="above">Above</option>
-							<option value="below">Below</option>
-							<option value="wave">Wave</option>
-							<option value="wave2">Wave2</option>
+						<select bind:value={dropZoneMode} style="flex: 1;">
+							<option value="floating">Floating</option>
+							<option value="glow">Glow</option>
 						</select>
 					</div>
 					<div class="input-row">
 						<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
-							Start %:
+							Start:
 							<input type="text" bind:value={dropZoneStart} placeholder="50% or 50px" style="width: 80px;" />
 						</label>
-						<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
-							Max W:
-							<input type="number" bind:value={dropZoneMaxWidth} min="50" max="300" style="width: 60px;" />
-						</label>
 					</div>
+					{#if dropZoneMode === 'floating'}
+						<div class="input-row">
+							<select bind:value={dropZoneLayout} style="flex: 1;">
+								<option value="around">Around</option>
+								<option value="above">Above</option>
+								<option value="below">Below</option>
+								<option value="wave">Wave</option>
+								<option value="wave2">Wave2</option>
+							</select>
+						</div>
+						<div class="input-row">
+							<label style="display: flex; align-items: center; gap: 0.5rem; flex: 1;">
+								Max W:
+								<input type="number" bind:value={dropZoneMaxWidth} min="50" max="300" style="width: 60px;" />
+							</label>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -435,6 +480,14 @@
 					<td>Remove a node (and optionally its descendants)</td>
 				</tr>
 				<tr>
+					<td><code>updateNode(path, dataUpdates)</code></td>
+					<td>Update data properties of a node in place</td>
+				</tr>
+				<tr>
+					<td><code>copyNodeWithDescendants(node, parentPath, transformFn)</code></td>
+					<td>Deep-copy a node and its subtree under a new parent</td>
+				</tr>
+				<tr>
 					<td><code>getNodeByPath(path)</code></td>
 					<td>Get a node by its path</td>
 				</tr>
@@ -449,6 +502,22 @@
 				<tr>
 					<td><code>refreshSiblings(parentPath)</code></td>
 					<td>Re-sort siblings using orderMember</td>
+				</tr>
+				<tr>
+					<td><code>refreshNode(path)</code></td>
+					<td>Force re-render of a single node</td>
+				</tr>
+				<tr>
+					<td><code>getExpandedPaths()</code></td>
+					<td>Get all currently expanded node paths</td>
+				</tr>
+				<tr>
+					<td><code>setExpandedPaths(paths)</code></td>
+					<td>Restore expanded state from a saved list of paths</td>
+				</tr>
+				<tr>
+					<td><code>getAllData()</code></td>
+					<td>Get all node data as a flat array</td>
 				</tr>
 			</tbody>
 		</table>
@@ -476,6 +545,7 @@
 		<div class="code-block">
 			<pre>{`<script lang="ts">
   import Tree from '@keenmate/svelte-treeview';
+  import type { LTreeNode, DropPosition, DropOperation } from '@keenmate/svelte-treeview';
 
   interface MyNode {
     id: number;
@@ -485,7 +555,7 @@
   }
 
   let treeRef: Tree<MyNode>;
-  let selectedNode = $state(null);
+  let selectedNode = $state<LTreeNode<MyNode> | null>(null);
 
   // Add a new node
   function addChild() {
@@ -500,8 +570,9 @@
 
   // Move node before sibling
   function moveUp() {
+    if (!selectedNode) return;
     const siblings = treeRef.getSiblings(selectedNode.path);
-    const index = siblings.findIndex(s => s.path === selectedNode.path);
+    const index = siblings.findIndex(s => s.path === selectedNode!.path);
     if (index > 0) {
       treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'before');
     }
@@ -509,12 +580,24 @@
 
   // Remove selected node
   function remove() {
+    if (!selectedNode) return;
     treeRef.removeNode(selectedNode.path);
     selectedNode = null;
   }
 
   // Handle drag-drop
-  function handleDrop(dropNode, draggedNode, position, event) {
+  // dragDropMode: 'none' | 'self' | 'cross' | 'both'
+  //   none  — disabled (default)
+  //   self  — reorder within same tree only
+  //   cross — between different trees only
+  //   both  — same-tree and cross-tree
+  function handleDrop(
+    dropNode: LTreeNode<MyNode> | null,
+    draggedNode: LTreeNode<MyNode>,
+    position: DropPosition,
+    event: DragEvent | TouchEvent,
+    operation: DropOperation
+  ) {
     if (dropNode) {
       treeRef.moveNode(draggedNode.path, dropNode.path, position);
     }
@@ -525,6 +608,7 @@
   bind:this={treeRef}
   data={data}
   orderMember="sortOrder"
+  dragDropMode="both"
   onNodeDrop={handleDrop}
   bind:selectedNode
 >
@@ -640,6 +724,12 @@
 	.selected-node {
 		font-weight: 600;
 		color: #667eea;
+	}
+
+	.node-type {
+		font-size: 0.7rem;
+		color: #a0aec0;
+		margin-left: 0.35rem;
 	}
 
 	.drop-warning {

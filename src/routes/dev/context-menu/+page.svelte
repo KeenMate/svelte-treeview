@@ -421,7 +421,7 @@
 				</div>
 				<div class="card-body">
 					<div class="mb-3">
-						<label class="form-label">X Offset (px)</label>
+						<label class="form-label">X Offset (px)
 						<input
 							type="number"
 							class="form-control form-control-sm"
@@ -430,10 +430,11 @@
 							max="50"
 						>
 						<small class="form-text text-muted">Horizontal offset from click position (default: 8px)</small>
+						</label>
 					</div>
 
 					<div class="mb-3">
-						<label class="form-label">Y Offset (px)</label>
+						<label class="form-label">Y Offset (px)
 						<input
 							type="number"
 							class="form-control form-control-sm"
@@ -442,6 +443,7 @@
 							max="50"
 						>
 						<small class="form-text text-muted">Vertical offset from click position (default: 0px)</small>
+						</label>
 					</div>
 
 					<div class="mb-3">
@@ -635,33 +637,4 @@
 		padding: 4px 0;
 	}
 
-	.context-menu-item {
-		display: flex;
-		align-items: center;
-		padding: 8px 12px;
-		cursor: pointer;
-		font-size: 14px;
-		transition: background-color 0.1s ease;
-	}
-
-	.context-menu-item:hover {
-		background-color: #f8f9fa;
-	}
-
-	.context-menu-item.text-danger:hover {
-		background-color: #f8d7da;
-	}
-
-	.context-menu-icon {
-		margin-right: 8px;
-		font-size: 12px;
-		width: 16px;
-		text-align: center;
-	}
-
-	.context-menu-divider {
-		height: 1px;
-		background-color: #e9ecef;
-		margin: 4px 0;
-	}
 </style>

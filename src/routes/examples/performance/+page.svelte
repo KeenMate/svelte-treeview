@@ -14,6 +14,14 @@
   }
   const savedConfig = loadConfig();
 
+  // Rendering mode: 'recursive' | 'flat' | 'virtual'
+  type RenderMode = 'recursive' | 'flat' | 'virtual';
+  let renderMode = $state<RenderMode>(savedConfig.renderMode ?? 'flat');
+
+  // Derived props from renderMode
+  const useFlatRendering = $derived(renderMode === 'flat' || renderMode === 'virtual');
+  const virtualScroll = $derived(renderMode === 'virtual');
+
   // Test configuration with localStorage defaults
   let expandLevel = $state(savedConfig.expandLevel ?? 1);
   let isSorted = $state(savedConfig.isSorted ?? true);
@@ -22,7 +30,8 @@
   let maxBatchSize = $state(savedConfig.maxBatchSize ?? 500);
   let indexerBatchSize = $state(savedConfig.indexerBatchSize ?? 25);
   let shouldUseInternalSearchIndex = $state(savedConfig.shouldUseInternalSearchIndex ?? true);
-  let useFlatRendering = $state(savedConfig.useFlatRendering ?? false);
+  let virtualContainerHeight = $state(savedConfig.virtualContainerHeight ?? '500px');
+  let virtualOverscan = $state(savedConfig.virtualOverscan ?? 5);
   let perfLoggingEnabled = $state(isPerfLoggingEnabled());
 
   // Data generation config
@@ -31,6 +40,7 @@
   // Save config to localStorage when it changes
   $effect(() => {
     const config = {
+      renderMode,
       expandLevel,
       isSorted,
       progressiveRender,
@@ -38,7 +48,8 @@
       maxBatchSize,
       indexerBatchSize,
       shouldUseInternalSearchIndex,
-      useFlatRendering,
+      virtualContainerHeight,
+      virtualOverscan,
       nodeCountTarget
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -46,6 +57,7 @@
 
   function resetConfig() {
     localStorage.removeItem(STORAGE_KEY);
+    renderMode = 'flat';
     expandLevel = 1;
     isSorted = true;
     progressiveRender = false;
@@ -53,7 +65,8 @@
     maxBatchSize = 500;
     indexerBatchSize = 25;
     shouldUseInternalSearchIndex = true;
-    useFlatRendering = false;
+    virtualContainerHeight = '500px';
+    virtualOverscan = 5;
     nodeCountTarget = 5000;
   }
 
@@ -199,7 +212,7 @@
   });
 
   // Tree state
-  let treeRef: any;
+  let treeRef = $state<any>(undefined);
   let treeKey = $state(0);
   let insertResult = $state<any>(null);
 
@@ -264,6 +277,7 @@
     };
     insertResult = null;
     lastExpandTime = null;
+    clearSearch();
     dataSource = null;
   }
 
@@ -346,14 +360,152 @@
     });
   }
 
-  // Track previous flat rendering state to detect changes
-  let prevFlatRendering = useFlatRendering;
+  // Search/filter
+  let searchText = $state('');
+  let lastSearchTime = $state<number | null>(null);
+
+  // Search mode: 'filter' filters the tree, 'search' navigates between matches
+  type SearchMode = 'filter' | 'search';
+  let searchMode = $state<SearchMode>('filter');
+  let searchInputValue = $state('');
+  let searchResults = $state<any[]>([]);
+  let currentSearchIdx = $state(-1);
+
+  function executeSearch() {
+    if (!searchInputValue.trim()) {
+      searchResults = [];
+      currentSearchIdx = -1;
+      lastSearchTime = null;
+      return;
+    }
+    const start = performance.now();
+    const results = treeRef?.searchNodes(searchInputValue.trim()) ?? [];
+    searchResults = results;
+    lastSearchTime = performance.now() - start;
+    if (results.length > 0) {
+      currentSearchIdx = 0;
+      navigateToResult(0);
+    } else {
+      currentSearchIdx = -1;
+    }
+  }
+
+  function navigateToResult(idx: number) {
+    if (searchResults.length === 0) return;
+    currentSearchIdx = idx;
+    const node = searchResults[idx];
+    if (node?.path) {
+      treeRef?.scrollToPath(node.path, { expand: true, highlight: true, scrollOptions: { behavior: 'smooth', block: 'center' }, containerScroll: true });
+    }
+  }
+
+  function searchNext() {
+    if (searchResults.length === 0) {
+      executeSearch();
+      return;
+    }
+    const next = (currentSearchIdx + 1) % searchResults.length;
+    navigateToResult(next);
+  }
+
+  function searchPrev() {
+    if (searchResults.length === 0) return;
+    const prev = (currentSearchIdx - 1 + searchResults.length) % searchResults.length;
+    navigateToResult(prev);
+  }
+
+  function clearSearch() {
+    searchInputValue = '';
+    searchText = '';
+    searchResults = [];
+    currentSearchIdx = -1;
+    lastSearchTime = null;
+  }
+
+  function onSearchInput() {
+    if (searchMode === 'filter') {
+      searchText = searchInputValue;
+      const start = performance.now();
+      // Also collect matching nodes for navigation
+      const results = treeRef?.searchNodes(searchInputValue.trim()) ?? [];
+      searchResults = results;
+      currentSearchIdx = results.length > 0 ? 0 : -1;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          lastSearchTime = performance.now() - start;
+        });
+      });
+    } else {
+      // In search mode, clear stale results but don't search until Enter
+      searchResults = [];
+      currentSearchIdx = -1;
+    }
+  }
+
+  function onSearchKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        searchPrev();
+      } else {
+        searchNext();
+      }
+    } else if (e.key === 'Escape') {
+      clearSearch();
+    }
+  }
+
+  function toggleSearchMode() {
+    clearSearch();
+    searchMode = searchMode === 'filter' ? 'search' : 'filter';
+  }
+
+  // updateNode test
+  let updateNodePath = $state('');
+  let lastUpdateTime = $state<number | null>(null);
+  let updateCounter = 0;
+
+  function timedUpdateNode() {
+    let targetPath = updateNodePath.trim();
+    if (!targetPath) {
+      // Pick a random node from level 1 or 2
+      const candidates = treeData.filter(n => n.level === 1 || n.level === 2);
+      if (candidates.length === 0) {
+        console.log('[Performance Test] No nodes to update');
+        return;
+      }
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      targetPath = pick.path;
+    }
+
+    updateCounter++;
+    const newName = `UPDATED #${updateCounter} (${new Date().toLocaleTimeString()})`;
+    console.log(`[Performance Test] Updating node: ${targetPath} → "${newName}"`);
+
+    const start = performance.now();
+    const result = treeRef?.updateNode(targetPath, { name: newName });
+    Promise.resolve().then(() => {
+      const svelteTime = performance.now() - start;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          lastUpdateTime = performance.now() - start;
+          console.log(`[Performance Test] updateNode (${targetPath}): svelte=${svelteTime.toFixed(2)}ms, paint=${lastUpdateTime.toFixed(2)}ms, success: ${result?.success}`);
+          if (!result?.success) {
+            console.warn(`[Performance Test] updateNode failed: ${result?.error}`);
+          }
+        });
+      });
+    });
+  }
+
+  // Track previous render mode to detect changes
+  let prevRenderMode = $state<RenderMode>(savedConfig.renderMode ?? 'flat');
 
   // Auto-redraw when rendering mode changes (if data is loaded)
   $effect(() => {
-    const currentFlat = useFlatRendering;
-    if (treeData.length > 0 && currentFlat !== prevFlatRendering) {
-      prevFlatRendering = currentFlat;
+    const currentMode = renderMode;
+    if (treeData.length > 0 && currentMode !== prevRenderMode) {
+      prevRenderMode = currentMode;
       // Reset metrics and trigger redraw
       metrics.generateTime = null; // Clear generate time since we're just switching modes
       metrics.renderStart = performance.now();
@@ -364,11 +516,16 @@
   });
 
   // Measure render time
+  // Capture renderStart at schedule time so async rAF callback uses the correct value.
+  // Guard against stale callbacks: only write if renderTime is still null.
   $effect(() => {
     if (treeData.length > 0 && metrics.renderStart && !metrics.renderTime) {
+      const capturedStart = metrics.renderStart;
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          metrics.renderTime = performance.now() - metrics.renderStart!;
+          if (!metrics.renderTime && metrics.renderStart === capturedStart) {
+            metrics.renderTime = performance.now() - capturedStart;
+          }
         });
       });
     }
@@ -377,7 +534,7 @@
   // Log results for easy comparison
   $effect(() => {
     if (metrics.renderTime) {
-      console.log(`[Performance Test] Mode: ${useFlatRendering ? 'FLAT' : 'RECURSIVE'}`);
+      console.log(`[Performance Test] Mode: ${renderMode.toUpperCase()}`);
       console.log(`[Performance Test] Nodes: ${metrics.nodeCount}`);
       console.log(`[Performance Test] Expand Level: ${expandLevel}`);
       if (metrics.generateTime !== null) {
@@ -404,17 +561,54 @@
   <div class="card">
     <h2>Rendering Mode</h2>
     <div class="mode-toggle">
-      <label class="toggle-option" class:active={!useFlatRendering}>
-        <input type="radio" bind:group={useFlatRendering} value={false} />
+      <label class="toggle-option" class:active={renderMode === 'recursive'}>
+        <input type="radio" bind:group={renderMode} value="recursive" />
         <span class="toggle-label">Recursive</span>
         <span class="toggle-desc">Traditional nested rendering with {'{#key}'} block</span>
       </label>
-      <label class="toggle-option" class:active={useFlatRendering}>
-        <input type="radio" bind:group={useFlatRendering} value={true} />
-        <span class="toggle-label">Flat (New!)</span>
-        <span class="toggle-desc">Centralized rendering, efficient expand/collapse</span>
+      <label class="toggle-option" class:active={renderMode === 'flat'}>
+        <input type="radio" bind:group={renderMode} value="flat" />
+        <span class="toggle-label">Flat</span>
+        <span class="toggle-desc">Centralized {'{#each}'} loop, per-node signals</span>
+      </label>
+      <label class="toggle-option" class:active={renderMode === 'virtual'}>
+        <input type="radio" bind:group={renderMode} value="virtual" />
+        <span class="toggle-label">Virtual Scroll</span>
+        <span class="toggle-desc">Flat + only renders visible nodes (~50 in DOM)</span>
       </label>
     </div>
+
+    <!-- Mode-specific options -->
+    {#if renderMode === 'virtual'}
+      <div class="mode-options">
+        <label>
+          Container Height:
+          <input type="text" bind:value={virtualContainerHeight} style="width: 80px" />
+        </label>
+        <label title="Extra rows rendered above and below the viewport to prevent flicker during fast scrolling">
+          Overscan:
+          <input type="number" bind:value={virtualOverscan} min="0" max="50" step="1" />
+        </label>
+      </div>
+    {/if}
+    {#if renderMode !== 'virtual'}
+      <div class="mode-options">
+        <label>
+          <input type="checkbox" bind:checked={progressiveRender} />
+          Progressive Render
+        </label>
+        {#if progressiveRender}
+          <label>
+            Initial Batch:
+            <input type="number" bind:value={initialBatchSize} min="5" max="200" step="5" />
+          </label>
+          <label>
+            Max Batch:
+            <input type="number" bind:value={maxBatchSize} min="100" max="2000" step="100" />
+          </label>
+        {/if}
+      </div>
+    {/if}
   </div>
 
   <div class="card">
@@ -432,20 +626,6 @@
         <input type="checkbox" bind:checked={isSorted} />
         Sort by name
       </label>
-      <label>
-        <input type="checkbox" bind:checked={progressiveRender} />
-        Progressive Render
-      </label>
-      {#if progressiveRender}
-        <label>
-          Initial Batch:
-          <input type="number" bind:value={initialBatchSize} min="5" max="200" step="5" />
-        </label>
-        <label>
-          Max Batch:
-          <input type="number" bind:value={maxBatchSize} min="100" max="2000" step="100" />
-        </label>
-      {/if}
       <label>
         <input type="checkbox" bind:checked={shouldUseInternalSearchIndex} />
         Search Index
@@ -502,6 +682,18 @@
           <span class="label">Expand/Collapse</span>
         </div>
       {/if}
+      {#if lastUpdateTime !== null}
+        <div class="metric expand-time">
+          <span class="value">{lastUpdateTime.toFixed(2)} ms</span>
+          <span class="label">Update Node</span>
+        </div>
+      {/if}
+      {#if lastSearchTime !== null}
+        <div class="metric search-time">
+          <span class="value">{lastSearchTime.toFixed(2)} ms</span>
+          <span class="label">Search/Filter</span>
+        </div>
+      {/if}
       {#if progressiveRender}
         <div class="metric" class:rendering={isRendering}>
           <span class="value">
@@ -527,18 +719,64 @@
     <div class="card">
       <h2>
         {dataSource === 'countries' ? 'Countries + States' : 'Synthetic Data'}
-        ({metrics.nodeCount.toLocaleString()} nodes) - {useFlatRendering ? 'Flat Mode' : 'Recursive Mode'}
+        ({metrics.nodeCount.toLocaleString()} nodes) - {renderMode === 'virtual' ? 'Virtual Scroll' : renderMode === 'flat' ? 'Flat Mode' : 'Recursive Mode'}
       </h2>
       <div class="tree-controls">
-        <button class="btn" onclick={timedExpandOneNode}>Expand One (timed)</button>
-        <button class="btn" onclick={timedCollapseOneNode}>Collapse One (timed)</button>
+        <button class="btn" onclick={timedExpandOneNode}>Expand One</button>
+        <button class="btn" onclick={timedCollapseOneNode}>Collapse One</button>
         <span class="control-divider">|</span>
-        <button class="btn secondary" onclick={timedExpandAll}>Expand All (timed)</button>
-        <button class="btn secondary" onclick={timedCollapseAll}>Collapse All (timed)</button>
-        <button class="btn secondary" onclick={() => treeRef?.expandAll()}>Expand All</button>
-        <button class="btn secondary" onclick={() => treeRef?.collapseAll()}>Collapse All</button>
+        <button class="btn secondary" onclick={timedExpandAll}>Expand All</button>
+        <button class="btn secondary" onclick={timedCollapseAll}>Collapse All</button>
       </div>
-      <div class="tree-container tree-container-tall">
+      <div class="tree-controls">
+        <input type="text" bind:value={updateNodePath} placeholder="Node path (empty = random)" class="path-input" />
+        <button class="btn" onclick={timedUpdateNode}>Update Node (timed)</button>
+        {#if lastUpdateTime !== null}
+          <span class="update-time">{lastUpdateTime.toFixed(2)} ms</span>
+        {/if}
+      </div>
+      <div class="search-bar">
+        <button
+          class="search-mode-btn"
+          title={searchMode === 'filter' ? 'Filter mode — switch to Search' : 'Search mode — switch to Filter'}
+          aria-label="Toggle search mode"
+          onclick={toggleSearchMode}
+        >
+          {#if searchMode === 'filter'}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          {:else}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          {/if}
+        </button>
+        <input
+          type="text"
+          bind:value={searchInputValue}
+          placeholder={searchMode === 'filter' ? 'Filter nodes...' : 'Search nodes... (Enter to find)'}
+          class="search-input"
+          oninput={onSearchInput}
+          onkeydown={onSearchKeydown}
+        />
+        {#if searchResults.length > 0}
+          <span class="search-counter">{currentSearchIdx + 1}/{searchResults.length}</span>
+          <button class="search-nav-btn" title="Previous (Shift+Enter)" aria-label="Previous result" onclick={searchPrev}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+          </button>
+          <button class="search-nav-btn" title="Next (Enter)" aria-label="Next result" onclick={searchNext}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        {:else if searchInputValue && lastSearchTime !== null}
+          <span class="search-counter no-results">0 results</span>
+        {/if}
+        {#if searchInputValue}
+          <button class="search-nav-btn" title="Clear" aria-label="Clear search" onclick={clearSearch}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        {/if}
+        {#if lastSearchTime !== null}
+          <span class="update-time">{lastSearchTime.toFixed(2)} ms</span>
+        {/if}
+      </div>
+      <div class="tree-container" class:tree-container-tall={!virtualScroll}>
         {#key treeKey}
           <Tree
             bind:this={treeRef}
@@ -557,7 +795,12 @@
             {maxBatchSize}
             {indexerBatchSize}
             {shouldUseInternalSearchIndex}
+            searchValueMember="name"
+            bind:searchText
             {useFlatRendering}
+            {virtualScroll}
+            {virtualContainerHeight}
+            {virtualOverscan}
             bind:insertResult
             bind:isRendering
             onRenderStart={() => {
@@ -573,7 +816,7 @@
             }}
           >
             {#snippet nodeTemplate(node: any)}
-              <span>{node.data?.name ?? node.path}</span>
+              <span class="node-label"><span class="node-path">[{node.path}]</span> {node.data?.name ?? node.path}</span>
             {/snippet}
           </Tree>
         {/key}
@@ -650,6 +893,18 @@
     color: #718096;
   }
 
+  .mode-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin-top: 0.75rem;
+    background: #f7fafc;
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
   .metrics {
     display: flex;
     gap: 1rem;
@@ -717,6 +972,31 @@
 
   .btn.active {
     background: #48bb78;
+  }
+
+  .path-input {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e0;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    width: 220px;
+    font-family: monospace;
+  }
+
+  .metric.search-time {
+    background: #667eea;
+    color: white;
+  }
+
+  .update-time {
+    font-weight: 600;
+    color: #48bb78;
+  }
+
+  .node-path {
+    color: #a0aec0;
+    font-size: 0.8em;
+    font-family: monospace;
   }
 
   ol {

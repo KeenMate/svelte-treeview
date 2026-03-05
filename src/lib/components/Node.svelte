@@ -64,13 +64,14 @@
 		leafIconClass,
 		selectedNodeClass,
 		dragOverNodeClass,
-		dropZoneStart,
 		allowCopy,
 	} = config;
 
-	// Read dropZoneMode through the proxy each time (not destructured) so it
-	// stays reactive in flat mode where nodes are NOT recreated on config change.
+	// Read dropZoneMode and dropZoneStart through the proxy each time (not
+	// destructured) so they stay reactive in flat mode where nodes are NOT
+	// recreated on config change.
 	const dropZoneMode = $derived(config.dropZoneMode);
+	const dropZoneStart = $derived(config.dropZoneStart);
 
 	// Compute if THIS node is the one being hovered for drop
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
@@ -106,10 +107,15 @@
 		const width = rect.width;
 		const height = rect.height;
 
-		// Calculate child zone threshold from dropZoneStart
-		const childThreshold = typeof dropZoneStart === 'number'
-			? width * (dropZoneStart / 100)
-			: width / 2;
+		// Convert dropZoneStart to pixels: number = percentage, string = as-is (px or %)
+		const startPx = typeof dropZoneStart === 'number'
+			? (dropZoneStart / 100) * width
+			: typeof dropZoneStart === 'string' && dropZoneStart.endsWith('px')
+				? parseFloat(dropZoneStart)
+				: typeof dropZoneStart === 'string'
+					? (parseFloat(dropZoneStart) / 100) * width
+					: width / 2;
+		const childThreshold = isNaN(startPx) ? width / 2 : startPx;
 
 		// Calculate the ideal position based on mouse position
 		let idealPosition: DropPosition;

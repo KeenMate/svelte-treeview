@@ -114,11 +114,11 @@
 	let isLoadingE = $state(false);
 
 	// Tree refs
-	let treeRefA: Tree<ScenarioNode>;
-	let treeRefB: Tree<ScenarioNode>;
-	let treeRefC: Tree<ScenarioNode>;
-	let treeRefD: Tree<ScenarioNode>;
-	let treeRefE: Tree<ScenarioNode>;
+	let treeRefA = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefB = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefC = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefD = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefE = $state<Tree<ScenarioNode>>(undefined!);
 
 	// Sort function
 	function sortByOrder(items: LTreeNode<ScenarioNode>[]) {
@@ -741,6 +741,12 @@
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
+							{#snippet noDataFound()}
+								<div class="drop-placeholder-content">
+									<p class="placeholder-icon">📂</p>
+									<p>Empty tree — drag items here or click "Add Root Node"</p>
+								</div>
+							{/snippet}
 							{#snippet dropPlaceholder()}
 								<div class="drop-placeholder-content">
 									<p class="placeholder-icon">📥</p>
@@ -765,6 +771,12 @@
 						>
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+							{/snippet}
+							{#snippet noDataFound()}
+								<div class="drop-placeholder-content">
+									<p class="placeholder-icon">📂</p>
+									<p>Empty tree — drag items here or add nodes</p>
+								</div>
 							{/snippet}
 							{#snippet dropPlaceholder()}
 								<div class="drop-placeholder-content">

@@ -26,6 +26,8 @@
 
 	let activityLog = $state<string[]>([]);
 	let debugMode = $state(false);
+	let xOffset = $state(8);
+	let yOffset = $state(0);
 
 	function sortByName(items: LTreeNode<FileItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
@@ -132,6 +134,16 @@
 				<input type="checkbox" bind:checked={debugMode} />
 				Debug Mode (menu appears at fixed position)
 			</label>
+			<label>
+				X Offset:
+				<input type="number" bind:value={xOffset} style="width: 70px;" />
+				<span class="hint">px</span>
+			</label>
+			<label>
+				Y Offset:
+				<input type="number" bind:value={yOffset} style="width: 70px;" />
+				<span class="hint">px</span>
+			</label>
 			<button class="btn btn-secondary" onclick={clearLog}>Clear Log</button>
 		</div>
 
@@ -144,6 +156,8 @@
 				isSorted={true}
 				expandLevel={3}
 				contextMenuCallback={getContextMenu}
+				contextMenuXOffset={xOffset}
+				contextMenuYOffset={yOffset}
 				shouldDisplayContextMenuInDebugMode={debugMode}
 				{...getTreeProps()}
 			>
@@ -262,7 +276,6 @@ function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
 
 		<div class="code-block">
 			<pre>{`<Tree
-  data={data}
   contextMenuCallback={getContextMenu}
   contextMenuXOffset={8}   // Default: 8px right of cursor
   contextMenuYOffset={0}   // Default: 0px below cursor
