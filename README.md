@@ -123,14 +123,14 @@ import '@keenmate/svelte-treeview/styles.scss';
   idMember="path"
   pathMember="path"
   selectedNodeClass="ltree-selected-bold"
-  onNodeClicked={(node) => console.log('Clicked:', node.data.name)}
+  onNodeClicked={(node) => console.log('Clicked:', node.data?.name)}
 >
   {#snippet nodeTemplate(node)}
     <div class="d-flex align-items-center">
-      <span class="me-2">{node.data.icon}</span>
-      <strong>{node.data.name}</strong>
-      {#if node.data.size}
-        <small class="text-muted ms-2">({node.data.size})</small>
+      <span class="me-2">{node.data?.icon}</span>
+      <strong>{node.data?.name}</strong>
+      {#if node.data?.size}
+        <small class="text-muted ms-2">({node.data?.size})</small>
       {/if}
     </div>
   {/snippet}
@@ -245,12 +245,12 @@ For complete FlexSearch documentation, visit: [FlexSearch Options](https://githu
   ];
 
   function onDragStart(node, event) {
-    console.log('Dragging:', node.data.name);
+    console.log('Dragging:', node.data?.name);
   }
 
   // Same-tree moves are auto-handled - this callback is for notification/custom logic
   function onDrop(dropNode, draggedNode, position, event, operation) {
-    console.log(`Dropped ${draggedNode.data.name} ${position} ${dropNode?.data.name}`);
+    console.log(`Dropped ${draggedNode.data?.name} ${position} ${dropNode?.data?.name}`);
     // position is 'before', 'after', or 'child'
     // operation is 'move' or 'copy' (Ctrl+drag)
   }
@@ -331,7 +331,7 @@ Use `beforeDropCallback` to validate or modify drops, including async operations
     if (position === 'child' && !dropNode.data.isFolder) {
       const confirmed = await showConfirmDialog('Drop as sibling instead?');
       if (!confirmed) return false;
-      return { position: 'below' }; // Override position
+      return { position: 'after' }; // Override position
     }
 
     // Proceed normally
@@ -372,7 +372,7 @@ The tree provides built-in methods for programmatic editing:
     const siblings = treeRef.getSiblings(selectedNode.path);
     const index = siblings.findIndex(s => s.path === selectedNode.path);
     if (index > 0) {
-      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'above');
+      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'before');
     }
   }
 
@@ -410,30 +410,30 @@ The tree supports context menus with two approaches: callback-based (recommended
     { path: '2', name: 'Images', type: 'folder', canEdit: false, canDelete: true }
   ];
 
-  function createContextMenu(node): ContextMenuItem[] {
+  function createContextMenu(node, closeMenu: () => void): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
 
     // Always available
     items.push({
       icon: '📂',
       title: 'Open',
-      callback: () => alert(`Opening ${node.data.name}`)
+      callback: () => alert(`Opening ${node.data?.name}`)
     });
 
     // Conditional actions based on node data
-    if (node.data.canEdit) {
+    if (node.data?.canEdit) {
       items.push({
         icon: '✏️',
         title: 'Edit',
-        callback: () => alert(`Editing ${node.data.name}`)
+        callback: () => alert(`Editing ${node.data?.name}`)
       });
     }
 
-    if (node.data.canDelete) {
+    if (node.data?.canDelete) {
       items.push({
         icon: '🗑️',
         title: 'Delete',
-        callback: () => confirm(`Delete ${node.data.name}?`) && alert('Deleted!')
+        callback: () => confirm(`Delete ${node.data?.name}?`) && alert('Deleted!')
       });
     }
 
@@ -471,11 +471,11 @@ The tree supports context menus with two approaches: callback-based (recommended
   pathMember="path"
 >
   {#snippet contextMenu(node, closeMenu)}
-    <div class="context-menu-item" onclick={() => { alert(`Open ${node.data.name}`); closeMenu(); }}>
+    <div class="context-menu-item" onclick={() => { alert(`Open ${node.data?.name}`); closeMenu(); }}>
       📂 Open
     </div>
     <div class="context-menu-divider"></div>
-    <div class="context-menu-item" onclick={() => { alert(`Delete ${node.data.name}`); closeMenu(); }}>
+    <div class="context-menu-item" onclick={() => { alert(`Delete ${node.data?.name}`); closeMenu(); }}>
       🗑️ Delete
     </div>
   {/snippet}
@@ -598,7 +598,6 @@ The component includes several pre-built classes for styling selected nodes:
 #### Data Mapping Properties
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `treeId` | `string \| null` | `null` | Unique identifier for the tree |
 | `parentPathMember` | `string \| null` | `null` | Property name for parent path references |
 | `levelMember` | `string \| null` | `null` | Property name for node level |
 | `isExpandedMember` | `string \| null` | `null` | Property name for expanded state |
@@ -606,6 +605,9 @@ The component includes several pre-built classes for styling selected nodes:
 | `isDraggableMember` | `string \| null` | `null` | Property name for draggable state |
 | `isDropAllowedMember` | `string \| null` | `null` | Property name for drop allowed state |
 | `allowedDropPositionsMember` | `string \| null` | `null` | Property name for allowed drop positions array |
+| `isCollapsibleMember` | `string \| null` | `null` | Property name for collapsible state |
+| `getIsCollapsibleCallback` | `(node) => boolean` | `undefined` | Callback to determine if a node is collapsible |
+| `getIsDraggableCallback` | `(node) => boolean` | `undefined` | Callback to determine if a node is draggable |
 | `hasChildrenMember` | `string \| null` | `null` | Property name for children existence |
 | `isSorted` | `boolean \| null` | `null` | Whether items should be sorted |
 
@@ -616,7 +618,7 @@ The component includes several pre-built classes for styling selected nodes:
 | `getDisplayValueCallback` | `(node) => string` | `undefined` | Function to get display value |
 | `searchValueMember` | `string \| null` | `null` | Property name for search indexing |
 | `getSearchValueCallback` | `(node) => string` | `undefined` | Function to get search value |
-| `shouldUseInternalSearchIndex` | `boolean` | `false` | Enable built-in search functionality |
+| `shouldUseInternalSearchIndex` | `boolean` | `true` | Enable built-in search functionality |
 | `initializeIndexCallback` | `() => Index` | `undefined` | Function to initialize search index |
 | `searchText` | `string` (bindable) | `undefined` | Current search text |
 
@@ -648,6 +650,7 @@ Without both requirements, no search indexing will occur.
 | `orderMember` | `string \| null` | `null` | Property name for sort order (enables before/after positioning in drag-drop) |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
+| `isLoading` | `boolean` | `false` | Show loading placeholder instead of tree content |
 | `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging |
 | `shouldDisplayContextMenuInDebugMode` | `boolean` | `false` | Display persistent context menu at fixed position for styling development |
 
@@ -662,6 +665,10 @@ Without both requirements, no search indexing will occur.
 | `virtualRowHeight` | `number` | auto | Explicit row height in px (auto-measured from first row if not set) |
 | `virtualOverscan` | `number` | `5` | Extra rows rendered above/below viewport |
 | `virtualContainerHeight` | `string` | auto/`'400px'` | CSS height for scroll container (auto-detected from parent if not set) |
+| `isRendering` | `boolean` (bindable) | `false` | Whether the tree is currently rendering (useful for progress indicators) |
+| `onRenderStart` | `() => void` | `undefined` | Called when progressive rendering begins |
+| `onRenderProgress` | `(rendered: number, total: number) => void` | `undefined` | Called after each batch with progress info |
+| `onRenderComplete` | `() => void` | `undefined` | Called when progressive rendering finishes |
 
 #### Drag & Drop Properties
 | Prop | Type | Default | Description |
@@ -683,7 +690,7 @@ Without both requirements, no search indexing will occur.
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
+| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. `dropNode` can be `null` (e.g., drop on empty tree). Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
 
 #### Visual Styling Properties
 | Prop | Type | Default | Description |
@@ -702,9 +709,10 @@ Without both requirements, no search indexing will occur.
 |---------|------------|-------------|
 | `nodeTemplate` | `(node)` | Custom node template |
 | `treeHeader` | | Tree header content |
-| `treeBody` | | Tree body content |
 | `treeFooter` | | Tree footer content |
-| `noDataFound` | | No data template |
+| `noDataFound` | | Content shown when tree has no data |
+| `dropPlaceholder` | | Content shown in empty drop target tree |
+| `loadingPlaceholder` | | Content shown while `isLoading` is true |
 | `contextMenu` | `(node, closeMenu)` | Context menu template |
 
 #### Public Methods
@@ -724,6 +732,15 @@ Without both requirements, no search indexing will occur.
 | `getNodeByPath` | `path: string` | Get a node by its path |
 | `getChildren` | `parentPath: string` | Get direct children of a node |
 | `getSiblings` | `path: string` | Get siblings of a node (including itself) |
+| `updateNode` | `path: string, data: Partial<T>` | Update a node's data properties |
+| `copyNodeWithDescendants` | `sourcePath: string, targetPath: string, position: DropPosition` | Copy a node and its subtree to a new location |
+| `refreshNode` | `path: string` | Force re-render of a specific node |
+| `refreshSiblings` | `path: string` | Force re-render of a node's siblings |
+| `getExpandedPaths` | | Get array of all currently expanded node paths |
+| `setExpandedPaths` | `paths: string[]` | Restore expanded state from saved paths |
+| `getAllData` | | Get all tree data as a flat array |
+| `applyChanges` | | Apply pending changes and refresh the tree |
+| `closeContextMenu` | | Programmatically close the context menu |
 
 #### ScrollToPath Options
 
@@ -916,7 +933,7 @@ const sortCallback = (items: LTreeNode<T>[]) => {
     }
 
     // Then sort by your custom criteria
-    return a.data.name.localeCompare(b.data.name);
+    return (a.data?.name ?? '').localeCompare(b.data?.name ?? '');
   });
 };
 ```
@@ -1033,32 +1050,12 @@ window.components['svelte-treeview'].perf.enable()
 
 ## CanvasTree (Canvas-Based Rendering)
 
-`CanvasTree` renders the tree on an HTML5 Canvas for high-performance visualization of large hierarchies. It supports multiple layout modes, keyboard navigation, drag & drop, and custom node rendering.
+Canvas rendering is available as a separate companion package: [`@keenmate/svelte-treeview-canvas`](https://github.com/keenmate/svelte-treeview-canvas)
 
-### Layout Modes
+It renders trees on HTML5 Canvas for high-performance visualization with multiple layout modes (tree, balanced, fishbone, radial, box), keyboard navigation, drag & drop, and custom node rendering. Install it separately:
 
-| Mode | Description |
-|------|-------------|
-| `tree` | Standard hierarchical tree (default) |
-| `balanced` | Root centered with two symmetric arms |
-| `fishbone` | Spine with alternating branches above/below |
-| `radial` | Star / concentric rings from center |
-| `box` | Space-filling treemap |
-
-### Fishbone Navigation
-
-In fishbone layout, keyboard navigation follows the fishbone structure:
-
-- **Left/Right**: Navigate between same-side nodes along the spine axis. Spine nodes stay on their side; branch nodes traverse same-depth peers across all spine branches.
-- **Up/Down**: Navigate parent/child within a branch. From spine nodes, enters branch children on the pressed side.
-- **Cross-spine** (optional): When `fishboneCrossNav={true}`, Up/Down crosses to the opposite side of the spine when no more nodes exist in the current direction.
-
-```svelte
-<CanvasTree
-  {data}
-  layoutMode="fishbone"
-  fishboneCrossNav={false}  <!-- default: stops at spine boundary -->
-/>
+```bash
+npm install @keenmate/svelte-treeview-canvas
 ```
 
 ## Development Setup & Contributing

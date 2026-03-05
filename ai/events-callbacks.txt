@@ -169,7 +169,7 @@ Custom sorting for tree display:
       if (aLevel !== bLevel) return aLevel - bLevel;
 
       // Then by your criteria
-      return a.data.name.localeCompare(b.data.name);
+      return (a.data?.name ?? '').localeCompare(b.data?.name ?? '');
     });
   }}
 />

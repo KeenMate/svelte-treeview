@@ -402,13 +402,13 @@ PERMISSION-BASED ACTIONS
     canCreate: true
   };
 
-  function createContextMenu(node) {
+  function createContextMenu(node, closeMenuCallback) {
     const items = [];
 
     items.push({
       icon: '📂',
       title: 'Open',
-      callback: () => openItem(node)
+      callback: () => { openItem(node); closeMenuCallback(); }
     });
 
     if (permissions.canEdit) {

@@ -25,6 +25,7 @@ A
 -
 addNode → tree-editing.txt
 allowCopy → drag-drop.txt
+applyChanges → tree-editing.txt
 allowedDropPositions → drag-drop.txt
 allowedDropPositionsMember → drag-drop.txt
 Async indexing → search-features.txt, performance.txt
@@ -53,6 +54,7 @@ D
 -
 data → basic-setup.txt, data-handling.txt
 displayValueMember → data-handling.txt
+dropPlaceholder → drag-drop.txt, basic-setup.txt
 Drag and drop → drag-drop.txt
 dragDropMode → drag-drop.txt
 dragOverNodeClass → styling-theming.txt, drag-drop.txt
@@ -77,9 +79,13 @@ FlexSearch → search-features.txt
 
 G
 -
+getAllData → tree-editing.txt
 getAllowedDropPositionsCallback → drag-drop.txt
 getChildren → tree-editing.txt
 getDisplayValueCallback → data-handling.txt
+getExpandedPaths → tree-editing.txt
+getIsCollapsibleCallback → data-handling.txt
+getIsDraggableCallback → drag-drop.txt, data-handling.txt
 getNodeByPath → tree-editing.txt
 getSearchValueCallback → search-features.txt, data-handling.txt
 getSiblings → tree-editing.txt
@@ -99,9 +105,12 @@ indexerTimeout → search-features.txt
 initialBatchSize → performance.txt
 insertResult → data-handling.txt
 Installation → basic-setup.txt
+isCollapsibleMember → data-handling.txt
+isLoading → basic-setup.txt
 isDraggableMember → drag-drop.txt, data-handling.txt
 isDropAllowedMember → drag-drop.txt, data-handling.txt
 isExpandedMember → data-handling.txt
+isRendering → performance.txt
 isSelectedMember → data-handling.txt
 isSorted → data-handling.txt
 
@@ -112,6 +121,7 @@ Keyboard → basic-setup.txt
 L
 -
 leafIconClass → styling-theming.txt
+loadingPlaceholder → basic-setup.txt
 levelMember → data-handling.txt
 Logging → performance.txt, advanced-patterns.txt
 LTree → data-handling.txt, typescript-types.txt
@@ -129,6 +139,9 @@ nodeTemplate → basic-setup.txt, styling-theming.txt
 O
 -
 onNodeClicked → events-callbacks.txt
+onRenderComplete → performance.txt
+onRenderProgress → performance.txt
+onRenderStart → performance.txt
 onNodeDragOver → events-callbacks.txt, drag-drop.txt
 onNodeDragStart → events-callbacks.txt, drag-drop.txt
 onNodeDrop → events-callbacks.txt, drag-drop.txt
@@ -154,6 +167,7 @@ Root drop zone → drag-drop.txt
 S
 -
 SCSS → styling-theming.txt, import-patterns.txt
+setExpandedPaths → tree-editing.txt
 scrollHighlightClass → styling-theming.txt
 scrollHighlightTimeout → styling-theming.txt
 scrollToPath → basic-setup.txt, tree-editing.txt
@@ -186,6 +200,7 @@ TypeScript → typescript-types.txt
 U
 -
 update() → basic-setup.txt, advanced-patterns.txt
+updateNode → tree-editing.txt
 useFlatRendering → performance.txt
 
 V

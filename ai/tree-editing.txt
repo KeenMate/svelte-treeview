@@ -158,6 +158,51 @@ MOVE UP/DOWN
   }
 </script>
 
+UPDATE NODE
+-----------
+Update a node's data properties:
+
+<script>
+  function updateNodeData(path) {
+    treeRef.updateNode(path, {
+      name: 'Updated Name',
+      status: 'modified'
+    });
+  }
+</script>
+
+updateNode signature:
+updateNode(path: string, data: Partial<T>)
+
+- path: Node to update
+- data: Partial data to merge into existing data
+
+GET/SET EXPANDED STATE
+----------------------
+Save and restore expanded state:
+
+<script>
+  // Save expanded state
+  const expandedPaths = treeRef.getExpandedPaths();
+  localStorage.setItem('expandedPaths', JSON.stringify(expandedPaths));
+
+  // Restore expanded state
+  const saved = JSON.parse(localStorage.getItem('expandedPaths') || '[]');
+  treeRef.setExpandedPaths(saved);
+</script>
+
+GET ALL DATA
+------------
+Get all tree data as flat array (with any modifications):
+
+const allItems = treeRef.getAllData();
+
+APPLY CHANGES
+-------------
+Force-apply pending changes and refresh the tree:
+
+treeRef.applyChanges();
+
 COPY NODE
 ---------
 <script>

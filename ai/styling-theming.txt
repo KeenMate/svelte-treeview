@@ -143,19 +143,19 @@ SCSS variables for drop zones:
 // Border radius
 $drop-zone-border-radius: 4px;
 
-// Above zone
-$drop-zone-above-bg: rgba(134, 239, 172, 0.25);
-$drop-zone-above-color: #166534;
-$drop-zone-above-active-bg: rgba(134, 239, 172, 0.85);
-$drop-zone-above-active-color: #14532d;
-$drop-zone-above-active-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+// Before zone
+$drop-zone-before-bg: rgba(134, 239, 172, 0.25);
+$drop-zone-before-color: #166534;
+$drop-zone-before-active-bg: rgba(134, 239, 172, 0.85);
+$drop-zone-before-active-color: #14532d;
+$drop-zone-before-active-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 
-// Below zone
-$drop-zone-below-bg: rgba(253, 186, 116, 0.25);
-$drop-zone-below-color: #9a3412;
-$drop-zone-below-active-bg: rgba(253, 186, 116, 0.85);
-$drop-zone-below-active-color: #7c2d12;
-$drop-zone-below-active-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+// After zone
+$drop-zone-after-bg: rgba(253, 186, 116, 0.25);
+$drop-zone-after-color: #9a3412;
+$drop-zone-after-active-bg: rgba(253, 186, 116, 0.85);
+$drop-zone-after-active-color: #7c2d12;
+$drop-zone-after-active-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
 
 // Child zone
 $drop-zone-child-bg: rgba(196, 181, 253, 0.25);
@@ -172,12 +172,12 @@ GLOW MODE STYLING
 -----------------
 CSS classes for glow indicators:
 
-.ltree-glow-above {
+.ltree-glow-before {
   border-top: 3px solid #22c55e;
   box-shadow: 0 -4px 8px rgba(34, 197, 94, 0.3);
 }
 
-.ltree-glow-below {
+.ltree-glow-after {
   border-bottom: 3px solid #f97316;
   box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
 }
@@ -254,8 +254,8 @@ States:
 Drop zones:
 - .ltree-drop-zones - Drop zone container
 - .ltree-drop-zone - Individual drop zone
-- .ltree-drop-above - Above position
-- .ltree-drop-below - Below position
+- .ltree-drop-before - Before position
+- .ltree-drop-after - After position
 - .ltree-drop-child - Child position
 - .ltree-drop-copy - Copy operation active
 

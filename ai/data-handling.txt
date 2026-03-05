@@ -62,6 +62,7 @@ OPTIONAL MEMBERS
 | isSelectedMember | string | Property for selected state |
 | isDraggableMember | string | Property for draggable state |
 | isDropAllowedMember | string | Property for drop allowed state |
+| isCollapsibleMember | string | Property for collapsible state |
 | hasChildrenMember | string | Property for children indicator |
 | searchValueMember | string | Property for search indexing |
 | orderMember | string | Property for sibling sort order |
@@ -136,7 +137,7 @@ const sortCallback = (nodes) => {
     }
 
     // THEN: Sort by your criteria
-    return a.data.name.localeCompare(b.data.name);
+    return (a.data?.name ?? '').localeCompare(b.data?.name ?? '');
   });
 };
 

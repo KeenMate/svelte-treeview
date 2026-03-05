@@ -11,7 +11,7 @@ CALLBACK-BASED CONTEXT MENU
 <script>
   import type { ContextMenuItem, LTreeNode } from '@keenmate/svelte-treeview';
 
-  function createContextMenu(node: LTreeNode<MyItem>): ContextMenuItem[] {
+  function createContextMenu(node: LTreeNode<MyItem>, closeMenuCallback: () => void): ContextMenuItem[] {
     const items: ContextMenuItem[] = [];
 
     // Basic item
@@ -178,8 +178,8 @@ CONDITIONAL MENUS
 -----------------
 Show different menus based on node type:
 
-function createContextMenu(node) {
-  if (node.data.type === 'folder') {
+function createContextMenu(node, closeMenuCallback) {
+  if (node.data?.type === 'folder') {
     return [
       { title: 'New File', callback: () => newFile(node) },
       { title: 'New Folder', callback: () => newFolder(node) },
@@ -189,7 +189,7 @@ function createContextMenu(node) {
     ];
   }
 
-  if (node.data.type === 'file') {
+  if (node.data?.type === 'file') {
     return [
       { title: 'Open', callback: () => openFile(node) },
       { title: 'Download', callback: () => downloadFile(node) },
@@ -262,10 +262,10 @@ Debug mode:
 COMMON PATTERNS
 ---------------
 File explorer menu:
-function createMenu(node) {
+function createMenu(node, closeMenuCallback) {
   const items = [];
 
-  if (node.data.type === 'folder') {
+  if (node.data?.type === 'folder') {
     items.push(
       { icon: '📄', title: 'New File', callback: () => newFile(node) },
       { icon: '📁', title: 'New Folder', callback: () => newFolder(node) }
@@ -289,7 +289,7 @@ function createMenu(node) {
 }
 
 User management menu:
-function createMenu(node) {
+function createMenu(node, closeMenuCallback) {
   const user = node.data;
   return [
     { icon: '👤', title: 'View Profile', callback: () => viewProfile(user) },

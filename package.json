@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "5.0.0-rc01",
+	"version": "5.0.0-rc02",
 	"scripts": {
 		"dev": "vite dev --port 17777",
 		"build": "vite build && npm run prepack",
@@ -20,7 +20,8 @@
 		"dist",
 		"!dist/**/*.test.*",
 		"!dist/**/*.spec.*",
-		"!dist/demo"
+		"!dist/demo",
+		"ai"
 	],
 	"sideEffects": [
 		"**/*.css",

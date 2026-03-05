@@ -234,6 +234,26 @@ Custom message when tree is empty:
   {/snippet}
 </Tree>
 
+LOADING STATE
+-------------
+Show a loading placeholder while data is being fetched:
+
+<Tree {data} isLoading={isLoading}>
+  {#snippet loadingPlaceholder()}
+    <div class="loading">Loading tree data...</div>
+  {/snippet}
+</Tree>
+
+DROP PLACEHOLDER
+----------------
+Custom placeholder for empty trees that accept drops:
+
+<Tree {data} dragDropMode="both">
+  {#snippet dropPlaceholder()}
+    <div class="drop-here">Drop items here to start</div>
+  {/snippet}
+</Tree>
+
 FRAMEWORK INTEGRATION
 ---------------------
 SvelteKit:

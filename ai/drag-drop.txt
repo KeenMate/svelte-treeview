@@ -25,6 +25,7 @@ BASIC DRAG AND DROP
   {data}
   idMember="id"
   pathMember="path"
+  dragDropMode="both"
   dragOverNodeClass="ltree-dragover-glow"
   onNodeDrop={handleDrop}
 />
@@ -53,9 +54,9 @@ Two visual modes for drop zones:
 <Tree dropZoneMode="floating" />
 
 Glow mode classes:
-- ltree-glow-before - top border glow
-- ltree-glow-after - bottom border glow
-- ltree-glow-child - full border glow
+- ltree-glow-before - top border glow (before position)
+- ltree-glow-after - bottom border glow (after position)
+- ltree-glow-child - full border glow (child position)
 
 DROP ZONE LAYOUTS (Floating Mode)
 ---------------------------------

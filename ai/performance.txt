@@ -120,6 +120,23 @@ RENDERING MODE COMPARISON
 | Flat | All nodes | Medium trees (100-10K) |
 | Virtual | ~50 nodes | Large trees (10K+) |
 
+RENDER PROGRESS CALLBACKS
+-------------------------
+Monitor progressive rendering:
+
+<Tree
+  {data}
+  progressiveRender={true}
+  bind:isRendering
+  onRenderStart={() => console.log('Render started')}
+  onRenderProgress={(rendered, total) =>
+    console.log(`Rendered ${rendered}/${total}`)
+  }
+  onRenderComplete={() => console.log('Render complete')}
+/>
+
+isRendering is a bindable boolean — useful for showing spinners/progress bars.
+
 SORTING PERFORMANCE
 -------------------
 Level-first sorting is critical:
@@ -130,7 +147,7 @@ sortCallback={(nodes) => {
     const aLevel = a.path.split('.').length;
     const bLevel = b.path.split('.').length;
     if (aLevel !== bLevel) return aLevel - bLevel;
-    return a.data.name.localeCompare(b.data.name);
+    return (a.data?.name ?? '').localeCompare(b.data?.name ?? '');
   });
 }}
 

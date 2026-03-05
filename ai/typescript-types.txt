@@ -101,7 +101,7 @@ interface ContextMenuItem {
 }
 
 Usage:
-function createMenu(node: LTreeNode<MyItem>): ContextMenuItem[] {
+function createMenu(node: LTreeNode<MyItem>, closeMenu: () => void): ContextMenuItem[] {
   return [
     {
       icon: '📂',
