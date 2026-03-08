@@ -6,6 +6,16 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
+## What's New in v5.0.0-rc03
+
+- **Unified Context Menu API**: New shared type system (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`) used by both svelte-treeview and canvas-tree. Breaking: `title` → `label`, `callback` → `onclick`, `isDivider` → separate `ContextMenuDivider` type.
+- **Context menu features**: Keyboard shortcuts, nested submenus, named dividers (`──── Section ────`), `isVisible`/`isDisabled` per item, `className="danger"`, async `onclick`.
+- **Svelte context menu components**: `ContextMenuItemC` and `ContextMenuDividerC` for declarative snippet-based menus alongside the callback approach.
+- **Accordion expand**: `accordionExpand={true}` — expanding a node auto-collapses its siblings.
+- **Toggle icon mode**: `toggleIconMode="rotate"` (default) smoothly rotates the expand icon vs `"swap"` which switches between two icons.
+- **Fix**: Expand/collapse icon not updating in flat rendering mode.
+- **Fix**: `vite.config.ts` no longer requires `@types/node`.
+
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
 > [!IMPORTANT]

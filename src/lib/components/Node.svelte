@@ -67,11 +67,13 @@
 		allowCopy,
 	} = config;
 
-	// Read dropZoneMode and dropZoneStart through the proxy each time (not
-	// destructured) so they stay reactive in flat mode where nodes are NOT
-	// recreated on config change.
+	// Read dropZoneMode, dropZoneStart, and accordionExpand through the proxy
+	// each time (not destructured) so they stay reactive in flat mode where
+	// nodes are NOT recreated on config change.
 	const dropZoneMode = $derived(config.dropZoneMode);
 	const dropZoneStart = $derived(config.dropZoneStart);
+	const accordionExpand = $derived(config.accordionExpand);
+	const toggleIconMode = $derived(config.toggleIconMode);
 
 	// Compute if THIS node is the one being hovered for drop
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
@@ -253,8 +255,24 @@
 	function toggleExpanded() {
 		if (node.hasChildren && isCollapsible) {
 			const newState = !node.isExpanded
+
+			// Accordion: collapse siblings when expanding
+			if (newState && accordionExpand) {
+				const siblings = tree.getSiblings(node.path)
+				console.log(`[accordion] expanding ${node.path}, checking ${siblings.length} siblings, accordionExpand=${accordionExpand}`)
+				for (const sibling of siblings) {
+					if (sibling.path !== node.path && sibling.isExpanded && tree.getNodeIsCollapsible(sibling)) {
+						console.log(`[accordion] collapsing sibling: ${sibling.path}`)
+						sibling.isExpanded = false
+						sibling._rev = (sibling._rev || 0) + 1
+					}
+				}
+			}
+
 			uiLogger.debug(`${newState ? 'Expanding' : 'Collapsing'} node: ${node.path}`)
 			node.isExpanded = newState
+			// Bump _rev so flat-mode {#each} key changes and Svelte re-renders the icon
+			node._rev = (node._rev || 0) + 1
 			tree.refresh()
 		}
 	}
@@ -280,10 +298,10 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		{#if hasChildren && isCollapsible}
 			<span
-				class="ltree-toggle-icon ltree-clickable {node.isExpanded
-					? collapseIconClass
+				class="ltree-toggle-icon ltree-clickable {toggleIconMode === 'swap'
+					? (node.isExpanded ? collapseIconClass : expandIconClass)
 					: expandIconClass}"
-				class:expanded={node.isExpanded}
+				class:expanded={toggleIconMode === 'rotate' && node.isExpanded}
 				onclick={toggleExpanded}
 			></span>
 		{:else}

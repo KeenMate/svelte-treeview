@@ -1,9 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { readFileSync } from 'fs';
-
-// Read package.json for build-time constants
-const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+import pkg from './package.json' with { type: 'json' };
 
 export default defineConfig({
 	plugins: [sveltekit()],

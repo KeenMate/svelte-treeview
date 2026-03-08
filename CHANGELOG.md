@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0-rc03] - 2026-03-08
+
 ### Added
 - **Unified Context Menu types** (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`): Shared type system across svelte-treeview and canvas-tree. Breaking change from old API: `title` → `label`, `callback` → `onclick`, `isDivider` flag replaced by separate `ContextMenuDivider` type with `divider: true` discriminator.
   - **Named dividers**: `{ divider: true, label: 'Section' }` renders as `──── Section ────`
