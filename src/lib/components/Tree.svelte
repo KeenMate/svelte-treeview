@@ -4,7 +4,7 @@
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import {
 		type InsertArrayResult,
-		type ContextMenuItem,
+		type ContextMenuEntry,
 		type DropPosition,
 		type DragDropMode,
 		type DropOperation,
@@ -113,6 +113,7 @@
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
 		allowCopy?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
 		autoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
+		accordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
 
 		// EVENTS
 		onNodeClicked?: (node: LTreeNode<T>) => void;
@@ -126,7 +127,7 @@
 		 */
 		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
 		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
-		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuItem[];
+		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuEntry[];
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
@@ -135,6 +136,7 @@
 		expandIconClass?: string | null | undefined;
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
+		toggleIconMode?: 'rotate' | 'swap';
 		scrollHighlightTimeout?: number | null | undefined;
 		scrollHighlightClass?: string | null | undefined;
 		contextMenuXOffset?: number | null | undefined;
@@ -223,6 +225,7 @@
 		dropZoneMaxWidth = 120,
 		allowCopy = false,
 		autoHandleCopy = true,
+		accordionExpand = false,
 
 		// EVENTS
 		onNodeClicked,
@@ -237,6 +240,7 @@
 		expandIconClass = 'ltree-icon-expand',
 		collapseIconClass = 'ltree-icon-collapse',
 		leafIconClass = 'ltree-icon-leaf',
+		toggleIconMode = 'rotate',
 		selectedNodeClass,
 		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
@@ -300,6 +304,7 @@
 		dropZoneMaxWidth,
 		allowCopy,
 		autoHandleCopy,
+		accordionExpand,
 		onNodeClicked,
 		onNodeDragStart,
 		onNodeDragOver,
@@ -313,6 +318,7 @@
 		expandIconClass,
 		collapseIconClass,
 		leafIconClass,
+		toggleIconMode,
 		scrollHighlightTimeout,
 		scrollHighlightClass,
 		contextMenuXOffset,
@@ -358,6 +364,7 @@
 	$effect(() => { controller.dragDropMode = dragDropMode ?? 'none'; });
 	$effect(() => { controller.allowCopy = allowCopy ?? false; });
 	$effect(() => { controller.autoHandleCopy = autoHandleCopy ?? true; });
+	$effect(() => { controller.accordionExpand = accordionExpand ?? false; });
 	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
@@ -365,6 +372,7 @@
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
 	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
 	$effect(() => { controller.leafIconClass = leafIconClass ?? 'ltree-icon-leaf'; });
+	$effect(() => { controller.toggleIconMode = toggleIconMode ?? 'rotate'; });
 	$effect(() => { controller.selectedNodeClass = selectedNodeClass; });
 	$effect(() => { controller.dragOverNodeClass = dragOverNodeClass; });
 	$effect(() => { controller.dropZoneMode = dropZoneMode ?? 'glow'; });
@@ -560,12 +568,14 @@
 				| "expandIconClass"
 				| "collapseIconClass"
 				| "leafIconClass"
+				| "toggleIconMode"
 				| "selectedNodeClass"
 				| "dragOverNodeClass"
 				| "scrollHighlightTimeout"
 				| "scrollHighlightClass"
 				| "contextMenuXOffset"
 				| "contextMenuYOffset"
+				| "accordionExpand"
 			>
 		>
 	) {
@@ -618,14 +628,70 @@
 		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
+		if (updates.toggleIconMode !== undefined) toggleIconMode = updates.toggleIconMode;
 		if (updates.selectedNodeClass !== undefined) selectedNodeClass = updates.selectedNodeClass;
 		if (updates.dragOverNodeClass !== undefined) dragOverNodeClass = updates.dragOverNodeClass;
 		if (updates.scrollHighlightTimeout !== undefined) scrollHighlightTimeout = updates.scrollHighlightTimeout;
 		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
 		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
 		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
+		if (updates.accordionExpand !== undefined) accordionExpand = updates.accordionExpand;
+	}
+
+	// ── Context menu keyboard shortcut handling ──────────────────────────
+	function parseShortcut(shortcut: string): { key: string; ctrl: boolean; shift: boolean; alt: boolean } {
+		const parts = shortcut.split('+').map(p => p.trim());
+		const key = parts.pop()!; // last part is the key
+		return {
+			key: key.toLowerCase(),
+			ctrl: parts.some(p => p.toLowerCase() === 'ctrl'),
+			shift: parts.some(p => p.toLowerCase() === 'shift'),
+			alt: parts.some(p => p.toLowerCase() === 'alt'),
+		};
+	}
+
+	function findEntryByShortcut(entries: ContextMenuEntry[], event: KeyboardEvent): import('../ltree/types.js').ContextMenuItem | null {
+		for (const entry of entries) {
+			if ('divider' in entry) continue;
+			if (entry.isVisible === false || entry.isDisabled) continue;
+			if (entry.shortcut) {
+				const parsed = parseShortcut(entry.shortcut);
+				const eventKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+				if (eventKey === parsed.key && event.ctrlKey === parsed.ctrl && event.shiftKey === parsed.shift && event.altKey === parsed.alt) {
+					return entry;
+				}
+			}
+			// Search children (submenus) too
+			if (entry.children) {
+				const found = findEntryByShortcut(entry.children, event);
+				if (found) return found;
+			}
+		}
+		return null;
+	}
+
+	async function handleContextMenuKeydown(event: KeyboardEvent) {
+		if (!controller.contextMenuVisible || !controller.contextMenuNode || !contextMenuCallback) return;
+
+		if (event.key === 'Escape') {
+			controller.closeContextMenu();
+			return;
+		}
+
+		const entries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller));
+		const match = findEntryByShortcut(entries, event);
+		if (match) {
+			event.preventDefault();
+			try {
+				await match.onclick?.();
+			} catch (error) {
+				console.error('Context menu shortcut error:', error);
+			}
+		}
 	}
 </script>
+
+<svelte:window onkeydown={handleContextMenuKeydown} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
@@ -878,45 +944,63 @@
 
 	<!-- Context Menu -->
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
-		<div class="ltree-context-menu" style="left: {controller.contextMenuX}px; top: {controller.contextMenuY}px;">
+		<div class="ltree-context-menu" style="left: {controller.contextMenuX}px; top: {controller.contextMenuY}px;" role="menu">
 			{#if contextMenuCallback}
-				{@const menuItems = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
-				{#each menuItems as item}
-					{#if item.isDivider}
-						<div class="ltree-context-menu-divider"></div>
-					{:else}
-						<div
-							class="ltree-context-menu-item {item.className || ''}"
-							class:ltree-context-menu-item-disabled={item.isDisabled}
-							role="menuitem"
-							tabindex={item.isDisabled ? -1 : 0}
-							onclick={async () => {
-								if (!item.isDisabled) {
-									try {
-										await item.callback();
-									} catch (error) {
-										console.error('Context menu callback error:', error);
+				{@const menuEntries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
+				{#snippet renderEntries(entries: ContextMenuEntry[])}
+					{#each entries as entry}
+						{#if 'divider' in entry}
+							<div class="ltree-context-menu-divider" role="separator">
+								{#if entry.label}
+									<span class="ltree-context-menu-divider-label">{entry.label}</span>
+								{/if}
+							</div>
+						{:else if entry.isVisible !== false}
+							{@const hasChildren = entry.children && entry.children.length > 0}
+							<div
+								class="ltree-context-menu-item {entry.className || ''}"
+								class:ltree-context-menu-item-disabled={entry.isDisabled}
+								class:ltree-context-menu-has-children={hasChildren}
+								role="menuitem"
+								tabindex={entry.isDisabled ? -1 : 0}
+								onclick={async () => {
+									if (!entry.isDisabled && !hasChildren) {
+										try {
+											await entry.onclick?.();
+										} catch (error) {
+											console.error('Context menu callback error:', error);
+										}
 									}
-								}
-							}}
-							onkeydown={async (e) => {
-								if ((e.key === 'Enter' || e.key === ' ') && !item.isDisabled) {
-									e.preventDefault();
-									try {
-										await item.callback();
-									} catch (error) {
-										console.error('Context menu callback error:', error);
+								}}
+								onkeydown={async (e) => {
+									if ((e.key === 'Enter' || e.key === ' ') && !entry.isDisabled && !hasChildren) {
+										e.preventDefault();
+										try {
+											await entry.onclick?.();
+										} catch (error) {
+											console.error('Context menu callback error:', error);
+										}
 									}
-								}
-							}}
-						>
-							{#if item.icon}
-								<span class="ltree-context-menu-icon">{item.icon}</span>
-							{/if}
-							{item.title}
-						</div>
-					{/if}
-				{/each}
+								}}
+							>
+								{#if entry.icon}
+									<span class="ltree-context-menu-icon">{entry.icon}</span>
+								{/if}
+								<span class="ltree-context-menu-label">{entry.label}</span>
+								{#if entry.shortcut}
+									<span class="ltree-context-menu-shortcut">{entry.shortcut}</span>
+								{/if}
+								{#if hasChildren}
+									<span class="ltree-context-menu-arrow">&#x25B8;</span>
+									<div class="ltree-context-submenu" role="menu">
+										{@render renderEntries(entry.children!)}
+									</div>
+								{/if}
+							</div>
+						{/if}
+					{/each}
+				{/snippet}
+				{@render renderEntries(menuEntries)}
 			{:else if contextMenu}
 				{@render contextMenu(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
 			{/if}

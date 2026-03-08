@@ -1,6 +1,8 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, ContextMenuItem } from '$lib/ltree/types.js';
+	import ContextMenuItemC from '$lib/components/ContextMenuItem.svelte';
+	import ContextMenuDividerC from '$lib/components/ContextMenuDivider.svelte';
+	import type { LTreeNode, ContextMenuEntry } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -25,6 +27,7 @@
 	];
 
 	let activityLog = $state<string[]>([]);
+	let snippetLog = $state<string[]>([]);
 	let debugMode = $state(false);
 	let xOffset = $state(8);
 	let yOffset = $state(0);
@@ -37,78 +40,102 @@
 		activityLog = [...activityLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
 
+	function addSnippetLog(message: string) {
+		snippetLog = [...snippetLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+
 	function clearLog() {
 		activityLog = [];
 	}
 
-	// Context menu callback - returns different menus based on node type
-	function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
+	function clearSnippetLog() {
+		snippetLog = [];
+	}
+
+	// Context menu callback using the new unified ContextMenuEntry type
+	function getContextMenu(node: LTreeNode<FileItem>, close: () => void): ContextMenuEntry[] {
 		const isFolder = node.data?.type === 'folder';
 		const isReadonly = node.data?.readonly;
 
-		const items: ContextMenuItem[] = [];
+		const entries: ContextMenuEntry[] = [];
 
 		if (isFolder) {
-			items.push({
+			entries.push({
 				icon: '📄',
-				title: 'New File',
-				callback: () => addLog(`New file in "${node.data?.name}"`)
+				label: 'New File',
+				shortcut: 'N',
+				onclick: () => { addLog(`New file in "${node.data?.name}"`); close(); }
 			});
-			items.push({
+			entries.push({
 				icon: '📁',
-				title: 'New Folder',
-				callback: () => addLog(`New folder in "${node.data?.name}"`)
+				label: 'New Folder',
+				shortcut: 'Shift+N',
+				onclick: () => { addLog(`New folder in "${node.data?.name}"`); close(); }
 			});
-			items.push({ isDivider: true, title: '', callback: () => {} });
+			entries.push({ divider: true });
 		}
 
-		items.push({
+		entries.push({
 			icon: '📋',
-			title: 'Copy',
-			callback: () => addLog(`Copied "${node.data?.name}"`)
+			label: 'Copy',
+			shortcut: 'C',
+			onclick: () => { addLog(`Copied "${node.data?.name}"`); close(); }
 		});
 
-		items.push({
+		entries.push({
 			icon: '✂️',
-			title: 'Cut',
+			label: 'Cut',
+			shortcut: 'X',
 			isDisabled: isReadonly,
-			callback: () => addLog(`Cut "${node.data?.name}"`)
+			onclick: () => { addLog(`Cut "${node.data?.name}"`); close(); }
 		});
 
-		items.push({
+		entries.push({
 			icon: '📥',
-			title: 'Paste',
+			label: 'Paste',
+			shortcut: 'V',
 			isDisabled: !isFolder,
-			callback: () => addLog(`Paste into "${node.data?.name}"`)
+			onclick: () => { addLog(`Paste into "${node.data?.name}"`); close(); }
 		});
 
-		items.push({ isDivider: true, title: '', callback: () => {} });
+		// Submenu example: Export As...
+		entries.push({
+			icon: '📤',
+			label: 'Export As...',
+			children: [
+				{ label: 'JSON', shortcut: 'J', onclick: () => { addLog(`Export "${node.data?.name}" as JSON`); close(); } },
+				{ label: 'XML', shortcut: 'X', onclick: () => { addLog(`Export "${node.data?.name}" as XML`); close(); } },
+				{ label: 'CSV', shortcut: 'C', onclick: () => { addLog(`Export "${node.data?.name}" as CSV`); close(); } },
+			]
+		});
 
-		items.push({
+		entries.push({ divider: true, label: 'Danger zone' });
+
+		entries.push({
 			icon: '✏️',
-			title: 'Rename',
+			label: 'Rename',
+			shortcut: 'F2',
 			isDisabled: isReadonly,
-			callback: () => addLog(`Rename "${node.data?.name}"`)
+			onclick: () => { addLog(`Rename "${node.data?.name}"`); close(); }
 		});
 
-		items.push({
+		entries.push({
 			icon: '🗑️',
-			title: 'Delete',
+			label: 'Delete',
+			className: 'danger',
 			isDisabled: isReadonly,
-			callback: () => addLog(`Delete "${node.data?.name}"`)
+			onclick: () => { addLog(`Delete "${node.data?.name}"`); close(); }
 		});
 
-		if (isReadonly) {
-			items.push({ isDivider: true, title: '', callback: () => {} });
-			items.push({
-				icon: '🔒',
-				title: 'Read-only file',
-				isDisabled: true,
-				callback: () => {}
-			});
-		}
+		// isVisible example: only show lock info for readonly
+		entries.push({
+			icon: '🔒',
+			label: 'Read-only file',
+			isDisabled: true,
+			isVisible: !!isReadonly
+		});
 
-		return items;
+		return entries;
 	}
 </script>
 
@@ -120,14 +147,14 @@
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>📋 Context Menu Examples</h1>
-		<p class="subtitle">Right-click context menus with callbacks, icons, and dynamic items</p>
+		<p class="subtitle">Right-click context menus with callbacks, snippets, shortcuts, submenus, and named dividers</p>
 		<RenderModeSwitch />
 	</header>
 
-	<!-- Dynamic Context Menu -->
+	<!-- Dynamic Context Menu (Callback approach) -->
 	<div class="card">
-		<h2>Dynamic Context Menu</h2>
-		<p class="description">Right-click on any node to see a context menu. The menu items change based on whether it's a folder or file, and whether it's read-only.</p>
+		<h2>Callback Approach</h2>
+		<p class="description">Right-click on any node. Demonstrates shortcuts, submenus, named dividers, <code>className="danger"</code>, and <code>isVisible</code>.</p>
 
 		<div class="controls">
 			<label>
@@ -180,46 +207,140 @@
 		{/if}
 	</div>
 
-	<!-- Context Menu Callback -->
+	<!-- Snippet Approach -->
 	<div class="card">
-		<h2>Context Menu Callback</h2>
-		<p class="description">Use <code>contextMenuCallback</code> to dynamically generate menu items based on the node.</p>
+		<h2>Snippet + Component Approach</h2>
+		<p class="description">Uses <code>ContextMenuItemC</code> and <code>ContextMenuDividerC</code> Svelte components inside a <code>contextMenu</code> snippet for declarative menus with conditional rendering.</p>
+
+		<div class="controls">
+			<button class="btn btn-secondary" onclick={clearSnippetLog}>Clear Log</button>
+		</div>
+
+		<div class="tree-container tree-container-tall">
+			<Tree
+				data={sampleData}
+				idMember="id"
+				pathMember="path"
+				sortCallback={sortByName}
+				isSorted={true}
+				expandLevel={3}
+				{...getTreeProps()}
+			>
+				{#snippet nodeTemplate(node: any)}
+					<span>
+						{node.data?.icon} {node.data?.name}
+						{#if node.data?.readonly}
+							<span style="color: #999; font-size: 0.8em;">(read-only)</span>
+						{/if}
+					</span>
+				{/snippet}
+				{#snippet contextMenu(node: LTreeNode<FileItem>, close: () => void)}
+					<ContextMenuItemC label="Copy" icon="📋" shortcut="C" onclick={() => { addSnippetLog(`Copied "${node.data?.name}"`); close(); }} />
+					<ContextMenuItemC label="Cut" icon="✂️" shortcut="X" isDisabled={!!node.data?.readonly} onclick={() => { addSnippetLog(`Cut "${node.data?.name}"`); close(); }} />
+					{#if node.data?.type === 'folder'}
+						<ContextMenuItemC label="Export As..." icon="📤">
+							<ContextMenuItemC label="JSON" shortcut="J" onclick={() => { addSnippetLog(`Export "${node.data?.name}" as JSON`); close(); }} />
+							<ContextMenuItemC label="XML" shortcut="X" onclick={() => { addSnippetLog(`Export "${node.data?.name}" as XML`); close(); }} />
+						</ContextMenuItemC>
+					{/if}
+					<ContextMenuDividerC label="Danger zone" />
+					<ContextMenuItemC label="Delete" icon="🗑️" className="danger" isDisabled={!!node.data?.readonly} onclick={() => { addSnippetLog(`Delete "${node.data?.name}"`); close(); }} />
+				{/snippet}
+			</Tree>
+		</div>
+
+		{#if snippetLog.length > 0}
+			<div class="output">
+				<p class="output-label">Activity Log:</p>
+				<pre>{snippetLog.join('\n')}</pre>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Callback API Reference -->
+	<div class="card">
+		<h2>Callback API</h2>
+		<p class="description">Use <code>contextMenuCallback</code> to dynamically generate menu entries based on the node.</p>
 
 		<div class="code-block">
-			<pre>{`import type { ContextMenuItem } from '@keenmate/svelte-treeview';
+			<pre>{`import type { ContextMenuEntry } from '@keenmate/svelte-treeview';
 
-function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
-  const isFolder = node.data?.type === 'folder';
-  const isReadonly = node.data?.readonly;
-
+function getContextMenu(node: LTreeNode<FileItem>, close: () => void): ContextMenuEntry[] {
   return [
-    {
-      icon: '📋',
-      title: 'Copy',
-      callback: () => console.log('Copy', node.data?.name)
-    },
-    {
-      icon: '✂️',
-      title: 'Cut',
-      isDisabled: isReadonly,  // Disabled for read-only files
-      callback: () => console.log('Cut', node.data?.name)
-    },
-    { isDivider: true, title: '', callback: () => {} },  // Divider
-    {
-      icon: '🗑️',
-      title: 'Delete',
-      isDisabled: isReadonly,
-      callback: () => console.log('Delete', node.data?.name)
-    }
+    { label: 'Copy', icon: '📋', shortcut: 'C',
+      onclick: () => { copy(node); close(); } },
+    { label: 'Edit', icon: '✏️',
+      onclick: () => { edit(node); close(); } },
+    { label: 'Export As...', icon: '📤', children: [
+        { label: 'JSON', shortcut: 'J', onclick: () => { exportAs(node, 'json'); close(); } },
+        { label: 'XML', shortcut: 'X', onclick: () => { exportAs(node, 'xml'); close(); } },
+    ]},
+    { divider: true, label: 'Danger zone' },
+    { label: 'Delete', className: 'danger', isDisabled: node.data.readonly,
+      onclick: () => { del(node); close(); } },
   ];
 }`}</pre>
 		</div>
 	</div>
 
-	<!-- ContextMenuItem Interface -->
+	<!-- Snippet API Reference -->
 	<div class="card">
-		<h2>ContextMenuItem Interface</h2>
-		<p class="description">The structure of each menu item.</p>
+		<h2>Snippet + Component API</h2>
+		<p class="description">Use <code>ContextMenuItemC</code> and <code>ContextMenuDividerC</code> components inside the <code>contextMenu</code> snippet.</p>
+
+		<div class="code-block">
+			<pre>{'<'}script{'>'}
+  import {"{"} ContextMenuItemC, ContextMenuDividerC {"}"} from '@keenmate/svelte-treeview';
+{'<'}/script{'>'}
+
+{`<Tree {data} ...>
+  {#snippet contextMenu(node, close)}
+    <ContextMenuItemC label="Copy" icon="📋" shortcut="C"
+      onclick={() => { copy(node); close(); }} />
+    {#if node.data.canExport}
+      <ContextMenuItemC label="Export As..." icon="📤">
+        <ContextMenuItemC label="JSON"
+          onclick={() => { exportAs(node, 'json'); close(); }} />
+        <ContextMenuItemC label="XML"
+          onclick={() => { exportAs(node, 'xml'); close(); }} />
+      </ContextMenuItemC>
+    {/if}
+    <ContextMenuDividerC label="Danger zone" />
+    <ContextMenuItemC label="Delete" className="danger"
+      isDisabled={node.data.readonly}
+      onclick={() => { del(node); close(); }} />
+  {/snippet}
+</Tree>`}</pre>
+		</div>
+	</div>
+
+	<!-- ContextMenuEntry Types -->
+	<div class="card">
+		<h2>ContextMenuEntry Types</h2>
+		<p class="description">The unified type definition shared across svelte-treeview and canvas-tree.</p>
+
+		<div class="code-block">
+			<pre>{`// Divider (simple or named)
+interface ContextMenuDivider {
+  divider: true;
+  label?: string;  // named: ──── [label] ────
+}
+
+// Menu item
+interface ContextMenuItem {
+  id?: string;
+  label: string;
+  icon?: string;
+  shortcut?: string;
+  isDisabled?: boolean;
+  isVisible?: boolean;       // false = skip rendering
+  className?: string;        // e.g. "danger"
+  onclick?: () => void | Promise<void>;
+  children?: ContextMenuEntry[];  // nested submenus
+}
+
+type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
+		</div>
 
 		<table>
 			<thead>
@@ -231,19 +352,24 @@ function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
 			</thead>
 			<tbody>
 				<tr>
-					<td><code>title</code></td>
+					<td><code>label</code></td>
 					<td><code>string</code></td>
-					<td>The text displayed in the menu item (required)</td>
+					<td>Display text (required for items, optional for dividers)</td>
 				</tr>
 				<tr>
-					<td><code>callback</code></td>
-					<td><code>() =&gt; void</code></td>
-					<td>Function called when item is clicked (required)</td>
+					<td><code>onclick</code></td>
+					<td><code>() =&gt; void | Promise</code></td>
+					<td>Click handler (optional: parent items with children may omit)</td>
 				</tr>
 				<tr>
 					<td><code>icon</code></td>
 					<td><code>string</code></td>
-					<td>Emoji or text icon shown before the title</td>
+					<td>Emoji or text icon shown before the label</td>
+				</tr>
+				<tr>
+					<td><code>shortcut</code></td>
+					<td><code>string</code></td>
+					<td>Keyboard shortcut hint (right-aligned, muted)</td>
 				</tr>
 				<tr>
 					<td><code>isDisabled</code></td>
@@ -251,22 +377,27 @@ function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
 					<td>If true, item is grayed out and not clickable</td>
 				</tr>
 				<tr>
-					<td><code>isDivider</code></td>
+					<td><code>isVisible</code></td>
 					<td><code>boolean</code></td>
-					<td>If true, renders a horizontal line divider</td>
+					<td>If false, item is not rendered (callback approach)</td>
+				</tr>
+				<tr>
+					<td><code>className</code></td>
+					<td><code>string</code></td>
+					<td>CSS class name (e.g. "danger" for red styling)</td>
+				</tr>
+				<tr>
+					<td><code>children</code></td>
+					<td><code>ContextMenuEntry[]</code></td>
+					<td>Nested submenu items (opens on hover)</td>
+				</tr>
+				<tr>
+					<td><code>divider</code></td>
+					<td><code>true</code></td>
+					<td>Type discriminator for divider entries</td>
 				</tr>
 			</tbody>
 		</table>
-
-		<div class="code-block">
-			<pre>{`interface ContextMenuItem {
-  icon?: string;
-  title: string;
-  isDisabled?: boolean;
-  callback: () => void;
-  isDivider?: boolean;
-}`}</pre>
-		</div>
 	</div>
 
 	<!-- Menu Position Offset -->
@@ -310,37 +441,39 @@ function getContextMenu(node: LTreeNode<FileItem>): ContextMenuItem[] {
 					<td>Each menu item</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-item.disabled</code></td>
+					<td><code>.ltree-context-menu-item-disabled</code></td>
 					<td>Disabled menu items</td>
+				</tr>
+				<tr>
+					<td><code>.ltree-context-menu-label</code></td>
+					<td>Label text span</td>
+				</tr>
+				<tr>
+					<td><code>.ltree-context-menu-shortcut</code></td>
+					<td>Right-aligned shortcut hint</td>
+				</tr>
+				<tr>
+					<td><code>.ltree-context-menu-arrow</code></td>
+					<td>Submenu arrow indicator</td>
 				</tr>
 				<tr>
 					<td><code>.ltree-context-menu-divider</code></td>
 					<td>Divider lines</td>
 				</tr>
+				<tr>
+					<td><code>.ltree-context-menu-divider-label</code></td>
+					<td>Named divider label text</td>
+				</tr>
+				<tr>
+					<td><code>.ltree-context-submenu</code></td>
+					<td>Nested submenu container</td>
+				</tr>
+				<tr>
+					<td><code>.danger</code></td>
+					<td>Danger-styled item (red text)</td>
+				</tr>
 			</tbody>
 		</table>
-
-		<div class="code-block">
-			<pre>{`/* Custom context menu styling */
-:global(.ltree-context-menu) {
-  background: #2d3748;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-}
-
-:global(.ltree-context-menu-item) {
-  color: white;
-  padding: 10px 16px;
-}
-
-:global(.ltree-context-menu-item:hover:not(.disabled)) {
-  background: #667eea;
-}
-
-:global(.ltree-context-menu-item.disabled) {
-  color: #718096;
-}`}</pre>
-		</div>
 	</div>
 
 	<footer>

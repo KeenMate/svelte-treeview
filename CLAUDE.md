@@ -40,13 +40,24 @@ interface Ltree<T> {
   filterNodes(searchText: string): void;
 }
 
-interface ContextMenuItem {
-  icon?: string;
-  title: string;
-  isDisabled?: boolean;
-  callback: () => void;
-  isDivider?: boolean;
+interface ContextMenuDivider {
+  divider: true;
+  label?: string;  // named divider: ──── [label] ────
 }
+
+interface ContextMenuItem {
+  id?: string;
+  label: string;
+  icon?: string;
+  shortcut?: string;
+  isDisabled?: boolean;
+  isVisible?: boolean;
+  className?: string;
+  onclick?: () => void | Promise<void>;
+  children?: ContextMenuEntry[];
+}
+
+type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;
 ```
 
 TREE_PROPS_REQUIRED:
@@ -63,7 +74,7 @@ TREE_PROPS_KEY:
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
 - treePathSeparator: string (default ".")
-- contextMenuCallback: (node: LTreeNode<T>) => ContextMenuItem[]
+- contextMenuCallback: (node: LTreeNode<T>, close: () => void) => ContextMenuEntry[]
 - contextMenuXOffset: number (default 8px)
 - contextMenuYOffset: number (default 0px)
 - shouldDisplayContextMenuInDebugMode: boolean (default false)
@@ -91,7 +102,7 @@ STYLING:
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
 - Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow
 - Touch ghost class: ltree-touch-ghost (customizable via --tree-ghost-bg, --tree-ghost-color)
-- Context menu classes: ltree-context-menu, ltree-context-menu-item, ltree-context-menu-divider
+- Context menu classes: ltree-context-menu, ltree-context-menu-item, ltree-context-menu-divider, ltree-context-menu-label, ltree-context-menu-shortcut, ltree-context-menu-arrow, ltree-context-submenu, ltree-context-menu-divider-label
 
 CONSTRAINTS:
 - Svelte 5 only (uses runes)
@@ -100,13 +111,17 @@ CONSTRAINTS:
 - Segments internally prefixed 'x' for ordering
 
 CONTEXT_MENU:
-- Two approaches: snippet-based and callback-based
-- Callback: contextMenuCallback(node) returns ContextMenuItem[]
+- Unified types: ContextMenuItem, ContextMenuDivider, ContextMenuEntry (shared with canvas-tree)
+- Two approaches: snippet-based (ContextMenuItemC/ContextMenuDividerC components) and callback-based
+- Callback: contextMenuCallback(node, close) returns ContextMenuEntry[]
+- Divider type: { divider: true, label?: string } — named dividers render as ──── [label] ────
+- Item features: label, icon, shortcut, isDisabled, isVisible, className (e.g. "danger"), onclick, children (submenus)
+- Submenus: children[] opens nested menu on hover (CSS position: absolute; left: 100%)
 - Position offset: contextMenuXOffset/YOffset for cursor clearance
 - Debug mode: shouldDisplayContextMenuInDebugMode shows menu at tree-relative position (200px right, 100px down)
 - Auto-close: closes on scroll, click outside, or programmatically
-- Features: icons, disabled states, dividers, conditional menus
 - Dev page: /dev/context-menu with examples and debug controls
+- Spec document: context-menu-spec.md (migration guide for web-treeview)
 
 EXTERNAL_UPDATE:
 - update() method for vanilla JS integration

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Tree } from '$lib/index.js';
-	import type { ContextMenuItem } from '$lib/ltree/types.js';
+	import type { ContextMenuEntry } from '$lib/ltree/types.js';
 
 	// Sample data for context menu testing
 	const contextMenuData = [
@@ -62,14 +62,14 @@
 		console.log('Node clicked:', node);
 	}
 
-	function createContextMenu(node: any, closeMenuCallback: () => void): ContextMenuItem[] {
-		const menuItems: ContextMenuItem[] = [];
+	function createContextMenu(node: any, closeMenuCallback: () => void): ContextMenuEntry[] {
+		const menuItems: ContextMenuEntry[] = [];
 
 		// Open action - always available
 		menuItems.push({
 			icon: '📂',
-			title: 'Open',
-			callback: () => {
+			label: 'Open',
+			onclick: () => {
 				alert(`Opening: ${node.data.name}`);
 				closeMenuCallback(); // Close menu after action
 			}
@@ -79,8 +79,8 @@
 		if (node.data.canEdit) {
 			menuItems.push({
 				icon: '✏️',
-				title: 'Edit',
-				callback: () => {
+				label: 'Edit',
+				onclick: () => {
 					alert(`Editing: ${node.data.name}`);
 					closeMenuCallback();
 				}
@@ -91,9 +91,9 @@
 		if (node.data.canDelete) {
 			menuItems.push({
 				icon: '🗑️',
-				title: 'Delete',
-				className: 'text-danger', // Bootstrap class for red text
-				callback: () => {
+				label: 'Delete',
+				className: 'danger',
+				onclick: () => {
 					if (confirm(`Delete "${node.data.name}"?`)) {
 						alert(`Deleted: ${node.data.name}`);
 						closeMenuCallback(); // Close after successful action
@@ -104,13 +104,13 @@
 		}
 
 		// Divider
-		menuItems.push({ isDivider: true } as ContextMenuItem);
+		menuItems.push({ divider: true });
 
 		// Copy action - always available (async example)
 		menuItems.push({
 			icon: '📋',
-			title: 'Copy',
-			callback: async () => {
+			label: 'Copy',
+			onclick: async () => {
 				// Simulate async operation
 				await new Promise(resolve => setTimeout(resolve, 1000));
 				alert(`Copied: ${node.data.name}`);
@@ -120,12 +120,12 @@
 
 		// New folder/file actions - only for folders and projects
 		if (node.data.type === 'folder' || node.data.type === 'project') {
-			menuItems.push({ isDivider: true } as ContextMenuItem);
+			menuItems.push({ divider: true });
 
 			menuItems.push({
 				icon: '📁',
-				title: 'New Folder',
-				callback: async () => {
+				label: 'New Folder',
+				onclick: async () => {
 					const name = prompt('New folder name:');
 					if (name) {
 						try {
@@ -153,8 +153,8 @@
 
 			menuItems.push({
 				icon: '📄',
-				title: 'New File',
-				callback: () => {
+				label: 'New File',
+				onclick: () => {
 					const name = prompt('New file name:');
 					if (name) {
 						alert(`Creating new file "${name}" in ${node.data.name}`);
@@ -164,29 +164,29 @@
 		}
 
 		// Divider
-		menuItems.push({ isDivider: true } as ContextMenuItem);
+		menuItems.push({ divider: true });
 
 		// Properties action - always available
 		menuItems.push({
 			icon: 'ℹ️',
-			title: 'Properties',
-			callback: () => alert(`Properties of: ${node.data.name}\nType: ${node.data.type}\nPath: ${node.path}`)
+			label: 'Properties',
+			onclick: () => alert(`Properties of: ${node.data.name}\nType: ${node.data.type}\nPath: ${node.path}`)
 		});
 
 		return menuItems;
 	}
 
 	// Advanced context menu callback - demonstrates more complex scenarios
-	function createAdvancedContextMenu(node: any, closeMenuCallback: () => void): ContextMenuItem[] {
-		const menuItems: ContextMenuItem[] = [];
+	function createAdvancedContextMenu(node: any, closeMenuCallback: () => void): ContextMenuEntry[] {
+		const menuItems: ContextMenuEntry[] = [];
 
 		// Status-based actions
 		if (node.data.status === 'running') {
 			menuItems.push({
 				icon: '🔴',
-				title: 'Stop',
+				label: 'Stop',
 				isDisabled: !node.data.canStop,
-				callback: () => {
+				onclick: () => {
 					alert(`Stopping ${node.data.name}`);
 					closeMenuCallback();
 				}
@@ -195,49 +195,49 @@
 			if (node.data.canRestart) {
 				menuItems.push({
 					icon: '🔄',
-					title: 'Restart',
-					callback: () => alert(`Restarting ${node.data.name}`)
+					label: 'Restart',
+					onclick: () => alert(`Restarting ${node.data.name}`)
 				});
 			}
 		} else {
 			menuItems.push({
 				icon: '🟢',
-				title: 'Start',
+				label: 'Start',
 				isDisabled: !node.data.canStart,
-				callback: () => alert(`Starting ${node.data.name}`)
+				onclick: () => alert(`Starting ${node.data.name}`)
 			});
 		}
 
 		// Type-specific actions
 		if (node.data.type === 'server') {
-			menuItems.push({ isDivider: true } as ContextMenuItem);
+			menuItems.push({ divider: true });
 
 			menuItems.push({
 				icon: '⚙️',
-				title: 'Configuration',
-				callback: () => alert(`Opening configuration for ${node.data.name}`)
+				label: 'Configuration',
+				onclick: () => alert(`Opening configuration for ${node.data.name}`)
 			});
 
 			menuItems.push({
 				icon: '📊',
-				title: 'Metrics',
-				callback: () => alert(`Viewing metrics for ${node.data.name}`)
+				label: 'Metrics',
+				onclick: () => alert(`Viewing metrics for ${node.data.name}`)
 			});
 
 			menuItems.push({
 				icon: '📋',
-				title: 'Logs',
-				callback: () => alert(`Viewing logs for ${node.data.name}`)
+				label: 'Logs',
+				onclick: () => alert(`Viewing logs for ${node.data.name}`)
 			});
 		}
 
 		if (node.data.type === 'database') {
-			menuItems.push({ isDivider: true } as ContextMenuItem);
+			menuItems.push({ divider: true });
 
 			menuItems.push({
 				icon: '💾',
-				title: 'Backup',
-				callback: async () => {
+				label: 'Backup',
+				onclick: async () => {
 					try {
 						// Simulate long-running backup operation
 						alert(`Starting backup of ${node.data.name}...`);
@@ -253,35 +253,35 @@
 
 			menuItems.push({
 				icon: '🔍',
-				title: 'Query Console',
+				label: 'Query Console',
 				isDisabled: node.data.isReadOnly,
-				callback: () => alert(`Opening query console for ${node.data.name}`)
+				onclick: () => alert(`Opening query console for ${node.data.name}`)
 			});
 		}
 
 		if (node.data.type === 'service') {
-			menuItems.push({ isDivider: true } as ContextMenuItem);
+			menuItems.push({ divider: true });
 
 			menuItems.push({
 				icon: '🔧',
-				title: 'Health Check',
-				callback: () => alert(`Running health check for ${node.data.name}`)
+				label: 'Health Check',
+				onclick: () => alert(`Running health check for ${node.data.name}`)
 			});
 		}
 
 		// Common actions
-		menuItems.push({ isDivider: true } as ContextMenuItem);
+		menuItems.push({ divider: true });
 
 		menuItems.push({
 			icon: '📈',
-			title: 'Monitor',
-			callback: () => alert(`Monitoring ${node.data.name}`)
+			label: 'Monitor',
+			onclick: () => alert(`Monitoring ${node.data.name}`)
 		});
 
 		menuItems.push({
 			icon: 'ℹ️',
-			title: 'Properties',
-			callback: () => alert(`Properties:\nName: ${node.data.name}\nType: ${node.data.type}\nStatus: ${node.data.status}\nPath: ${node.path}`)
+			label: 'Properties',
+			onclick: () => alert(`Properties:\nName: ${node.data.name}\nType: ${node.data.type}\nStatus: ${node.data.status}\nPath: ${node.path}`)
 		});
 
 		return menuItems;

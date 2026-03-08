@@ -6,6 +6,7 @@ export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 
 export type Tuple<T, U> = [T, U];
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
+export type ToggleIconMode = 'rotate' | 'swap';
 export type DropZoneLayout = 'around' | 'above' | 'below' | 'wave' | 'wave2';
 export type DropOperation = 'move' | 'copy';
 
@@ -20,14 +21,26 @@ export interface ApplyChangesResult {
 	failed: Array<{ index: number; operation: string; path: string; error: string }>;
 }
 
-export interface ContextMenuItem {
-	icon?: string;
-	title: string;
-	isDisabled?: boolean;
-	callback: () => void | Promise<void>;
-	isDivider?: boolean;
-	className?: string;
+// ── Context Menu Types ──────────────────────────────────────────────────
+
+export interface ContextMenuDivider {
+	divider: true;
+	label?: string; // named divider: ──── [label] ────
 }
+
+export interface ContextMenuItem {
+	id?: string;
+	label: string;
+	icon?: string;
+	shortcut?: string;
+	isDisabled?: boolean;
+	isVisible?: boolean; // false = skip rendering (callback approach)
+	className?: string; // e.g. "danger" for red styling
+	onclick?: () => void | Promise<void>;
+	children?: ContextMenuEntry[]; // nested submenus
+}
+
+export type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;
 
 export interface InsertArrayResult<T> {
 	successful: number;

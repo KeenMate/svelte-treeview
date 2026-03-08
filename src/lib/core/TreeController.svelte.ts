@@ -4,12 +4,13 @@ import { createLTree } from '../ltree/ltree.svelte.js';
 import {
 	type Ltree,
 	type InsertArrayResult,
-	type ContextMenuItem,
+	type ContextMenuEntry,
 	type DropPosition,
 	type DragDropMode,
 	type DropOperation,
 	type TreeChange,
-	type ApplyChangesResult
+	type ApplyChangesResult,
+	type ToggleIconMode
 } from '../ltree/types.js';
 import { tick } from 'svelte';
 import {
@@ -43,6 +44,7 @@ export interface NodeConfig {
 	expandIconClass: string;
 	collapseIconClass: string;
 	leafIconClass: string;
+	toggleIconMode: ToggleIconMode;
 	selectedNodeClass: string | null | undefined;
 	dragOverNodeClass: string | null | undefined;
 	dropZoneMode: 'floating' | 'glow';
@@ -50,6 +52,7 @@ export interface NodeConfig {
 	dropZoneStart: number | string;
 	dropZoneMaxWidth: number;
 	allowCopy: boolean;
+	accordionExpand: boolean;
 }
 
 // ─── Controller props ─────────────────────────────────────────────────────
@@ -129,6 +132,7 @@ export interface TreeControllerProps<T> {
 	dropZoneMaxWidth?: number;
 	allowCopy?: boolean;
 	autoHandleCopy?: boolean;
+	accordionExpand?: boolean;
 
 	// EVENTS
 	onNodeClicked?: (node: LTreeNode<T>) => void;
@@ -159,7 +163,7 @@ export interface TreeControllerProps<T> {
 	contextMenuCallback?: (
 		node: LTreeNode<T>,
 		closeMenuCallback: () => void
-	) => ContextMenuItem[];
+	) => ContextMenuEntry[];
 
 	// Tells the controller whether a context menu snippet exists (set by Tree.svelte)
 	hasContextMenuSnippet?: boolean;
@@ -171,6 +175,7 @@ export interface TreeControllerProps<T> {
 	expandIconClass?: string | null | undefined;
 	collapseIconClass?: string | null | undefined;
 	leafIconClass?: string | null | undefined;
+	toggleIconMode?: ToggleIconMode;
 	scrollHighlightTimeout?: number | null | undefined;
 	scrollHighlightClass?: string | null | undefined;
 	contextMenuXOffset?: number | null | undefined;
@@ -198,8 +203,10 @@ export class TreeController<T> {
 		dropZoneMode: 'glow',
 		dropZoneLayout: 'around',
 		dropZoneStart: 33,
+		toggleIconMode: 'rotate',
 		dropZoneMaxWidth: 120,
-		allowCopy: false
+		allowCopy: false,
+		accordionExpand: false
 	});
 
 	// ── Props stored as reactive state ──────────────────────────────────
@@ -226,6 +233,7 @@ export class TreeController<T> {
 	// DRAG AND DROP
 	dragDropMode = $state<DragDropMode>('none');
 	allowCopy = $state(false);
+	accordionExpand = $state(false);
 	autoHandleCopy = $state(true);
 
 	// EVENTS (stored for calling — plain assignments, not deeply proxied)
@@ -244,6 +252,7 @@ export class TreeController<T> {
 	expandIconClass = $state('ltree-icon-expand');
 	collapseIconClass = $state('ltree-icon-collapse');
 	leafIconClass = $state('ltree-icon-leaf');
+	toggleIconMode = $state<ToggleIconMode>('rotate');
 	selectedNodeClass = $state<string | null | undefined>(undefined);
 	dragOverNodeClass = $state<string | null | undefined>(undefined);
 	dropZoneMode = $state<'floating' | 'glow'>('glow');
@@ -394,11 +403,13 @@ export class TreeController<T> {
 		this.dragDropMode = props.dragDropMode ?? 'none';
 		this.allowCopy = props.allowCopy ?? false;
 		this.autoHandleCopy = props.autoHandleCopy ?? true;
+		this.accordionExpand = props.accordionExpand ?? false;
 
 		this.shouldToggleOnNodeClick = props.shouldToggleOnNodeClick ?? true;
 		this.expandIconClass = props.expandIconClass ?? 'ltree-icon-expand';
 		this.collapseIconClass = props.collapseIconClass ?? 'ltree-icon-collapse';
 		this.leafIconClass = props.leafIconClass ?? 'ltree-icon-leaf';
+		this.toggleIconMode = props.toggleIconMode ?? 'rotate';
 		this.selectedNodeClass = props.selectedNodeClass;
 		this.dragOverNodeClass = props.dragOverNodeClass;
 		this.dropZoneMode = props.dropZoneMode ?? 'glow';
@@ -501,13 +512,15 @@ export class TreeController<T> {
 			expandIconClass: this.expandIconClass,
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
+			toggleIconMode: this.toggleIconMode,
 			selectedNodeClass: this.selectedNodeClass,
 			dragOverNodeClass: this.dragOverNodeClass,
 			dropZoneMode: this.dropZoneMode,
 			dropZoneLayout: this.dropZoneLayout,
 			dropZoneStart: this.dropZoneStart,
 			dropZoneMaxWidth: this.dropZoneMaxWidth,
-			allowCopy: this.allowCopy
+			allowCopy: this.allowCopy,
+			accordionExpand: this.accordionExpand
 		};
 
 		// ── Effects ─────────────────────────────────────────────────────
@@ -527,13 +540,15 @@ export class TreeController<T> {
 				expandIconClass: this.expandIconClass,
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
+				toggleIconMode: this.toggleIconMode,
 				selectedNodeClass: this.selectedNodeClass,
 				dragOverNodeClass: this.dragOverNodeClass,
 				dropZoneMode: this.dropZoneMode,
 				dropZoneLayout: this.dropZoneLayout,
 				dropZoneStart: this.dropZoneStart,
 				dropZoneMaxWidth: this.dropZoneMaxWidth,
-				allowCopy: this.allowCopy
+				allowCopy: this.allowCopy,
+				accordionExpand: this.accordionExpand
 			});
 		});
 

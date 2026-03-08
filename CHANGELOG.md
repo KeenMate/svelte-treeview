@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Unified Context Menu types** (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`): Shared type system across svelte-treeview and canvas-tree. Breaking change from old API: `title` → `label`, `callback` → `onclick`, `isDivider` flag replaced by separate `ContextMenuDivider` type with `divider: true` discriminator.
+  - **Named dividers**: `{ divider: true, label: 'Section' }` renders as `──── Section ────`
+  - **Keyboard shortcuts**: `shortcut` field renders right-aligned hint and activates on keypress when menu is open
+  - **Submenus**: `children: ContextMenuEntry[]` opens nested menu on hover
+  - **Visibility control**: `isVisible: false` hides items in callback approach (snippet approach uses `{#if}`)
+  - **Flexible styling**: `className` replaces dedicated `danger` boolean — use `className="danger"` or any custom class
+  - **Async onclick**: `onclick` supports `Promise<void>` return with try/catch error handling
+- **`ContextMenuItemC` / `ContextMenuDividerC` Svelte components**: Declarative context menu building inside the `contextMenu` snippet. Supports nested children slot for submenus.
+- **Context menu keyboard shortcuts**: When context menu is open, pressing a shortcut key (e.g. `C`, `Shift+N`, `F2`) triggers the matching item's `onclick`. Supports modifier keys (Ctrl, Shift, Alt). Escape closes the menu.
+- **`accordionExpand` prop**: Per-parent accordion behavior — expanding a node automatically collapses its siblings (children of the same parent). Opt-in via `accordionExpand={true}`. Respects `isCollapsibleMember`/`getIsCollapsibleCallback` — non-collapsible siblings are not force-collapsed. Programmatic methods (`expandAll`, `expandNodes`) remain unconstrained.
+- **`toggleIconMode` prop** (`'rotate'` | `'swap'`, default `'rotate'`): Controls how expand/collapse icons behave. `'rotate'` mode (new default) always uses `expandIconClass` (▶) and rotates it 90° via CSS when expanded — smooth animated transition. `'swap'` mode switches between `expandIconClass` (▶) and `collapseIconClass` (▼) classes (previous behavior). Ported from `@keenmate/web-treeview`.
+
+### Fixed
+- **Expand/collapse icon not updating in flat rendering mode**: `toggleExpanded()` now bumps `node._rev` so the flat-mode `{#each}` key changes and Svelte re-renders the node with the correct icon state.
+- **`.expanded` CSS transform was a no-op**: `.ltree-toggle-icon.expanded` had `rotate(0deg)` (no effect). Fixed to `rotate(90deg)` for the new `rotate` toggle icon mode.
+
 ## [5.0.0-rc02] - 2026-03-05
 
 ### Architecture (Breaking)

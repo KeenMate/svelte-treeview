@@ -254,7 +254,7 @@ $body-color: #212529 !default;
 		flex-shrink: 0;
 
 		&.expanded {
-			transform: rotate(0deg);
+			transform: rotate(90deg);
 		}
 	}
 
@@ -489,6 +489,7 @@ $body-color: #212529 !default;
 		color: var(--ltree-body-color);
 		text-decoration: none;
 		font-size: 14px;
+		position: relative;
 
 		&:hover {
 			background-color: var(--ltree-light);
@@ -506,6 +507,19 @@ $body-color: #212529 !default;
 				background-color: rgba(var(--ltree-danger-rgb), 0.1);
 			}
 		}
+
+		// Submenu: show on hover with delay
+		&.ltree-context-menu-has-children {
+			cursor: default;
+
+			> .ltree-context-submenu {
+				display: none;
+			}
+
+			&:hover > .ltree-context-submenu {
+				display: block;
+			}
+		}
 	}
 
 	.ltree-context-menu-icon {
@@ -513,18 +527,74 @@ $body-color: #212529 !default;
 		font-size: 12px;
 		width: 16px;
 		text-align: center;
+		flex-shrink: 0;
+	}
+
+	.ltree-context-menu-label {
+		flex-grow: 1;
+	}
+
+	.ltree-context-menu-shortcut {
+		margin-left: auto;
+		padding-left: 16px;
+		color: #9ca3af;
+		font-size: 12px;
+		flex-shrink: 0;
+	}
+
+	.ltree-context-menu-arrow {
+		margin-left: 8px;
+		font-size: 10px;
+		color: #9ca3af;
+		flex-shrink: 0;
 	}
 
 	.ltree-context-menu-divider {
-		height: 1px;
-		background-color: var(--ltree-border);
+		display: flex;
+		align-items: center;
 		margin: 4px 0;
+
+		// Default: simple line
+		&:not(:has(.ltree-context-menu-divider-label)) {
+			height: 1px;
+			background-color: var(--ltree-border);
+		}
+
+		// Named divider: ──── [label] ────
+		&:has(.ltree-context-menu-divider-label) {
+			gap: 8px;
+			padding: 0 12px;
+
+			&::before,
+			&::after {
+				content: '';
+				flex: 1;
+				height: 1px;
+				background-color: var(--ltree-border);
+			}
+		}
 	}
 
-	.ltree-context-menu-separator {
-		height: 1px;
-		background-color: var(--ltree-border);
-		margin: 4px 0;
+	.ltree-context-menu-divider-label {
+		font-size: 11px;
+		color: #9ca3af;
+		white-space: nowrap;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	// Submenu positioning
+	.ltree-context-submenu {
+		position: absolute;
+		left: 100%;
+		top: 0;
+		background: white;
+		border: 1px solid var(--ltree-border);
+		border-radius: 4px;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+		padding: 4px 0;
+		min-width: 150px;
+		z-index: 1001;
 	}
 }
 

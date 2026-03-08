@@ -41,7 +41,7 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 - **Tree Editing**: Built-in methods for add, move, remove operations with automatic path management
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
-- **Context Menus**: Dynamic right-click menus with callback-based generation, icons, disabled states
+- **Context Menus**: Dynamic right-click menus with shortcuts, submenus, named dividers, and two API approaches (callback or Svelte components)
 - **Visual Customization**: Extensive styling options and icon customization
 - **TypeScript Support**: Full TypeScript support with comprehensive type definitions
 - **Accessibility**: Built with accessibility in mind
@@ -395,14 +395,14 @@ The tree provides built-in methods for programmatic editing:
 
 ### With Context Menus
 
-The tree supports context menus with two approaches: callback-based (recommended) and snippet-based.
+The tree supports context menus with two approaches: **callback-based** (imperative, shared with web components) and **snippet + component** (declarative, Svelte-only).
 
 #### Callback-Based Context Menus
 
 ```svelte
 <script lang="ts">
   import { Tree } from '@keenmate/svelte-treeview';
-  import type { ContextMenuItem } from '@keenmate/svelte-treeview';
+  import type { ContextMenuEntry } from '@keenmate/svelte-treeview';
 
   const data = [
     { path: '1', name: 'Documents', type: 'folder', canEdit: true, canDelete: true },
@@ -410,45 +410,21 @@ The tree supports context menus with two approaches: callback-based (recommended
     { path: '2', name: 'Images', type: 'folder', canEdit: false, canDelete: true }
   ];
 
-  function createContextMenu(node, closeMenu: () => void): ContextMenuItem[] {
-    const items: ContextMenuItem[] = [];
-
-    // Always available
-    items.push({
-      icon: '📂',
-      title: 'Open',
-      callback: () => alert(`Opening ${node.data?.name}`)
-    });
-
-    // Conditional actions based on node data
-    if (node.data?.canEdit) {
-      items.push({
-        icon: '✏️',
-        title: 'Edit',
-        callback: () => alert(`Editing ${node.data?.name}`)
-      });
-    }
-
-    if (node.data?.canDelete) {
-      items.push({
-        icon: '🗑️',
-        title: 'Delete',
-        callback: () => confirm(`Delete ${node.data?.name}?`) && alert('Deleted!')
-      });
-    }
-
-    // Divider
-    items.push({ isDivider: true });
-
-    // Disabled item example
-    items.push({
-      icon: '🔒',
-      title: 'Restricted Action',
-      isDisabled: true,
-      callback: () => {}
-    });
-
-    return items;
+  function createContextMenu(node, close: () => void): ContextMenuEntry[] {
+    return [
+      { label: 'Open', icon: '📂', shortcut: 'O',
+        onclick: () => { alert(`Opening ${node.data?.name}`); close(); } },
+      { label: 'Edit', icon: '✏️', shortcut: 'E', isVisible: node.data?.canEdit,
+        onclick: () => { alert(`Editing ${node.data?.name}`); close(); } },
+      { label: 'Export As...', icon: '📤', children: [
+          { label: 'JSON', shortcut: 'J', onclick: () => { exportAs(node, 'json'); close(); } },
+          { label: 'XML', shortcut: 'X', onclick: () => { exportAs(node, 'xml'); close(); } },
+      ]},
+      { divider: true, label: 'Danger zone' },
+      { label: 'Delete', icon: '🗑️', className: 'danger',
+        isDisabled: !node.data?.canDelete,
+        onclick: () => { confirm(`Delete?`) && alert('Deleted!'); close(); } },
+    ];
   }
 </script>
 
@@ -457,39 +433,48 @@ The tree supports context menus with two approaches: callback-based (recommended
   idMember="path"
   pathMember="path"
   contextMenuCallback={createContextMenu}
-  contextMenuXOffset={8}
-  contextMenuYOffset={0}
 />
 ```
 
-#### Snippet-Based Context Menus
+#### Snippet + Component Context Menus
 
 ```svelte
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
->
-  {#snippet contextMenu(node, closeMenu)}
-    <div class="context-menu-item" onclick={() => { alert(`Open ${node.data?.name}`); closeMenu(); }}>
-      📂 Open
-    </div>
-    <div class="context-menu-divider"></div>
-    <div class="context-menu-item" onclick={() => { alert(`Delete ${node.data?.name}`); closeMenu(); }}>
-      🗑️ Delete
-    </div>
+<script lang="ts">
+  import { Tree, ContextMenuItemC, ContextMenuDividerC } from '@keenmate/svelte-treeview';
+</script>
+
+<Tree {data} idMember="path" pathMember="path">
+  {#snippet contextMenu(node, close)}
+    <ContextMenuItemC label="Copy" icon="📋" shortcut="C"
+      onclick={() => { copy(node); close(); }} />
+    {#if node.data?.type === 'folder'}
+      <ContextMenuItemC label="Export As..." icon="📤">
+        <ContextMenuItemC label="JSON" shortcut="J"
+          onclick={() => { exportAs(node, 'json'); close(); }} />
+        <ContextMenuItemC label="XML" shortcut="X"
+          onclick={() => { exportAs(node, 'xml'); close(); }} />
+      </ContextMenuItemC>
+    {/if}
+    <ContextMenuDividerC label="Danger zone" />
+    <ContextMenuItemC label="Delete" icon="🗑️" className="danger"
+      isDisabled={!!node.data?.readonly}
+      onclick={() => { del(node); close(); }} />
   {/snippet}
 </Tree>
 ```
 
 #### Context Menu Features
 
-- **Dynamic menus**: Generate menu items based on node properties
-- **Icons and dividers**: Visual organization and identification
-- **Disabled states**: Context-sensitive menu availability
+- **Unified types**: `ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry` shared across svelte-treeview and canvas-tree
+- **Keyboard shortcuts**: `shortcut` field renders a hint and activates on keypress when menu is open (supports `Ctrl+`, `Shift+`, `Alt+` modifiers)
+- **Submenus**: `children` array opens nested menus on hover
+- **Named dividers**: `{ divider: true, label: 'Section' }` renders as `---- Section ----`
+- **Visibility control**: `isVisible: false` hides items (callback approach); snippet approach uses `{#if}`
+- **Flexible styling**: `className="danger"` or any custom CSS class
+- **Dynamic menus**: Generate items based on node properties
+- **Icons and disabled states**: Visual organization and context-sensitive availability
 - **Position offset**: `contextMenuXOffset`/`contextMenuYOffset` for cursor clearance
-- **Auto-close**: Closes on scroll, click outside, or programmatically
-- **Type safety**: Full TypeScript support with `ContextMenuItem` interface
+- **Auto-close**: Closes on scroll, click outside, Escape key, or programmatically
 
 ## Styling and Customization
 
