@@ -277,9 +277,10 @@
 		}
 	}
 
-	function _onNodeClicked() {
+	function _onNodeClicked(event?: MouseEvent) {
 		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
-		callbacks.onNodeClicked(node)
+		const modifiers = event ? { ctrl: event.ctrlKey || event.metaKey, shift: event.shiftKey } : undefined;
+		callbacks.onNodeClicked(node, modifiers)
 		if (shouldToggleOnNodeClick) {
 			toggleExpanded()
 		}
@@ -323,7 +324,7 @@
 			draggable={node?.isDraggable}
 			onclick={(e) => {
 				e.stopPropagation();
-				_onNodeClicked();
+				_onNodeClicked(e);
 			}}
 			oncontextmenu={(e) => {
 				e.stopPropagation();

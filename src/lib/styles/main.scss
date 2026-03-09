@@ -329,6 +329,13 @@ $body-color: #212529 !default;
 	padding: 6px 10px !important;
 }
 
+// Multi-select: subtle highlight for all selected nodes (works with any selectedNodeClass)
+.ltree-multi-selected {
+	background-color: rgba(var(--ltree-primary-rgb), 0.08) !important;
+	outline: 1px solid rgba(var(--ltree-primary-rgb), 0.25);
+	outline-offset: -1px;
+}
+
 .ltree-selected-brackets {
 	position: relative;
 

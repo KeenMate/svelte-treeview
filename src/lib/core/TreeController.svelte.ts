@@ -26,8 +26,13 @@ import '../global-api.js';
 
 // ─── Shared interfaces (also used by Node.svelte) ────────────────────────
 
+export interface SelectionModifiers {
+	ctrl: boolean;
+	shift: boolean;
+}
+
 export interface NodeCallbacks<T> {
-	onNodeClicked: (node: LTreeNode<T>) => void;
+	onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => void;
 	onNodeRightClicked: (node: LTreeNode<T>, event: MouseEvent) => void;
 	onNodeDragStart: (node: LTreeNode<T>, event: DragEvent) => void;
 	onNodeDragOver: (node: LTreeNode<T>, event: DragEvent) => void;
@@ -94,6 +99,12 @@ export interface TreeControllerProps<T> {
 	// BEHAVIOUR
 	expandLevel?: number | null | undefined;
 	shouldToggleOnNodeClick?: boolean | null | undefined;
+	/**
+	 * How shift+click range selection works:
+	 * - 'visual': selects all visible (expanded) nodes between the two clicks in display order (default)
+	 * - 'logical': selects all nodes between the two clicks in tree order, including collapsed/hidden nodes
+	 */
+	rangeSelectionMode?: 'visual' | 'logical';
 	initializeIndexCallback?: () => Index;
 	searchText?: string | null | undefined;
 	shouldUseInternalSearchIndex?: boolean | null | undefined;
@@ -162,8 +173,10 @@ export interface TreeControllerProps<T> {
 	) => void;
 	contextMenuCallback?: (
 		node: LTreeNode<T>,
-		closeMenuCallback: () => void
+		closeMenuCallback: () => void,
+		selectedNodes?: LTreeNode<T>[]
 	) => ContextMenuEntry[];
+	onSelectionChanged?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 
 	// Tells the controller whether a context menu snippet exists (set by Tree.svelte)
 	hasContextMenuSnippet?: boolean;
@@ -216,6 +229,8 @@ export class TreeController<T> {
 	// DATA (bidirectional / output)
 	data = $state.raw<T[]>([]);
 	selectedNode = $state.raw<LTreeNode<T> | null | undefined>(null);
+	selectedPaths = $state.raw<Set<string>>(new Set());
+	lastSelectedPath: string | null = null;
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
 	isRendering = $state(false);
@@ -223,6 +238,7 @@ export class TreeController<T> {
 	// BEHAVIOUR
 	shouldDisplayDebugInformation = $state(false);
 	shouldDisplayContextMenuInDebugMode = $state(false);
+	rangeSelectionMode = $state<'visual' | 'logical'>('visual');
 	isLoading = $state(false);
 	useFlatRendering = $state(true);
 	progressiveRender = $state(true);
@@ -238,6 +254,7 @@ export class TreeController<T> {
 
 	// EVENTS (stored for calling — plain assignments, not deeply proxied)
 	onNodeClickedCb: ((node: LTreeNode<T>) => void) | undefined;
+	onSelectionChangedCb: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
 	onNodeDragStartCb: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
 	onNodeDragOverCb: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
 	beforeDropCallbackCb: TreeControllerProps<T>['beforeDropCallback'];
@@ -392,6 +409,7 @@ export class TreeController<T> {
 
 		this.shouldDisplayDebugInformation = props.shouldDisplayDebugInformation ?? false;
 		this.shouldDisplayContextMenuInDebugMode = props.shouldDisplayContextMenuInDebugMode ?? false;
+		this.rangeSelectionMode = props.rangeSelectionMode ?? 'visual';
 		this.isLoading = props.isLoading ?? false;
 
 		this.useFlatRendering = props.useFlatRendering ?? true;
@@ -430,6 +448,7 @@ export class TreeController<T> {
 
 		// Store callbacks
 		this.onNodeClickedCb = props.onNodeClicked;
+		this.onSelectionChangedCb = props.onSelectionChanged;
 		this.onNodeDragStartCb = props.onNodeDragStart;
 		this.onNodeDragOverCb = props.onNodeDragOver;
 		this.beforeDropCallbackCb = props.beforeDropCallback;
@@ -494,7 +513,7 @@ export class TreeController<T> {
 
 		// ── Create stable nodeCallbacks ─────────────────────────────────
 		this.nodeCallbacks = {
-			onNodeClicked: this._onNodeClicked.bind(this),
+			onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => this._onNodeClicked(node, modifiers),
 			onNodeRightClicked: this._onNodeRightClicked.bind(this),
 			onNodeDragStart: this._onNodeDragStart.bind(this),
 			onNodeDragOver: this._onNodeDragOver.bind(this),
@@ -1307,6 +1326,8 @@ export class TreeController<T> {
 		if (updates.searchText !== undefined) this.searchText = updates.searchText;
 		if (updates.shouldDisplayDebugInformation !== undefined)
 			this.shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
+		if (updates.rangeSelectionMode !== undefined)
+			this.rangeSelectionMode = updates.rangeSelectionMode ?? 'visual';
 		if (updates.shouldDisplayContextMenuInDebugMode !== undefined)
 			this.shouldDisplayContextMenuInDebugMode =
 				updates.shouldDisplayContextMenuInDebugMode ?? false;
@@ -1361,39 +1382,248 @@ export class TreeController<T> {
 		if (updates.onNodeDrop !== undefined) this.onNodeDropCb = updates.onNodeDrop;
 		if (updates.contextMenuCallback !== undefined)
 			this.contextMenuCallbackCb = updates.contextMenuCallback;
+		if (updates.onSelectionChanged !== undefined)
+			this.onSelectionChangedCb = updates.onSelectionChanged;
 	}
 
 	// ── Internal event handlers ─────────────────────────────────────────
 
-	private async _onNodeClicked(node: LTreeNode<T>) {
+	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers) {
 		if (this.contextMenuVisible) {
 			this.closeContextMenu();
 		}
 
-		if (this.selectedNode) {
-			const previousNode = this.tree.getNodeByPath(this.selectedNode.path);
-			if (previousNode) {
-				previousNode.isSelected = false;
+		const ctrl = modifiers?.ctrl ?? false;
+		const shift = modifiers?.shift ?? false;
+
+		uiLogger.debug(`[multi-select] Click on ${node.path}`, { ctrl, shift, lastAnchor: this.lastSelectedPath, prevCount: this.selectedPaths.size });
+
+		if (ctrl) {
+			// Toggle this node in/out of selection
+			const newPaths = new Set(this.selectedPaths);
+			if (newPaths.has(node.path)) {
+				newPaths.delete(node.path);
+				node.isSelected = false;
+				uiLogger.debug(`[multi-select] Ctrl+click: deselected ${node.path}`, { selectedCount: newPaths.size });
 			} else {
-				this.selectedNode = null;
+				newPaths.add(node.path);
+				node.isSelected = true;
+				uiLogger.debug(`[multi-select] Ctrl+click: added ${node.path}`, { selectedCount: newPaths.size });
 			}
+			this.selectedPaths = newPaths;
+			this.lastSelectedPath = node.path;
+		} else if (shift && this.lastSelectedPath) {
+			// Range select from lastSelectedPath to this node
+			uiLogger.debug(`[multi-select] Shift+click: range ${this.lastSelectedPath} → ${node.path} (mode: ${this.rangeSelectionMode})`);
+			const rangePaths = this._getNodesBetween(this.lastSelectedPath, node.path);
+			uiLogger.debug(`[multi-select] Range result: ${rangePaths.length} nodes`, { paths: rangePaths });
+			// Clear previous selection
+			this._clearAllSelectionFlags();
+			const newPaths = new Set<string>();
+			for (const path of rangePaths) {
+				newPaths.add(path);
+				const n = this.tree.getNodeByPath(path);
+				if (n) n.isSelected = true;
+			}
+			this.selectedPaths = newPaths;
+			// Don't update lastSelectedPath on shift+click (anchor stays)
+		} else {
+			// Normal click: clear all, select only this node
+			if (this.selectedPaths.size > 1) {
+				uiLogger.debug(`[multi-select] Plain click: clearing ${this.selectedPaths.size} nodes, selecting ${node.path}`);
+			}
+			this._clearAllSelectionFlags();
+			node.isSelected = true;
+			const newPaths = new Set<string>();
+			newPaths.add(node.path);
+			this.selectedPaths = newPaths;
+			this.lastSelectedPath = node.path;
 		}
 
-		node.isSelected = true;
+		// Always update selectedNode to the clicked node (backward compat)
 		this.selectedNode = node;
 
-		uiLogger.debug(`Node selected: ${node.path}`, {
-			newPath: node.path,
-			id: node.id
+		uiLogger.debug(`[multi-select] Selection updated: ${this.selectedPaths.size} nodes selected`, {
+			paths: [...this.selectedPaths]
 		});
 
 		this.onNodeClickedCb?.(node);
+		this._notifySelectionChanged();
 		this.tree.refresh();
+	}
+
+	/** Clear isSelected flag on all currently selected nodes */
+	private _clearAllSelectionFlags() {
+		for (const path of this.selectedPaths) {
+			const n = this.tree.getNodeByPath(path);
+			if (n) n.isSelected = false;
+		}
+	}
+
+	/** Notify listeners about selection change */
+	private _notifySelectionChanged() {
+		if (this.onSelectionChangedCb) {
+			const nodes = this.getSelectedNodes();
+			this.onSelectionChangedCb(this.selectedPaths, nodes);
+		}
+	}
+
+	/** Get nodes between two paths for range selection, respecting rangeSelectionMode */
+	private _getNodesBetween(pathA: string, pathB: string): string[] {
+		uiLogger.debug(`[multi-select] _getNodesBetween: ${pathA} → ${pathB}, mode=${this.rangeSelectionMode}`);
+		if (this.rangeSelectionMode === 'logical') {
+			return this._getAllNodesBetween(pathA, pathB);
+		}
+		return this._getVisibleNodesBetween(pathA, pathB);
+	}
+
+	/** Get visible nodes between two paths (inclusive), in display order.
+	 *  Only includes expanded/visible nodes. */
+	private _getVisibleNodesBetween(pathA: string, pathB: string): string[] {
+		const flatNodes = this.tree.visibleFlatNodes;
+		let indexA = -1;
+		let indexB = -1;
+		for (let i = 0; i < flatNodes.length; i++) {
+			if (flatNodes[i].path === pathA) indexA = i;
+			if (flatNodes[i].path === pathB) indexB = i;
+			if (indexA !== -1 && indexB !== -1) break;
+		}
+		uiLogger.debug(`[multi-select] _getVisibleNodesBetween: indexA=${indexA}, indexB=${indexB}, totalVisible=${flatNodes.length}`);
+		if (indexA === -1 || indexB === -1) {
+			uiLogger.debug(`[multi-select] _getVisibleNodesBetween: path not found in visible nodes, falling back to [${pathB}]`);
+			return [pathB];
+		}
+		const start = Math.min(indexA, indexB);
+		const end = Math.max(indexA, indexB);
+		const result = flatNodes.slice(start, end + 1).map(n => n.path);
+		uiLogger.debug(`[multi-select] _getVisibleNodesBetween: selected ${result.length} visible nodes [${start}..${end}]`);
+		return result;
+	}
+
+	/** Get ALL nodes between two paths (inclusive), in depth-first tree order.
+	 *  Includes collapsed/hidden nodes — "logical" range selection. */
+	private _getAllNodesBetween(pathA: string, pathB: string): string[] {
+		// Walk entire tree depth-first and collect paths between A and B
+		const allPaths: string[] = [];
+		const traverse = (node: LTreeNode<T>) => {
+			if (node.path) allPaths.push(node.path);
+			for (const child of Object.values(node.children)) {
+				traverse(child);
+			}
+		};
+		for (const rootChild of this.tree.tree) {
+			traverse(rootChild);
+		}
+
+		let indexA = -1;
+		let indexB = -1;
+		for (let i = 0; i < allPaths.length; i++) {
+			if (allPaths[i] === pathA) indexA = i;
+			if (allPaths[i] === pathB) indexB = i;
+			if (indexA !== -1 && indexB !== -1) break;
+		}
+		uiLogger.debug(`[multi-select] _getAllNodesBetween: indexA=${indexA}, indexB=${indexB}, totalNodes=${allPaths.length}`);
+		if (indexA === -1 || indexB === -1) {
+			uiLogger.debug(`[multi-select] _getAllNodesBetween: path not found in tree, falling back to [${pathB}]`);
+			return [pathB];
+		}
+		const start = Math.min(indexA, indexB);
+		const end = Math.max(indexA, indexB);
+		const result = allPaths.slice(start, end + 1);
+		uiLogger.debug(`[multi-select] _getAllNodesBetween: selected ${result.length} nodes [${start}..${end}]`);
+		return result;
+	}
+
+	// ── Public multi-select methods ─────────────────────────────────────
+
+	/** Select a node with the given mode */
+	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
+		uiLogger.debug(`[multi-select] selectNode("${path}", "${mode}")`);
+		const node = this.tree.getNodeByPath(path);
+		if (!node) {
+			uiLogger.debug(`[multi-select] selectNode: node not found at path "${path}"`);
+			return;
+		}
+
+		if (mode === 'toggle') {
+			this._onNodeClicked(node, { ctrl: true, shift: false });
+		} else if (mode === 'range') {
+			this._onNodeClicked(node, { ctrl: false, shift: true });
+		} else {
+			this._onNodeClicked(node);
+		}
+	}
+
+	/** Select multiple nodes by paths (replaces current selection) */
+	selectNodes(paths: string[]) {
+		uiLogger.debug(`[multi-select] selectNodes: ${paths.length} paths`, { paths });
+		this._clearAllSelectionFlags();
+		const newPaths = new Set<string>();
+		let lastNode: LTreeNode<T> | null = null;
+		let notFound = 0;
+		for (const path of paths) {
+			const node = this.tree.getNodeByPath(path);
+			if (node) {
+				node.isSelected = true;
+				newPaths.add(path);
+				lastNode = node;
+			} else {
+				notFound++;
+			}
+		}
+		this.selectedPaths = newPaths;
+		if (lastNode) {
+			this.selectedNode = lastNode;
+			this.lastSelectedPath = lastNode.path;
+		}
+		uiLogger.debug(`[multi-select] selectNodes: ${newPaths.size} selected, ${notFound} not found`);
+		this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Clear all selection */
+	deselectAll() {
+		uiLogger.debug(`[multi-select] deselectAll: clearing ${this.selectedPaths.size} nodes`);
+		this._clearAllSelectionFlags();
+		this.selectedPaths = new Set();
+		this.selectedNode = null;
+		this.lastSelectedPath = null;
+		this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Get all selected nodes */
+	getSelectedNodes(): LTreeNode<T>[] {
+		const nodes: LTreeNode<T>[] = [];
+		for (const path of this.selectedPaths) {
+			const node = this.tree.getNodeByPath(path);
+			if (node) nodes.push(node);
+		}
+		return nodes;
+	}
+
+	/** Check if a specific node path is selected */
+	isNodeSelected(path: string): boolean {
+		return this.selectedPaths.has(path);
 	}
 
 	private _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
 		if (!this.hasContextMenuSnippet && !this.contextMenuCallbackCb) {
 			return;
+		}
+
+		// If right-clicking on an unselected node, clear multi-selection and select only this node
+		if (!this.selectedPaths.has(node.path)) {
+			uiLogger.debug(`[multi-select] Right-click on unselected node ${node.path}, clearing ${this.selectedPaths.size} selected nodes`);
+			this._clearAllSelectionFlags();
+			node.isSelected = true;
+			this.selectedPaths = new Set([node.path]);
+			this.selectedNode = node;
+			this.lastSelectedPath = node.path;
+			this._notifySelectionChanged();
+			this.tree.refresh();
+		} else {
+			uiLogger.debug(`[multi-select] Right-click on selected node ${node.path}, keeping ${this.selectedPaths.size} selected nodes`);
 		}
 
 		uiLogger.debug(`Context menu opened: ${node.path}`);

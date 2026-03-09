@@ -13,7 +13,7 @@ export { createTreeController } from "./core/createTreeController.js"
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
 export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
 export type { RenderStats } from "./components/RenderCoordinator.svelte"
-export type { NodeCallbacks, NodeConfig } from "./core/TreeController.svelte"
+export type { NodeCallbacks, NodeConfig, SelectionModifiers } from "./core/TreeController.svelte"
 
 // Export logging utilities
 export { enableLogging, disableLogging, setLogLevel, setCategoryLevel, LOGGING_CATEGORIES } from "./logger.js"

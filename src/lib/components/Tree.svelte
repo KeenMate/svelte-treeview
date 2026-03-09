@@ -53,6 +53,7 @@
 		// DATA
 		data: T[];
 		selectedNode?: LTreeNode<T> | null | undefined;
+		selectedPaths?: Set<string>;
 		insertResult?: InsertArrayResult<T> | null | undefined;
 
 		// SLOTS
@@ -68,6 +69,7 @@
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
 		shouldToggleOnNodeClick?: boolean | null | undefined;
+		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
 		shouldUseInternalSearchIndex?: boolean | null | undefined;
@@ -117,6 +119,7 @@
 
 		// EVENTS
 		onNodeClicked?: (node: LTreeNode<T>) => void;
+		onSelectionChanged?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
 		/**
@@ -127,7 +130,7 @@
 		 */
 		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
 		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
-		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void) => ContextMenuEntry[];
+		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
@@ -175,6 +178,7 @@
 		// DATA
 		data = $bindable(),
 		selectedNode = $bindable(),
+		selectedPaths = $bindable(new Set<string>()),
 		insertResult = $bindable(),
 
 		// SLOTS
@@ -190,6 +194,7 @@
 		expandLevel = 2,
 
 		shouldToggleOnNodeClick = true,
+		rangeSelectionMode = 'visual',
 		shouldUseInternalSearchIndex = true,
 		initializeIndexCallback,
 		searchText = $bindable(),
@@ -229,6 +234,7 @@
 
 		// EVENTS
 		onNodeClicked,
+		onSelectionChanged,
 		onNodeDragStart,
 		onNodeDragOver,
 		beforeDropCallback,
@@ -278,6 +284,7 @@
 		selectedNode,
 		expandLevel,
 		shouldToggleOnNodeClick,
+		rangeSelectionMode,
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
 		searchText,
@@ -306,6 +313,7 @@
 		autoHandleCopy,
 		accordionExpand,
 		onNodeClicked,
+		onSelectionChanged,
 		onNodeDragStart,
 		onNodeDragOver,
 		beforeDropCallback,
@@ -369,6 +377,7 @@
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
 	$effect(() => { controller.shouldToggleOnNodeClick = shouldToggleOnNodeClick ?? true; });
+	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
 	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
 	$effect(() => { controller.leafIconClass = leafIconClass ?? 'ltree-icon-leaf'; });
@@ -386,6 +395,7 @@
 
 	// Callback sync
 	$effect(() => { controller.onNodeClickedCb = onNodeClicked; });
+	$effect(() => { controller.onSelectionChangedCb = onSelectionChanged; });
 	$effect(() => { controller.onNodeDragStartCb = onNodeDragStart; });
 	$effect(() => { controller.onNodeDragOverCb = onNodeDragOver; });
 	$effect(() => { controller.beforeDropCallbackCb = beforeDropCallback; });
@@ -397,11 +407,13 @@
 
 	// ── Sync controller → bindable props (outputs flow back to parent) ──
 	$effect(() => { selectedNode = controller.selectedNode; });
+	$effect(() => { selectedPaths = controller.selectedPaths; });
 	$effect(() => { insertResult = controller.insertResult; });
 	$effect(() => { isRendering = controller.isRendering; });
 
 	// Bidirectional: parent can also SET selectedNode
 	$effect(() => { controller.selectedNode = selectedNode; });
+	$effect(() => { controller.selectedPaths = selectedPaths; });
 
 	// ── Floating drop zone helpers ───────────────────────────────────────
 	const formattedDropZoneStart = $derived(
@@ -502,6 +514,27 @@
 		controller.closeContextMenu();
 	}
 
+	// Multi-select methods
+	export function selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
+		controller.selectNode(path, mode);
+	}
+
+	export function selectNodes(paths: string[]) {
+		controller.selectNodes(paths);
+	}
+
+	export function deselectAll() {
+		controller.deselectAll();
+	}
+
+	export function getSelectedNodes(): LTreeNode<T>[] {
+		return controller.getSelectedNodes();
+	}
+
+	export function isNodeSelected(path: string): boolean {
+		return controller.isNodeSelected(path);
+	}
+
 	export async function scrollToPath(
 		path: string,
 		options?: {
@@ -543,8 +576,10 @@
 				| "sortCallback"
 				| "data"
 				| "selectedNode"
+				| "selectedPaths"
 				| "expandLevel"
 				| "shouldToggleOnNodeClick"
+				| "rangeSelectionMode"
 				| "shouldUseInternalSearchIndex"
 				| "initializeIndexCallback"
 				| "searchText"
@@ -553,6 +588,7 @@
 				| "shouldDisplayDebugInformation"
 				| "shouldDisplayContextMenuInDebugMode"
 				| "onNodeClicked"
+				| "onSelectionChanged"
 				| "onNodeDragStart"
 				| "onNodeDragOver"
 				| "beforeDropCallback"
@@ -603,8 +639,10 @@
 		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;
 		if (updates.data !== undefined) data = updates.data;
 		if (updates.selectedNode !== undefined) selectedNode = updates.selectedNode;
+		if (updates.selectedPaths !== undefined) selectedPaths = updates.selectedPaths;
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.shouldToggleOnNodeClick !== undefined) shouldToggleOnNodeClick = updates.shouldToggleOnNodeClick;
+		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
 		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
 		if (updates.initializeIndexCallback !== undefined) initializeIndexCallback = updates.initializeIndexCallback;
 		if (updates.searchText !== undefined) searchText = updates.searchText;
@@ -613,6 +651,7 @@
 		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
 		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
 		if (updates.onNodeClicked !== undefined) onNodeClicked = updates.onNodeClicked;
+		if (updates.onSelectionChanged !== undefined) onSelectionChanged = updates.onSelectionChanged;
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
@@ -678,7 +717,7 @@
 			return;
 		}
 
-		const entries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller));
+		const entries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes());
 		const match = findEntryByShortcut(entries, event);
 		if (match) {
 			event.preventDefault();
@@ -946,7 +985,7 @@
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
 		<div class="ltree-context-menu" style="left: {controller.contextMenuX}px; top: {controller.contextMenuY}px;" role="menu">
 			{#if contextMenuCallback}
-				{@const menuEntries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
+				{@const menuEntries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
 				{#snippet renderEntries(entries: ContextMenuEntry[])}
 					{#each entries as entry}
 						{#if 'divider' in entry}
