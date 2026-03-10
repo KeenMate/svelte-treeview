@@ -6,7 +6,13 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## What's New in v5.0.0-rc03
+## What's New in v5.0.0-rc04
+
+- **Multi-select**: Ctrl+click toggles nodes, Shift+click selects ranges, plain click replaces selection. New `selectedPaths` bindable (`Set<string>`), `onSelectionChanged` event, and `rangeSelectionMode` prop (`'visual'` vs `'logical'`).
+- **Public multi-select API**: `selectNode(path, mode)`, `selectNodes(paths)`, `deselectAll()`, `getSelectedNodes()`, `isNodeSelected(path)` on TreeController.
+- **Selection-aware context menus**: `contextMenuCallback` now receives `selectedNodes` as 3rd parameter for bulk actions.
+
+### v5.0.0-rc03
 
 - **Unified Context Menu API**: New shared type system (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`) used by both svelte-treeview and canvas-tree. Breaking: `title` → `label`, `callback` → `onclick`, `isDivider` → separate `ContextMenuDivider` type.
 - **Context menu features**: Keyboard shortcuts, nested submenus, named dividers (`──── Section ────`), `isVisible`/`isDisabled` per item, `className="danger"`, async `onclick`.
@@ -51,6 +57,7 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 - **Tree Editing**: Built-in methods for add, move, remove operations with automatic path management
 - **Search & Filter**: Integrated FlexSearch for fast, full-text search capabilities
 - **Flexible Data Sources**: Works with any hierarchical data structure
+- **Multi-Select**: Ctrl+click toggle, Shift+click range select (visual or logical mode), `selectedPaths` bindable, selection-aware context menus
 - **Context Menus**: Dynamic right-click menus with shortcuts, submenus, named dividers, and two API approaches (callback or Svelte components)
 - **Visual Customization**: Extensive styling options and icon customization
 - **TypeScript Support**: Full TypeScript support with comprehensive type definitions
