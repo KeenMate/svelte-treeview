@@ -53,6 +53,12 @@
 			description: 'Real-world workflows with mock database integration and batch operations.'
 		},
 		{
+			href: '/examples/branch-operations',
+			icon: '🌿',
+			title: 'Branch Operations',
+			description: 'Bulk subtree operations — insertBranch, replaceBranch, deleteBranch — with single emission.'
+		},
+		{
 			href: '/examples/performance',
 			icon: '⚡',
 			title: 'Performance Test',

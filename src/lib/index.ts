@@ -6,12 +6,16 @@ export {default as ContextMenuDividerC} from "./components/ContextMenuDivider.sv
 
 // Core layer (headless controller)
 export { TreeController } from "./core/TreeController.svelte"
-export type { TreeControllerProps } from "./core/TreeController.svelte"
+export type { TreeControllerProps, PasteResult } from "./core/TreeController.svelte"
 export { createTreeController } from "./core/createTreeController.js"
 
 // Export types
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
-export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
+export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, InsertBranchResult, DeleteBranchResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
+
+// Clipboard types & utilities
+export type { ClipboardEntry, TreeClipboard } from "./core/clipboard.js"
+export { setClipboard, getClipboard, clearClipboard, hasClipboard, getClipboardOperation } from "./core/clipboard.js"
 export type { RenderStats } from "./components/RenderCoordinator.svelte"
 export type { NodeCallbacks, NodeConfig, SelectionModifiers } from "./core/TreeController.svelte"
 

@@ -10,7 +10,7 @@ import {
 	getRelativePath
 } from '../helpers/ltree-helpers.js';
 
-import type { Ltree, Tuple, InsertArrayResult } from './types.js';
+import type { Ltree, Tuple, InsertArrayResult, InsertBranchResult, DeleteBranchResult } from './types.js';
 import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
 import { perfStart, perfEnd, perfSummary } from '../perf-logger.js';
@@ -864,6 +864,9 @@ export function createLTree<T>(
 			// Update source parent's hasChildren
 			if (Object.keys(sourceParent.children).length === 0) {
 				sourceParent.hasChildren = false;
+				if (_hasChildrenMember && sourceParent.data) {
+					(sourceParent.data as any)[_hasChildrenMember] = false;
+				}
 			}
 
 			// Calculate new parent and path
@@ -907,9 +910,11 @@ export function createLTree<T>(
 			sourceNode.parentPath = newParentPath;
 			sourceNode.level = getLevel(newPath, this.treePathSeparator);
 
-			// Update the data object's path if pathMember is defined
-			if (this.pathMember && sourceNode.data) {
-				(sourceNode.data as any)[this.pathMember] = newPath;
+			// Sync data object fields to match new tree position
+			if (sourceNode.data) {
+				if (_pathMember) (sourceNode.data as any)[_pathMember] = newPath;
+				if (_parentPathMember) (sourceNode.data as any)[_parentPathMember] = newParentPath;
+				if (_levelMember) (sourceNode.data as any)[_levelMember] = sourceNode.level;
 			}
 
 			// Update all descendants' paths recursively
@@ -918,6 +923,9 @@ export function createLTree<T>(
 			// Insert into new parent
 			newParent.children[segmentPrefix + newSegment] = sourceNode;
 			newParent.hasChildren = true;
+			if (_hasChildrenMember && newParent.data) {
+				(newParent.data as any)[_hasChildrenMember] = true;
+			}
 
 			// If orderMember is defined and position is before/after, calculate order
 			if (this.orderMember && position !== 'child' && sourceNode.data) {
@@ -968,9 +976,11 @@ export function createLTree<T>(
 				child.parentPath = node.path;
 				child.level = getLevel(newChildPath, this.treePathSeparator);
 
-				// Update the data object's path if pathMember is defined
-				if (this.pathMember && child.data) {
-					(child.data as any)[this.pathMember] = newChildPath;
+				// Sync data object fields
+				if (child.data) {
+					if (_pathMember) (child.data as any)[_pathMember] = newChildPath;
+					if (_parentPathMember) (child.data as any)[_parentPathMember] = node.path;
+					if (_levelMember) (child.data as any)[_levelMember] = child.level;
 				}
 
 				// Recurse into children using the OLD child path as base
@@ -1004,6 +1014,10 @@ export function createLTree<T>(
 			// Update parent's hasChildren
 			if (Object.keys(parent.children).length === 0) {
 				parent.hasChildren = false;
+				// Sync data object's hasChildren field
+				if (_hasChildrenMember && parent.data) {
+					(parent.data as any)[_hasChildrenMember] = false;
+				}
 			}
 
 			// Update node count
@@ -1068,15 +1082,22 @@ export function createLTree<T>(
 			newNode.isExpanded = _expandLevel ? newNode.level! <= _expandLevel : false;
 			newNode.hasChildren = false;
 
-			// Update path in data if pathMember is defined
-			if (_pathMember && data) {
-				(data as any)[_pathMember] = newPath;
+			// Sync data object fields to match new tree position
+			if (data) {
+				if (_pathMember) (data as any)[_pathMember] = newPath;
+				if (_parentPathMember) (data as any)[_parentPathMember] = parentPath;
+				if (_levelMember) (data as any)[_levelMember] = newNode.level;
+				if (_hasChildrenMember) (data as any)[_hasChildrenMember] = false;
 			}
 
 			// Add to parent
 			const targetParent = parent || root;
 			targetParent.children[segmentPrefix + pathSegment] = newNode;
 			targetParent.hasChildren = true;
+			// Sync data object's hasChildren field
+			if (_hasChildrenMember && targetParent.data) {
+				(targetParent.data as any)[_hasChildrenMember] = true;
+			}
 
 			// Update statistics
 			nodeCount++;
@@ -1349,6 +1370,304 @@ export function createLTree<T>(
 			};
 			traverse(root);
 			return result;
+		},
+
+		// ── Bulk subtree operations (single emission) ─────────────────────────
+
+		insertBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+			const targetParent = parentPath ? this.getNodeByPath(parentPath) : root;
+			if (!targetParent && parentPath) {
+				return { success: false, count: 0, failed: [], parentNode: null };
+			}
+			const parentNode = targetParent || root;
+
+			if (data.length === 0) {
+				return { success: true, count: 0, failed: [], parentNode };
+			}
+
+			const failed: Array<{ data: T; error: string }> = [];
+
+			// Convert raw data → LTreeNode (same logic as insertArray lines 244-288)
+			let mappedData = data.map((row, index) => {
+				const node = createLTreeNode<T>();
+				node.treeId = _treeId || '';
+				node.id = _idMember ? getField(row, _idMember) : undefined;
+				const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
+
+				if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
+					const pathDesc = rawPath === '' ? 'empty string'
+						: rawPath == null ? 'undefined/null'
+						: `non-string (${typeof rawPath})`;
+					failed.push({ data: row, error: `Item at index ${index} has invalid path (${pathDesc})` });
+					return null;
+				}
+				node.path = rawPath;
+
+				if (shouldCalculateParentPath) {
+					node.parentPath = getParentPath(node.path, this.treePathSeparator);
+				} else node.parentPath = getField(row, _parentPathMember!);
+
+				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator), 0, 1, this.treePathSeparator);
+
+				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
+				else node.level = getLevel(node.path, this.treePathSeparator);
+
+				if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
+
+				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
+				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
+				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
+				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
+
+				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
+
+				node.data = row;
+				return node;
+			}).filter((node): node is LTreeNode<T> => node !== null);
+
+			// Sort to ensure parents come before children
+			if (!this.isSorted) {
+				if (this.sortCallback) mappedData = this.sortCallback(mappedData);
+				else mappedData = this._defaultSort(this, mappedData);
+			}
+
+			// Insert all nodes silently (no emission per node)
+			const affectedParents = new Set<string>();
+			let insertedCount = 0;
+
+			for (const node of mappedData) {
+				const result = this.insertTreeNode(node.parentPath ?? '', node, true);
+				if (result) {
+					failed.push({ data: node.data!, error: result });
+				} else {
+					insertedCount++;
+					affectedParents.add(node.parentPath ?? '');
+
+					// Add to flat tree for search indexing
+					if (_shouldUseInternalSearchIndex) {
+						flatTreeNodes.push(node);
+					}
+				}
+			}
+
+			// Re-sort each affected parent's children (without emitting)
+			for (const pp of affectedParents) {
+				const parent = pp ? this.getNodeByPath(pp) : root;
+				if (!parent) continue;
+				const children = Object.values(parent.children) as LTreeNode<T>[];
+				if (children.length === 0) continue;
+
+				let sorted: LTreeNode<T>[];
+				if (this.sortCallback) {
+					sorted = this.sortCallback(children);
+				} else {
+					sorted = [...children].sort((a, b) => {
+						if (this.orderMember && a.data && b.data) {
+							const aOrder = getField(a.data, this.orderMember) ?? 0;
+							const bOrder = getField(b.data, this.orderMember) ?? 0;
+							if (aOrder !== bOrder) return aOrder - bOrder;
+						}
+						return this.getNodeDisplayValue(a).localeCompare(this.getNodeDisplayValue(b));
+					});
+				}
+				const newChildren: Record<string, LTreeNode<T>> = {};
+				sorted.forEach(child => {
+					newChildren[segmentPrefix + child.pathSegment] = child;
+				});
+				parent.children = newChildren;
+			}
+
+			// ── Pipeline: directly update all affected parents ──────────
+			// Update hasChildren + _hasChildrenMember on EVERY parent that received children
+			for (const pp of affectedParents) {
+				const parent = pp ? this.getNodeByPath(pp) : root;
+				if (!parent) continue;
+				parent.hasChildren = Object.keys(parent.children).length > 0;
+				if (_hasChildrenMember && parent.data) {
+					(parent.data as any)[_hasChildrenMember] = parent.hasChildren;
+				}
+			}
+
+			// Bump _rev on all affected parents AND their ancestors up to root
+			const bumpedPaths = new Set<string>();
+			for (const pp of affectedParents) {
+				let walkPath = pp;
+				while (walkPath && !bumpedPaths.has(walkPath)) {
+					bumpedPaths.add(walkPath);
+					const ancestor = this.getNodeByPath(walkPath);
+					if (ancestor) ancestor._rev = (ancestor._rev || 0) + 1;
+					const sepIdx = walkPath.lastIndexOf(this.treePathSeparator);
+					walkPath = sepIdx > 0 ? walkPath.substring(0, sepIdx) : '';
+				}
+			}
+
+			// Batch add to indexer
+			if (_shouldUseInternalSearchIndex && indexer) {
+				const startIdx = flatTreeNodes.length - insertedCount;
+				const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
+				for (let i = startIdx; i < flatTreeNodes.length; i++) {
+					itemsToIndex.push({ node: flatTreeNodes[i], index: i });
+				}
+				if (itemsToIndex.length > 0) {
+					indexer.addToQueue(itemsToIndex);
+				}
+			}
+
+			// Single emission
+			this._emitTreeChanged();
+
+			return { success: true, count: insertedCount, failed, parentNode };
+		},
+
+		replaceBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+			const targetParent = parentPath ? this.getNodeByPath(parentPath) : root;
+			if (!targetParent && parentPath) {
+				return { success: false, count: 0, failed: [], parentNode: null };
+			}
+			const parentNode = targetParent || root;
+
+			// Count and collect all descendant paths for removal
+			const countDescendants = (n: LTreeNode<T>): number => {
+				let count = 0;
+				for (const child of Object.values(n.children)) {
+					count += 1 + countDescendants(child);
+				}
+				return count;
+			};
+			const removedCount = countDescendants(parentNode);
+
+			// Remove descendants from flatTreeNodes (for search index consistency)
+			if (removedCount > 0) {
+				const collectPaths = (n: LTreeNode<T>, paths: Set<string>) => {
+					for (const child of Object.values(n.children)) {
+						paths.add(child.path);
+						collectPaths(child, paths);
+					}
+				};
+				const pathsToRemove = new Set<string>();
+				collectPaths(parentNode, pathsToRemove);
+				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+			}
+
+			// Clear children
+			parentNode.children = {};
+			parentNode.hasChildren = false;
+			if (_hasChildrenMember && parentNode.data) {
+				(parentNode.data as any)[_hasChildrenMember] = false;
+			}
+			nodeCount -= removedCount;
+
+			// Delegate to insertBranch for the new data
+			return this.insertBranch(parentPath, data);
+		},
+
+		deleteBranch(path: string, keepParent: boolean = false): DeleteBranchResult<T> {
+			const countDescendants = (n: LTreeNode<T>): number => {
+				let count = 0;
+				for (const child of Object.values(n.children)) {
+					count += 1 + countDescendants(child);
+				}
+				return count;
+			};
+
+			const collectPaths = (n: LTreeNode<T>, paths: Set<string>) => {
+				for (const child of Object.values(n.children)) {
+					paths.add(child.path);
+					collectPaths(child, paths);
+				}
+			};
+
+			if (keepParent) {
+				// Keep the node, clear its children
+				const node = path ? this.getNodeByPath(path) : root;
+				if (!node && path) {
+					return { success: false, removedCount: 0, error: `Node not found: ${path}` };
+				}
+				const targetNode = node || root;
+
+				const removedCount = countDescendants(targetNode);
+				if (removedCount === 0) {
+					return { success: true, removedCount: 0 };
+				}
+
+				// Remove from flatTreeNodes
+				const pathsToRemove = new Set<string>();
+				collectPaths(targetNode, pathsToRemove);
+				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+
+				targetNode.children = {};
+				targetNode.hasChildren = false;
+				if (_hasChildrenMember && targetNode.data) {
+					(targetNode.data as any)[_hasChildrenMember] = false;
+				}
+				nodeCount -= removedCount;
+
+				// Bump _rev on node itself + ancestors
+				targetNode._rev = (targetNode._rev || 0) + 1;
+				let ancestorPath = path;
+				while (ancestorPath) {
+					const sepIdx = ancestorPath.lastIndexOf(this.treePathSeparator);
+					ancestorPath = sepIdx > 0 ? ancestorPath.substring(0, sepIdx) : '';
+					if (ancestorPath) {
+						const ancestor = this.getNodeByPath(ancestorPath);
+						if (ancestor) ancestor._rev = (ancestor._rev || 0) + 1;
+					}
+				}
+
+				this._emitTreeChanged();
+				return { success: true, removedCount };
+			} else {
+				// Remove the node itself + all descendants
+				if (path === '') {
+					return { success: false, removedCount: 0, error: 'Cannot delete root node' };
+				}
+
+				const node = this.getNodeByPath(path);
+				if (!node) {
+					return { success: false, removedCount: 0, error: `Node not found: ${path}` };
+				}
+
+				const parentPath = node.parentPath || '';
+				const parent = parentPath ? this.getNodeByPath(parentPath) : root;
+				if (!parent) {
+					return { success: false, removedCount: 0, error: `Parent not found: ${parentPath}` };
+				}
+
+				const removedCount = 1 + countDescendants(node);
+
+				// Remove from flatTreeNodes
+				const pathsToRemove = new Set<string>();
+				pathsToRemove.add(node.path);
+				collectPaths(node, pathsToRemove);
+				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+
+				// Remove from parent
+				const segment = segmentPrefix + node.pathSegment;
+				delete parent.children[segment];
+
+				if (Object.keys(parent.children).length === 0) {
+					parent.hasChildren = false;
+					if (_hasChildrenMember && parent.data) {
+						(parent.data as any)[_hasChildrenMember] = false;
+					}
+				}
+
+				nodeCount -= removedCount;
+
+				// Bump _rev on ancestors
+				let ancestorPath = parentPath;
+				while (ancestorPath) {
+					const ancestor = this.getNodeByPath(ancestorPath);
+					if (ancestor) ancestor._rev = (ancestor._rev || 0) + 1;
+					const sepIdx = ancestorPath.lastIndexOf(this.treePathSeparator);
+					ancestorPath = sepIdx > 0 ? ancestorPath.substring(0, sepIdx) : '';
+				}
+
+				this._emitTreeChanged();
+				return { success: true, removedCount };
+			}
 		},
 
 		_defaultSort: function (self: Ltree<T>, items: LTreeNode<T>[]): LTreeNode<T>[] {

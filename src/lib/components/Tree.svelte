@@ -4,6 +4,8 @@
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import {
 		type InsertArrayResult,
+		type InsertBranchResult,
+		type DeleteBranchResult,
 		type ContextMenuEntry,
 		type DropPosition,
 		type DragDropMode,
@@ -115,13 +117,18 @@
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
 		allowCopy?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
 		autoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
+		autoHandleMove?: boolean; // Auto-handle same-tree move operations (default: true). Set to false for database-first workflow.
+		autoHandlePaste?: boolean; // Auto-handle paste operations (default: true). Set to false for database-first workflow.
 		accordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
 
-		// EVENTS
-		onNodeClicked?: (node: LTreeNode<T>) => void;
-		onSelectionChanged?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
+		// EVENTS (on* = fire-and-forget notifications)
+		onNodeClick?: (node: LTreeNode<T>) => void;
+		onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
+		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
+
+		// INTERCEPTORS (before*Callback = can modify/block)
 		/**
 		 * Called before a drop is processed. Return false to cancel the drop.
 		 * Return { position, operation } to override the drop position or operation.
@@ -129,8 +136,12 @@
 		 * Can be async - return a Promise to show dialogs or perform async validation.
 		 */
 		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
-		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
-		contextMenuCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
+		beforeCopyCallback?: (paths: string[]) => string[] | false | void;
+		beforeCutCallback?: (paths: string[]) => string[] | false | void;
+		beforePasteCallback?: (targetPath: string, operation: 'copy' | 'cut', entries: import('../core/clipboard.js').ClipboardEntry<T>[]) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+
+		// DATA PROVIDERS (get*Callback = returns data the system uses)
+		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
@@ -230,16 +241,23 @@
 		dropZoneMaxWidth = 120,
 		allowCopy = false,
 		autoHandleCopy = true,
+		autoHandleMove = true,
+		autoHandlePaste = true,
 		accordionExpand = false,
 
 		// EVENTS
-		onNodeClicked,
-		onSelectionChanged,
+		onNodeClick,
+		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
-		beforeDropCallback,
 		onNodeDrop,
-		contextMenuCallback,
+		// INTERCEPTORS
+		beforeDropCallback,
+		beforeCopyCallback,
+		beforeCutCallback,
+		beforePasteCallback,
+		// DATA PROVIDERS
+		getContextMenuItemsCallback,
 
 		// VISUALS
 		bodyClass,
@@ -311,14 +329,19 @@
 		dropZoneMaxWidth,
 		allowCopy,
 		autoHandleCopy,
+		autoHandleMove,
+		autoHandlePaste,
 		accordionExpand,
-		onNodeClicked,
-		onSelectionChanged,
+		onNodeClick,
+		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
-		beforeDropCallback,
 		onNodeDrop,
-		contextMenuCallback,
+		beforeDropCallback,
+		beforeCopyCallback,
+		beforeCutCallback,
+		beforePasteCallback,
+		getContextMenuItemsCallback,
 		hasContextMenuSnippet: !!contextMenu,
 		bodyClass,
 		selectedNodeClass,
@@ -372,6 +395,8 @@
 	$effect(() => { controller.dragDropMode = dragDropMode ?? 'none'; });
 	$effect(() => { controller.allowCopy = allowCopy ?? false; });
 	$effect(() => { controller.autoHandleCopy = autoHandleCopy ?? true; });
+	$effect(() => { controller.autoHandleMove = autoHandleMove ?? true; });
+	$effect(() => { controller.autoHandlePaste = autoHandlePaste ?? true; });
 	$effect(() => { controller.accordionExpand = accordionExpand ?? false; });
 	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
 
@@ -394,16 +419,19 @@
 	$effect(() => { controller.contextMenuYOffset = contextMenuYOffset ?? 0; });
 
 	// Callback sync
-	$effect(() => { controller.onNodeClickedCb = onNodeClicked; });
-	$effect(() => { controller.onSelectionChangedCb = onSelectionChanged; });
-	$effect(() => { controller.onNodeDragStartCb = onNodeDragStart; });
-	$effect(() => { controller.onNodeDragOverCb = onNodeDragOver; });
-	$effect(() => { controller.beforeDropCallbackCb = beforeDropCallback; });
-	$effect(() => { controller.onNodeDropCb = onNodeDrop; });
-	$effect(() => { controller.contextMenuCallbackCb = contextMenuCallback; });
-	$effect(() => { controller.onRenderStartCb = onRenderStart; });
-	$effect(() => { controller.onRenderProgressCb = onRenderProgress; });
-	$effect(() => { controller.onRenderCompleteCb = onRenderComplete; });
+	$effect(() => { controller.onNodeClickHandler = onNodeClick; });
+	$effect(() => { controller.onSelectionChangeHandler = onSelectionChange; });
+	$effect(() => { controller.onNodeDragStartHandler = onNodeDragStart; });
+	$effect(() => { controller.onNodeDragOverHandler = onNodeDragOver; });
+	$effect(() => { controller.onNodeDropHandler = onNodeDrop; });
+	$effect(() => { controller.beforeDropHandler = beforeDropCallback; });
+	$effect(() => { controller.beforeCopyHandler = beforeCopyCallback; });
+	$effect(() => { controller.beforeCutHandler = beforeCutCallback; });
+	$effect(() => { controller.beforePasteHandler = beforePasteCallback; });
+	$effect(() => { controller.getContextMenuItemsHandler = getContextMenuItemsCallback; });
+	$effect(() => { controller.onRenderStartHandler = onRenderStart; });
+	$effect(() => { controller.onRenderProgressHandler = onRenderProgress; });
+	$effect(() => { controller.onRenderCompleteHandler = onRenderComplete; });
 
 	// ── Sync controller → bindable props (outputs flow back to parent) ──
 	$effect(() => { selectedNode = controller.selectedNode; });
@@ -486,6 +514,18 @@
 
 	export function applyChanges(changes: TreeChange<T>[]): ApplyChangesResult {
 		return controller.applyChanges(changes);
+	}
+
+	export function insertBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+		return controller.insertBranch(parentPath, data);
+	}
+
+	export function replaceBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+		return controller.replaceBranch(parentPath, data);
+	}
+
+	export function deleteBranch(path: string, keepParent?: boolean): DeleteBranchResult<T> {
+		return controller.deleteBranch(path, keepParent);
 	}
 
 	export function copyNodeWithDescendants(
@@ -587,13 +627,16 @@
 				| "indexerTimeout"
 				| "shouldDisplayDebugInformation"
 				| "shouldDisplayContextMenuInDebugMode"
-				| "onNodeClicked"
-				| "onSelectionChanged"
+				| "onNodeClick"
+				| "onSelectionChange"
 				| "onNodeDragStart"
 				| "onNodeDragOver"
-				| "beforeDropCallback"
 				| "onNodeDrop"
-				| "contextMenuCallback"
+				| "beforeDropCallback"
+				| "beforeCopyCallback"
+				| "beforeCutCallback"
+				| "beforePasteCallback"
+				| "getContextMenuItemsCallback"
 				| "virtualScroll"
 				| "virtualRowHeight"
 				| "virtualOverscan"
@@ -650,13 +693,16 @@
 		if (updates.indexerTimeout !== undefined) indexerTimeout = updates.indexerTimeout;
 		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
 		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
-		if (updates.onNodeClicked !== undefined) onNodeClicked = updates.onNodeClicked;
-		if (updates.onSelectionChanged !== undefined) onSelectionChanged = updates.onSelectionChanged;
+		if (updates.onNodeClick !== undefined) onNodeClick = updates.onNodeClick;
+		if (updates.onSelectionChange !== undefined) onSelectionChange = updates.onSelectionChange;
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
-		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
-		if (updates.contextMenuCallback !== undefined) contextMenuCallback = updates.contextMenuCallback;
+		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
+		if (updates.beforeCopyCallback !== undefined) beforeCopyCallback = updates.beforeCopyCallback;
+		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;
+		if (updates.beforePasteCallback !== undefined) beforePasteCallback = updates.beforePasteCallback;
+		if (updates.getContextMenuItemsCallback !== undefined) getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
 		if (updates.virtualScroll !== undefined) virtualScroll = updates.virtualScroll;
 		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;
 		if (updates.virtualOverscan !== undefined) virtualOverscan = updates.virtualOverscan;
@@ -710,14 +756,14 @@
 	}
 
 	async function handleContextMenuKeydown(event: KeyboardEvent) {
-		if (!controller.contextMenuVisible || !controller.contextMenuNode || !contextMenuCallback) return;
+		if (!controller.contextMenuVisible || !controller.contextMenuNode || !getContextMenuItemsCallback) return;
 
 		if (event.key === 'Escape') {
 			controller.closeContextMenu();
 			return;
 		}
 
-		const entries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes());
+		const entries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes());
 		const match = findEntryByShortcut(entries, event);
 		if (match) {
 			event.preventDefault();
@@ -984,8 +1030,8 @@
 	<!-- Context Menu -->
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
 		<div class="ltree-context-menu" style="left: {controller.contextMenuX}px; top: {controller.contextMenuY}px;" role="menu">
-			{#if contextMenuCallback}
-				{@const menuEntries = contextMenuCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
+			{#if getContextMenuItemsCallback}
+				{@const menuEntries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
 				{#snippet renderEntries(entries: ContextMenuEntry[])}
 					{#each entries as entry}
 						{#if 'divider' in entry}

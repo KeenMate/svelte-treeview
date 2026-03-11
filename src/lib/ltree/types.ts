@@ -52,6 +52,19 @@ export interface InsertArrayResult<T> {
 	total: number;
 }
 
+export interface InsertBranchResult<T> {
+	success: boolean;
+	count: number;
+	failed: Array<{ data: T; error: string }>;
+	parentNode: LTreeNode<T> | null;
+}
+
+export interface DeleteBranchResult<T> {
+	success: boolean;
+	removedCount: number;
+	error?: string;
+}
+
 export interface Ltree<T> {
 	// Properties (readonly getters)
 	treePathSeparator: string;
@@ -154,6 +167,11 @@ export interface Ltree<T> {
 	addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string };
 	updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string };
 	applyChanges(changes: TreeChange<T>[]): ApplyChangesResult;
+
+	// Bulk subtree operations (single emission)
+	insertBranch(parentPath: string, data: T[]): InsertBranchResult<T>;
+	replaceBranch(parentPath: string, data: T[]): InsertBranchResult<T>;
+	deleteBranch(path: string, keepParent?: boolean): DeleteBranchResult<T>;
 
 	// Cross-tree copy method
 	copyNodeWithDescendants(

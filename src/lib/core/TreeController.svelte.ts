@@ -4,6 +4,8 @@ import { createLTree } from '../ltree/ltree.svelte.js';
 import {
 	type Ltree,
 	type InsertArrayResult,
+	type InsertBranchResult,
+	type DeleteBranchResult,
 	type ContextMenuEntry,
 	type DropPosition,
 	type DragDropMode,
@@ -20,9 +22,31 @@ import {
 } from '../components/RenderCoordinator.svelte.js';
 import { uiLogger, dragLogger } from '../logger.js';
 import { perfStart, perfEnd } from '../perf-logger.js';
+import {
+	type ClipboardEntry,
+	type TreeClipboard,
+	setClipboard,
+	getClipboard,
+	clearClipboard,
+	hasClipboard,
+	getClipboardOperation as getClipboardOp
+} from './clipboard.js';
 
 // Re-register global API (safe to import multiple times)
 import '../global-api.js';
+
+// ─── Paste result type ────────────────────────────────────────────────────
+
+export interface PasteResult<T> {
+	success: boolean;
+	count: number;
+	error?: string;
+	/** Included when autoHandlePaste=false — clipboard data for consumer to handle */
+	entries?: ClipboardEntry<T>[];
+	operation?: 'copy' | 'cut';
+	targetPath?: string;
+	position?: 'child' | 'before' | 'after';
+}
 
 // ─── Shared interfaces (also used by Node.svelte) ────────────────────────
 
@@ -143,12 +167,25 @@ export interface TreeControllerProps<T> {
 	dropZoneMaxWidth?: number;
 	allowCopy?: boolean;
 	autoHandleCopy?: boolean;
+	autoHandleMove?: boolean;
+	autoHandlePaste?: boolean;
 	accordionExpand?: boolean;
 
-	// EVENTS
-	onNodeClicked?: (node: LTreeNode<T>) => void;
+	// EVENTS (on* = fire-and-forget notifications)
+	onNodeClick?: (node: LTreeNode<T>) => void;
 	onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 	onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
+	onNodeDrop?: (
+		dropNode: LTreeNode<T> | null,
+		draggedNode: LTreeNode<T>,
+		position: DropPosition,
+		event: DragEvent | TouchEvent,
+		operation: DropOperation
+	) => void;
+	onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
+	onPaste?: (result: PasteResult<T>) => void;
+
+	// INTERCEPTORS (before*Callback = can modify/block)
 	beforeDropCallback?: (
 		dropNode: LTreeNode<T> | null,
 		draggedNode: LTreeNode<T>,
@@ -164,19 +201,20 @@ export interface TreeControllerProps<T> {
 				| { position?: DropPosition; operation?: DropOperation }
 				| void
 		  >;
-	onNodeDrop?: (
-		dropNode: LTreeNode<T> | null,
-		draggedNode: LTreeNode<T>,
-		position: DropPosition,
-		event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) => void;
-	contextMenuCallback?: (
+	beforeCopyCallback?: (paths: string[]) => string[] | false | void;
+	beforeCutCallback?: (paths: string[]) => string[] | false | void;
+	beforePasteCallback?: (
+		targetPath: string,
+		operation: 'copy' | 'cut',
+		entries: ClipboardEntry<T>[]
+	) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+
+	// DATA PROVIDERS (get*Callback = returns data the system uses)
+	getContextMenuItemsCallback?: (
 		node: LTreeNode<T>,
 		closeMenuCallback: () => void,
 		selectedNodes?: LTreeNode<T>[]
 	) => ContextMenuEntry[];
-	onSelectionChanged?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 
 	// Tells the controller whether a context menu snippet exists (set by Tree.svelte)
 	hasContextMenuSnippet?: boolean;
@@ -251,18 +289,28 @@ export class TreeController<T> {
 	allowCopy = $state(false);
 	accordionExpand = $state(false);
 	autoHandleCopy = $state(true);
+	autoHandleMove = $state(true);
+	autoHandlePaste = $state(true);
 
-	// EVENTS (stored for calling — plain assignments, not deeply proxied)
-	onNodeClickedCb: ((node: LTreeNode<T>) => void) | undefined;
-	onSelectionChangedCb: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
-	onNodeDragStartCb: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
-	onNodeDragOverCb: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
-	beforeDropCallbackCb: TreeControllerProps<T>['beforeDropCallback'];
-	onNodeDropCb: TreeControllerProps<T>['onNodeDrop'];
-	contextMenuCallbackCb: TreeControllerProps<T>['contextMenuCallback'];
-	onRenderStartCb: (() => void) | undefined;
-	onRenderProgressCb: ((stats: RenderStats) => void) | undefined;
-	onRenderCompleteCb: ((stats: RenderStats) => void) | undefined;
+	// Event handlers (on* = fire-and-forget)
+	onNodeClickHandler: ((node: LTreeNode<T>) => void) | undefined;
+	onSelectionChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
+	onNodeDragStartHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
+	onNodeDragOverHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
+	onNodeDropHandler: TreeControllerProps<T>['onNodeDrop'];
+	onPasteHandler: ((result: PasteResult<T>) => void) | undefined;
+	onRenderStartHandler: (() => void) | undefined;
+	onRenderProgressHandler: ((stats: RenderStats) => void) | undefined;
+	onRenderCompleteHandler: ((stats: RenderStats) => void) | undefined;
+
+	// Interceptor handlers (before*Callback)
+	beforeDropHandler: TreeControllerProps<T>['beforeDropCallback'];
+	beforeCopyHandler: TreeControllerProps<T>['beforeCopyCallback'];
+	beforeCutHandler: TreeControllerProps<T>['beforeCutCallback'];
+	beforePasteHandler: TreeControllerProps<T>['beforePasteCallback'];
+
+	// Data provider handlers (get*Callback)
+	getContextMenuItemsHandler: TreeControllerProps<T>['getContextMenuItemsCallback'];
 
 	// Visual config (for nodeConfig updates)
 	shouldToggleOnNodeClick = $state(true);
@@ -349,6 +397,9 @@ export class TreeController<T> {
 	// Drop placeholder
 	isDropPlaceholderActive = $state(false);
 
+	// Clipboard — paths dimmed during cut operation
+	cutPaths = $state.raw<Set<string>>(new Set());
+
 	// Skip insertArray flag
 	_skipInsertArray = false;
 
@@ -421,6 +472,8 @@ export class TreeController<T> {
 		this.dragDropMode = props.dragDropMode ?? 'none';
 		this.allowCopy = props.allowCopy ?? false;
 		this.autoHandleCopy = props.autoHandleCopy ?? true;
+		this.autoHandleMove = props.autoHandleMove ?? true;
+		this.autoHandlePaste = props.autoHandlePaste ?? true;
 		this.accordionExpand = props.accordionExpand ?? false;
 
 		this.shouldToggleOnNodeClick = props.shouldToggleOnNodeClick ?? true;
@@ -447,16 +500,20 @@ export class TreeController<T> {
 		this.virtualContainerHeight = props.virtualContainerHeight;
 
 		// Store callbacks
-		this.onNodeClickedCb = props.onNodeClicked;
-		this.onSelectionChangedCb = props.onSelectionChanged;
-		this.onNodeDragStartCb = props.onNodeDragStart;
-		this.onNodeDragOverCb = props.onNodeDragOver;
-		this.beforeDropCallbackCb = props.beforeDropCallback;
-		this.onNodeDropCb = props.onNodeDrop;
-		this.contextMenuCallbackCb = props.contextMenuCallback;
-		this.onRenderStartCb = props.onRenderStart;
-		this.onRenderProgressCb = props.onRenderProgress;
-		this.onRenderCompleteCb = props.onRenderComplete;
+		this.onNodeClickHandler = props.onNodeClick;
+		this.onSelectionChangeHandler = props.onSelectionChange;
+		this.onNodeDragStartHandler = props.onNodeDragStart;
+		this.onNodeDragOverHandler = props.onNodeDragOver;
+		this.onNodeDropHandler = props.onNodeDrop;
+		this.onPasteHandler = props.onPaste;
+		this.beforeDropHandler = props.beforeDropCallback;
+		this.beforeCopyHandler = props.beforeCopyCallback;
+		this.beforeCutHandler = props.beforeCutCallback;
+		this.beforePasteHandler = props.beforePasteCallback;
+		this.getContextMenuItemsHandler = props.getContextMenuItemsCallback;
+		this.onRenderStartHandler = props.onRenderStart;
+		this.onRenderProgressHandler = props.onRenderProgress;
+		this.onRenderCompleteHandler = props.onRenderComplete;
 
 		// ── Create LTree ────────────────────────────────────────────────
 		// svelte-ignore non_reactive_update
@@ -499,14 +556,14 @@ export class TreeController<T> {
 			? createRenderCoordinator(2, {
 					onStart: () => {
 						this.isRendering = true;
-						this.onRenderStartCb?.();
+						this.onRenderStartHandler?.();
 					},
 					onProgress: (stats) => {
-						this.onRenderProgressCb?.(stats);
+						this.onRenderProgressHandler?.(stats);
 					},
 					onComplete: (stats) => {
 						this.isRendering = false;
-						this.onRenderCompleteCb?.(stats);
+						this.onRenderCompleteHandler?.(stats);
 					}
 				})
 			: null;
@@ -719,7 +776,7 @@ export class TreeController<T> {
 		$effect(() => {
 			if (
 				this.shouldDisplayContextMenuInDebugMode &&
-				(this.hasContextMenuSnippet || this.contextMenuCallbackCb) &&
+				(this.hasContextMenuSnippet || this.getContextMenuItemsHandler) &&
 				this.tree?.tree &&
 				this.tree.tree.length > 0
 			) {
@@ -895,6 +952,297 @@ export class TreeController<T> {
 		return result;
 	}
 
+	// ── Bulk subtree operations ─────────────────────────────────────────
+
+	insertBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+		this._skipInsertArray = true;
+		const result = this.tree?.insertBranch(parentPath, data) || {
+			success: false,
+			count: 0,
+			failed: [],
+			parentNode: null
+		};
+		tick().then(() => {
+			this._skipInsertArray = false;
+		});
+		return result;
+	}
+
+	replaceBranch(parentPath: string, data: T[]): InsertBranchResult<T> {
+		this._skipInsertArray = true;
+		const result = this.tree?.replaceBranch(parentPath, data) || {
+			success: false,
+			count: 0,
+			failed: [],
+			parentNode: null
+		};
+		tick().then(() => {
+			this._skipInsertArray = false;
+		});
+		return result;
+	}
+
+	deleteBranch(path: string, keepParent?: boolean): DeleteBranchResult<T> {
+		this._skipInsertArray = true;
+		const result = this.tree?.deleteBranch(path, keepParent) || {
+			success: false,
+			removedCount: 0,
+			error: 'Tree not initialized'
+		};
+		tick().then(() => {
+			this._skipInsertArray = false;
+		});
+		return result;
+	}
+
+	// ── Clipboard operations ───────────────────────────────────────────
+
+	/**
+	 * Collect a node and all its descendants into a ClipboardEntry.
+	 * Descendants are ordered parent-first with paths relative to the source node.
+	 */
+	private _collectClipboardEntry(node: LTreeNode<T>): ClipboardEntry<T> {
+		const descendants: ClipboardEntry<T>['descendants'] = [];
+		const sep = this.treePathSeparator;
+
+		const walk = (n: LTreeNode<T>) => {
+			for (const child of Object.values(n.children)) {
+				// relativePath = everything after sourcePath + separator
+				const rel = child.path.substring(node.path.length);
+				descendants.push({
+					relativePath: rel,
+					data: structuredClone(child.data as T)
+				});
+				walk(child);
+			}
+		};
+		walk(node);
+
+		return {
+			sourceTreeId: this.treeId,
+			sourcePath: node.path,
+			data: structuredClone(node.data as T),
+			descendants
+		};
+	}
+
+	/**
+	 * Copy nodes to the shared clipboard.
+	 * @param paths Specific paths to copy, or uses selectedPaths if omitted.
+	 */
+	copyNodes(paths?: string[]): void {
+		let pathsToUse = paths ?? [...this.selectedPaths];
+		if (pathsToUse.length === 0) return;
+
+		// Interceptor: can modify paths or block
+		if (this.beforeCopyHandler) {
+			const result = this.beforeCopyHandler(pathsToUse);
+			if (result === false) return;
+			if (Array.isArray(result)) pathsToUse = result;
+		}
+
+		const entries: ClipboardEntry<T>[] = [];
+		for (const p of pathsToUse) {
+			const node = this.tree.getNodeByPath(p);
+			if (node) entries.push(this._collectClipboardEntry(node));
+		}
+		if (entries.length === 0) return;
+
+		// Clear any previous cut state
+		this.cutPaths = new Set();
+
+		setClipboard<T>({
+			operation: 'copy',
+			entries,
+			sourceTreeId: this.treeId
+		});
+		uiLogger.debug(`[clipboard] Copied ${entries.length} node(s)`);
+	}
+
+	/**
+	 * Cut nodes to the shared clipboard. Nodes are dimmed but NOT removed until paste.
+	 * @param paths Specific paths to cut, or uses selectedPaths if omitted.
+	 */
+	cutNodes(paths?: string[]): void {
+		let pathsToUse = paths ?? [...this.selectedPaths];
+		if (pathsToUse.length === 0) return;
+
+		// Interceptor: can modify paths or block
+		if (this.beforeCutHandler) {
+			const result = this.beforeCutHandler(pathsToUse);
+			if (result === false) return;
+			if (Array.isArray(result)) pathsToUse = result;
+		}
+
+		const entries: ClipboardEntry<T>[] = [];
+		const cutSet = new Set<string>();
+		for (const p of pathsToUse) {
+			const node = this.tree.getNodeByPath(p);
+			if (node) {
+				entries.push(this._collectClipboardEntry(node));
+				// Add the node itself and all its descendants to cutPaths for dimming
+				cutSet.add(p);
+				const walkDim = (n: LTreeNode<T>) => {
+					for (const child of Object.values(n.children)) {
+						cutSet.add(child.path);
+						walkDim(child);
+					}
+				};
+				walkDim(node);
+			}
+		}
+		if (entries.length === 0) return;
+
+		setClipboard<T>({
+			operation: 'cut',
+			entries,
+			sourceTreeId: this.treeId
+		});
+		this.cutPaths = cutSet;
+		uiLogger.debug(`[clipboard] Cut ${entries.length} node(s), dimming ${cutSet.size} paths`);
+	}
+
+	/**
+	 * Paste clipboard content under (or beside) the target node.
+	 * @param targetPath Where to paste
+	 * @param transformData Consumer callback to generate new IDs/paths for pasted data
+	 * @param position 'child' (default), 'before', or 'after'
+	 */
+	pasteNodes(
+		targetPath: string,
+		transformData: (data: T, index: number, operation: 'copy' | 'cut') => T,
+		position: 'child' | 'before' | 'after' = 'child'
+	): PasteResult<T> {
+		const clip = getClipboard<T>();
+		if (!clip || clip.entries.length === 0) {
+			return { success: false, count: 0, error: 'Clipboard is empty' };
+		}
+
+		// Interceptor: can modify target/position or block
+		if (this.beforePasteHandler) {
+			const result = this.beforePasteHandler(targetPath, clip.operation, clip.entries);
+			if (result === false) {
+				return { success: false, count: 0, error: 'Paste blocked by beforePasteCallback' };
+			}
+			if (result && typeof result === 'object') {
+				if (result.targetPath !== undefined) targetPath = result.targetPath;
+				if (result.position !== undefined) position = result.position;
+			}
+		}
+
+		// Re-evaluate after possible interceptor override
+		const isRootPasteAfter = targetPath === '';
+		const targetNodeAfter = isRootPasteAfter ? null : this.tree.getNodeByPath(targetPath);
+		if (!isRootPasteAfter && !targetNodeAfter) {
+			return { success: false, count: 0, error: `Target node not found: ${targetPath}` };
+		}
+
+		// Guard: reject pasting into the source node or any of its descendants (same-tree)
+		if (!isRootPasteAfter && clip.sourceTreeId === this.treeId) {
+			const sep = this.treePathSeparator;
+			for (const entry of clip.entries) {
+				if (targetPath === entry.sourcePath || targetPath.startsWith(entry.sourcePath + sep)) {
+					return { success: false, count: 0, error: 'Cannot paste a node into itself or its own descendant' };
+				}
+			}
+		}
+
+		// When autoHandlePaste=false, don't modify tree — just provide clipboard data
+		if (!this.autoHandlePaste) {
+			const result: PasteResult<T> = {
+				success: true,
+				count: clip.entries.length,
+				entries: clip.entries,
+				operation: clip.operation,
+				targetPath,
+				position
+			};
+
+			// Clear clipboard and cut state
+			this.cutPaths = new Set();
+			clearClipboard();
+
+			uiLogger.debug(`[clipboard] autoHandlePaste=false — forwarding ${clip.entries.length} entries to consumer`);
+			this.onPasteHandler?.(result);
+			return result;
+		}
+
+		this._skipInsertArray = true;
+		let totalCount = 0;
+		let lastError: string | undefined;
+
+		for (const entry of clip.entries) {
+			// Always reconstruct from clipboard data snapshot (avoids infinite loop
+			// when copyNodeWithDescendants iterates live children while adding to them)
+			const transformedRoot = transformData(entry.data, totalCount, clip.operation);
+			let addResult: { success: boolean; node?: LTreeNode<T>; error?: string };
+			if (isRootPasteAfter || position === 'child') {
+				// Root paste or child: add under targetPath ('' for root)
+				addResult = this.tree.addNode(targetPath, transformedRoot);
+			} else {
+				addResult = this.tree.addNode(targetNodeAfter!.parentPath ?? '', transformedRoot);
+			}
+			if (addResult.success && addResult.node) {
+				totalCount++;
+				// Add descendants from the snapshot taken at copy/cut time
+				for (const desc of entry.descendants) {
+					const transformedDesc = transformData(desc.data, totalCount, clip.operation);
+					const parentRelPath = desc.relativePath.substring(0, desc.relativePath.lastIndexOf(this.treePathSeparator));
+					const descParentPath = parentRelPath
+						? addResult.node.path + parentRelPath
+						: addResult.node.path;
+					const descResult = this.tree.addNode(descParentPath, transformedDesc);
+					if (descResult.success) totalCount++;
+				}
+			} else {
+				lastError = addResult.error;
+			}
+		}
+
+		// If cut operation AND same tree, remove source nodes
+		if (clip.operation === 'cut' && clip.sourceTreeId === this.treeId) {
+			for (const entry of clip.entries) {
+				this.tree.removeNode(entry.sourcePath, true);
+			}
+		}
+
+		tick().then(() => {
+			this._skipInsertArray = false;
+		});
+
+		// Clear clipboard and cut state
+		this.cutPaths = new Set();
+		clearClipboard();
+
+		const result: PasteResult<T> = {
+			success: totalCount > 0,
+			count: totalCount,
+			error: totalCount === 0 ? (lastError ?? 'No nodes pasted') : undefined
+		};
+		uiLogger.debug(`[clipboard] Pasted ${totalCount} node(s)`);
+		this.onPasteHandler?.(result);
+		return result;
+	}
+
+	/** Cancel a cut operation — clears dimming and clipboard. */
+	cancelCut(): void {
+		if (getClipboardOp() === 'cut') {
+			clearClipboard();
+		}
+		this.cutPaths = new Set();
+		uiLogger.debug('[clipboard] Cut cancelled');
+	}
+
+	/** Check if the shared clipboard has content. */
+	hasClipboardContent(): boolean {
+		return hasClipboard();
+	}
+
+	/** Get the current clipboard operation type. */
+	getClipboardOperation(): 'copy' | 'cut' | null {
+		return getClipboardOp();
+	}
+
 	getExpandedPaths(): string[] {
 		return this.tree?.getExpandedPaths() || [];
 	}
@@ -999,7 +1347,7 @@ export class TreeController<T> {
 		}
 
 		dragLogger.debug('dragOver OK', { target: node.path, position: this.activeDropPosition, operation: this.currentDropOperation, hasElement: !!element });
-		this.onNodeDragOverCb?.(node, event);
+		this.onNodeDragOverHandler?.(node, event);
 	}
 
 	/** Call from ondragleave. Clears hover state when cursor leaves element bounds. */
@@ -1362,6 +1710,10 @@ export class TreeController<T> {
 		if (updates.allowCopy !== undefined) this.allowCopy = updates.allowCopy ?? false;
 		if (updates.autoHandleCopy !== undefined)
 			this.autoHandleCopy = updates.autoHandleCopy ?? true;
+		if (updates.autoHandleMove !== undefined)
+			this.autoHandleMove = updates.autoHandleMove ?? true;
+		if (updates.autoHandlePaste !== undefined)
+			this.autoHandlePaste = updates.autoHandlePaste ?? true;
 		if (updates.dragDropMode !== undefined)
 			this.dragDropMode = updates.dragDropMode ?? 'none';
 		if (updates.scrollHighlightTimeout !== undefined)
@@ -1374,16 +1726,23 @@ export class TreeController<T> {
 			this.contextMenuYOffset = updates.contextMenuYOffset ?? 0;
 
 		// Callbacks
-		if (updates.onNodeClicked !== undefined) this.onNodeClickedCb = updates.onNodeClicked;
-		if (updates.onNodeDragStart !== undefined) this.onNodeDragStartCb = updates.onNodeDragStart;
-		if (updates.onNodeDragOver !== undefined) this.onNodeDragOverCb = updates.onNodeDragOver;
+		if (updates.onNodeClick !== undefined) this.onNodeClickHandler = updates.onNodeClick;
+		if (updates.onNodeDragStart !== undefined) this.onNodeDragStartHandler = updates.onNodeDragStart;
+		if (updates.onNodeDragOver !== undefined) this.onNodeDragOverHandler = updates.onNodeDragOver;
 		if (updates.beforeDropCallback !== undefined)
-			this.beforeDropCallbackCb = updates.beforeDropCallback;
-		if (updates.onNodeDrop !== undefined) this.onNodeDropCb = updates.onNodeDrop;
-		if (updates.contextMenuCallback !== undefined)
-			this.contextMenuCallbackCb = updates.contextMenuCallback;
-		if (updates.onSelectionChanged !== undefined)
-			this.onSelectionChangedCb = updates.onSelectionChanged;
+			this.beforeDropHandler = updates.beforeDropCallback;
+		if (updates.beforeCopyCallback !== undefined)
+			this.beforeCopyHandler = updates.beforeCopyCallback;
+		if (updates.beforeCutCallback !== undefined)
+			this.beforeCutHandler = updates.beforeCutCallback;
+		if (updates.beforePasteCallback !== undefined)
+			this.beforePasteHandler = updates.beforePasteCallback;
+		if (updates.onNodeDrop !== undefined) this.onNodeDropHandler = updates.onNodeDrop;
+		if (updates.onPaste !== undefined) this.onPasteHandler = updates.onPaste;
+		if (updates.getContextMenuItemsCallback !== undefined)
+			this.getContextMenuItemsHandler = updates.getContextMenuItemsCallback;
+		if (updates.onSelectionChange !== undefined)
+			this.onSelectionChangeHandler = updates.onSelectionChange;
 	}
 
 	// ── Internal event handlers ─────────────────────────────────────────
@@ -1447,7 +1806,7 @@ export class TreeController<T> {
 			paths: [...this.selectedPaths]
 		});
 
-		this.onNodeClickedCb?.(node);
+		this.onNodeClickHandler?.(node);
 		this._notifySelectionChanged();
 		this.tree.refresh();
 	}
@@ -1462,9 +1821,9 @@ export class TreeController<T> {
 
 	/** Notify listeners about selection change */
 	private _notifySelectionChanged() {
-		if (this.onSelectionChangedCb) {
+		if (this.onSelectionChangeHandler) {
 			const nodes = this.getSelectedNodes();
-			this.onSelectionChangedCb(this.selectedPaths, nodes);
+			this.onSelectionChangeHandler(this.selectedPaths, nodes);
 		}
 	}
 
@@ -1608,7 +1967,7 @@ export class TreeController<T> {
 	}
 
 	private _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
-		if (!this.hasContextMenuSnippet && !this.contextMenuCallbackCb) {
+		if (!this.hasContextMenuSnippet && !this.getContextMenuItemsHandler) {
 			return;
 		}
 
@@ -1661,7 +2020,7 @@ export class TreeController<T> {
 		});
 		this.draggedNode = node;
 		this.isDragInProgress = true;
-		this.onNodeDragStartCb?.(node, event);
+		this.onNodeDragStartHandler?.(node, event);
 	}
 
 	_onNodeDragEnd = (event: DragEvent) => {
@@ -1704,8 +2063,8 @@ export class TreeController<T> {
 			isCrossTree: draggedNodeRef.treeId !== this.treeId
 		});
 
-		if (this.beforeDropCallbackCb) {
-			const result = await this.beforeDropCallbackCb(
+		if (this.beforeDropHandler) {
+			const result = await this.beforeDropHandler(
 				dropNode,
 				draggedNodeRef,
 				position,
@@ -1721,9 +2080,14 @@ export class TreeController<T> {
 
 		const isSameTreeDrag = draggedNodeRef.treeId === this.treeId;
 		if (isSameTreeDrag && operation === 'move' && dropNode) {
-			const result = this.moveNode(draggedNodeRef.path, dropNode.path, position);
-			this.onNodeDropCb?.(dropNode, draggedNodeRef, position, event, operation);
-			return result.success;
+			if (this.autoHandleMove) {
+				const result = this.moveNode(draggedNodeRef.path, dropNode.path, position);
+				this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+				return result.success;
+			}
+			// autoHandleMove=false: don't modify tree, just notify consumer
+			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+			return true;
 		}
 
 		if (isSameTreeDrag && operation === 'copy' && dropNode && this.autoHandleCopy) {
@@ -1742,11 +2106,11 @@ export class TreeController<T> {
 				siblingPath,
 				copyPosition
 			);
-			this.onNodeDropCb?.(dropNode, draggedNodeRef, position, event, operation);
+			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
 			return result.success;
 		}
 
-		this.onNodeDropCb?.(dropNode, draggedNodeRef, position, event, operation);
+		this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
 		return true;
 	}
 
@@ -1790,7 +2154,7 @@ export class TreeController<T> {
 				this.activeDropPosition = this.calculateDropPosition(event, nodeElement);
 			}
 			this.currentDropOperation = this.allowCopy && event.ctrlKey ? 'copy' : 'move';
-			this.onNodeDragOverCb?.(node, event);
+			this.onNodeDragOverHandler?.(node, event);
 
 			if (event.dataTransfer) {
 				event.dataTransfer.dropEffect = this.currentDropOperation;
