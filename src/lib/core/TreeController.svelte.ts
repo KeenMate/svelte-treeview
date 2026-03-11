@@ -31,6 +31,7 @@ import {
 	hasClipboard,
 	getClipboardOperation as getClipboardOp
 } from './clipboard.js';
+import type { TreeNavigation } from './navigation.js';
 
 // Re-register global API (safe to import multiple times)
 import '../global-api.js';
@@ -337,6 +338,9 @@ export class TreeController<T> {
 	virtualOverscan = $state(5);
 	virtualContainerHeight = $state<string | undefined>(undefined);
 
+	// ── Navigation strategy ────────────────────────────────────────────
+	navigation!: TreeNavigation<T>;
+
 	// ── Internal mutable state ──────────────────────────────────────────
 
 	// Context menu
@@ -598,6 +602,9 @@ export class TreeController<T> {
 			allowCopy: this.allowCopy,
 			accordionExpand: this.accordionExpand
 		};
+
+		// ── Initialize default navigation strategy ─────────────────────
+		this.navigation = this.createDefaultNavigation();
 
 		// ── Effects ─────────────────────────────────────────────────────
 		// IMPORTANT: These $effect() calls bind to the lifecycle of whichever
@@ -1769,6 +1776,7 @@ export class TreeController<T> {
 				node.isSelected = true;
 				uiLogger.debug(`[multi-select] Ctrl+click: added ${node.path}`, { selectedCount: newPaths.size });
 			}
+			node._rev = (node._rev || 0) + 1;
 			this.selectedPaths = newPaths;
 			this.lastSelectedPath = node.path;
 		} else if (shift && this.lastSelectedPath) {
@@ -1782,7 +1790,10 @@ export class TreeController<T> {
 			for (const path of rangePaths) {
 				newPaths.add(path);
 				const n = this.tree.getNodeByPath(path);
-				if (n) n.isSelected = true;
+				if (n) {
+					n.isSelected = true;
+					n._rev = (n._rev || 0) + 1;
+				}
 			}
 			this.selectedPaths = newPaths;
 			// Don't update lastSelectedPath on shift+click (anchor stays)
@@ -1793,6 +1804,7 @@ export class TreeController<T> {
 			}
 			this._clearAllSelectionFlags();
 			node.isSelected = true;
+			node._rev = (node._rev || 0) + 1;
 			const newPaths = new Set<string>();
 			newPaths.add(node.path);
 			this.selectedPaths = newPaths;
@@ -1815,7 +1827,10 @@ export class TreeController<T> {
 	private _clearAllSelectionFlags() {
 		for (const path of this.selectedPaths) {
 			const n = this.tree.getNodeByPath(path);
-			if (n) n.isSelected = false;
+			if (n) {
+				n.isSelected = false;
+				n._rev = (n._rev || 0) + 1;
+			}
 		}
 	}
 
@@ -2585,6 +2600,150 @@ export class TreeController<T> {
 
 	private generateTreeId(): string {
 		return `${Date.now()}${Math.floor(Math.random() * 10000)}`;
+	}
+
+	// ── Keyboard navigation (delegates to this.navigation strategy) ─────
+
+	/** Select a node and scroll it into view (core navigation primitive) */
+	navTo(path: string): void { this.navigation.navTo(path); }
+	/** Move to next visible node at the same level */
+	navNextSibling(): void { this.navigation.navNextSibling(); }
+	/** Move to previous visible node at the same level */
+	navPrevSibling(): void { this.navigation.navPrevSibling(); }
+	/** Move to first child (expands if collapsed) */
+	navInto(): void { this.navigation.navInto(); }
+	/** Move to parent node (no collapse) */
+	navOut(): void { this.navigation.navOut(); }
+	/** Collapse parent and select it (Backspace behavior) */
+	navBackOut(): void { this.navigation.navBackOut(); }
+	/** Toggle expand/collapse of current node */
+	navToggle(): void { this.navigation.navToggle(); }
+	/** Select first visible node */
+	navFirst(): void { this.navigation.navFirst(); }
+	/** Select last visible node */
+	navLast(): void { this.navigation.navLast(); }
+
+	/** Create the default flat-list navigation strategy (used by the HTML tree renderer) */
+	createDefaultNavigation(): TreeNavigation<T> {
+		return {
+			navTo: (path: string) => {
+				const node = this.getNodeByPath(path);
+				if (!node) return;
+				this.selectNode(path, 'replace');
+				this.scrollToPath(path, { expand: false, highlight: false, containerScroll: true });
+			},
+
+			navNextSibling: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.selectedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) {
+					this.navigation.navTo(flatNodes[0].path);
+					return;
+				}
+				const currentLevel = flatNodes[currentIndex].level;
+				for (let i = currentIndex + 1; i < flatNodes.length; i++) {
+					if (flatNodes[i].level === currentLevel) {
+						this.navigation.navTo(flatNodes[i].path);
+						return;
+					}
+				}
+			},
+
+			navPrevSibling: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.selectedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) {
+					this.navigation.navTo(flatNodes[flatNodes.length - 1].path);
+					return;
+				}
+				const currentLevel = flatNodes[currentIndex].level;
+				for (let i = currentIndex - 1; i >= 0; i--) {
+					if (flatNodes[i].level === currentLevel) {
+						this.navigation.navTo(flatNodes[i].path);
+						return;
+					}
+				}
+			},
+
+			navInto: () => {
+				const currentPath = this.selectedNode?.path;
+				if (!currentPath) return;
+				const node = this.getNodeByPath(currentPath);
+				if (!node) return;
+				const flatNodes = this.allFlatNodes;
+				const currentIndex = flatNodes.findIndex(n => n.path === currentPath);
+
+				if (node.hasChildren && !node.isExpanded && node.isCollapsible !== false) {
+					this.expandNodes(currentPath);
+					tick().then(() => {
+						const updatedFlat = this.allFlatNodes;
+						const idx = updatedFlat.findIndex(n => n.path === currentPath);
+						if (idx >= 0 && idx + 1 < updatedFlat.length) {
+							this.navigation.navTo(updatedFlat[idx + 1].path);
+						}
+					});
+				} else if (node.hasChildren && node.isExpanded) {
+					const nextIdx = currentIndex + 1;
+					if (nextIdx < flatNodes.length) {
+						this.navigation.navTo(flatNodes[nextIdx].path);
+					}
+				}
+			},
+
+			navOut: () => {
+				const currentPath = this.selectedNode?.path;
+				if (!currentPath) return;
+				const node = this.getNodeByPath(currentPath);
+				if (!node?.parentPath) return;
+				this.navigation.navTo(node.parentPath);
+			},
+
+			navBackOut: () => {
+				const currentPath = this.selectedNode?.path;
+				if (!currentPath) return;
+				const node = this.getNodeByPath(currentPath);
+				if (!node?.parentPath) return;
+				const parent = this.getNodeByPath(node.parentPath);
+				if (!parent) return;
+				if (parent.hasChildren && parent.isExpanded && parent.isCollapsible !== false) {
+					this.collapseNodes(parent.path);
+					parent._rev = (parent._rev || 0) + 1;
+				}
+				tick().then(() => {
+					this.navigation.navTo(parent.path);
+				});
+			},
+
+			navToggle: () => {
+				const currentPath = this.selectedNode?.path;
+				if (!currentPath) return;
+				const node = this.getNodeByPath(currentPath);
+				if (!node?.hasChildren || node.isCollapsible === false) return;
+				if (node.isExpanded) {
+					this.collapseNodes(currentPath);
+				} else {
+					this.expandNodes(currentPath);
+				}
+			},
+
+			navFirst: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length > 0) {
+					this.navigation.navTo(flatNodes[0].path);
+				}
+			},
+
+			navLast: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length > 0) {
+					this.navigation.navTo(flatNodes[flatNodes.length - 1].path);
+				}
+			}
+		};
 	}
 
 	findScrollableAncestor(element: HTMLElement): HTMLElement | null {

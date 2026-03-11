@@ -16,6 +16,7 @@ export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, 
 // Clipboard types & utilities
 export type { ClipboardEntry, TreeClipboard } from "./core/clipboard.js"
 export { setClipboard, getClipboard, clearClipboard, hasClipboard, getClipboardOperation } from "./core/clipboard.js"
+export type { TreeNavigation, TreeNavigationOverrides } from "./core/navigation.js"
 export type { RenderStats } from "./components/RenderCoordinator.svelte"
 export type { NodeCallbacks, NodeConfig, SelectionModifiers } from "./core/TreeController.svelte"
 

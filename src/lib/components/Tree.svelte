@@ -17,6 +17,7 @@
 	import type { RenderStats } from './RenderCoordinator.svelte.js';
 	import { TreeController } from '../core/TreeController.svelte.js';
 	import { createTreeController } from '../core/createTreeController.js';
+	import type { TreeNavigationOverrides } from '../core/navigation.js';
 
 	// NodeCallbacks and NodeConfig are now defined in ../core/TreeController.svelte.ts
 	// and re-exported from index.ts for public consumption.
@@ -155,6 +156,12 @@
 		scrollHighlightClass?: string | null | undefined;
 		contextMenuXOffset?: number | null | undefined;
 		contextMenuYOffset?: number | null | undefined;
+
+		/** Custom keydown handler. Return true to prevent default tree keyboard handling. */
+		onTreeKeydown?: (event: KeyboardEvent, controller: TreeController<T>) => boolean | void;
+
+		/** Override individual navigation methods (e.g. for custom ArrowDown/Up behavior) */
+		navigationOverrides?: TreeNavigationOverrides<T>;
 	}
 
 	let {
@@ -270,7 +277,9 @@
 		scrollHighlightTimeout = 4000,
 		scrollHighlightClass = 'ltree-scroll-highlight',
 		contextMenuXOffset = 8,
-		contextMenuYOffset = 0
+		contextMenuYOffset = 0,
+		onTreeKeydown,
+		navigationOverrides
 	}: Props = $props();
 
 	// ── Create controller ───────────────────────────────────────────────
@@ -355,6 +364,11 @@
 		contextMenuXOffset,
 		contextMenuYOffset,
 	});
+
+	// ── Apply navigation overrides if provided ─────────────────────────
+	if (navigationOverrides) {
+		controller.navigation = { ...controller.createDefaultNavigation(), ...navigationOverrides };
+	}
 
 	// ── Set contexts (must happen synchronously during component init) ──
 	setContext('Ltree', controller.tree);
@@ -723,6 +737,40 @@
 		if (updates.accordionExpand !== undefined) accordionExpand = updates.accordionExpand;
 	}
 
+	// ── Arrow key navigation ─────────────────────────────────────────────
+	function handleTreeKeydown(event: KeyboardEvent) {
+		// Ignore modifier-only key presses (Ctrl, Shift, Alt, Meta)
+		if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return;
+
+		// Don't interfere with context menu keyboard handling
+		if (controller.contextMenuVisible) return;
+
+		// Call custom handler first — return true to suppress default handling
+		if (onTreeKeydown?.(event, controller) === true) {
+			event.preventDefault();
+			return;
+		}
+
+		if (controller.allFlatNodes.length === 0) return;
+
+		let handled = true;
+
+		switch (event.key) {
+			case 'ArrowDown':  controller.navNextSibling(); break;
+			case 'ArrowUp':    controller.navPrevSibling(); break;
+			case 'ArrowRight': controller.navInto(); break;
+			case 'ArrowLeft':  controller.navOut(); break;
+			case 'Backspace':  controller.navBackOut(); break;
+			case 'Home':       controller.navFirst(); break;
+			case 'End':        controller.navLast(); break;
+			case 'Enter':
+			case ' ':          controller.navToggle(); break;
+			default:           handled = false;
+		}
+
+		if (handled) event.preventDefault();
+	}
+
 	// ── Context menu keyboard shortcut handling ──────────────────────────
 	function parseShortcut(shortcut: string): { key: string; ctrl: boolean; shift: boolean; alt: boolean } {
 		const parts = shortcut.split('+').map(p => p.trim());
@@ -781,7 +829,9 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="ltree-container"
+	tabindex="0"
 	bind:this={treeContainerRef}
+	onkeydown={handleTreeKeydown}
 	ondragenter={controller.handleTreeDragEnter}
 	ondragleave={controller.handleTreeDragLeave}
 	ondragend={controller._onNodeDragEnd}
