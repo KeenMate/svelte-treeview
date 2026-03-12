@@ -2,7 +2,7 @@
 	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types.js';
-	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import ExampleHeader from '../ExampleHeader.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type ScenarioNode = {
@@ -600,12 +600,10 @@
 </svelte:head>
 
 <div class="container">
-	<header class="example-header">
-		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>Business Scenarios</h1>
-		<p class="subtitle">Real-world tree manipulation workflows with database integration</p>
-		<RenderModeSwitch />
-	</header>
+	<ExampleHeader
+		title="Business Scenarios"
+		subtitle="Real-world tree manipulation workflows with database integration"
+	/>
 
 	<!-- Scenario Tabs -->
 	<div class="card">
@@ -714,7 +712,7 @@
 							expandLevel={3}
 							dragDropMode="cross"
 							onNodeDrop={handleDropC}
-							onNodeClicked={onNodeClickC}
+							onNodeClick={onNodeClickC}
 							selectedNode={selectedNodeC}
 							isLoading={isLoadingC}
 							{...getTreeProps()}
@@ -944,43 +942,6 @@ async function saveAll() {
 </div>
 
 <style>
-	.container {
-		max-width: 1400px;
-		margin: 0 auto;
-		padding: 2rem;
-	}
-
-	.example-header {
-		margin-bottom: 2rem;
-	}
-
-	.example-header h1 {
-		margin: 0.5rem 0;
-		font-size: 2rem;
-	}
-
-	.subtitle {
-		color: #666;
-		margin: 0;
-	}
-
-	.back-link {
-		color: #667eea;
-		text-decoration: none;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
-	.card {
-		background: white;
-		border-radius: 8px;
-		padding: 1.5rem;
-		margin-bottom: 1.5rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	}
-
 	.tabs {
 		display: flex;
 		gap: 0.5rem;

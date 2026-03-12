@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, ContextMenuEntry } from '$lib/ltree/types.js';
-	import RenderModeSwitch from '../RenderModeSwitch.svelte';
+	import ExampleHeader from '../ExampleHeader.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
 	type DemoNode = {
@@ -299,19 +299,15 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Branch Operations - Svelte Treeview</title>
+</svelte:head>
+
 <div class="container">
-	<header class="page-header">
-		<div class="header-top">
-			<a href="/examples" class="back-link">Examples</a>
-			<RenderModeSwitch />
-		</div>
-		<h1>Branch Operations</h1>
-		<p class="subtitle">
-			Cut a branch, paste it onto another node. The move is processed by a simulated
-			server (configurable delay), which recalculates paths and IDs. The tree updates
-			via <code>deleteBranch</code> + <code>insertBranch</code> with a single emission each.
-		</p>
-	</header>
+	<ExampleHeader
+		title="Branch Operations"
+		subtitle="Cut a branch, paste it onto another node with server-simulated path recalculation"
+	/>
 
 	<!-- Workflow -->
 	<section class="card workflow-card">
@@ -370,6 +366,7 @@
 					sortCallback={sortByOrder}
 					isSorted={true}
 					expandLevel={3}
+					selectedNodeClass="ltree-selected-bold"
 					getContextMenuItemsCallback={getContextMenu}
 					bind:selectedNode
 					{...getTreeProps()}
@@ -436,41 +433,6 @@ treeRef.insertBranch(targetPath, serverResult);`}</code></pre>
 </div>
 
 <style>
-	.page-header {
-		margin-bottom: 2rem;
-	}
-
-	.header-top {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 1rem;
-	}
-
-	.back-link {
-		color: var(--accent, #667eea);
-		text-decoration: none;
-		font-size: 0.9rem;
-	}
-
-	.back-link:hover {
-		text-decoration: underline;
-	}
-
-	.subtitle {
-		color: #64748b;
-		font-size: 1rem;
-		margin-top: 0.5rem;
-	}
-
-	.subtitle code {
-		font-size: 0.85em;
-		background: #f1f5f9;
-		padding: 0.1em 0.3em;
-		border-radius: 3px;
-		color: #6366f1;
-	}
-
 	/* Workflow */
 
 	.workflow-card h2 {

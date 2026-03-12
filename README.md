@@ -8,6 +8,12 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 
 ## What's New in v5.0.0-rc04
 
+- **Pluggable keyboard navigation**: New `TreeNavigation<T>` interface — each renderer (HTML, Canvas) provides its own spatial implementation. Override individual methods via `TreeNavigationOverrides<T>`.
+- **Bulk subtree operations**: `insertBranch()`, `replaceBranch()`, `deleteBranch()` on TreeController — add, replace, or remove entire subtrees with a single emission.
+- **Clipboard API**: `copyNodes()`, `cutNodes()`, `pasteNodes()`, `cancelCut()` on TreeController. Cut nodes are visually dimmed. Supports auto-handle and manual (server-driven) paste modes.
+
+### v5.0.0-rc03
+
 - **Multi-select**: Ctrl+click toggles nodes, Shift+click selects ranges, plain click replaces selection. New `selectedPaths` bindable (`Set<string>`), `onSelectionChanged` event, and `rangeSelectionMode` prop (`'visual'` vs `'logical'`).
 - **Public multi-select API**: `selectNode(path, mode)`, `selectNodes(paths)`, `deselectAll()`, `getSelectedNodes()`, `isNodeSelected(path)` on TreeController.
 - **Selection-aware context menus**: `contextMenuCallback` now receives `selectedNodes` as 3rd parameter for bulk actions.

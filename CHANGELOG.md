@@ -7,22 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [5.0.0-rc04] - 2026-03-10
+## [5.0.0-rc04] - 2026-03-12
+
+### Added
+- **`TreeNavigation<T>` interface**: Pluggable keyboard navigation per renderer. Each renderer (HTML, Canvas) provides its own spatial implementation. Users can override individual methods via `TreeNavigationOverrides<T>`.
+- **Bulk subtree operations**: `insertBranch(parentPath, nodes)`, `replaceBranch(path, nodes)`, `deleteBranch(path)` on TreeController — perform subtree-level add/replace/remove with a single tree emission.
+- **Clipboard API on TreeController**: `copyNodes(paths?)`, `cutNodes(paths?)`, `pasteNodes(targetPath, position, options?)`, `cancelCut()`, `hasClipboard()`, `getClipboardOperation()`. Cut nodes are dimmed via `cutPaths` set. Supports `autoHandlePaste` (default) and manual mode for server-driven workflows.
+- **Branch-operations example** (`/examples/branch-operations`): Server-simulated cut/paste workflow demonstrating `deleteBranch` + `insertBranch` with clipboard integration.
+
+### Fixed
+- **`.ltree-container` missing `outline: none`**: Container div now suppresses browser focus outline.
+
+## [5.0.0-rc03] - 2026-03-08
 
 ### Added
 - **Multi-select**: Ctrl+click (Cmd on Mac) toggles individual nodes in/out of selection. Shift+click selects a range from the last-clicked anchor to the current node. Plain click clears selection and selects one node.
 - **`selectedPaths` bindable prop**: `Set<string>` of all selected node paths. Two-way binding for external control.
 - **`rangeSelectionMode` prop**: `'visual'` (default) selects only visible/expanded nodes between anchor and target; `'logical'` selects all nodes in depth-first tree order including collapsed children.
 - **`onSelectionChanged` event**: `(paths: Set<string>, nodes: LTreeNode<T>[]) => void` fires when selection changes.
-- **`contextMenuCallback` 3rd parameter**: Now receives `selectedNodes?: LTreeNode<T>[]` — enables selection-aware context menus (e.g. "Export 5 nodes as CSV").
+- **`contextMenuCallback` 3rd parameter**: Now receives `selectedNodes?: LTreeNode<T>[]` — enables selection-aware context menus.
 - **Public multi-select API on TreeController**: `selectNode(path, mode)`, `selectNodes(paths)`, `deselectAll()`, `getSelectedNodes()`, `isNodeSelected(path)`.
 - **`SelectionModifiers` type export**: `{ ctrl: boolean; shift: boolean }` for modifier-aware click handling.
 - **`.ltree-multi-selected` CSS class**: Styling for nodes in a multi-selection.
-- **Right-click multi-select awareness**: Right-clicking a node already in the selection preserves it; right-clicking an unselected node clears selection and selects only that node.
-
-## [5.0.0-rc03] - 2026-03-08
-
-### Added
 - **Unified Context Menu types** (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`): Shared type system across svelte-treeview and canvas-tree. Breaking change from old API: `title` → `label`, `callback` → `onclick`, `isDivider` flag replaced by separate `ContextMenuDivider` type with `divider: true` discriminator.
   - **Named dividers**: `{ divider: true, label: 'Section' }` renders as `──── Section ────`
   - **Keyboard shortcuts**: `shortcut` field renders right-aligned hint and activates on keypress when menu is open

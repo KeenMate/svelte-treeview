@@ -182,7 +182,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={3}
-				contextMenuCallback={getContextMenu}
+				getContextMenuItemsCallback={getContextMenu}
 				contextMenuXOffset={xOffset}
 				contextMenuYOffset={yOffset}
 				shouldDisplayContextMenuInDebugMode={debugMode}
@@ -260,7 +260,7 @@
 	<!-- Callback API Reference -->
 	<div class="card">
 		<h2>Callback API</h2>
-		<p class="description">Use <code>contextMenuCallback</code> to dynamically generate menu entries based on the node.</p>
+		<p class="description">Use <code>getContextMenuItemsCallback</code> to dynamically generate menu entries based on the node.</p>
 
 		<div class="code-block">
 			<pre>{`import type { ContextMenuEntry } from '@keenmate/svelte-treeview';
@@ -407,7 +407,7 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
 
 		<div class="code-block">
 			<pre>{`<Tree
-  contextMenuCallback={getContextMenu}
+  getContextMenuItemsCallback={getContextMenu}
   contextMenuXOffset={8}   // Default: 8px right of cursor
   contextMenuYOffset={0}   // Default: 0px below cursor
 />`}</pre>

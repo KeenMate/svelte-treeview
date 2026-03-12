@@ -71,7 +71,7 @@
 				isSorted={true}
 				expandLevel={2}
 				bind:selectedNode
-				onNodeClicked={handleNodeClick}
+				onNodeClick={handleNodeClick}
 				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}

@@ -58,7 +58,7 @@
 		});
 	};
 
-	function onNodeClicked(node: any) {
+	function onNodeClick(node: any) {
 		console.log('Node clicked:', node);
 	}
 
@@ -314,10 +314,10 @@
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}
 						shouldToggleOnNodeClick={true}
-						{onNodeClicked}
+						{onNodeClick}
 						{contextMenuXOffset}
 						{contextMenuYOffset}
-						contextMenuCallback={createContextMenu}
+						getContextMenuItemsCallback={createContextMenu}
 						shouldDisplayContextMenuInDebugMode={debugContextMenu}
 					>
 						{#snippet nodeTemplate(node: any)}
@@ -392,7 +392,7 @@
 				<div class="card-body">
 					<ul class="small">
 						<li><strong>Right-click</strong> on any tree node to open context menu</li>
-						<li>Menu items are generated dynamically via <code>contextMenuCallback</code></li>
+						<li>Menu items are generated dynamically via <code>getContextMenuItemsCallback</code></li>
 						<li>Different nodes have different permissions (edit/delete)</li>
 						<li>Context menu actions show alerts for demonstration</li>
 						<li>Menu position includes configurable X/Y offset</li>
@@ -508,10 +508,10 @@
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={false}
 						shouldToggleOnNodeClick={true}
-						{onNodeClicked}
+						{onNodeClick}
 						{contextMenuXOffset}
 						{contextMenuYOffset}
-						contextMenuCallback={createAdvancedContextMenu}
+						getContextMenuItemsCallback={createAdvancedContextMenu}
 						shouldDisplayContextMenuInDebugMode={debugContextMenu2}
 					>
 						{#snippet nodeTemplate(node: any)}

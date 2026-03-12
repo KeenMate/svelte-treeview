@@ -153,7 +153,7 @@
 		}
 	}
 
-	function onNodeClicked(node: any) {
+	function onNodeClick(node: any) {
 		console.log('Node clicked:', node);
 	}
 
@@ -202,7 +202,7 @@
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}
 						shouldToggleOnNodeClick={true}
-						{onNodeClicked}
+						{onNodeClick}
 					>
 						{#snippet nodeTemplate(node: any)}
 							<div class="d-flex align-items-center">
