@@ -86,84 +86,63 @@ For extremely large trees (50,000+ nodes), implement external virtualization:
   </div>
 </VirtualList>
 
-MULTI-SELECT MODE
------------------
-Implement checkbox-based multi-selection:
+MULTI-SELECT (BUILT-IN, v5.0.0-rc03+)
+--------------------------------------
+Built-in multi-select — no custom implementation needed:
 
 <script>
-  let selectedPaths = $state(new Set());
+  let selectedPaths = $state(new Set<string>());
 
-  function toggleSelection(node) {
-    const newSet = new Set(selectedPaths);
-    if (newSet.has(node.path)) {
-      newSet.delete(node.path);
-    } else {
-      newSet.add(node.path);
-    }
-    selectedPaths = newSet;
-  }
-
-  function isSelected(path) {
-    return selectedPaths.has(path);
+  function handleSelectionChanged(paths: Set<string>, nodes: LTreeNode<MyItem>[]) {
+    console.log(`${paths.size} nodes selected`);
   }
 </script>
 
-<Tree {data}>
-  {#snippet nodeTemplate(node)}
-    <label>
-      <input
-        type="checkbox"
-        checked={isSelected(node.path)}
-        onchange={() => toggleSelection(node)}
-      />
-      {node.data.name}
-    </label>
-  {/snippet}
-</Tree>
+<Tree
+  {data}
+  bind:selectedPaths
+  rangeSelectionMode="visual"
+  onSelectionChanged={handleSelectionChanged}
+/>
 
-KEYBOARD NAVIGATION
--------------------
-Add keyboard support:
+Interactions:
+- Ctrl+click (Cmd on Mac): toggle individual node
+- Shift+click: range select from anchor to target
+- Plain click: clear selection, select one
 
-<script>
-  let selectedNode = $state(null);
-  let treeRef;
+rangeSelectionMode:
+- "visual" (default): selects only visible/expanded nodes
+- "logical": selects all nodes in depth-first order including collapsed
 
-  function handleKeydown(e) {
-    if (!selectedNode) return;
+TreeController API:
+- treeRef.selectNode(path, mode)    // mode: 'toggle' | 'range' | 'replace'
+- treeRef.selectNodes(paths)
+- treeRef.deselectAll()
+- treeRef.getSelectedNodes()
+- treeRef.isNodeSelected(path)
 
-    switch (e.key) {
-      case 'ArrowDown':
-        selectNext();
-        break;
-      case 'ArrowUp':
-        selectPrevious();
-        break;
-      case 'ArrowRight':
-        treeRef.expandNodes(selectedNode.path);
-        break;
-      case 'ArrowLeft':
-        treeRef.collapseNodes(selectedNode.path);
-        break;
-      case 'Enter':
-        activateNode(selectedNode);
-        break;
-    }
-  }
+KEYBOARD NAVIGATION (BUILT-IN)
+-------------------------------
+Keyboard navigation is built into the Tree component — no custom implementation needed.
+The tree container is focusable and handles arrow keys automatically.
 
-  function selectNext() {
-    const flat = treeRef.ltree.flatTreeNodes;
-    const idx = flat.findIndex(n => n.path === selectedNode.path);
-    if (idx < flat.length - 1) {
-      selectedNode = flat[idx + 1];
-      treeRef.scrollToPath(selectedNode.path);
-    }
-  }
-</script>
+Built-in keys:
+- ArrowDown/Up: next/previous visible node
+- ArrowRight: expand node or move to first child
+- ArrowLeft: collapse node or move to parent
+- Home/End: first/last visible node
+- Enter/Space: toggle expand/collapse
+- Backspace: collapse parent and select it
 
-<div onkeydown={handleKeydown} tabindex="0">
-  <Tree bind:this={treeRef} bind:selectedNode />
-</div>
+For canvas trees, navigation is spatial (based on node positions) and layout-aware.
+
+Custom navigation overrides (canvas, v5.0.0-rc04+):
+<CanvasTree
+  navigationOverrides={{
+    navInto: () => { /* custom enter-children logic */ },
+    // other methods use default spatial nav
+  }}
+/>
 
 UNDO/REDO SYSTEM
 ----------------
@@ -403,36 +382,38 @@ PERMISSION-BASED ACTIONS
   };
 
   function createContextMenu(node, closeMenuCallback) {
-    const items = [];
+    const items: ContextMenuEntry[] = [];
 
     items.push({
       icon: '📂',
-      title: 'Open',
-      callback: () => { openItem(node); closeMenuCallback(); }
+      label: 'Open',
+      onclick: () => { openItem(node); closeMenuCallback(); }
     });
 
     if (permissions.canEdit) {
       items.push({
         icon: '✏️',
-        title: 'Edit',
-        callback: () => editItem(node)
+        label: 'Edit',
+        shortcut: 'F2',
+        onclick: () => editItem(node)
       });
     }
 
     if (permissions.canCreate && node.data.type === 'folder') {
       items.push({
         icon: '➕',
-        title: 'New Item',
-        callback: () => createItem(node)
+        label: 'New Item',
+        onclick: () => createItem(node)
       });
     }
 
     if (permissions.canDelete) {
-      items.push({ isDivider: true });
+      items.push({ divider: true });
       items.push({
         icon: '🗑️',
-        title: 'Delete',
-        callback: () => deleteItem(node)
+        label: 'Delete',
+        className: 'danger',
+        onclick: () => deleteItem(node)
       });
     }
 

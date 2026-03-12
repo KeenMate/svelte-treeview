@@ -3,45 +3,79 @@ CONTEXT MENU
 
 CRITICAL: Two approaches for context menus
 - Callback-based (recommended): contextMenuCallback prop
-- Snippet-based: contextMenu snippet
-- Both support dynamic items, icons, disabled states
+- Snippet-based: ContextMenuItemC / ContextMenuDividerC components inside contextMenu snippet
+- Both support dynamic items, icons, keyboard shortcuts, submenus, disabled/hidden states
+
+TYPES (v5.0.0-rc03+)
+---------------------
+import type { ContextMenuEntry, ContextMenuItem, ContextMenuDivider } from '@keenmate/svelte-treeview';
+
+interface ContextMenuItem {
+  id?: string;
+  label: string;              // Menu item text (was "title" in old API)
+  icon?: string;              // Optional icon (emoji, text, or Font Awesome class)
+  shortcut?: string;          // Keyboard shortcut hint (e.g. "Ctrl+C", "F2")
+  isDisabled?: boolean;       // Disable the item
+  isVisible?: boolean;        // Hide the item (default true)
+  className?: string;         // Custom CSS class (e.g. "danger")
+  onclick?: () => void | Promise<void>;  // Action (was "callback" in old API)
+  children?: ContextMenuEntry[];  // Submenu items
+}
+
+interface ContextMenuDivider {
+  divider: true;              // Discriminator (was "isDivider" in old API)
+  label?: string;             // Named divider: ──── [label] ────
+}
+
+type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;
 
 CALLBACK-BASED CONTEXT MENU
----------------------------
+----------------------------
 <script>
-  import type { ContextMenuItem, LTreeNode } from '@keenmate/svelte-treeview';
+  import type { ContextMenuEntry, LTreeNode } from '@keenmate/svelte-treeview';
 
-  function createContextMenu(node: LTreeNode<MyItem>, closeMenuCallback: () => void): ContextMenuItem[] {
-    const items: ContextMenuItem[] = [];
-
-    // Basic item
-    items.push({
-      icon: '📂',
-      title: 'Open',
-      callback: () => alert(`Opening ${node.data.name}`)
-    });
-
-    // Conditional item
-    if (node.data.canEdit) {
-      items.push({
-        icon: '✏️',
-        title: 'Edit',
-        callback: () => editItem(node.data)
-      });
-    }
-
-    // Divider
-    items.push({ isDivider: true });
-
-    // Disabled item
-    items.push({
-      icon: '🗑️',
-      title: 'Delete',
-      isDisabled: !node.data.canDelete,
-      callback: () => deleteItem(node.data)
-    });
-
-    return items;
+  function createContextMenu(
+    node: LTreeNode<MyItem>,
+    closeMenuCallback: () => void,
+    selectedNodes?: LTreeNode<MyItem>[]
+  ): ContextMenuEntry[] {
+    return [
+      // Basic item with icon and shortcut
+      {
+        label: 'Open',
+        icon: '📂',
+        shortcut: 'Enter',
+        onclick: () => openItem(node.data)
+      },
+      // Named divider
+      { divider: true, label: 'Edit' },
+      // Submenu
+      {
+        label: 'Move to...',
+        icon: '📁',
+        children: [
+          { label: 'Inbox', onclick: () => moveTo(node, 'inbox') },
+          { label: 'Archive', onclick: () => moveTo(node, 'archive') },
+        ]
+      },
+      // Divider
+      { divider: true },
+      // Danger item
+      {
+        label: 'Delete',
+        icon: '🗑️',
+        shortcut: 'Del',
+        className: 'danger',
+        isDisabled: node.data?.isProtected,
+        onclick: () => deleteItem(node.data)
+      },
+      // Selection-aware item (rc03+)
+      ...(selectedNodes && selectedNodes.length > 1 ? [{
+        label: `Export ${selectedNodes.length} items`,
+        icon: '📤',
+        onclick: () => exportItems(selectedNodes)
+      }] : [])
+    ];
   }
 </script>
 
@@ -50,300 +84,118 @@ CALLBACK-BASED CONTEXT MENU
   contextMenuCallback={createContextMenu}
 />
 
-CONTEXT MENU ITEM INTERFACE
----------------------------
-interface ContextMenuItem {
-  icon?: string;           // Optional icon (emoji or text)
-  title: string;           // Menu item text
-  isDisabled?: boolean;    // Disable the item
-  callback: () => void | Promise<void>;  // Action
-  isDivider?: boolean;     // Render as divider
-  className?: string;      // Custom CSS class
-}
-
 SNIPPET-BASED CONTEXT MENU
---------------------------
+---------------------------
+<script>
+  import { ContextMenuItemC, ContextMenuDividerC } from '@keenmate/svelte-treeview';
+</script>
+
 <Tree {data}>
   {#snippet contextMenu(node, closeMenu)}
-    <div class="ltree-context-menu-item" onclick={() => {
-      openItem(node.data);
-      closeMenu();
-    }}>
-      📂 Open
-    </div>
-
-    <div class="ltree-context-menu-divider"></div>
-
-    <div
-      class="ltree-context-menu-item"
-      class:ltree-context-menu-item-disabled={!node.data.canDelete}
-      onclick={() => {
-        if (node.data.canDelete) {
-          deleteItem(node.data);
-          closeMenu();
-        }
-      }}
-    >
-      🗑️ Delete
-    </div>
+    <ContextMenuItemC
+      label="Open"
+      icon="📂"
+      shortcut="Enter"
+      onclick={() => { openItem(node.data); closeMenu(); }}
+    />
+    <ContextMenuDividerC label="Edit" />
+    <ContextMenuItemC label="Rename" icon="✏️" shortcut="F2" onclick={() => rename(node)} />
+    {#if node.data?.canDelete}
+      <ContextMenuItemC
+        label="Delete"
+        icon="🗑️"
+        className="danger"
+        onclick={() => deleteItem(node.data)}
+      />
+    {/if}
   {/snippet}
 </Tree>
 
-POSITION OFFSET
----------------
-Adjust menu position relative to cursor:
-
-<Tree
-  contextMenuCallback={createMenu}
-  contextMenuXOffset={8}   <!-- Horizontal offset (default: 8px) -->
-  contextMenuYOffset={0}   <!-- Vertical offset (default: 0px) -->
-/>
-
-CLOSE MENU CALLBACK
--------------------
-Callback receives closeMenu function for programmatic control:
-
-function createContextMenu(node, closeMenuCallback) {
-  return [
-    {
-      title: 'Action',
-      callback: async () => {
-        const success = await doSomething();
-        if (success) {
-          closeMenuCallback();  // Close only on success
-        }
-      }
-    }
-  ];
-}
-
-<Tree contextMenuCallback={createContextMenu} />
-
-ASYNC CALLBACKS
----------------
-Menu item callbacks can be async:
+SUBMENUS
+--------
+Nested menus via children array:
 
 {
-  title: 'Save to Server',
-  callback: async () => {
-    try {
-      await saveToServer(node.data);
-      showSuccess('Saved!');
-    } catch (error) {
-      showError('Failed to save');
-      // Menu stays open on error
-    }
-  }
+  label: 'Sort by',
+  children: [
+    { label: 'Name', onclick: () => sortBy('name') },
+    { label: 'Date', onclick: () => sortBy('date') },
+    { divider: true },
+    { label: 'Ascending', onclick: () => sortDir('asc') },
+    { label: 'Descending', onclick: () => sortDir('desc') },
+  ]
 }
 
-CLOSE CONTEXT MENU PROGRAMMATICALLY
------------------------------------
-<script>
-  let treeRef;
+KEYBOARD SHORTCUTS
+------------------
+When context menu is open, pressing a shortcut key triggers the matching item:
 
-  function closeMenuExternally() {
-    treeRef.closeContextMenu();
-  }
-</script>
+{ label: 'Copy', shortcut: 'Ctrl+C', onclick: () => copyNode() }
+{ label: 'Paste', shortcut: 'Ctrl+V', onclick: () => pasteNode() }
+{ label: 'Rename', shortcut: 'F2', onclick: () => startRename() }
 
-<Tree bind:this={treeRef} ... />
+Supported modifiers: Ctrl, Shift, Alt. Escape closes the menu.
+
+NAMED DIVIDERS
+--------------
+{ divider: true, label: 'Actions' }    // ──── Actions ────
+{ divider: true }                       // ──────────────────
+
+VISIBILITY CONTROL
+------------------
+Hide items dynamically (callback approach):
+{ label: 'Admin Panel', isVisible: user.isAdmin, onclick: () => openAdmin() }
+
+In snippet approach, use {#if}:
+{#if user.isAdmin}
+  <ContextMenuItemC label="Admin Panel" onclick={() => openAdmin()} />
+{/if}
+
+POSITION OFFSET
+---------------
+<Tree
+  contextMenuCallback={createMenu}
+  contextMenuXOffset={8}
+  contextMenuYOffset={0}
+/>
 
 AUTO-CLOSE BEHAVIOR
 -------------------
 Context menu automatically closes on:
 - Click outside the menu
-- Scroll events (mouse wheel, scrollbar, touch)
+- Scroll events
 - Another right-click
 - Pressing Escape
 - Window resize
 
-CUSTOM ITEM STYLING
--------------------
-Add custom classes to items:
-
-{
-  title: 'Delete',
-  className: 'text-danger',  // Your CSS class
-  callback: () => deleteItem()
-}
-
-Built-in CSS classes:
+STYLING
+-------
+CSS classes:
 - .ltree-context-menu - Menu container
 - .ltree-context-menu-item - Menu item
-- .ltree-context-menu-item-disabled - Disabled item
-- .ltree-context-menu-icon - Icon container
 - .ltree-context-menu-divider - Divider line
-
-CONDITIONAL MENUS
------------------
-Show different menus based on node type:
-
-function createContextMenu(node, closeMenuCallback) {
-  if (node.data?.type === 'folder') {
-    return [
-      { title: 'New File', callback: () => newFile(node) },
-      { title: 'New Folder', callback: () => newFolder(node) },
-      { isDivider: true },
-      { title: 'Rename', callback: () => rename(node) },
-      { title: 'Delete', callback: () => deleteFolder(node) }
-    ];
-  }
-
-  if (node.data?.type === 'file') {
-    return [
-      { title: 'Open', callback: () => openFile(node) },
-      { title: 'Download', callback: () => downloadFile(node) },
-      { isDivider: true },
-      { title: 'Rename', callback: () => rename(node) },
-      { title: 'Delete', callback: () => deleteFile(node) }
-    ];
-  }
-
-  return [];  // No menu
-}
-
-ICONS
------
-Icons can be:
-- Emoji: '📁', '✏️', '🗑️'
-- Text: 'Edit', '[X]'
-- Unicode: '\u{1F4C1}'
-
-Example with emojis:
-{
-  icon: '📂',
-  title: 'Open Folder',
-  callback: () => openFolder()
-}
-
-DIVIDERS
---------
-Add visual separation:
-
-[
-  { title: 'Cut', callback: () => cut() },
-  { title: 'Copy', callback: () => copy() },
-  { title: 'Paste', callback: () => paste() },
-  { isDivider: true },  // <-- Divider here
-  { title: 'Delete', callback: () => del() }
-]
-
-DISABLED ITEMS
---------------
-Disable based on conditions:
-
-{
-  title: 'Paste',
-  isDisabled: clipboard.isEmpty(),
-  callback: () => paste()
-}
-
-{
-  title: 'Delete',
-  isDisabled: node.data.isReadOnly,
-  callback: () => deleteItem()
-}
+- .ltree-context-menu-divider-label - Named divider text
+- .ltree-context-menu-label - Item label
+- .ltree-context-menu-shortcut - Shortcut hint
+- .ltree-context-menu-arrow - Submenu arrow indicator
+- .ltree-context-submenu - Submenu container
 
 DEBUG MODE
 ----------
-For CSS development, show menu persistently:
-
 <Tree
   contextMenuCallback={createMenu}
   shouldDisplayContextMenuInDebugMode={true}
-  shouldDisplayDebugInformation={true}
 />
-
-Debug mode:
-- Shows menu at fixed position (200px right, 100px down from tree)
-- Uses second node (or first if only one)
-- Menu stays visible for styling
-
-COMMON PATTERNS
----------------
-File explorer menu:
-function createMenu(node, closeMenuCallback) {
-  const items = [];
-
-  if (node.data?.type === 'folder') {
-    items.push(
-      { icon: '📄', title: 'New File', callback: () => newFile(node) },
-      { icon: '📁', title: 'New Folder', callback: () => newFolder(node) }
-    );
-  }
-
-  items.push(
-    { isDivider: true },
-    { icon: '✏️', title: 'Rename', callback: () => rename(node) },
-    { icon: '📋', title: 'Copy Path', callback: () => copyPath(node) },
-    { isDivider: true },
-    {
-      icon: '🗑️',
-      title: 'Delete',
-      isDisabled: node.data.isSystem,
-      callback: () => deleteItem(node)
-    }
-  );
-
-  return items;
-}
-
-User management menu:
-function createMenu(node, closeMenuCallback) {
-  const user = node.data;
-  return [
-    { icon: '👤', title: 'View Profile', callback: () => viewProfile(user) },
-    { icon: '✉️', title: 'Send Email', callback: () => sendEmail(user) },
-    { isDivider: true },
-    {
-      icon: '🔒',
-      title: user.isActive ? 'Deactivate' : 'Activate',
-      callback: () => toggleActive(user)
-    },
-    {
-      icon: '🗑️',
-      title: 'Remove',
-      isDisabled: user.isAdmin,
-      callback: () => removeUser(user)
-    }
-  ];
-}
-
-STYLING CONTEXT MENU
---------------------
-Override default styles:
-
-.ltree-context-menu {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.ltree-context-menu-item {
-  padding: 8px 12px;
-  border-radius: 4px;
-}
-
-.ltree-context-menu-item:hover {
-  background: #2a2a2a;
-}
-
-.ltree-context-menu-item-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 BEST PRACTICES
 --------------
-✅ Use callback-based approach for complex menus
-✅ Show icons for quick recognition
-✅ Use dividers to group related actions
-✅ Disable dangerous actions when not safe
-✅ Close menu after successful action
-✅ Handle async operations gracefully
+✅ Use label (not title), onclick (not callback), { divider: true } (not isDivider)
+✅ Use shortcuts for common actions
+✅ Group related items with named dividers
+✅ Use className="danger" for destructive actions
+✅ Use isVisible to hide items contextually
+✅ Use selectedNodes parameter for bulk actions
 
+❌ Don't use old API (title, callback, isDivider) — use new types
 ❌ Don't create menus with too many items (>10)
-❌ Don't forget to close menu after action
-❌ Don't use blocking operations in callbacks
-❌ Don't make all items look the same (use icons)
+❌ Don't forget to handle async onclick errors

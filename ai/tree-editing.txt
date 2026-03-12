@@ -332,6 +332,60 @@ Edit node name inline:
   {/snippet}
 </Tree>
 
+BULK SUBTREE OPERATIONS (rc04+)
+-------------------------------
+Insert, replace, or delete entire subtrees with a single tree emission:
+
+insertBranch(parentPath: string, nodes: T[]): void
+- Inserts an array of nodes as a subtree under parentPath
+- All nodes are inserted in one batch, triggering a single reactive update
+
+replaceBranch(path: string, nodes: T[]): void
+- Removes the node at path and all descendants, then inserts new nodes
+- Useful for server-driven updates where a subtree is replaced wholesale
+
+deleteBranch(path: string): void
+- Removes the node at path and all its descendants in one operation
+
+Example: server-driven cut/paste
+<script>
+  async function handlePaste(targetPath) {
+    const response = await api.paste(clipboardData, targetPath);
+    // Server returns the updated subtree
+    treeRef.deleteBranch(clipboardData.sourcePath);
+    treeRef.insertBranch(targetPath, response.newNodes);
+  }
+</script>
+
+CLIPBOARD API (rc04+)
+---------------------
+Built-in clipboard for copy/cut/paste workflows:
+
+// Copy selected nodes (or specific paths)
+treeRef.copyNodes();                    // copies selectedPaths
+treeRef.copyNodes(['1.2', '1.3']);      // copies specific paths
+
+// Cut selected nodes (dims them visually, removes on paste)
+treeRef.cutNodes();                     // cuts selectedPaths
+treeRef.cutNodes(['1.2']);              // cuts specific paths
+
+// Paste under target node
+treeRef.pasteNodes('2.1', 'child');     // paste as children of 2.1
+treeRef.pasteNodes('2.1', 'after');     // paste as siblings after 2.1
+
+// Cancel cut (removes dimming)
+treeRef.cancelCut();
+
+// Check clipboard state
+treeRef.hasClipboard();                 // boolean
+treeRef.getClipboardOperation();        // 'copy' | 'cut' | null
+
+Cut nodes are tracked via treeRef.cutPaths (Set<string>) and rendered at reduced opacity.
+
+Manual paste mode (server-driven):
+treeRef.pasteNodes('2.1', 'child', { autoHandlePaste: false });
+// Returns clipboard data for you to send to server, doesn't modify tree
+
 BATCH OPERATIONS
 ----------------
 Multiple operations at once:

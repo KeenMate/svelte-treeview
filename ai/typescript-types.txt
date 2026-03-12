@@ -38,8 +38,17 @@ import type {
   Ltree,               // Tree instance interface
   DropPosition,        // 'before' | 'after' | 'child'
 
-  // Context menu
-  ContextMenuItem,     // Menu item interface
+  // Context menu (v5.0.0-rc03+ unified types)
+  ContextMenuEntry,    // ContextMenuItem | ContextMenuDivider
+  ContextMenuItem,     // { label, icon?, shortcut?, onclick?, children?, ... }
+  ContextMenuDivider,  // { divider: true, label?: string }
+
+  // Navigation (v5.0.0-rc04+)
+  TreeNavigation,      // Interface for pluggable keyboard nav
+  TreeNavigationOverrides,  // Partial overrides
+
+  // Multi-select (v5.0.0-rc03+)
+  SelectionModifiers,  // { ctrl: boolean; shift: boolean }
 
   // Results
   InsertArrayResult,   // Insert operation result
@@ -89,34 +98,55 @@ function getAllowedPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
   return null;  // all positions
 }
 
-CONTEXTMENUITEM INTERFACE
--------------------------
+CONTEXT MENU TYPES (v5.0.0-rc03+)
+----------------------------------
 interface ContextMenuItem {
+  id?: string;
+  label: string;              // was "title" in old API
   icon?: string;
-  title: string;
+  shortcut?: string;          // e.g. "Ctrl+C", "F2"
   isDisabled?: boolean;
-  callback: () => void | Promise<void>;
-  isDivider?: boolean;
-  className?: string;
+  isVisible?: boolean;
+  className?: string;         // e.g. "danger"
+  onclick?: () => void | Promise<void>;  // was "callback" in old API
+  children?: ContextMenuEntry[];  // submenu items
 }
 
+interface ContextMenuDivider {
+  divider: true;              // was "isDivider" flag in old API
+  label?: string;             // named divider: ──── [label] ────
+}
+
+type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;
+
 Usage:
-function createMenu(node: LTreeNode<MyItem>, closeMenu: () => void): ContextMenuItem[] {
+function createMenu(
+  node: LTreeNode<MyItem>,
+  closeMenu: () => void,
+  selectedNodes?: LTreeNode<MyItem>[]
+): ContextMenuEntry[] {
   return [
-    {
-      icon: '📂',
-      title: 'Open',
-      callback: () => openItem(node.data)
-    },
-    { isDivider: true },
-    {
-      icon: '🗑️',
-      title: 'Delete',
-      isDisabled: node.data?.isProtected,
-      callback: () => deleteItem(node.data)
-    }
+    { label: 'Open', icon: '📂', shortcut: 'Enter', onclick: () => openItem(node.data) },
+    { divider: true, label: 'Edit' },
+    { label: 'Delete', icon: '🗑️', className: 'danger', onclick: () => deleteItem(node.data) }
   ];
 }
+
+TREENAVIGATION INTERFACE (v5.0.0-rc04+)
+----------------------------------------
+interface TreeNavigation<T> {
+  navTo(path: string): void;
+  navNextSibling(): void;
+  navPrevSibling(): void;
+  navInto(): void;
+  navOut(): void;
+  navBackOut(): void;
+  navToggle(): void;
+  navFirst(): void;
+  navLast(): void;
+}
+
+type TreeNavigationOverrides<T> = Partial<TreeNavigation<T>>;
 
 INSERTARRAYRESULT INTERFACE
 ---------------------------
@@ -195,11 +225,12 @@ getDisplayValueCallback?: (node: LTreeNode<T>) => string;
 getSearchValueCallback?: (node: LTreeNode<T>) => string;
 getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null;
 
-// Context menu
+// Context menu (v5.0.0-rc03+ — label/onclick/divider API)
 contextMenuCallback?: (
   node: LTreeNode<T>,
-  closeMenu: () => void
-) => ContextMenuItem[];
+  closeMenu: () => void,
+  selectedNodes?: LTreeNode<T>[]  // multi-select aware (rc03+)
+) => ContextMenuEntry[];
 
 // Sort
 sortCallback?: (nodes: LTreeNode<T>[]) => LTreeNode<T>[];

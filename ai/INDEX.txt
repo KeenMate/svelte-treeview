@@ -10,8 +10,8 @@ import-patterns.txt      - How to import the component, types, styles
 data-handling.txt        - Path-based hierarchy, LTree data structure
 drag-drop.txt            - Drag and drop, positions, touch support, restrictions
 search-features.txt      - FlexSearch, async indexing, filtering
-context-menu.txt         - Callback-based and snippet-based menus
-tree-editing.txt         - addNode, moveNode, removeNode methods
+context-menu.txt         - Callback-based and snippet-based menus (unified types: label/onclick/divider)
+tree-editing.txt         - addNode, moveNode, removeNode, bulk ops (insertBranch/deleteBranch), clipboard
 styling-theming.txt      - CSS variables, SCSS, classes
 events-callbacks.txt     - Events, callbacks, handlers
 typescript-types.txt     - Types and interfaces
@@ -38,8 +38,17 @@ bodyClass → styling-theming.txt
 C
 -
 Callbacks → events-callbacks.txt, data-handling.txt
+cancelCut → tree-editing.txt
+clipboard → tree-editing.txt
 closeContextMenu → context-menu.txt
 collapseAll → basic-setup.txt, tree-editing.txt
+ContextMenuDivider → context-menu.txt, typescript-types.txt
+ContextMenuEntry → context-menu.txt, typescript-types.txt
+ContextMenuItemC → context-menu.txt
+ContextMenuDividerC → context-menu.txt
+copyNodes → tree-editing.txt
+cutNodes → tree-editing.txt
+cutPaths → tree-editing.txt
 collapseIconClass → styling-theming.txt
 collapseNodes → basic-setup.txt
 Context menu → context-menu.txt
@@ -53,6 +62,8 @@ Ctrl+drag → drag-drop.txt
 D
 -
 data → basic-setup.txt, data-handling.txt
+deleteBranch → tree-editing.txt
+deselectAll → advanced-patterns.txt
 displayValueMember → data-handling.txt
 dropPlaceholder → drag-drop.txt, basic-setup.txt
 Drag and drop → drag-drop.txt
@@ -103,6 +114,7 @@ Import → import-patterns.txt
 indexerBatchSize → search-features.txt, performance.txt
 indexerTimeout → search-features.txt
 initialBatchSize → performance.txt
+insertBranch → tree-editing.txt
 insertResult → data-handling.txt
 Installation → basic-setup.txt
 isCollapsibleMember → data-handling.txt
@@ -116,7 +128,7 @@ isSorted → data-handling.txt
 
 K
 -
-Keyboard → basic-setup.txt
+Keyboard → basic-setup.txt, advanced-patterns.txt
 
 L
 -
@@ -131,14 +143,19 @@ M
 -
 maxBatchSize → performance.txt
 moveNode → tree-editing.txt
+multiSelect → advanced-patterns.txt
 
 N
 -
+navigationOverrides → advanced-patterns.txt
+navInto → typescript-types.txt, advanced-patterns.txt
+navOut → typescript-types.txt, advanced-patterns.txt
 nodeTemplate → basic-setup.txt, styling-theming.txt
 
 O
 -
 onNodeClicked → events-callbacks.txt
+onSelectionChanged → advanced-patterns.txt
 onRenderComplete → performance.txt
 onRenderProgress → performance.txt
 onRenderStart → performance.txt
@@ -149,6 +166,7 @@ orderMember → drag-drop.txt, tree-editing.txt
 
 P
 -
+pasteNodes → tree-editing.txt
 parentPathMember → data-handling.txt
 Path structure → data-handling.txt
 pathMember → data-handling.txt, basic-setup.txt
@@ -159,7 +177,9 @@ progressiveRender → performance.txt
 
 R
 -
+rangeSelectionMode → advanced-patterns.txt
 refreshNode → tree-editing.txt
+replaceBranch → tree-editing.txt
 refreshSiblings → tree-editing.txt
 removeNode → tree-editing.txt
 Root drop zone → drag-drop.txt
@@ -177,6 +197,8 @@ searchText → search-features.txt, basic-setup.txt
 searchValueMember → search-features.txt, data-handling.txt
 selectedNode → basic-setup.txt, events-callbacks.txt
 selectedNodeClass → styling-theming.txt
+selectedPaths → advanced-patterns.txt
+selectNode → advanced-patterns.txt
 shouldDisplayDebugInformation → basic-setup.txt, performance.txt
 shouldToggleOnNodeClick → basic-setup.txt
 shouldUseInternalSearchIndex → search-features.txt
@@ -192,6 +214,8 @@ T
 Touch drag → drag-drop.txt
 Tree → basic-setup.txt, typescript-types.txt
 TreeController → basic-setup.txt, advanced-patterns.txt
+TreeNavigation → typescript-types.txt, advanced-patterns.txt
+TreeNavigationOverrides → typescript-types.txt, advanced-patterns.txt
 TreeProvider → basic-setup.txt, advanced-patterns.txt
 treeId → basic-setup.txt
 treePathSeparator → data-handling.txt
@@ -253,6 +277,15 @@ A: → performance.txt
 Q: How do I copy nodes instead of move?
 A: → drag-drop.txt (Ctrl+drag)
 
+Q: How do I implement clipboard copy/cut/paste?
+A: → tree-editing.txt (Clipboard API)
+
+Q: How do I insert/delete an entire subtree at once?
+A: → tree-editing.txt (insertBranch, deleteBranch, replaceBranch)
+
+Q: How do I select multiple nodes?
+A: → advanced-patterns.txt (Multi-select)
+
 Q: How do I implement async drop validation?
 A: → drag-drop.txt (beforeDropCallback)
 
@@ -290,6 +323,9 @@ TREE EDITING
 - Move nodes → tree-editing.txt
 - Remove nodes → tree-editing.txt
 - Order management → tree-editing.txt
+- Bulk subtree ops → tree-editing.txt (insertBranch, replaceBranch, deleteBranch)
+- Clipboard (copy/cut/paste) → tree-editing.txt
+- Multi-select → advanced-patterns.txt
 
 CUSTOMIZATION
 - CSS variables → styling-theming.txt
