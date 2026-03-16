@@ -11,7 +11,7 @@ export { createTreeController } from "./core/createTreeController.js"
 
 // Export types
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
-export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, InsertBranchResult, DeleteBranchResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
+export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ClickBehavior, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, InsertBranchResult, DeleteBranchResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
 
 // Clipboard types & utilities
 export type { ClipboardEntry, TreeClipboard } from "./core/clipboard.js"

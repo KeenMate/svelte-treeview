@@ -6,8 +6,9 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## What's New in v5.0.0-rc04
+## What's New in v5.0.0-rc05
 
+- **`clickBehavior` prop**: Controls node click behavior — `'select'` (click selects, double-click expands), `'expand'` (click expands only), or `'expand-and-focus'` (click selects + expands, default). Replaces `shouldToggleOnNodeClick`. Matches canvas package's `ClickBehavior` type.
 - **Pluggable keyboard navigation**: New `TreeNavigation<T>` interface — each renderer (HTML, Canvas) provides its own spatial implementation. Override individual methods via `TreeNavigationOverrides<T>`.
 - **Bulk subtree operations**: `insertBranch()`, `replaceBranch()`, `deleteBranch()` on TreeController — add, replace, or remove entire subtrees with a single emission.
 - **Clipboard API**: `copyNodes()`, `cutNodes()`, `pasteNodes()`, `cancelCut()` on TreeController. Cut nodes are visually dimmed. Supports auto-handle and manual (server-driven) paste modes.
@@ -654,7 +655,7 @@ Without both requirements, no search indexing will occur.
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
-| `shouldToggleOnNodeClick` | `boolean` | `true` | Toggle expansion on node click |
+| `clickBehavior` | `ClickBehavior` | `'expand-and-focus'` | Node click behavior: `'select'` (click selects, dblclick expands), `'expand'` (click expands only), `'expand-and-focus'` (click selects + expands) |
 | `orderMember` | `string \| null` | `null` | Property name for sort order (enables before/after positioning in drag-drop) |
 | `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
 | `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
@@ -867,7 +868,7 @@ All Tree props can be updated except snippets/templates, including:
 - Callbacks: `sortCallback`, `getDisplayValueCallback`, `onNodeClicked`, etc.
 - Visual: `bodyClass`, `selectedNodeClass`, `expandIconClass`, etc.
 - Context menu: `contextMenuCallback`, `contextMenuXOffset`, `contextMenuYOffset`
-- Behavior: `shouldToggleOnNodeClick`, `shouldUseInternalSearchIndex`, etc.
+- Behavior: `clickBehavior`, `shouldUseInternalSearchIndex`, etc.
 
 ### Debug Information
 

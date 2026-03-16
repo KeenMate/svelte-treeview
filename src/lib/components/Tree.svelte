@@ -10,6 +10,7 @@
 		type DropPosition,
 		type DragDropMode,
 		type DropOperation,
+		type ClickBehavior,
 		type TreeChange,
 		type ApplyChangesResult
 	} from '../ltree/types.js';
@@ -71,7 +72,7 @@
 
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
-		shouldToggleOnNodeClick?: boolean | null | undefined;
+		clickBehavior?: ClickBehavior | null | undefined;
 		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
@@ -211,7 +212,7 @@
 		// BEHAVIOUR
 		expandLevel = 2,
 
-		shouldToggleOnNodeClick = true,
+		clickBehavior = 'expand-and-focus',
 		rangeSelectionMode = 'visual',
 		shouldUseInternalSearchIndex = true,
 		initializeIndexCallback,
@@ -310,7 +311,7 @@
 		data,
 		selectedNode,
 		expandLevel,
-		shouldToggleOnNodeClick,
+		clickBehavior,
 		rangeSelectionMode,
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
@@ -415,7 +416,7 @@
 	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
-	$effect(() => { controller.shouldToggleOnNodeClick = shouldToggleOnNodeClick ?? true; });
+	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
 	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
 	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
@@ -632,7 +633,7 @@
 				| "selectedNode"
 				| "selectedPaths"
 				| "expandLevel"
-				| "shouldToggleOnNodeClick"
+				| "clickBehavior"
 				| "rangeSelectionMode"
 				| "shouldUseInternalSearchIndex"
 				| "initializeIndexCallback"
@@ -698,7 +699,7 @@
 		if (updates.selectedNode !== undefined) selectedNode = updates.selectedNode;
 		if (updates.selectedPaths !== undefined) selectedPaths = updates.selectedPaths;
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
-		if (updates.shouldToggleOnNodeClick !== undefined) shouldToggleOnNodeClick = updates.shouldToggleOnNodeClick;
+		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
 		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
 		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
 		if (updates.initializeIndexCallback !== undefined) initializeIndexCallback = updates.initializeIndexCallback;

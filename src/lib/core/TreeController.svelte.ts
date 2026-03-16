@@ -12,7 +12,8 @@ import {
 	type DropOperation,
 	type TreeChange,
 	type ApplyChangesResult,
-	type ToggleIconMode
+	type ToggleIconMode,
+	type ClickBehavior
 } from '../ltree/types.js';
 import { tick } from 'svelte';
 import {
@@ -70,7 +71,7 @@ export interface NodeCallbacks<T> {
 }
 
 export interface NodeConfig {
-	shouldToggleOnNodeClick: boolean;
+	clickBehavior: ClickBehavior;
 	expandIconClass: string;
 	collapseIconClass: string;
 	leafIconClass: string;
@@ -123,7 +124,7 @@ export interface TreeControllerProps<T> {
 
 	// BEHAVIOUR
 	expandLevel?: number | null | undefined;
-	shouldToggleOnNodeClick?: boolean | null | undefined;
+	clickBehavior?: ClickBehavior | null | undefined;
 	/**
 	 * How shift+click range selection works:
 	 * - 'visual': selects all visible (expanded) nodes between the two clicks in display order (default)
@@ -246,7 +247,7 @@ export class TreeController<T> {
 	// ── Stable callback & config objects for Node context ───────────────
 	nodeCallbacks!: NodeCallbacks<T>;
 	nodeConfig = $state<NodeConfig>({
-		shouldToggleOnNodeClick: true,
+		clickBehavior: 'expand-and-focus',
 		expandIconClass: 'ltree-icon-expand',
 		collapseIconClass: 'ltree-icon-collapse',
 		leafIconClass: 'ltree-icon-leaf',
@@ -314,7 +315,7 @@ export class TreeController<T> {
 	getContextMenuItemsHandler: TreeControllerProps<T>['getContextMenuItemsCallback'];
 
 	// Visual config (for nodeConfig updates)
-	shouldToggleOnNodeClick = $state(true);
+	clickBehavior = $state<ClickBehavior>('expand-and-focus');
 	expandIconClass = $state('ltree-icon-expand');
 	collapseIconClass = $state('ltree-icon-collapse');
 	leafIconClass = $state('ltree-icon-leaf');
@@ -480,7 +481,7 @@ export class TreeController<T> {
 		this.autoHandlePaste = props.autoHandlePaste ?? true;
 		this.accordionExpand = props.accordionExpand ?? false;
 
-		this.shouldToggleOnNodeClick = props.shouldToggleOnNodeClick ?? true;
+		this.clickBehavior = props.clickBehavior ?? 'expand-and-focus';
 		this.expandIconClass = props.expandIconClass ?? 'ltree-icon-expand';
 		this.collapseIconClass = props.collapseIconClass ?? 'ltree-icon-collapse';
 		this.leafIconClass = props.leafIconClass ?? 'ltree-icon-leaf';
@@ -588,7 +589,7 @@ export class TreeController<T> {
 
 		// ── Initial nodeConfig ──────────────────────────────────────────
 		this.nodeConfig = {
-			shouldToggleOnNodeClick: this.shouldToggleOnNodeClick,
+			clickBehavior: this.clickBehavior,
 			expandIconClass: this.expandIconClass,
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
@@ -619,7 +620,7 @@ export class TreeController<T> {
 		// Using $state() (not .raw()) so the proxy makes property reads reactive in Node.svelte.
 		$effect(() => {
 			Object.assign(this.nodeConfig, {
-				shouldToggleOnNodeClick: this.shouldToggleOnNodeClick,
+				clickBehavior: this.clickBehavior,
 				expandIconClass: this.expandIconClass,
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
@@ -1694,8 +1695,8 @@ export class TreeController<T> {
 		if (updates.virtualOverscan !== undefined) this.virtualOverscan = updates.virtualOverscan ?? 5;
 		if (updates.virtualContainerHeight !== undefined) this.virtualContainerHeight = updates.virtualContainerHeight;
 
-		if (updates.shouldToggleOnNodeClick !== undefined)
-			this.shouldToggleOnNodeClick = updates.shouldToggleOnNodeClick ?? true;
+		if (updates.clickBehavior !== undefined)
+			this.clickBehavior = updates.clickBehavior ?? 'expand-and-focus';
 		if (updates.expandIconClass !== undefined)
 			this.expandIconClass = updates.expandIconClass ?? 'ltree-icon-expand';
 		if (updates.collapseIconClass !== undefined)
@@ -1821,6 +1822,9 @@ export class TreeController<T> {
 		this.onNodeClickHandler?.(node);
 		this._notifySelectionChanged();
 		this.tree.refresh();
+
+		// Focus the tree container so keyboard navigation works after clicking a node
+		this.containerElement?.focus();
 	}
 
 	/** Clear isSelected flag on all currently selected nodes */

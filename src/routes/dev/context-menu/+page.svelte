@@ -313,7 +313,7 @@
 						bind:searchText
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}
-						shouldToggleOnNodeClick={true}
+						clickBehavior="expand-and-focus"
 						{onNodeClick}
 						{contextMenuXOffset}
 						{contextMenuYOffset}
@@ -507,7 +507,7 @@
 						bind:searchText={searchText2}
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={false}
-						shouldToggleOnNodeClick={true}
+						clickBehavior="expand-and-focus"
 						{onNodeClick}
 						{contextMenuXOffset}
 						{contextMenuYOffset}

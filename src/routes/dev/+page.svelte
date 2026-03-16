@@ -201,7 +201,7 @@
 						bind:searchText
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}
-						shouldToggleOnNodeClick={true}
+						clickBehavior="expand-and-focus"
 						{onNodeClick}
 					>
 						{#snippet nodeTemplate(node: any)}

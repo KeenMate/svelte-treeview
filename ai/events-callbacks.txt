@@ -17,10 +17,12 @@ NODE CLICK
   }}
 />
 
-Toggle on click (default: true):
-<Tree shouldToggleOnNodeClick={false} />
+Click behavior (default: 'expand-and-focus'):
+<Tree clickBehavior="select" />
 
-When false, clicks only select, don't expand/collapse.
+'select' = click selects, double-click expands/collapses.
+'expand' = click expands/collapses only, no selection.
+'expand-and-focus' = click selects + expands/collapses.
 
 DRAG EVENTS
 -----------

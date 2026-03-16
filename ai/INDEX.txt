@@ -200,7 +200,7 @@ selectedNodeClass → styling-theming.txt
 selectedPaths → advanced-patterns.txt
 selectNode → advanced-patterns.txt
 shouldDisplayDebugInformation → basic-setup.txt, performance.txt
-shouldToggleOnNodeClick → basic-setup.txt
+clickBehavior → basic-setup.txt, events-callbacks.txt
 shouldUseInternalSearchIndex → search-features.txt
 Snippets → basic-setup.txt, context-menu.txt
 sortCallback → data-handling.txt, basic-setup.txt

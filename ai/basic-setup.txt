@@ -170,8 +170,11 @@ CLICK HANDLING
   }}
 />
 
-Toggle on click (default true):
-<Tree shouldToggleOnNodeClick={false} ... />
+Click behavior (default 'expand-and-focus'):
+<Tree clickBehavior="select" ... />
+<!-- 'select' = click selects, dblclick expands -->
+<!-- 'expand' = click expands only -->
+<!-- 'expand-and-focus' = click selects + expands -->
 
 SCROLL TO NODE
 --------------

@@ -7,6 +7,7 @@ export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 export type Tuple<T, U> = [T, U];
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
+export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type DropZoneLayout = 'around' | 'above' | 'below' | 'wave' | 'wave2';
 export type DropOperation = 'move' | 'copy';
 

@@ -70,6 +70,7 @@ TREE_PROPS_KEY:
 - searchText (bindable)
 - selectedNode (bindable)
 - insertResult (bindable) - InsertArrayResult<T> with failed nodes info
+- clickBehavior: ClickBehavior (default 'expand-and-focus') - 'select' | 'expand' | 'expand-and-focus'
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
@@ -163,4 +164,4 @@ CANVAS_PACKAGE:
 - Peer-depends on this package (@keenmate/svelte-treeview ^5.0.0)
 - Canvas examples (org-chart, nhl-playoffs, canvas-dendrogram, layout-modes, json-loader) are in that package
 
-RECENT: v5.0.0-rc03 - Unified ContextMenuItem types, Svelte context menu components, keyboard shortcuts, submenus, named dividers. Core/renderer split enabling custom renderers. Canvas rendering extracted to @keenmate/svelte-treeview-canvas.
+RECENT: v5.0.0-rc05 - clickBehavior prop ('select'|'expand'|'expand-and-focus') replaces shouldToggleOnNodeClick. TreeNavigation, bulk subtree ops, clipboard API. Unified ContextMenuItem types, Svelte context menu components. Core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.

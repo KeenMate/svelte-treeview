@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 
-	const version = 'v5.0.0-rc03';
+	const version = 'v5.0.0-rc05';
 
 	const examples = [
 		{
@@ -9,6 +9,12 @@
 			icon: '🌲',
 			title: 'Basic Examples',
 			description: 'Tree rendering, expand/collapse controls, node selection, and scroll to path.'
+		},
+		{
+			href: '/examples/interaction',
+			icon: '🖱️',
+			title: 'Interaction',
+			description: 'Click behavior modes, multi-select with range selection, and keyboard navigation.'
 		},
 		{
 			href: '/examples/drag-drop',

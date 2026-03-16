@@ -58,7 +58,6 @@
 	// Works reactively because nodeConfig uses $state() (not .raw()) and is mutated
 	// in-place via Object.assign, so the proxy reference stays the same.
 	const {
-		shouldToggleOnNodeClick,
 		expandIconClass,
 		collapseIconClass,
 		leafIconClass,
@@ -66,6 +65,7 @@
 		dragOverNodeClass,
 		allowCopy,
 	} = config;
+	const clickBehavior = $derived(config.clickBehavior);
 
 	// Read dropZoneMode, dropZoneStart, and accordionExpand through the proxy
 	// each time (not destructured) so they stay reactive in flat mode where
@@ -280,8 +280,23 @@
 	function _onNodeClicked(event?: MouseEvent) {
 		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
 		const modifiers = event ? { ctrl: event.ctrlKey || event.metaKey, shift: event.shiftKey } : undefined;
-		callbacks.onNodeClicked(node, modifiers)
-		if (shouldToggleOnNodeClick) {
+
+		if (clickBehavior === 'expand') {
+			// Expand only — no selection callback
+			toggleExpanded()
+		} else if (clickBehavior === 'expand-and-focus') {
+			// Select + expand on single click
+			callbacks.onNodeClicked(node, modifiers)
+			toggleExpanded()
+		} else {
+			// 'select' — single click selects only
+			callbacks.onNodeClicked(node, modifiers)
+		}
+	}
+
+	function _onNodeDblClicked(event?: MouseEvent) {
+		if (clickBehavior === 'select') {
+			// In select mode, double-click expands/collapses
 			toggleExpanded()
 		}
 	}
@@ -325,6 +340,10 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				_onNodeClicked(e);
+			}}
+			ondblclick={(e) => {
+				e.stopPropagation();
+				_onNodeDblClicked(e);
 			}}
 			oncontextmenu={(e) => {
 				e.stopPropagation();
