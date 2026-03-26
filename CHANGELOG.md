@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`clickBehavior` prop** (`'select'` | `'expand'` | `'expand-and-focus'`, default `'expand-and-focus'`): Controls what happens on node click. `'expand-and-focus'` selects and expands (previous default). `'select'` selects on single click, expands on double-click. `'expand'` expands only without selecting. Replaces the boolean `shouldToggleOnNodeClick` prop. Matches canvas package's `ClickBehavior` type.
+- **`showCheckboxes` prop**: Renders a checkbox before each selectable node. Clicking the checkbox toggles the node's selection (same as Ctrl+click). Works with multi-select (`selectedPaths`), `clickBehavior`, and all selection styles.
+- **Interaction example page** (`/examples/interaction`): Interactive demos for click behavior, checkboxes, multi-select with range selection, and keyboard navigation. All settings persisted to localStorage.
+
+### Fixed
+- **Keyboard navigation not working after node click**: Clicking a node now auto-focuses the tree container, so arrow keys work immediately without having to click the container separately.
 
 ### Breaking
 - **`shouldToggleOnNodeClick` removed**: Replace `shouldToggleOnNodeClick={true}` with `clickBehavior="expand-and-focus"` (default) and `shouldToggleOnNodeClick={false}` with `clickBehavior="select"`.

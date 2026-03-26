@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
-	import type { ClickBehavior } from '$lib/ltree/types.js';
+	import type { ClickBehavior, CheckboxMode } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -42,8 +42,18 @@
 	interface Settings {
 		clickBehavior: ClickBehavior;
 		selectedNodeClass: string;
+		showCheckboxes: boolean;
+		checkboxMode: CheckboxMode;
 		rangeSelectionMode: 'visual' | 'logical';
 	}
+
+	const defaultSettings: Settings = {
+		clickBehavior: 'expand-and-focus',
+		selectedNodeClass: 'ltree-selected-bold',
+		showCheckboxes: false,
+		checkboxMode: 'independent',
+		rangeSelectionMode: 'visual'
+	};
 
 	function loadSettings(): Settings {
 		try {
@@ -53,12 +63,6 @@
 		return { ...defaultSettings };
 	}
 
-	const defaultSettings: Settings = {
-		clickBehavior: 'expand-and-focus',
-		selectedNodeClass: 'ltree-selected-bold',
-		rangeSelectionMode: 'visual'
-	};
-
 	const saved = loadSettings();
 
 	function saveSettings() {
@@ -66,6 +70,8 @@
 			localStorage?.setItem(STORAGE_KEY, JSON.stringify({
 				clickBehavior,
 				selectedNodeClass,
+				showCheckboxes,
+				checkboxMode,
 				rangeSelectionMode
 			}));
 		} catch {}
@@ -80,10 +86,12 @@
 	// ── Click Behavior demo ──────────────────────────────────────────
 	let clickBehavior = $state<ClickBehavior>(saved.clickBehavior);
 	let selectedNodeClass = $state(saved.selectedNodeClass);
+	let showCheckboxes = $state(saved.showCheckboxes);
+	let checkboxMode = $state<CheckboxMode>(saved.checkboxMode);
 	let clickSelectedNode = $state<LTreeNode<Item> | null>(null);
 	let clickLog = $state<string[]>([]);
 
-	$effect(() => { clickBehavior; selectedNodeClass; rangeSelectionMode; saveSettings(); });
+	$effect(() => { clickBehavior; selectedNodeClass; showCheckboxes; checkboxMode; rangeSelectionMode; saveSettings(); });
 
 	function onClickDemoNodeClick(node: LTreeNode<Item>) {
 		clickLog = [`Selected: ${node.data?.name} (${node.path})`, ...clickLog.slice(0, 9)];
@@ -119,7 +127,7 @@
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>🖱️ Interaction</h1>
-		<p class="subtitle">Click behavior, multi-select, and keyboard navigation</p>
+		<p class="subtitle">Click behavior, checkboxes, multi-select, and keyboard navigation</p>
 		<RenderModeSwitch />
 	</header>
 
@@ -148,6 +156,19 @@
 					{/each}
 				</select>
 			</label>
+			<label>
+				<input type="checkbox" bind:checked={showCheckboxes} />
+				Show Checkboxes
+			</label>
+			{#if showCheckboxes}
+				<label>
+					Checkbox Mode:
+					<select bind:value={checkboxMode}>
+						<option value="independent">independent (each checkbox standalone)</option>
+						<option value="cascade">cascade (parent toggles all children)</option>
+					</select>
+				</label>
+			{/if}
 			<button class="btn btn-secondary" onclick={() => { clickLog = []; }}>Clear Log</button>
 		</div>
 
@@ -162,6 +183,8 @@
 					expandLevel={2}
 					{selectedNodeClass}
 					{clickBehavior}
+					{showCheckboxes}
+					{checkboxMode}
 					bind:selectedNode={clickSelectedNode}
 					onNodeClick={onClickDemoNodeClick}
 					{...getTreeProps()}
@@ -178,7 +201,7 @@
 	? 'Single click selects AND expands/collapses'
 	: clickBehavior === 'select'
 		? 'Single click selects only\nDouble-click expands/collapses'
-		: 'Single click expands/collapses only\nNo selection on click'}</pre>
+		: 'Single click expands/collapses only\nNo selection on click'}{showCheckboxes ? '\n+ Checkboxes toggle selection' : ''}</pre>
 				</div>
 				{#if clickSelectedNode}
 					<div class="output">
@@ -199,6 +222,7 @@
 			<pre>{`<Tree
   clickBehavior="${clickBehavior}"
   selectedNodeClass="${selectedNodeClass}"
+  showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}
   ...
 />
 
@@ -206,6 +230,10 @@
   'expand-and-focus' — click selects + expands (default)
   'select'           — click selects, double-click expands
   'expand'           — click expands only, no selection
+
+<!-- checkboxMode options:
+  'independent' — each checkbox standalone (default)
+  'cascade'     — parent toggles all descendants
 -->`}</pre>
 		</div>
 	</div>
@@ -216,6 +244,7 @@
 		<p class="description">
 			Hold <code>Ctrl</code> (or <code>Cmd</code>) and click to toggle individual nodes.
 			Hold <code>Shift</code> and click to select a range.
+			Enable checkboxes above for a click-friendly multi-select experience.
 			The <code>rangeSelectionMode</code> prop controls whether range selection includes collapsed children.
 		</p>
 
@@ -240,6 +269,8 @@
 					isSorted={true}
 					expandLevel={3}
 					{selectedNodeClass}
+					{showCheckboxes}
+					{checkboxMode}
 					{rangeSelectionMode}
 					bind:selectedNode={multiSelectedNode}
 					bind:selectedPaths={multiSelectedPaths}
@@ -256,7 +287,7 @@
 					<p class="output-label">Selected ({multiSelectedPaths.size} nodes)</p>
 					<pre>{multiSelectedPaths.size > 0
 	? [...multiSelectedPaths].join(', ')
-	: '(none — try Ctrl+click or Shift+click)'}</pre>
+	: '(none — try Ctrl+click, Shift+click, or checkboxes)'}</pre>
 				</div>
 				{#if selectionLog.length > 0}
 					<div class="output">
@@ -277,6 +308,7 @@
 
 		<div class="code-block">
 			<pre>{`<Tree
+  showCheckboxes={true}
   rangeSelectionMode="${rangeSelectionMode}"
   bind:selectedPaths={selectedPaths}
   onSelectionChange={(paths, nodes) => { ... }}

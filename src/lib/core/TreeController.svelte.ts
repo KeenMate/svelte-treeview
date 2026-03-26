@@ -1,5 +1,5 @@
 import type { Index, SearchOptions } from 'flexsearch';
-import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
+import { type LTreeNode, VisualState } from '../ltree/ltree-node.svelte.js';
 import { createLTree } from '../ltree/ltree.svelte.js';
 import {
 	type Ltree,
@@ -13,7 +13,8 @@ import {
 	type TreeChange,
 	type ApplyChangesResult,
 	type ToggleIconMode,
-	type ClickBehavior
+	type ClickBehavior,
+	type CheckboxMode
 } from '../ltree/types.js';
 import { tick } from 'svelte';
 import {
@@ -59,6 +60,7 @@ export interface SelectionModifiers {
 
 export interface NodeCallbacks<T> {
 	onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => void;
+	onCheckboxToggle: (node: LTreeNode<T>) => void;
 	onNodeRightClicked: (node: LTreeNode<T>, event: MouseEvent) => void;
 	onNodeDragStart: (node: LTreeNode<T>, event: DragEvent) => void;
 	onNodeDragOver: (node: LTreeNode<T>, event: DragEvent) => void;
@@ -72,6 +74,8 @@ export interface NodeCallbacks<T> {
 
 export interface NodeConfig {
 	clickBehavior: ClickBehavior;
+	showCheckboxes: boolean;
+	checkboxMode: CheckboxMode;
 	expandIconClass: string;
 	collapseIconClass: string;
 	leafIconClass: string;
@@ -125,6 +129,16 @@ export interface TreeControllerProps<T> {
 	// BEHAVIOUR
 	expandLevel?: number | null | undefined;
 	clickBehavior?: ClickBehavior | null | undefined;
+	showCheckboxes?: boolean | null | undefined;
+	checkboxMode?: CheckboxMode | null | undefined;
+	/**
+	 * Interceptor called before a checkbox toggle is applied.
+	 * @param node - The node whose checkbox was clicked
+	 * @param checked - The intended new state (true = checking, false = unchecking)
+	 * @param affectedPaths - Paths that would be affected (includes descendants in cascade mode)
+	 * @returns false to cancel, string[] to override affected paths, or void/true to proceed
+	 */
+	beforeCheckboxToggleCallback?: (node: LTreeNode<T>, checked: boolean, affectedPaths: string[]) => boolean | string[] | void;
 	/**
 	 * How shift+click range selection works:
 	 * - 'visual': selects all visible (expanded) nodes between the two clicks in display order (default)
@@ -248,6 +262,8 @@ export class TreeController<T> {
 	nodeCallbacks!: NodeCallbacks<T>;
 	nodeConfig = $state<NodeConfig>({
 		clickBehavior: 'expand-and-focus',
+		showCheckboxes: false,
+		checkboxMode: 'independent',
 		expandIconClass: 'ltree-icon-expand',
 		collapseIconClass: 'ltree-icon-collapse',
 		leafIconClass: 'ltree-icon-leaf',
@@ -310,12 +326,15 @@ export class TreeController<T> {
 	beforeCopyHandler: TreeControllerProps<T>['beforeCopyCallback'];
 	beforeCutHandler: TreeControllerProps<T>['beforeCutCallback'];
 	beforePasteHandler: TreeControllerProps<T>['beforePasteCallback'];
+	beforeCheckboxToggleHandler: TreeControllerProps<T>['beforeCheckboxToggleCallback'];
 
 	// Data provider handlers (get*Callback)
 	getContextMenuItemsHandler: TreeControllerProps<T>['getContextMenuItemsCallback'];
 
 	// Visual config (for nodeConfig updates)
 	clickBehavior = $state<ClickBehavior>('expand-and-focus');
+	showCheckboxes = $state(false);
+	checkboxMode = $state<CheckboxMode>('independent');
 	expandIconClass = $state('ltree-icon-expand');
 	collapseIconClass = $state('ltree-icon-collapse');
 	leafIconClass = $state('ltree-icon-leaf');
@@ -482,6 +501,9 @@ export class TreeController<T> {
 		this.accordionExpand = props.accordionExpand ?? false;
 
 		this.clickBehavior = props.clickBehavior ?? 'expand-and-focus';
+		this.showCheckboxes = props.showCheckboxes ?? false;
+		this.checkboxMode = props.checkboxMode ?? 'independent';
+		this.beforeCheckboxToggleHandler = props.beforeCheckboxToggleCallback;
 		this.expandIconClass = props.expandIconClass ?? 'ltree-icon-expand';
 		this.collapseIconClass = props.collapseIconClass ?? 'ltree-icon-collapse';
 		this.leafIconClass = props.leafIconClass ?? 'ltree-icon-leaf';
@@ -576,6 +598,7 @@ export class TreeController<T> {
 		// ── Create stable nodeCallbacks ─────────────────────────────────
 		this.nodeCallbacks = {
 			onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => this._onNodeClicked(node, modifiers),
+			onCheckboxToggle: (node: LTreeNode<T>) => this._onCheckboxToggle(node),
 			onNodeRightClicked: this._onNodeRightClicked.bind(this),
 			onNodeDragStart: this._onNodeDragStart.bind(this),
 			onNodeDragOver: this._onNodeDragOver.bind(this),
@@ -590,6 +613,8 @@ export class TreeController<T> {
 		// ── Initial nodeConfig ──────────────────────────────────────────
 		this.nodeConfig = {
 			clickBehavior: this.clickBehavior,
+			showCheckboxes: this.showCheckboxes,
+			checkboxMode: this.checkboxMode,
 			expandIconClass: this.expandIconClass,
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
@@ -621,6 +646,7 @@ export class TreeController<T> {
 		$effect(() => {
 			Object.assign(this.nodeConfig, {
 				clickBehavior: this.clickBehavior,
+				showCheckboxes: this.showCheckboxes,
 				expandIconClass: this.expandIconClass,
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
@@ -1697,6 +1723,12 @@ export class TreeController<T> {
 
 		if (updates.clickBehavior !== undefined)
 			this.clickBehavior = updates.clickBehavior ?? 'expand-and-focus';
+		if (updates.showCheckboxes !== undefined)
+			this.showCheckboxes = updates.showCheckboxes ?? false;
+		if (updates.checkboxMode !== undefined)
+			this.checkboxMode = updates.checkboxMode ?? 'independent';
+		if (updates.beforeCheckboxToggleCallback !== undefined)
+			this.beforeCheckboxToggleHandler = updates.beforeCheckboxToggleCallback;
 		if (updates.expandIconClass !== undefined)
 			this.expandIconClass = updates.expandIconClass ?? 'ltree-icon-expand';
 		if (updates.collapseIconClass !== undefined)
@@ -1825,6 +1857,129 @@ export class TreeController<T> {
 
 		// Focus the tree container so keyboard navigation works after clicking a node
 		this.containerElement?.focus();
+	}
+
+	/** Get all descendant paths of a node (depth-first) */
+	private _getDescendantPaths(node: LTreeNode<T>): string[] {
+		const result: string[] = [];
+		const traverse = (n: LTreeNode<T>) => {
+			for (const child of Object.values(n.children)) {
+				result.push(child.path);
+				traverse(child);
+			}
+		};
+		traverse(node);
+		return result;
+	}
+
+	/** Handle checkbox toggle with cascade and interceptor support */
+	private _onCheckboxToggle(node: LTreeNode<T>) {
+		// In cascade mode, indeterminate → check all (not fully selected yet)
+		const newChecked = this.checkboxMode === 'cascade' && node.visualState === VisualState.indeterminate
+			? true
+			: !node.isSelected;
+
+		// Compute affected paths based on checkboxMode
+		let affectedPaths = [node.path];
+		if (this.checkboxMode === 'cascade') {
+			const descendantPaths = this._getDescendantPaths(node);
+			affectedPaths = [node.path, ...descendantPaths];
+		}
+
+		// Call interceptor if provided
+		if (this.beforeCheckboxToggleHandler) {
+			const result = this.beforeCheckboxToggleHandler(node, newChecked, affectedPaths);
+			if (result === false) return;
+			if (Array.isArray(result)) {
+				affectedPaths = result;
+			}
+		}
+
+		// Apply selection changes
+		const newPaths = new Set(this.selectedPaths);
+		for (const path of affectedPaths) {
+			const n = this.tree.getNodeByPath(path);
+			if (!n) continue;
+			if (newChecked) {
+				newPaths.add(path);
+				n.isSelected = true;
+			} else {
+				newPaths.delete(path);
+				n.isSelected = false;
+			}
+			n._rev = (n._rev || 0) + 1;
+		}
+		this.selectedPaths = newPaths;
+		this.lastSelectedPath = node.path;
+		this.selectedNode = node;
+
+		// Update visual states for the toggled node and its ancestors in cascade mode
+		if (this.checkboxMode === 'cascade') {
+			const vs = this._computeVisualState(node);
+			if (node.visualState !== vs) {
+				node.visualState = vs;
+				node._rev = (node._rev || 0) + 1;
+			}
+		}
+		// Always update ancestors — handles both cascade toggle and individual child clicks
+		this._updateAncestorVisualStates(node.path);
+
+		this.onNodeClickHandler?.(node);
+		this._notifySelectionChanged();
+		this.tree.refresh();
+		this.containerElement?.focus();
+	}
+
+	/** Walk up from a node path and set visualState on each ancestor based on descendant selection */
+	private _updateAncestorVisualStates(startPath: string) {
+		const newPaths = new Set(this.selectedPaths);
+		let path: string | null | undefined = this.tree.getNodeByPath(startPath)?.parentPath;
+		while (path) {
+			const ancestor = this.tree.getNodeByPath(path);
+			if (!ancestor) break;
+			const vs = this._computeVisualState(ancestor);
+
+			// Sync isSelected with visual state: all children selected → parent selected
+			const shouldBeSelected = vs === VisualState.selected;
+			if (ancestor.isSelected !== shouldBeSelected) {
+				ancestor.isSelected = shouldBeSelected;
+				if (shouldBeSelected) newPaths.add(path);
+				else newPaths.delete(path);
+			}
+
+			if (ancestor.visualState !== vs) {
+				ancestor.visualState = vs;
+			}
+			ancestor._rev = (ancestor._rev || 0) + 1;
+			path = ancestor.parentPath;
+		}
+		this.selectedPaths = newPaths;
+	}
+
+	/** Compute visual state for a node based on its descendants' isSelected */
+	private _computeVisualState(node: LTreeNode<T>): VisualState {
+		const children = Object.values(node.children);
+		if (children.length === 0) {
+			return node.isSelected ? VisualState.selected : VisualState.notSelected;
+		}
+		let allSelected = true;
+		let noneSelected = true;
+		const check = (n: LTreeNode<T>) => {
+			if (!allSelected && !noneSelected) return; // indeterminate already
+			if (n.isSelected) noneSelected = false;
+			else allSelected = false;
+			for (const child of Object.values(n.children)) {
+				if (!allSelected && !noneSelected) return;
+				check(child);
+			}
+		};
+		for (const child of children) {
+			check(child);
+			if (!allSelected && !noneSelected) break;
+		}
+		if (allSelected) return VisualState.selected;
+		if (noneSelected) return VisualState.notSelected;
+		return VisualState.indeterminate;
 	}
 
 	/** Clear isSelected flag on all currently selected nodes */

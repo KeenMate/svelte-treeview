@@ -11,6 +11,7 @@
 		type DragDropMode,
 		type DropOperation,
 		type ClickBehavior,
+		type CheckboxMode,
 		type TreeChange,
 		type ApplyChangesResult
 	} from '../ltree/types.js';
@@ -73,6 +74,9 @@
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
 		clickBehavior?: ClickBehavior | null | undefined;
+		showCheckboxes?: boolean | null | undefined;
+		checkboxMode?: CheckboxMode | null | undefined;
+		beforeCheckboxToggleCallback?: (node: LTreeNode<T>, checked: boolean, affectedPaths: string[]) => boolean | string[] | void;
 		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
@@ -213,6 +217,9 @@
 		expandLevel = 2,
 
 		clickBehavior = 'expand-and-focus',
+		showCheckboxes = false,
+		checkboxMode = 'independent',
+		beforeCheckboxToggleCallback,
 		rangeSelectionMode = 'visual',
 		shouldUseInternalSearchIndex = true,
 		initializeIndexCallback,
@@ -312,6 +319,9 @@
 		selectedNode,
 		expandLevel,
 		clickBehavior,
+		showCheckboxes,
+		checkboxMode,
+		beforeCheckboxToggleCallback,
 		rangeSelectionMode,
 		shouldUseInternalSearchIndex,
 		initializeIndexCallback,
@@ -417,6 +427,9 @@
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
 	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
+	$effect(() => { controller.showCheckboxes = showCheckboxes ?? false; });
+	$effect(() => { controller.checkboxMode = checkboxMode ?? 'independent'; });
+	$effect(() => { controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback; });
 	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
 	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
@@ -634,6 +647,9 @@
 				| "selectedPaths"
 				| "expandLevel"
 				| "clickBehavior"
+				| "showCheckboxes"
+				| "checkboxMode"
+				| "beforeCheckboxToggleCallback"
 				| "rangeSelectionMode"
 				| "shouldUseInternalSearchIndex"
 				| "initializeIndexCallback"
@@ -700,6 +716,9 @@
 		if (updates.selectedPaths !== undefined) selectedPaths = updates.selectedPaths;
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
+		if (updates.showCheckboxes !== undefined) showCheckboxes = updates.showCheckboxes;
+		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
+		if (updates.beforeCheckboxToggleCallback !== undefined) beforeCheckboxToggleCallback = updates.beforeCheckboxToggleCallback;
 		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
 		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
 		if (updates.initializeIndexCallback !== undefined) initializeIndexCallback = updates.initializeIndexCallback;

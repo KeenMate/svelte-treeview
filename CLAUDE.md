@@ -71,6 +71,7 @@ TREE_PROPS_KEY:
 - selectedNode (bindable)
 - insertResult (bindable) - InsertArrayResult<T> with failed nodes info
 - clickBehavior: ClickBehavior (default 'expand-and-focus') - 'select' | 'expand' | 'expand-and-focus'
+- showCheckboxes: boolean (default false) - renders selection checkboxes per node
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)

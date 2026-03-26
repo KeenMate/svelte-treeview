@@ -316,6 +316,89 @@ $body-color: #212529 !default;
 	content: '↓';
 }
 
+// Checkbox — custom styled with indeterminate support
+.ltree-checkbox {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 4px;
+	cursor: pointer;
+	position: relative;
+	vertical-align: middle;
+
+	// Hide native input but keep it accessible
+	input[type="checkbox"] {
+		position: absolute;
+		opacity: 0;
+		width: 0;
+		height: 0;
+		pointer-events: none;
+	}
+
+	// Custom visual box
+	.ltree-checkbox__box {
+		display: inline-block;
+		width: var(--ltree-checkbox-size, 15px);
+		height: var(--ltree-checkbox-size, 15px);
+		border: var(--ltree-checkbox-border-width, 1.5px) solid var(--ltree-checkbox-border-color, #adb5bd);
+		border-radius: var(--ltree-checkbox-border-radius, 3px);
+		background: var(--ltree-checkbox-bg, #fff);
+		transition: background-color 0.15s ease, border-color 0.15s ease;
+		position: relative;
+		flex-shrink: 0;
+
+		// Checkmark (hidden by default)
+		&::after {
+			content: '';
+			position: absolute;
+			display: none;
+		}
+	}
+
+	// Hover
+	&:hover .ltree-checkbox__box {
+		border-color: var(--ltree-primary, #0d6efd);
+	}
+
+	// Checked state
+	input:checked + .ltree-checkbox__box {
+		background: var(--ltree-primary, #0d6efd);
+		border-color: var(--ltree-primary, #0d6efd);
+
+		&::after {
+			display: block;
+			left: 4px;
+			top: 1px;
+			width: 4px;
+			height: 8px;
+			border: solid var(--ltree-checkbox-checkmark-color, #fff);
+			border-width: 0 2px 2px 0;
+			transform: rotate(45deg);
+		}
+	}
+
+	// Indeterminate state — dash
+	input:indeterminate + .ltree-checkbox__box {
+		background: var(--ltree-primary, #0d6efd);
+		border-color: var(--ltree-primary, #0d6efd);
+
+		&::after {
+			display: block;
+			left: 3px;
+			top: 50%;
+			width: calc(var(--ltree-checkbox-size, 15px) - 8px);
+			height: 0;
+			border: solid var(--ltree-checkbox-checkmark-color, #fff);
+			border-width: 0 0 2px 0;
+			transform: translateY(-50%);
+		}
+	}
+
+	// Focus ring
+	input:focus-visible + .ltree-checkbox__box {
+		box-shadow: 0 0 0 2px rgba(var(--ltree-primary-rgb, 13, 110, 253), 0.25);
+	}
+}
+
 // Selected Node Styles
 .ltree-selected-bold {
 	font-weight: bold !important;
@@ -351,6 +434,14 @@ $body-color: #212529 !default;
 		margin-left: 6px;
 		color: var(--ltree-primary);
 		font-weight: bold;
+	}
+}
+
+// Suppress brackets when checkboxes are shown (checkbox already indicates selection)
+.ltree-checkbox ~ .ltree-selected-brackets {
+	&::before,
+	&::after {
+		content: none;
 	}
 }
 

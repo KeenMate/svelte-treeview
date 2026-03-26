@@ -66,6 +66,11 @@
 		allowCopy,
 	} = config;
 	const clickBehavior = $derived(config.clickBehavior);
+	const showCheckboxes = $derived(config.showCheckboxes);
+	const checkboxMode = $derived(config.checkboxMode);
+
+	// Indeterminate state: driven by controller's _updateAncestorVisualStates
+	const isIndeterminate = $derived(checkboxMode === 'cascade' && node.visualState === 'indeterminate');
 
 	// Read dropZoneMode, dropZoneStart, and accordionExpand through the proxy
 	// each time (not destructured) so they stay reactive in flat mode where
@@ -277,6 +282,16 @@
 		}
 	}
 
+	// Svelte action to set the indeterminate DOM property (not settable via attribute)
+	function setIndeterminate(el: HTMLInputElement, value: boolean) {
+		el.indeterminate = value;
+		return {
+			update(newValue: boolean) {
+				el.indeterminate = newValue;
+			}
+		};
+	}
+
 	function _onNodeClicked(event?: MouseEvent) {
 		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
 		const modifiers = event ? { ctrl: event.ctrlKey || event.metaKey, shift: event.shiftKey } : undefined;
@@ -322,6 +337,27 @@
 			></span>
 		{:else}
 			<span class="ltree-toggle-icon {leafIconClass}"></span>
+		{/if}
+
+		{#if showCheckboxes && node.isSelectable}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<label
+				class="ltree-checkbox"
+				onclick={(e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					callbacks.onCheckboxToggle(node);
+				}}
+			>
+				<input
+					type="checkbox"
+					checked={node.isSelected && !isIndeterminate}
+					use:setIndeterminate={isIndeterminate}
+					tabindex={-1}
+				/>
+				<span class="ltree-checkbox__box"></span>
+			</label>
 		{/if}
 
 		<!-- Node content with separate click handler -->
