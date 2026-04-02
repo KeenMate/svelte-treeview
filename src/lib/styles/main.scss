@@ -412,7 +412,12 @@ $body-color: #212529 !default;
 	padding: 6px 10px !important;
 }
 
-// Multi-select: subtle highlight for all selected nodes (works with any selectedNodeClass)
+.ltree-selected-highlight {
+	background-color: var(--ltree-highlight-bg, #cce8ff) !important;
+	color: var(--ltree-highlight-color, inherit) !important;
+}
+
+// Multi-select: subtle highlight for all selected nodes (works with any highlightedNodeClass)
 .ltree-multi-selected {
 	background-color: rgba(var(--ltree-primary-rgb), 0.08) !important;
 	outline: 1px solid rgba(var(--ltree-primary-rgb), 0.25);

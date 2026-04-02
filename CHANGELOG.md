@@ -7,15 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [5.0.0-rc05] - 2026-03-16
+## [5.0.0-rc06] - 2026-03-31
 
 ### Added
-- **`clickBehavior` prop** (`'select'` | `'expand'` | `'expand-and-focus'`, default `'expand-and-focus'`): Controls what happens on node click. `'expand-and-focus'` selects and expands (previous default). `'select'` selects on single click, expands on double-click. `'expand'` expands only without selecting. Replaces the boolean `shouldToggleOnNodeClick` prop. Matches canvas package's `ClickBehavior` type.
-- **`showCheckboxes` prop**: Renders a checkbox before each selectable node. Clicking the checkbox toggles the node's selection (same as Ctrl+click). Works with multi-select (`selectedPaths`), `clickBehavior`, and all selection styles.
-- **Interaction example page** (`/examples/interaction`): Interactive demos for click behavior, checkboxes, multi-select with range selection, and keyboard navigation. All settings persisted to localStorage.
+- **`showCheckboxes` prop**: Renders a checkbox before each selectable node with custom styling and indeterminate support.
+- **`checkboxMode` prop** (`'independent'` | `'cascade'`): Controls whether checking a parent cascades to all descendants. Indeterminate state shown when partial.
+- **`beforeCheckboxToggleCallback` interceptor**: Cancel or override checkbox toggles.
+- **Three-level selection model**: Separated into `focusedNode` (single node, click/arrows), `highlightedPaths` (multi-select, Ctrl/Shift+click), and `selectedPaths` (checkbox data state). Highlight and checkbox state are independent — build a highlight selection, then check/uncheck all highlighted nodes with one checkbox click.
+- **`onHighlightChange` event**: Fires when highlighted paths change (Ctrl+click, Shift+click, etc.).
+- **Bulk checkbox via highlight**: When multiple nodes are highlighted and a checkbox in the highlight is clicked, all highlighted nodes toggle together.
+- **Shift+Arrow/Home/End keyboard highlight**: Shift+ArrowDown/Up extends highlight range by one sibling, Shift+Home/End extends to first/last visible node.
+- **PageUp/PageDown navigation**: Jumps 10 visible nodes forward/back. Shift+PageUp/PageDown extends highlight by 10 nodes.
+- **`ltree-selected-highlight` CSS class**: Explorer-style blue background highlight. Customizable via `--ltree-highlight-bg` and `--ltree-highlight-color`.
+- **Interaction example page** (`/examples/interaction`): Interactive demos for click behavior, checkboxes, multi-select, and keyboard navigation. All settings persisted to localStorage.
 
 ### Fixed
 - **Keyboard navigation not working after node click**: Clicking a node now auto-focuses the tree container, so arrow keys work immediately without having to click the container separately.
+- **Svelte proxy equality warning on checkbox toggle**: `_setFocusedNode` now compares by path instead of object identity to avoid `state_proxy_equality_mismatch`.
+
+### Breaking
+- **`selectedNode` → `focusedNode`**: Renamed prop and bindable. The single focused node (last clicked / arrow-keyed to).
+- **`selectedPaths` repurposed**: Now represents checkbox-only data state. For click/highlight multi-select, use `highlightedPaths`.
+- **`highlightedPaths` (new)**: Replaces old `selectedPaths` for Ctrl+click / Shift+click UI highlight.
+- **`selectedNodeClass` → `highlightedNodeClass`**: CSS class applied to highlighted nodes.
+- **`focusedNodeClass` (new)**: CSS class applied to the single focused node.
+- **`onSelectionChange` repurposed**: Now fires on checkbox selection changes only. Use `onHighlightChange` for highlight changes.
+- **`selectNode()` / `selectNodes()` deprecated**: Use `highlightNode()` / `highlightNodes()` instead.
+
+## [5.0.0-rc05] - 2026-03-26
+
+### Added
+- **`clickBehavior` prop** (`'select'` | `'expand'` | `'expand-and-focus'`, default `'expand-and-focus'`): Controls what happens on node click. Replaces the boolean `shouldToggleOnNodeClick` prop. Matches canvas package's `ClickBehavior` type.
 
 ### Breaking
 - **`shouldToggleOnNodeClick` removed**: Replace `shouldToggleOnNodeClick={true}` with `clickBehavior="expand-and-focus"` (default) and `shouldToggleOnNodeClick={false}` with `clickBehavior="select"`.

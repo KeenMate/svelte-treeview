@@ -309,7 +309,7 @@
 						{sortCallback}
 						expandLevel={3}
 						treePathSeparator="."
-						bind:selectedNode
+						bind:focusedNode={selectedNode}
 						bind:searchText
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}
@@ -503,7 +503,7 @@
 						{sortCallback}
 						expandLevel={3}
 						treePathSeparator="."
-						bind:selectedNode={selectedNode2}
+						bind:focusedNode={selectedNode2}
 						bind:searchText={searchText2}
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={false}

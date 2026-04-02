@@ -57,7 +57,8 @@
 
 		// DATA
 		data: T[];
-		selectedNode?: LTreeNode<T> | null | undefined;
+		focusedNode?: LTreeNode<T> | null | undefined;
+		highlightedPaths?: Set<string>;
 		selectedPaths?: Set<string>;
 		insertResult?: InsertArrayResult<T> | null | undefined;
 
@@ -129,6 +130,7 @@
 
 		// EVENTS (on* = fire-and-forget notifications)
 		onNodeClick?: (node: LTreeNode<T>) => void;
+		onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
@@ -151,7 +153,8 @@
 
 		// VISUALS
 		bodyClass?: string | null | undefined;
-		selectedNodeClass?: string | null | undefined;
+		highlightedNodeClass?: string | null | undefined;
+		focusedNodeClass?: string | null | undefined;
 		dragOverNodeClass?: string | null | undefined;
 		expandIconClass?: string | null | undefined;
 		collapseIconClass?: string | null | undefined;
@@ -200,7 +203,8 @@
 
 		// DATA
 		data = $bindable(),
-		selectedNode = $bindable(),
+		focusedNode = $bindable(),
+		highlightedPaths = $bindable(new Set<string>()),
 		selectedPaths = $bindable(new Set<string>()),
 		insertResult = $bindable(),
 
@@ -262,6 +266,7 @@
 
 		// EVENTS
 		onNodeClick,
+		onHighlightChange,
 		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
@@ -280,7 +285,8 @@
 		collapseIconClass = 'ltree-icon-collapse',
 		leafIconClass = 'ltree-icon-leaf',
 		toggleIconMode = 'rotate',
-		selectedNodeClass,
+		highlightedNodeClass,
+		focusedNodeClass,
 		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
 		scrollHighlightClass = 'ltree-scroll-highlight',
@@ -316,7 +322,9 @@
 		treeId,
 		treePathSeparator,
 		data,
-		selectedNode,
+		focusedNode,
+		highlightedPaths,
+		selectedPaths,
 		expandLevel,
 		clickBehavior,
 		showCheckboxes,
@@ -353,6 +361,7 @@
 		autoHandlePaste,
 		accordionExpand,
 		onNodeClick,
+		onHighlightChange,
 		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
@@ -364,7 +373,8 @@
 		getContextMenuItemsCallback,
 		hasContextMenuSnippet: !!contextMenu,
 		bodyClass,
-		selectedNodeClass,
+		highlightedNodeClass,
+		focusedNodeClass,
 		dragOverNodeClass,
 		expandIconClass,
 		collapseIconClass,
@@ -435,7 +445,8 @@
 	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
 	$effect(() => { controller.leafIconClass = leafIconClass ?? 'ltree-icon-leaf'; });
 	$effect(() => { controller.toggleIconMode = toggleIconMode ?? 'rotate'; });
-	$effect(() => { controller.selectedNodeClass = selectedNodeClass; });
+	$effect(() => { controller.highlightedNodeClass = highlightedNodeClass; });
+	$effect(() => { controller.focusedNodeClass = focusedNodeClass; });
 	$effect(() => { controller.dragOverNodeClass = dragOverNodeClass; });
 	$effect(() => { controller.dropZoneMode = dropZoneMode ?? 'glow'; });
 	$effect(() => { controller.dropZoneLayout = dropZoneLayout ?? 'around'; });
@@ -448,6 +459,7 @@
 
 	// Callback sync
 	$effect(() => { controller.onNodeClickHandler = onNodeClick; });
+	$effect(() => { controller.onHighlightChangeHandler = onHighlightChange; });
 	$effect(() => { controller.onSelectionChangeHandler = onSelectionChange; });
 	$effect(() => { controller.onNodeDragStartHandler = onNodeDragStart; });
 	$effect(() => { controller.onNodeDragOverHandler = onNodeDragOver; });
@@ -462,14 +474,29 @@
 	$effect(() => { controller.onRenderCompleteHandler = onRenderComplete; });
 
 	// ── Sync controller → bindable props (outputs flow back to parent) ──
-	$effect(() => { selectedNode = controller.selectedNode; });
+	$effect(() => { focusedNode = controller.focusedNode; });
+	$effect(() => { highlightedPaths = controller.highlightedPaths; });
 	$effect(() => { selectedPaths = controller.selectedPaths; });
 	$effect(() => { insertResult = controller.insertResult; });
 	$effect(() => { isRendering = controller.isRendering; });
 
-	// Bidirectional: parent can also SET selectedNode
-	$effect(() => { controller.selectedNode = selectedNode; });
-	$effect(() => { controller.selectedPaths = selectedPaths; });
+	// Bidirectional: parent can also SET these
+	$effect(() => { controller.focusedNode = focusedNode; });
+	$effect(() => {
+		// Compare by size + content to avoid proxy identity loops
+		const hp = highlightedPaths;
+		const cp = controller.highlightedPaths;
+		if (hp.size !== cp.size || [...hp].some(p => !cp.has(p))) {
+			controller.highlightedPaths = new Set(hp);
+		}
+	});
+	$effect(() => {
+		const sp = selectedPaths;
+		const cp = controller.selectedPaths;
+		if (sp.size !== cp.size || [...sp].some(p => !cp.has(p))) {
+			controller.selectedPaths = new Set(sp);
+		}
+	});
 
 	// ── Floating drop zone helpers ───────────────────────────────────────
 	const formattedDropZoneStart = $derived(
@@ -643,7 +670,8 @@
 				| "isSorted"
 				| "sortCallback"
 				| "data"
-				| "selectedNode"
+				| "focusedNode"
+				| "highlightedPaths"
 				| "selectedPaths"
 				| "expandLevel"
 				| "clickBehavior"
@@ -659,6 +687,7 @@
 				| "shouldDisplayDebugInformation"
 				| "shouldDisplayContextMenuInDebugMode"
 				| "onNodeClick"
+				| "onHighlightChange"
 				| "onSelectionChange"
 				| "onNodeDragStart"
 				| "onNodeDragOver"
@@ -679,7 +708,8 @@
 				| "collapseIconClass"
 				| "leafIconClass"
 				| "toggleIconMode"
-				| "selectedNodeClass"
+				| "highlightedNodeClass"
+				| "focusedNodeClass"
 				| "dragOverNodeClass"
 				| "scrollHighlightTimeout"
 				| "scrollHighlightClass"
@@ -712,7 +742,8 @@
 		if (updates.isSorted !== undefined) isSorted = updates.isSorted;
 		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;
 		if (updates.data !== undefined) data = updates.data;
-		if (updates.selectedNode !== undefined) selectedNode = updates.selectedNode;
+		if (updates.focusedNode !== undefined) focusedNode = updates.focusedNode;
+		if (updates.highlightedPaths !== undefined) highlightedPaths = updates.highlightedPaths;
 		if (updates.selectedPaths !== undefined) selectedPaths = updates.selectedPaths;
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
@@ -728,6 +759,7 @@
 		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
 		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
 		if (updates.onNodeClick !== undefined) onNodeClick = updates.onNodeClick;
+		if (updates.onHighlightChange !== undefined) onHighlightChange = updates.onHighlightChange;
 		if (updates.onSelectionChange !== undefined) onSelectionChange = updates.onSelectionChange;
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
@@ -748,7 +780,8 @@
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
 		if (updates.toggleIconMode !== undefined) toggleIconMode = updates.toggleIconMode;
-		if (updates.selectedNodeClass !== undefined) selectedNodeClass = updates.selectedNodeClass;
+		if (updates.highlightedNodeClass !== undefined) highlightedNodeClass = updates.highlightedNodeClass;
+		if (updates.focusedNodeClass !== undefined) focusedNodeClass = updates.focusedNodeClass;
 		if (updates.dragOverNodeClass !== undefined) dragOverNodeClass = updates.dragOverNodeClass;
 		if (updates.scrollHighlightTimeout !== undefined) scrollHighlightTimeout = updates.scrollHighlightTimeout;
 		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
@@ -776,13 +809,15 @@
 		let handled = true;
 
 		switch (event.key) {
-			case 'ArrowDown':  controller.navNextSibling(); break;
-			case 'ArrowUp':    controller.navPrevSibling(); break;
+			case 'ArrowDown':  event.shiftKey ? controller.navHighlightNext() : controller.navNextSibling(); break;
+			case 'ArrowUp':    event.shiftKey ? controller.navHighlightPrev() : controller.navPrevSibling(); break;
 			case 'ArrowRight': controller.navInto(); break;
 			case 'ArrowLeft':  controller.navOut(); break;
 			case 'Backspace':  controller.navBackOut(); break;
-			case 'Home':       controller.navFirst(); break;
-			case 'End':        controller.navLast(); break;
+			case 'Home':       event.shiftKey ? controller.navHighlightFirst() : controller.navFirst(); break;
+			case 'End':        event.shiftKey ? controller.navHighlightLast() : controller.navLast(); break;
+			case 'PageDown':   event.shiftKey ? controller.navHighlightPageDown() : controller.navPageDown(); break;
+			case 'PageUp':     event.shiftKey ? controller.navHighlightPageUp() : controller.navPageUp(); break;
 			case 'Enter':
 			case ' ':          controller.navToggle(); break;
 			default:           handled = false;

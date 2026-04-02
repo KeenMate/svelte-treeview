@@ -27,7 +27,7 @@ BASIC TYPED USAGE
   {data}
   idMember="id"
   pathMember="path"
-  bind:selectedNode
+  bind:focusedNode
 />
 
 TYPE EXPORTS

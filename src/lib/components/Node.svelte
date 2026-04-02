@@ -61,7 +61,8 @@
 		expandIconClass,
 		collapseIconClass,
 		leafIconClass,
-		selectedNodeClass,
+		highlightedNodeClass,
+		focusedNodeClass,
 		dragOverNodeClass,
 		allowCopy,
 	} = config;
@@ -364,7 +365,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-node-content {node.isSelected ? selectedNodeClass : ''} {isDraggedOver && dragOverNodeClass ? dragOverNodeClass : ''}"
+			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''} {isDraggedOver && dragOverNodeClass ? dragOverNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
 			class:ltree-draggable={node?.isDraggable}

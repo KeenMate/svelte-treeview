@@ -80,7 +80,8 @@ export interface NodeConfig {
 	collapseIconClass: string;
 	leafIconClass: string;
 	toggleIconMode: ToggleIconMode;
-	selectedNodeClass: string | null | undefined;
+	highlightedNodeClass: string | null | undefined;
+	focusedNodeClass: string | null | undefined;
 	dragOverNodeClass: string | null | undefined;
 	dropZoneMode: 'floating' | 'glow';
 	dropZoneLayout: 'around' | 'above' | 'below' | 'wave' | 'wave2';
@@ -124,7 +125,9 @@ export interface TreeControllerProps<T> {
 
 	// DATA
 	data: T[];
-	selectedNode?: LTreeNode<T> | null | undefined;
+	focusedNode?: LTreeNode<T> | null | undefined;
+	highlightedPaths?: Set<string>;
+	selectedPaths?: Set<string>;
 
 	// BEHAVIOUR
 	expandLevel?: number | null | undefined;
@@ -198,6 +201,7 @@ export interface TreeControllerProps<T> {
 		event: DragEvent | TouchEvent,
 		operation: DropOperation
 	) => void;
+	onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 	onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 	onPaste?: (result: PasteResult<T>) => void;
 
@@ -237,7 +241,8 @@ export interface TreeControllerProps<T> {
 
 	// VISUALS
 	bodyClass?: string | null | undefined;
-	selectedNodeClass?: string | null | undefined;
+	highlightedNodeClass?: string | null | undefined;
+	focusedNodeClass?: string | null | undefined;
 	dragOverNodeClass?: string | null | undefined;
 	expandIconClass?: string | null | undefined;
 	collapseIconClass?: string | null | undefined;
@@ -267,7 +272,8 @@ export class TreeController<T> {
 		expandIconClass: 'ltree-icon-expand',
 		collapseIconClass: 'ltree-icon-collapse',
 		leafIconClass: 'ltree-icon-leaf',
-		selectedNodeClass: undefined,
+		highlightedNodeClass: undefined,
+		focusedNodeClass: undefined,
 		dragOverNodeClass: undefined,
 		dropZoneMode: 'glow',
 		dropZoneLayout: 'around',
@@ -284,9 +290,10 @@ export class TreeController<T> {
 
 	// DATA (bidirectional / output)
 	data = $state.raw<T[]>([]);
-	selectedNode = $state.raw<LTreeNode<T> | null | undefined>(null);
+	focusedNode = $state.raw<LTreeNode<T> | null | undefined>(null);
+	highlightedPaths = $state.raw<Set<string>>(new Set());
+	lastHighlightedPath: string | null = null;
 	selectedPaths = $state.raw<Set<string>>(new Set());
-	lastSelectedPath: string | null = null;
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
 	isRendering = $state(false);
@@ -312,6 +319,7 @@ export class TreeController<T> {
 
 	// Event handlers (on* = fire-and-forget)
 	onNodeClickHandler: ((node: LTreeNode<T>) => void) | undefined;
+	onHighlightChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
 	onSelectionChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
 	onNodeDragStartHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
 	onNodeDragOverHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
@@ -339,7 +347,8 @@ export class TreeController<T> {
 	collapseIconClass = $state('ltree-icon-collapse');
 	leafIconClass = $state('ltree-icon-leaf');
 	toggleIconMode = $state<ToggleIconMode>('rotate');
-	selectedNodeClass = $state<string | null | undefined>(undefined);
+	highlightedNodeClass = $state<string | null | undefined>(undefined);
+	focusedNodeClass = $state<string | null | undefined>(undefined);
 	dragOverNodeClass = $state<string | null | undefined>(undefined);
 	dropZoneMode = $state<'floating' | 'glow'>('glow');
 	dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('around');
@@ -479,7 +488,9 @@ export class TreeController<T> {
 		this.treePathSeparator = props.treePathSeparator ?? '.';
 
 		this.data = props.data;
-		this.selectedNode = props.selectedNode ?? null;
+		this.focusedNode = props.focusedNode ?? null;
+		this.highlightedPaths = props.highlightedPaths ?? new Set();
+		this.selectedPaths = props.selectedPaths ?? new Set();
 		this.searchText = props.searchText;
 
 		this.shouldDisplayDebugInformation = props.shouldDisplayDebugInformation ?? false;
@@ -508,7 +519,8 @@ export class TreeController<T> {
 		this.collapseIconClass = props.collapseIconClass ?? 'ltree-icon-collapse';
 		this.leafIconClass = props.leafIconClass ?? 'ltree-icon-leaf';
 		this.toggleIconMode = props.toggleIconMode ?? 'rotate';
-		this.selectedNodeClass = props.selectedNodeClass;
+		this.highlightedNodeClass = props.highlightedNodeClass;
+		this.focusedNodeClass = props.focusedNodeClass;
 		this.dragOverNodeClass = props.dragOverNodeClass;
 		this.dropZoneMode = props.dropZoneMode ?? 'glow';
 		this.dropZoneLayout = props.dropZoneLayout ?? 'around';
@@ -528,6 +540,7 @@ export class TreeController<T> {
 
 		// Store callbacks
 		this.onNodeClickHandler = props.onNodeClick;
+		this.onHighlightChangeHandler = props.onHighlightChange;
 		this.onSelectionChangeHandler = props.onSelectionChange;
 		this.onNodeDragStartHandler = props.onNodeDragStart;
 		this.onNodeDragOverHandler = props.onNodeDragOver;
@@ -619,7 +632,8 @@ export class TreeController<T> {
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
 			toggleIconMode: this.toggleIconMode,
-			selectedNodeClass: this.selectedNodeClass,
+			highlightedNodeClass: this.highlightedNodeClass,
+			focusedNodeClass: this.focusedNodeClass,
 			dragOverNodeClass: this.dragOverNodeClass,
 			dropZoneMode: this.dropZoneMode,
 			dropZoneLayout: this.dropZoneLayout,
@@ -651,7 +665,8 @@ export class TreeController<T> {
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
 				toggleIconMode: this.toggleIconMode,
-				selectedNodeClass: this.selectedNodeClass,
+				highlightedNodeClass: this.highlightedNodeClass,
+				focusedNodeClass: this.focusedNodeClass,
 				dragOverNodeClass: this.dragOverNodeClass,
 				dropZoneMode: this.dropZoneMode,
 				dropZoneLayout: this.dropZoneLayout,
@@ -1062,10 +1077,10 @@ export class TreeController<T> {
 
 	/**
 	 * Copy nodes to the shared clipboard.
-	 * @param paths Specific paths to copy, or uses selectedPaths if omitted.
+	 * @param paths Specific paths to copy, or uses highlightedPaths if omitted.
 	 */
 	copyNodes(paths?: string[]): void {
-		let pathsToUse = paths ?? [...this.selectedPaths];
+		let pathsToUse = paths ?? [...this.highlightedPaths];
 		if (pathsToUse.length === 0) return;
 
 		// Interceptor: can modify paths or block
@@ -1095,10 +1110,10 @@ export class TreeController<T> {
 
 	/**
 	 * Cut nodes to the shared clipboard. Nodes are dimmed but NOT removed until paste.
-	 * @param paths Specific paths to cut, or uses selectedPaths if omitted.
+	 * @param paths Specific paths to cut, or uses highlightedPaths if omitted.
 	 */
 	cutNodes(paths?: string[]): void {
-		let pathsToUse = paths ?? [...this.selectedPaths];
+		let pathsToUse = paths ?? [...this.highlightedPaths];
 		if (pathsToUse.length === 0) return;
 
 		// Interceptor: can modify paths or block
@@ -1704,7 +1719,9 @@ export class TreeController<T> {
 		if (updates.treePathSeparator !== undefined)
 			this.treePathSeparator = updates.treePathSeparator ?? '.';
 		if (updates.data !== undefined) this.data = updates.data;
-		if (updates.selectedNode !== undefined) this.selectedNode = updates.selectedNode;
+		if (updates.focusedNode !== undefined) this._setFocusedNode(updates.focusedNode ?? null);
+		if (updates.highlightedPaths !== undefined) this.highlightedPaths = updates.highlightedPaths ?? new Set();
+		if (updates.selectedPaths !== undefined) this.selectedPaths = updates.selectedPaths ?? new Set();
 		if (updates.searchText !== undefined) this.searchText = updates.searchText;
 		if (updates.shouldDisplayDebugInformation !== undefined)
 			this.shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
@@ -1735,8 +1752,10 @@ export class TreeController<T> {
 			this.collapseIconClass = updates.collapseIconClass ?? 'ltree-icon-collapse';
 		if (updates.leafIconClass !== undefined)
 			this.leafIconClass = updates.leafIconClass ?? 'ltree-icon-leaf';
-		if (updates.selectedNodeClass !== undefined)
-			this.selectedNodeClass = updates.selectedNodeClass;
+		if (updates.highlightedNodeClass !== undefined)
+			this.highlightedNodeClass = updates.highlightedNodeClass;
+		if (updates.focusedNodeClass !== undefined)
+			this.focusedNodeClass = updates.focusedNodeClass;
 		if (updates.dragOverNodeClass !== undefined)
 			this.dragOverNodeClass = updates.dragOverNodeClass;
 		if (updates.dropZoneMode !== undefined)
@@ -1781,6 +1800,8 @@ export class TreeController<T> {
 		if (updates.onPaste !== undefined) this.onPasteHandler = updates.onPaste;
 		if (updates.getContextMenuItemsCallback !== undefined)
 			this.getContextMenuItemsHandler = updates.getContextMenuItemsCallback;
+		if (updates.onHighlightChange !== undefined)
+			this.onHighlightChangeHandler = updates.onHighlightChange;
 		if (updates.onSelectionChange !== undefined)
 			this.onSelectionChangeHandler = updates.onSelectionChange;
 	}
@@ -1795,64 +1816,53 @@ export class TreeController<T> {
 		const ctrl = modifiers?.ctrl ?? false;
 		const shift = modifiers?.shift ?? false;
 
-		uiLogger.debug(`[multi-select] Click on ${node.path}`, { ctrl, shift, lastAnchor: this.lastSelectedPath, prevCount: this.selectedPaths.size });
+		uiLogger.debug(`[highlight] Click on ${node.path}`, { ctrl, shift, lastAnchor: this.lastHighlightedPath, prevCount: this.highlightedPaths.size });
 
 		if (ctrl) {
-			// Toggle this node in/out of selection
-			const newPaths = new Set(this.selectedPaths);
+			// Toggle this node in/out of highlight
+			const newPaths = new Set([...this.highlightedPaths]);
 			if (newPaths.has(node.path)) {
 				newPaths.delete(node.path);
-				node.isSelected = false;
-				uiLogger.debug(`[multi-select] Ctrl+click: deselected ${node.path}`, { selectedCount: newPaths.size });
+				node.isHighlighted = false;
 			} else {
 				newPaths.add(node.path);
-				node.isSelected = true;
-				uiLogger.debug(`[multi-select] Ctrl+click: added ${node.path}`, { selectedCount: newPaths.size });
+				node.isHighlighted = true;
 			}
 			node._rev = (node._rev || 0) + 1;
-			this.selectedPaths = newPaths;
-			this.lastSelectedPath = node.path;
-		} else if (shift && this.lastSelectedPath) {
-			// Range select from lastSelectedPath to this node
-			uiLogger.debug(`[multi-select] Shift+click: range ${this.lastSelectedPath} → ${node.path} (mode: ${this.rangeSelectionMode})`);
-			const rangePaths = this._getNodesBetween(this.lastSelectedPath, node.path);
-			uiLogger.debug(`[multi-select] Range result: ${rangePaths.length} nodes`, { paths: rangePaths });
-			// Clear previous selection
-			this._clearAllSelectionFlags();
+			this.highlightedPaths = newPaths;
+			this.lastHighlightedPath = node.path;
+		} else if (shift && this.lastHighlightedPath) {
+			// Range highlight from lastHighlightedPath to this node
+			const rangePaths = this._getNodesBetween(this.lastHighlightedPath, node.path);
+			// Clear previous highlights
+			this._clearAllHighlightFlags();
 			const newPaths = new Set<string>();
 			for (const path of rangePaths) {
 				newPaths.add(path);
 				const n = this.tree.getNodeByPath(path);
 				if (n) {
-					n.isSelected = true;
+					n.isHighlighted = true;
 					n._rev = (n._rev || 0) + 1;
 				}
 			}
-			this.selectedPaths = newPaths;
-			// Don't update lastSelectedPath on shift+click (anchor stays)
+			this.highlightedPaths = newPaths;
+			// Don't update lastHighlightedPath on shift+click (anchor stays)
 		} else {
-			// Normal click: clear all, select only this node
-			if (this.selectedPaths.size > 1) {
-				uiLogger.debug(`[multi-select] Plain click: clearing ${this.selectedPaths.size} nodes, selecting ${node.path}`);
-			}
-			this._clearAllSelectionFlags();
-			node.isSelected = true;
+			// Normal click: clear all highlights, highlight only this node
+			this._clearAllHighlightFlags();
+			node.isHighlighted = true;
 			node._rev = (node._rev || 0) + 1;
 			const newPaths = new Set<string>();
 			newPaths.add(node.path);
-			this.selectedPaths = newPaths;
-			this.lastSelectedPath = node.path;
+			this.highlightedPaths = newPaths;
+			this.lastHighlightedPath = node.path;
 		}
 
-		// Always update selectedNode to the clicked node (backward compat)
-		this.selectedNode = node;
-
-		uiLogger.debug(`[multi-select] Selection updated: ${this.selectedPaths.size} nodes selected`, {
-			paths: [...this.selectedPaths]
-		});
+		// Update focus
+		this._setFocusedNode(node);
 
 		this.onNodeClickHandler?.(node);
-		this._notifySelectionChanged();
+		this._notifyHighlightChanged();
 		this.tree.refresh();
 
 		// Focus the tree container so keyboard navigation works after clicking a node
@@ -1879,11 +1889,30 @@ export class TreeController<T> {
 			? true
 			: !node.isSelected;
 
-		// Compute affected paths based on checkboxMode
-		let affectedPaths = [node.path];
+		// If the clicked node is part of a multi-highlight, apply to all highlighted nodes
+		const isMultiHighlighted = this.highlightedPaths.size > 1 && this.highlightedPaths.has(node.path);
+
+		// Compute affected paths based on checkboxMode and multi-highlight
+		let affectedPaths: string[] = [];
+		if (isMultiHighlighted) {
+			// Start with all highlighted nodes
+			affectedPaths = [...this.highlightedPaths];
+		} else {
+			affectedPaths = [node.path];
+		}
+
+		// In cascade mode, also include descendants of each affected node
 		if (this.checkboxMode === 'cascade') {
-			const descendantPaths = this._getDescendantPaths(node);
-			affectedPaths = [node.path, ...descendantPaths];
+			const expanded = new Set(affectedPaths);
+			for (const path of affectedPaths) {
+				const n = this.tree.getNodeByPath(path);
+				if (n) {
+					for (const dp of this._getDescendantPaths(n)) {
+						expanded.add(dp);
+					}
+				}
+			}
+			affectedPaths = [...expanded];
 		}
 
 		// Call interceptor if provided
@@ -1896,7 +1925,7 @@ export class TreeController<T> {
 		}
 
 		// Apply selection changes
-		const newPaths = new Set(this.selectedPaths);
+		const newPaths = new Set([...this.selectedPaths]);
 		for (const path of affectedPaths) {
 			const n = this.tree.getNodeByPath(path);
 			if (!n) continue;
@@ -1910,19 +1939,23 @@ export class TreeController<T> {
 			n._rev = (n._rev || 0) + 1;
 		}
 		this.selectedPaths = newPaths;
-		this.lastSelectedPath = node.path;
-		this.selectedNode = node;
+		this._setFocusedNode(node);
 
-		// Update visual states for the toggled node and its ancestors in cascade mode
-		if (this.checkboxMode === 'cascade') {
-			const vs = this._computeVisualState(node);
-			if (node.visualState !== vs) {
-				node.visualState = vs;
-				node._rev = (node._rev || 0) + 1;
+		// Update visual states for toggled nodes and their ancestors
+		// Collect unique root paths to update (the top-level nodes that were directly toggled)
+		const rootPaths = isMultiHighlighted ? [...this.highlightedPaths] : [node.path];
+		for (const rp of rootPaths) {
+			const rn = this.tree.getNodeByPath(rp);
+			if (!rn) continue;
+			if (this.checkboxMode === 'cascade') {
+				const vs = this._computeVisualState(rn);
+				if (rn.visualState !== vs) {
+					rn.visualState = vs;
+					rn._rev = (rn._rev || 0) + 1;
+				}
 			}
+			this._updateAncestorVisualStates(rp);
 		}
-		// Always update ancestors — handles both cascade toggle and individual child clicks
-		this._updateAncestorVisualStates(node.path);
 
 		this.onNodeClickHandler?.(node);
 		this._notifySelectionChanged();
@@ -1932,7 +1965,7 @@ export class TreeController<T> {
 
 	/** Walk up from a node path and set visualState on each ancestor based on descendant selection */
 	private _updateAncestorVisualStates(startPath: string) {
-		const newPaths = new Set(this.selectedPaths);
+		const newPaths = new Set([...this.selectedPaths]);
 		let path: string | null | undefined = this.tree.getNodeByPath(startPath)?.parentPath;
 		while (path) {
 			const ancestor = this.tree.getNodeByPath(path);
@@ -1982,7 +2015,31 @@ export class TreeController<T> {
 		return VisualState.indeterminate;
 	}
 
-	/** Clear isSelected flag on all currently selected nodes */
+	/** Set focused node, clearing previous focus flag */
+	private _setFocusedNode(node: LTreeNode<T> | null) {
+		if (this.focusedNode && this.focusedNode.path !== node?.path) {
+			this.focusedNode.isFocused = false;
+			this.focusedNode._rev = (this.focusedNode._rev || 0) + 1;
+		}
+		if (node) {
+			node.isFocused = true;
+			node._rev = (node._rev || 0) + 1;
+		}
+		this.focusedNode = node;
+	}
+
+	/** Clear isHighlighted flag on all currently highlighted nodes */
+	private _clearAllHighlightFlags() {
+		for (const path of this.highlightedPaths) {
+			const n = this.tree.getNodeByPath(path);
+			if (n) {
+				n.isHighlighted = false;
+				n._rev = (n._rev || 0) + 1;
+			}
+		}
+	}
+
+	/** Clear isSelected flag on all currently selected (checkbox) nodes */
 	private _clearAllSelectionFlags() {
 		for (const path of this.selectedPaths) {
 			const n = this.tree.getNodeByPath(path);
@@ -1993,7 +2050,15 @@ export class TreeController<T> {
 		}
 	}
 
-	/** Notify listeners about selection change */
+	/** Notify listeners about highlight change */
+	private _notifyHighlightChanged() {
+		if (this.onHighlightChangeHandler) {
+			const nodes = this.getHighlightedNodes();
+			this.onHighlightChangeHandler(this.highlightedPaths, nodes);
+		}
+	}
+
+	/** Notify listeners about checkbox selection change */
 	private _notifySelectionChanged() {
 		if (this.onSelectionChangeHandler) {
 			const nodes = this.getSelectedNodes();
@@ -2067,16 +2132,12 @@ export class TreeController<T> {
 		return result;
 	}
 
-	// ── Public multi-select methods ─────────────────────────────────────
+	// ── Public highlight methods (UI selection) ────────────────────────
 
-	/** Select a node with the given mode */
-	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
-		uiLogger.debug(`[multi-select] selectNode("${path}", "${mode}")`);
+	/** Highlight a node with the given mode */
+	highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
 		const node = this.tree.getNodeByPath(path);
-		if (!node) {
-			uiLogger.debug(`[multi-select] selectNode: node not found at path "${path}"`);
-			return;
-		}
+		if (!node) return;
 
 		if (mode === 'toggle') {
 			this._onNodeClicked(node, { ctrl: true, shift: false });
@@ -2087,45 +2148,56 @@ export class TreeController<T> {
 		}
 	}
 
-	/** Select multiple nodes by paths (replaces current selection) */
-	selectNodes(paths: string[]) {
-		uiLogger.debug(`[multi-select] selectNodes: ${paths.length} paths`, { paths });
-		this._clearAllSelectionFlags();
+	/** Highlight multiple nodes by paths (replaces current highlights) */
+	highlightNodes(paths: string[]) {
+		this._clearAllHighlightFlags();
 		const newPaths = new Set<string>();
 		let lastNode: LTreeNode<T> | null = null;
-		let notFound = 0;
 		for (const path of paths) {
 			const node = this.tree.getNodeByPath(path);
 			if (node) {
-				node.isSelected = true;
+				node.isHighlighted = true;
+				node._rev = (node._rev || 0) + 1;
 				newPaths.add(path);
 				lastNode = node;
-			} else {
-				notFound++;
 			}
 		}
-		this.selectedPaths = newPaths;
+		this.highlightedPaths = newPaths;
 		if (lastNode) {
-			this.selectedNode = lastNode;
-			this.lastSelectedPath = lastNode.path;
+			this._setFocusedNode(lastNode);
+			this.lastHighlightedPath = lastNode.path;
 		}
-		uiLogger.debug(`[multi-select] selectNodes: ${newPaths.size} selected, ${notFound} not found`);
-		this._notifySelectionChanged();
+		this._notifyHighlightChanged();
 		this.tree.refresh();
 	}
 
-	/** Clear all selection */
-	deselectAll() {
-		uiLogger.debug(`[multi-select] deselectAll: clearing ${this.selectedPaths.size} nodes`);
-		this._clearAllSelectionFlags();
-		this.selectedPaths = new Set();
-		this.selectedNode = null;
-		this.lastSelectedPath = null;
-		this._notifySelectionChanged();
+	/** Clear all highlights */
+	clearHighlight() {
+		this._clearAllHighlightFlags();
+		this.highlightedPaths = new Set();
+		this.lastHighlightedPath = null;
+		this._notifyHighlightChanged();
 		this.tree.refresh();
 	}
 
-	/** Get all selected nodes */
+	/** Get all highlighted nodes */
+	getHighlightedNodes(): LTreeNode<T>[] {
+		const nodes: LTreeNode<T>[] = [];
+		for (const path of this.highlightedPaths) {
+			const node = this.tree.getNodeByPath(path);
+			if (node) nodes.push(node);
+		}
+		return nodes;
+	}
+
+	/** Check if a specific node path is highlighted */
+	isNodeHighlighted(path: string): boolean {
+		return this.highlightedPaths.has(path);
+	}
+
+	// ── Public selection methods (checkbox data state) ───────────────
+
+	/** Get all selected (checked) nodes */
 	getSelectedNodes(): LTreeNode<T>[] {
 		const nodes: LTreeNode<T>[] = [];
 		for (const path of this.selectedPaths) {
@@ -2135,9 +2207,27 @@ export class TreeController<T> {
 		return nodes;
 	}
 
-	/** Check if a specific node path is selected */
+	/** Check if a specific node path is selected (checked) */
 	isNodeSelected(path: string): boolean {
 		return this.selectedPaths.has(path);
+	}
+
+	/** Clear all checkbox selections */
+	deselectAll() {
+		this._clearAllSelectionFlags();
+		this.selectedPaths = new Set();
+		this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** @deprecated Use highlightNode() instead */
+	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
+		this.highlightNode(path, mode);
+	}
+
+	/** @deprecated Use highlightNodes() instead */
+	selectNodes(paths: string[]) {
+		this.highlightNodes(paths);
 	}
 
 	private _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
@@ -2145,18 +2235,16 @@ export class TreeController<T> {
 			return;
 		}
 
-		// If right-clicking on an unselected node, clear multi-selection and select only this node
-		if (!this.selectedPaths.has(node.path)) {
-			uiLogger.debug(`[multi-select] Right-click on unselected node ${node.path}, clearing ${this.selectedPaths.size} selected nodes`);
-			this._clearAllSelectionFlags();
-			node.isSelected = true;
-			this.selectedPaths = new Set([node.path]);
-			this.selectedNode = node;
-			this.lastSelectedPath = node.path;
-			this._notifySelectionChanged();
+		// If right-clicking on an unhighlighted node, clear highlights and highlight only this node
+		if (!this.highlightedPaths.has(node.path)) {
+			this._clearAllHighlightFlags();
+			node.isHighlighted = true;
+			node._rev = (node._rev || 0) + 1;
+			this.highlightedPaths = new Set([node.path]);
+			this._setFocusedNode(node);
+			this.lastHighlightedPath = node.path;
+			this._notifyHighlightChanged();
 			this.tree.refresh();
-		} else {
-			uiLogger.debug(`[multi-select] Right-click on selected node ${node.path}, keeping ${this.selectedPaths.size} selected nodes`);
 		}
 
 		uiLogger.debug(`Context menu opened: ${node.path}`);
@@ -2781,6 +2869,24 @@ export class TreeController<T> {
 	navFirst(): void { this.navigation.navFirst(); }
 	/** Select last visible node */
 	navLast(): void { this.navigation.navLast(); }
+	/** PageDown — jump forward ~10 visible nodes */
+	navPageDown(): void { this.navigation.navPageDown(); }
+	/** PageUp — jump back ~10 visible nodes */
+	navPageUp(): void { this.navigation.navPageUp(); }
+
+	// ── Shift+navigation: extend highlight range ────────────────────
+	/** Shift+ArrowDown — extend highlight to next visible node */
+	navHighlightNext(): void { this.navigation.navHighlightNext(); }
+	/** Shift+ArrowUp — extend highlight to previous visible node */
+	navHighlightPrev(): void { this.navigation.navHighlightPrev(); }
+	/** Shift+Home — extend highlight to first visible node */
+	navHighlightFirst(): void { this.navigation.navHighlightFirst(); }
+	/** Shift+End — extend highlight to last visible node */
+	navHighlightLast(): void { this.navigation.navHighlightLast(); }
+	/** Shift+PageDown — extend highlight forward ~10 visible nodes */
+	navHighlightPageDown(): void { this.navigation.navHighlightPageDown(); }
+	/** Shift+PageUp — extend highlight back ~10 visible nodes */
+	navHighlightPageUp(): void { this.navigation.navHighlightPageUp(); }
 
 	/** Create the default flat-list navigation strategy (used by the HTML tree renderer) */
 	createDefaultNavigation(): TreeNavigation<T> {
@@ -2795,7 +2901,7 @@ export class TreeController<T> {
 			navNextSibling: () => {
 				const flatNodes = this.allFlatNodes;
 				if (flatNodes.length === 0) return;
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
 				if (currentIndex === -1) {
 					this.navigation.navTo(flatNodes[0].path);
@@ -2813,7 +2919,7 @@ export class TreeController<T> {
 			navPrevSibling: () => {
 				const flatNodes = this.allFlatNodes;
 				if (flatNodes.length === 0) return;
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
 				if (currentIndex === -1) {
 					this.navigation.navTo(flatNodes[flatNodes.length - 1].path);
@@ -2829,7 +2935,7 @@ export class TreeController<T> {
 			},
 
 			navInto: () => {
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				if (!currentPath) return;
 				const node = this.getNodeByPath(currentPath);
 				if (!node) return;
@@ -2854,7 +2960,7 @@ export class TreeController<T> {
 			},
 
 			navOut: () => {
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				if (!currentPath) return;
 				const node = this.getNodeByPath(currentPath);
 				if (!node?.parentPath) return;
@@ -2862,7 +2968,7 @@ export class TreeController<T> {
 			},
 
 			navBackOut: () => {
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				if (!currentPath) return;
 				const node = this.getNodeByPath(currentPath);
 				if (!node?.parentPath) return;
@@ -2878,7 +2984,7 @@ export class TreeController<T> {
 			},
 
 			navToggle: () => {
-				const currentPath = this.selectedNode?.path;
+				const currentPath = this.focusedNode?.path;
 				if (!currentPath) return;
 				const node = this.getNodeByPath(currentPath);
 				if (!node?.hasChildren || node.isCollapsible === false) return;
@@ -2901,8 +3007,113 @@ export class TreeController<T> {
 				if (flatNodes.length > 0) {
 					this.navigation.navTo(flatNodes[flatNodes.length - 1].path);
 				}
+			},
+
+			navPageDown: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				const targetIndex = Math.min((currentIndex === -1 ? 0 : currentIndex) + 10, flatNodes.length - 1);
+				this.navigation.navTo(flatNodes[targetIndex].path);
+			},
+
+			navPageUp: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : flatNodes.length;
+				const targetIndex = Math.max((currentIndex === -1 ? flatNodes.length : currentIndex) - 10, 0);
+				this.navigation.navTo(flatNodes[targetIndex].path);
+			},
+
+			// ── Shift+navigation: extend highlight range ────────────
+			navHighlightNext: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) return;
+				// Move to next node at same level
+				const currentLevel = flatNodes[currentIndex].level;
+				for (let i = currentIndex + 1; i < flatNodes.length; i++) {
+					if (flatNodes[i].level === currentLevel) {
+						this._navHighlightTo(flatNodes[i].path);
+						return;
+					}
+				}
+			},
+
+			navHighlightPrev: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) return;
+				const currentLevel = flatNodes[currentIndex].level;
+				for (let i = currentIndex - 1; i >= 0; i--) {
+					if (flatNodes[i].level === currentLevel) {
+						this._navHighlightTo(flatNodes[i].path);
+						return;
+					}
+				}
+			},
+
+			navHighlightFirst: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length > 0) {
+					this._navHighlightTo(flatNodes[0].path);
+				}
+			},
+
+			navHighlightLast: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length > 0) {
+					this._navHighlightTo(flatNodes[flatNodes.length - 1].path);
+				}
+			},
+
+			navHighlightPageDown: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) return;
+				const targetIndex = Math.min(currentIndex + 10, flatNodes.length - 1);
+				this._navHighlightTo(flatNodes[targetIndex].path);
+			},
+
+			navHighlightPageUp: () => {
+				const flatNodes = this.allFlatNodes;
+				if (flatNodes.length === 0) return;
+				const currentPath = this.focusedNode?.path;
+				const currentIndex = currentPath ? flatNodes.findIndex(n => n.path === currentPath) : -1;
+				if (currentIndex === -1) return;
+				const targetIndex = Math.max(currentIndex - 10, 0);
+				this._navHighlightTo(flatNodes[targetIndex].path);
 			}
 		};
+	}
+
+	/** Extend highlight to target path (Shift+nav) — uses range from anchor, moves focus */
+	private _navHighlightTo(path: string) {
+		// Set anchor if not set
+		if (!this.lastHighlightedPath && this.focusedNode) {
+			this.lastHighlightedPath = this.focusedNode.path;
+			// Ensure anchor is highlighted
+			const anchorNode = this.focusedNode;
+			if (!anchorNode.isHighlighted) {
+				anchorNode.isHighlighted = true;
+				anchorNode._rev = (anchorNode._rev || 0) + 1;
+				this.highlightedPaths = new Set([anchorNode.path]);
+			}
+		}
+		this.highlightNode(path, 'range');
+		// Move focus to the target without clearing highlights
+		const node = this.tree.getNodeByPath(path);
+		if (node) this._setFocusedNode(node);
+		this.scrollToPath(path, { expand: false, highlight: false, containerScroll: true });
+		this.tree.refresh();
 	}
 
 	findScrollableAncestor(element: HTMLElement): HTMLElement | null {

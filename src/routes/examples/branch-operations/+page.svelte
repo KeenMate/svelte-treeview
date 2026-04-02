@@ -366,9 +366,9 @@
 					sortCallback={sortByOrder}
 					isSorted={true}
 					expandLevel={3}
-					selectedNodeClass="ltree-selected-bold"
+					highlightedNodeClass="ltree-selected-bold"
 					getContextMenuItemsCallback={getContextMenu}
-					bind:selectedNode
+					bind:focusedNode={selectedNode}
 					{...getTreeProps()}
 				>
 					{#snippet nodeTemplate(node: any)}

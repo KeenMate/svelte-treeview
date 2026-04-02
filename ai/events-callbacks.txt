@@ -194,7 +194,9 @@ BINDING VS CALLBACK
 -------------------
 Bindable props (two-way):
 - searchText
-- selectedNode
+- focusedNode (single focused node)
+- highlightedPaths (Set<string>, Ctrl/Shift+click highlight)
+- selectedPaths (Set<string>, checkbox data state)
 - insertResult
 
 Callback props (one-way notification):
@@ -216,7 +218,7 @@ Example combining both:
 </script>
 
 <Tree
-  bind:selectedNode
+  bind:focusedNode
   onNodeClicked={handleClick}
 />
 

@@ -197,7 +197,7 @@
 						{expandLevel}
 						{treePathSeparator}
 						isSorted={false}
-						bind:selectedNode
+						bind:focusedNode={selectedNode}
 						bind:searchText
 						shouldUseInternalSearchIndex={true}
 						shouldDisplayDebugInformation={true}

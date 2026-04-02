@@ -61,7 +61,7 @@ Available SCSS variables:
 
 SELECTED NODE CLASSES
 ---------------------
-<Tree selectedNodeClass="ltree-selected-bold" />
+<Tree highlightedNodeClass="ltree-selected-bold" />
 
 Built-in classes:
 - ltree-selected-bold - Bold text with primary color
@@ -75,7 +75,7 @@ Custom selected style:
   font-weight: 600;
 }
 
-<Tree selectedNodeClass="my-selected" />
+<Tree highlightedNodeClass="my-selected" />
 
 DRAG-OVER CLASSES
 -----------------

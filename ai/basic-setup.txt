@@ -93,7 +93,7 @@ BINDING SELECTED NODE
   {data}
   idMember="id"
   pathMember="path"
-  bind:selectedNode
+  bind:focusedNode
 />
 
 {#if selectedNode}

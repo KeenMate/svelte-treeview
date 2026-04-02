@@ -283,7 +283,7 @@ Complete workflow for adding items:
   }
 </script>
 
-<Tree bind:this={treeRef} bind:selectedNode />
+<Tree bind:this={treeRef} bind:focusedNode />
 
 <button onclick={addSibling} disabled={!selectedNode}>Add Sibling</button>
 <button onclick={addChild} disabled={!selectedNode}>Add Child</button>
@@ -362,11 +362,11 @@ CLIPBOARD API (rc04+)
 Built-in clipboard for copy/cut/paste workflows:
 
 // Copy selected nodes (or specific paths)
-treeRef.copyNodes();                    // copies selectedPaths
+treeRef.copyNodes();                    // copies highlightedPaths
 treeRef.copyNodes(['1.2', '1.3']);      // copies specific paths
 
 // Cut selected nodes (dims them visually, removes on paste)
-treeRef.cutNodes();                     // cuts selectedPaths
+treeRef.cutNodes();                     // cuts highlightedPaths
 treeRef.cutNodes(['1.2']);              // cuts specific paths
 
 // Paste under target node

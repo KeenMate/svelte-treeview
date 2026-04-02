@@ -713,7 +713,7 @@
 							dragDropMode="cross"
 							onNodeDrop={handleDropC}
 							onNodeClick={onNodeClickC}
-							selectedNode={selectedNodeC}
+							focusedNode={selectedNodeC}
 							isLoading={isLoadingC}
 							{...getTreeProps()}
 						>

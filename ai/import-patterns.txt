@@ -170,7 +170,7 @@ SVELTEKIT IMPORT
   {data}
   idMember="id"
   pathMember="path"
-  bind:selectedNode
+  bind:focusedNode
 />
 
 // +layout.svelte (for global styles)

@@ -21,10 +21,10 @@ treeElement.update({
 treeElement.update({ searchText: '' });
 
 All props updatable except snippets:
-- data, searchText, selectedNode, expandLevel
+- data, searchText, focusedNode, highlightedPaths, selectedPaths, expandLevel
 - Members: idMember, pathMember, displayValueMember
 - Callbacks: sortCallback, onNodeClicked, etc.
-- Visual: bodyClass, selectedNodeClass, etc.
+- Visual: bodyClass, highlightedNodeClass, etc.
 
 LAZY LOADING CHILDREN
 ---------------------
@@ -86,33 +86,47 @@ For extremely large trees (50,000+ nodes), implement external virtualization:
   </div>
 </VirtualList>
 
-MULTI-SELECT (BUILT-IN, v5.0.0-rc03+)
---------------------------------------
-Built-in multi-select — no custom implementation needed:
+THREE-LEVEL SELECTION (v5.0.0-rc05+)
+-------------------------------------
+Three independent state tracks:
+
+1. focusedNode — single node (click/arrow keys), for detail panels
+2. highlightedPaths — multi-node UI highlight (Ctrl/Shift+click), for bulk ops
+3. selectedPaths — checkbox data state, independent of highlight
 
 <script>
+  let focusedNode = $state(null);
+  let highlightedPaths = $state(new Set<string>());
   let selectedPaths = $state(new Set<string>());
-
-  function handleSelectionChanged(paths: Set<string>, nodes: LTreeNode<MyItem>[]) {
-    console.log(`${paths.size} nodes selected`);
-  }
 </script>
 
 <Tree
   {data}
+  bind:focusedNode
+  bind:highlightedPaths
   bind:selectedPaths
+  highlightedNodeClass="ltree-selected-highlight"
+  showCheckboxes={true}
+  checkboxMode="cascade"
   rangeSelectionMode="visual"
-  onSelectionChanged={handleSelectionChanged}
+  onHighlightChange={(paths, nodes) => console.log(`${paths.size} highlighted`)}
+  onSelectionChange={(paths, nodes) => console.log(`${paths.size} checked`)}
 />
 
-Interactions:
-- Ctrl+click (Cmd on Mac): toggle individual node
-- Shift+click: range select from anchor to target
-- Plain click: clear selection, select one
+Highlight interactions:
+- Ctrl+click (Cmd on Mac): toggle individual node highlight
+- Shift+click: range highlight from anchor to target
+- Shift+Arrow/Home/End/PageUp/PageDown: extend highlight via keyboard
+- Plain click: clear highlights, highlight one
+
+Checkbox interactions:
+- Click checkbox: toggle isSelected (independent of highlight)
+- Click checkbox on highlighted node with multi-highlight: all highlighted toggle
+- Cascade mode: checking parent checks all descendants, indeterminate state
 
 rangeSelectionMode:
-- "visual" (default): selects only visible/expanded nodes
-- "logical": selects all nodes in depth-first order including collapsed
+- "visual" (default): highlights only visible/expanded nodes
+- "logical": highlights all nodes in depth-first order including collapsed
 
 TreeController API:
 - treeRef.selectNode(path, mode)    // mode: 'toggle' | 'range' | 'replace'
@@ -370,7 +384,7 @@ BREADCRUMB NAVIGATION
   {/each}
 </nav>
 
-<Tree bind:this={treeRef} bind:selectedNode />
+<Tree bind:this={treeRef} bind:focusedNode />
 
 PERMISSION-BASED ACTIONS
 ------------------------

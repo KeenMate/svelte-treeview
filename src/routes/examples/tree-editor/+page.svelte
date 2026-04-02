@@ -330,7 +330,7 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="both"
-						bind:selectedNode
+						bind:focusedNode={selectedNode}
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
 						onNodeDragStart={handleDragStart}
@@ -610,7 +610,7 @@
   orderMember="sortOrder"
   dragDropMode="both"
   onNodeDrop={handleDrop}
-  bind:selectedNode
+  bind:focusedNode={selectedNode}
 >
   {#snippet nodeTemplate(node: any)}
     <span>{node.data?.name}</span>

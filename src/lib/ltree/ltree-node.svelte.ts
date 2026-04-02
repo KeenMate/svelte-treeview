@@ -33,6 +33,8 @@ export interface LTreeNode<T> {
 
 	visualState: VisualState;
 	isExpanded: boolean;
+	isFocused: boolean;
+	isHighlighted: boolean;
 	isSelected: boolean;
 
 	isSelectable: boolean;
@@ -64,6 +66,8 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		isCheckboxVisible: false,
 		visualState: VisualState.notSelected,
 		isExpanded: false,
+		isFocused: false,
+		isHighlighted: false,
 		isSelected: false,
 
 		isSelectable: true,

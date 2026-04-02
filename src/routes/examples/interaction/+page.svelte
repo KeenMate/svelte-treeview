@@ -14,22 +14,45 @@
 		{ id: 3, path: '1.1.1', name: 'Reports', icon: '📊' },
 		{ id: 4, path: '1.1.2', name: 'Presentations', icon: '📽️' },
 		{ id: 5, path: '1.1.3', name: 'Spreadsheets', icon: '📈' },
+		{ id: 50, path: '1.1.4', name: 'Invoices', icon: '🧾' },
+		{ id: 51, path: '1.1.5', name: 'Contracts', icon: '📜' },
+		{ id: 52, path: '1.1.6', name: 'Budgets', icon: '💰' },
+		{ id: 53, path: '1.1.7', name: 'Meeting Notes', icon: '📝' },
+		{ id: 54, path: '1.1.8', name: 'Templates', icon: '📄' },
 		{ id: 6, path: '1.2', name: 'Personal', icon: '🏠' },
 		{ id: 7, path: '1.2.1', name: 'Photos', icon: '📷' },
 		{ id: 8, path: '1.2.2', name: 'Music', icon: '🎵' },
 		{ id: 9, path: '1.2.3', name: 'Videos', icon: '🎬' },
+		{ id: 55, path: '1.2.4', name: 'Recipes', icon: '🍳' },
+		{ id: 56, path: '1.2.5', name: 'Travel', icon: '✈️' },
+		{ id: 57, path: '1.2.6', name: 'Fitness', icon: '🏋️' },
+		{ id: 58, path: '1.2.7', name: 'Books', icon: '📚' },
 		{ id: 10, path: '2', name: 'Downloads', icon: '⬇️' },
 		{ id: 11, path: '2.1', name: 'Software', icon: '💿' },
 		{ id: 12, path: '2.2', name: 'Media', icon: '🎞️' },
 		{ id: 13, path: '2.3', name: 'Archives', icon: '📦' },
+		{ id: 60, path: '2.4', name: 'Documents', icon: '📃' },
+		{ id: 61, path: '2.5', name: 'Images', icon: '🖼️' },
+		{ id: 62, path: '2.6', name: 'Fonts', icon: '🔤' },
+		{ id: 63, path: '2.7', name: 'Plugins', icon: '🔌' },
+		{ id: 64, path: '2.8', name: 'Drivers', icon: '🖨️' },
 		{ id: 14, path: '3', name: 'Projects', icon: '🚀' },
 		{ id: 15, path: '3.1', name: 'Web App', icon: '🌐' },
 		{ id: 16, path: '3.1.1', name: 'Frontend', icon: '🎨' },
 		{ id: 17, path: '3.1.2', name: 'Backend', icon: '⚙️' },
 		{ id: 18, path: '3.1.3', name: 'Tests', icon: '🧪' },
+		{ id: 70, path: '3.1.4', name: 'DevOps', icon: '🔧' },
+		{ id: 71, path: '3.1.5', name: 'Docs', icon: '📖' },
 		{ id: 19, path: '3.2', name: 'Mobile App', icon: '📱' },
 		{ id: 20, path: '3.2.1', name: 'iOS', icon: '🍎' },
-		{ id: 21, path: '3.2.2', name: 'Android', icon: '🤖' }
+		{ id: 21, path: '3.2.2', name: 'Android', icon: '🤖' },
+		{ id: 72, path: '3.2.3', name: 'Flutter', icon: '🦋' },
+		{ id: 73, path: '3.2.4', name: 'React Native', icon: '⚛️' },
+		{ id: 74, path: '3.3', name: 'CLI Tools', icon: '⌨️' },
+		{ id: 75, path: '3.3.1', name: 'Linter', icon: '🔍' },
+		{ id: 76, path: '3.3.2', name: 'Formatter', icon: '✨' },
+		{ id: 77, path: '3.3.3', name: 'Bundler', icon: '📦' },
+		{ id: 78, path: '3.3.4', name: 'Compiler', icon: '🏗️' }
 	];
 
 	type Item = typeof sampleData[0];
@@ -41,7 +64,7 @@
 	// ── Persisted settings ───────────────────────────────────────────
 	interface Settings {
 		clickBehavior: ClickBehavior;
-		selectedNodeClass: string;
+		highlightedNodeClass: string;
 		showCheckboxes: boolean;
 		checkboxMode: CheckboxMode;
 		rangeSelectionMode: 'visual' | 'logical';
@@ -49,7 +72,7 @@
 
 	const defaultSettings: Settings = {
 		clickBehavior: 'expand-and-focus',
-		selectedNodeClass: 'ltree-selected-bold',
+		highlightedNodeClass: 'ltree-selected-bold',
 		showCheckboxes: false,
 		checkboxMode: 'independent',
 		rangeSelectionMode: 'visual'
@@ -69,7 +92,7 @@
 		try {
 			localStorage?.setItem(STORAGE_KEY, JSON.stringify({
 				clickBehavior,
-				selectedNodeClass,
+				highlightedNodeClass,
 				showCheckboxes,
 				checkboxMode,
 				rangeSelectionMode
@@ -77,41 +100,37 @@
 		} catch {}
 	}
 
-	const selectedNodeClassOptions = [
-		{ value: 'ltree-selected-bold', label: 'Bold (ltree-selected-bold)' },
-		{ value: 'ltree-selected-border', label: 'Border (ltree-selected-border)' },
-		{ value: 'ltree-selected-brackets', label: 'Brackets (ltree-selected-brackets)' }
+	const highlightedNodeClassOptions = [
+		{ value: 'ltree-selected-bold', label: 'Bold' },
+		{ value: 'ltree-selected-border', label: 'Border' },
+		{ value: 'ltree-selected-brackets', label: 'Brackets' },
+		{ value: 'ltree-selected-highlight', label: 'Highlight (Explorer-style)' }
 	];
 
 	// ── Click Behavior demo ──────────────────────────────────────────
 	let clickBehavior = $state<ClickBehavior>(saved.clickBehavior);
-	let selectedNodeClass = $state(saved.selectedNodeClass);
+	let highlightedNodeClass = $state(saved.highlightedNodeClass);
 	let showCheckboxes = $state(saved.showCheckboxes);
 	let checkboxMode = $state<CheckboxMode>(saved.checkboxMode);
-	let clickSelectedNode = $state<LTreeNode<Item> | null>(null);
-	let clickLog = $state<string[]>([]);
 
-	$effect(() => { clickBehavior; selectedNodeClass; showCheckboxes; checkboxMode; rangeSelectionMode; saveSettings(); });
+	// Three-level state
+	let focusedNode1 = $state<LTreeNode<Item> | null>(null);
+	let highlightedPaths1 = $state(new Set<string>());
+	let selectedPaths1 = $state(new Set<string>());
+
+	$effect(() => { clickBehavior; highlightedNodeClass; showCheckboxes; checkboxMode; rangeSelectionMode; saveSettings(); });
 
 	function onClickDemoNodeClick(node: LTreeNode<Item>) {
-		clickLog = [`Selected: ${node.data?.name} (${node.path})`, ...clickLog.slice(0, 9)];
 	}
 
 	// ── Multi-select demo ────────────────────────────────────────────
 	let rangeSelectionMode = $state<'visual' | 'logical'>(saved.rangeSelectionMode);
-	let multiSelectedPaths = $state(new Set<string>());
-	let multiSelectedNode = $state<LTreeNode<Item> | null>(null);
-	let selectionLog = $state<string[]>([]);
-
-	function onSelectionChange(paths: Set<string>, nodes: LTreeNode<Item>[]) {
-		selectionLog = [
-			`${nodes.length} node(s): ${nodes.map(n => n.data?.name).join(', ')}`,
-			...selectionLog.slice(0, 9)
-		];
-	}
+	let focusedNode2 = $state<LTreeNode<Item> | null>(null);
+	let highlightedPaths2 = $state(new Set<string>());
+	let selectedPaths2 = $state(new Set<string>());
 
 	// ── Keyboard navigation demo ─────────────────────────────────────
-	let navSelectedNode = $state<LTreeNode<Item> | null>(null);
+	let navFocusedNode = $state<LTreeNode<Item> | null>(null);
 	let navLog = $state<string[]>([]);
 
 	function onNavNodeClick(node: LTreeNode<Item>) {
@@ -150,8 +169,8 @@
 			</label>
 			<label>
 				Selected Style:
-				<select bind:value={selectedNodeClass}>
-					{#each selectedNodeClassOptions as opt}
+				<select bind:value={highlightedNodeClass}>
+					{#each highlightedNodeClassOptions as opt}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
 				</select>
@@ -169,7 +188,7 @@
 					</select>
 				</label>
 			{/if}
-			<button class="btn btn-secondary" onclick={() => { clickLog = []; }}>Clear Log</button>
+			<button class="btn btn-secondary" onclick={() => { highlightedPaths1 = new Set(); selectedPaths1 = new Set(); }}>Clear All</button>
 		</div>
 
 		<div class="grid-2">
@@ -181,11 +200,13 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					expandLevel={2}
-					{selectedNodeClass}
+					{highlightedNodeClass}
 					{clickBehavior}
 					{showCheckboxes}
 					{checkboxMode}
-					bind:selectedNode={clickSelectedNode}
+					bind:focusedNode={focusedNode1}
+					bind:highlightedPaths={highlightedPaths1}
+					bind:selectedPaths={selectedPaths1}
 					onNodeClick={onClickDemoNodeClick}
 					{...getTreeProps()}
 				>
@@ -196,32 +217,24 @@
 			</div>
 			<div>
 				<div class="output">
-					<p class="output-label">Current Mode</p>
-					<pre>{clickBehavior === 'expand-and-focus'
-	? 'Single click selects AND expands/collapses'
-	: clickBehavior === 'select'
-		? 'Single click selects only\nDouble-click expands/collapses'
-		: 'Single click expands/collapses only\nNo selection on click'}{showCheckboxes ? '\n+ Checkboxes toggle selection' : ''}</pre>
+					<p class="output-label">Focused Node</p>
+					<pre>{focusedNode1 ? `${focusedNode1.data?.icon} ${focusedNode1.data?.name} (${focusedNode1.path})` : '(none)'}</pre>
 				</div>
-				{#if clickSelectedNode}
-					<div class="output">
-						<p class="output-label">Selected Node</p>
-						<pre>{clickSelectedNode.data?.icon} {clickSelectedNode.data?.name} ({clickSelectedNode.path})</pre>
-					</div>
-				{/if}
-				{#if clickLog.length > 0}
-					<div class="output">
-						<p class="output-label">Event Log</p>
-						<pre>{clickLog.join('\n')}</pre>
-					</div>
-				{/if}
+				<div class="output">
+					<p class="output-label">Highlighted ({highlightedPaths1.size})</p>
+					<pre>{highlightedPaths1.size > 0 ? [...highlightedPaths1].join(', ') : '(none — try Ctrl+click or Shift+click)'}</pre>
+				</div>
+				<div class="output">
+					<p class="output-label">Selected / Checked ({selectedPaths1.size})</p>
+					<pre>{selectedPaths1.size > 0 ? [...selectedPaths1].join(', ') : '(none — use checkboxes)'}</pre>
+				</div>
 			</div>
 		</div>
 
 		<div class="code-block">
 			<pre>{`<Tree
   clickBehavior="${clickBehavior}"
-  selectedNodeClass="${selectedNodeClass}"
+  highlightedNodeClass="${highlightedNodeClass}"
   showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}
   ...
 />
@@ -256,7 +269,7 @@
 					<option value="logical">logical (all nodes in tree order)</option>
 				</select>
 			</label>
-			<button class="btn btn-secondary" onclick={() => { multiSelectedPaths = new Set(); selectionLog = []; }}>Clear Selection</button>
+			<button class="btn btn-secondary" onclick={() => { highlightedPaths2 = new Set(); selectedPaths2 = new Set(); }}>Clear All</button>
 		</div>
 
 		<div class="grid-2">
@@ -268,13 +281,13 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					expandLevel={3}
-					{selectedNodeClass}
+					{highlightedNodeClass}
 					{showCheckboxes}
 					{checkboxMode}
 					{rangeSelectionMode}
-					bind:selectedNode={multiSelectedNode}
-					bind:selectedPaths={multiSelectedPaths}
-					{onSelectionChange}
+					bind:focusedNode={focusedNode2}
+					bind:highlightedPaths={highlightedPaths2}
+					bind:selectedPaths={selectedPaths2}
 					{...getTreeProps()}
 				>
 					{#snippet nodeTemplate(node: any)}
@@ -284,17 +297,17 @@
 			</div>
 			<div>
 				<div class="output">
-					<p class="output-label">Selected ({multiSelectedPaths.size} nodes)</p>
-					<pre>{multiSelectedPaths.size > 0
-	? [...multiSelectedPaths].join(', ')
-	: '(none — try Ctrl+click, Shift+click, or checkboxes)'}</pre>
+					<p class="output-label">Focused Node</p>
+					<pre>{focusedNode2 ? `${focusedNode2.data?.icon} ${focusedNode2.data?.name} (${focusedNode2.path})` : '(none)'}</pre>
 				</div>
-				{#if selectionLog.length > 0}
-					<div class="output">
-						<p class="output-label">Selection Log</p>
-						<pre>{selectionLog.join('\n')}</pre>
-					</div>
-				{/if}
+				<div class="output">
+					<p class="output-label">Highlighted ({highlightedPaths2.size})</p>
+					<pre>{highlightedPaths2.size > 0 ? [...highlightedPaths2].join(', ') : '(none — try Ctrl+click or Shift+click)'}</pre>
+				</div>
+				<div class="output">
+					<p class="output-label">Selected / Checked ({selectedPaths2.size})</p>
+					<pre>{selectedPaths2.size > 0 ? [...selectedPaths2].join(', ') : '(none — use checkboxes)'}</pre>
+				</div>
 			</div>
 		</div>
 
@@ -310,7 +323,7 @@
 			<pre>{`<Tree
   showCheckboxes={true}
   rangeSelectionMode="${rangeSelectionMode}"
-  bind:selectedPaths={selectedPaths}
+  bind:highlightedPaths={selectedPaths}
   onSelectionChange={(paths, nodes) => { ... }}
   ...
 />`}</pre>
@@ -334,8 +347,8 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					expandLevel={2}
-					{selectedNodeClass}
-					bind:selectedNode={navSelectedNode}
+					{highlightedNodeClass}
+					bind:focusedNode={navFocusedNode}
 					onNodeClick={onNavNodeClick}
 					{...getTreeProps()}
 				>
@@ -356,10 +369,10 @@ Home   Go to first node
 End    Go to last visible node
 &#9003;   Collapse and go to parent</pre>
 				</div>
-				{#if navSelectedNode}
+				{#if navFocusedNode}
 					<div class="output">
-						<p class="output-label">Current Node</p>
-						<pre>{navSelectedNode.data?.icon} {navSelectedNode.data?.name} ({navSelectedNode.path})</pre>
+						<p class="output-label">Focused Node</p>
+						<pre>{navFocusedNode.data?.icon} {navFocusedNode.data?.name} ({navFocusedNode.path})</pre>
 					</div>
 				{/if}
 				{#if navLog.length > 0}

@@ -70,7 +70,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={2}
-				bind:selectedNode
+				bind:focusedNode={selectedNode}
 				onNodeClick={handleNodeClick}
 				{...getTreeProps()}
 			>

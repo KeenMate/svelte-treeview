@@ -403,7 +403,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={3}
-				bind:selectedNode={selectedStd}
+				bind:focusedNode={selectedStd}
 				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}

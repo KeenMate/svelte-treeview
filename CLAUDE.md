@@ -68,10 +68,13 @@ TREE_PROPS_REQUIRED:
 
 TREE_PROPS_KEY:
 - searchText (bindable)
-- selectedNode (bindable)
+- focusedNode (bindable) - single focused node (click/arrow keys)
+- highlightedPaths (bindable, Set<string>) - multi-select highlight (Ctrl/Shift+click)
+- selectedPaths (bindable, Set<string>) - checkbox data state
 - insertResult (bindable) - InsertArrayResult<T> with failed nodes info
 - clickBehavior: ClickBehavior (default 'expand-and-focus') - 'select' | 'expand' | 'expand-and-focus'
 - showCheckboxes: boolean (default false) - renders selection checkboxes per node
+- checkboxMode: CheckboxMode (default 'independent') - 'independent' | 'cascade'
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
@@ -165,4 +168,4 @@ CANVAS_PACKAGE:
 - Peer-depends on this package (@keenmate/svelte-treeview ^5.0.0)
 - Canvas examples (org-chart, nhl-playoffs, canvas-dendrogram, layout-modes, json-loader) are in that package
 
-RECENT: v5.0.0-rc05 - clickBehavior prop ('select'|'expand'|'expand-and-focus') replaces shouldToggleOnNodeClick. TreeNavigation, bulk subtree ops, clipboard API. Unified ContextMenuItem types, Svelte context menu components. Core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.
+RECENT: v5.0.0-rc06 - Three-level selection (focusedNode/highlightedPaths/selectedPaths). showCheckboxes + checkboxMode (cascade/independent). Shift+Arrow/Home/End/PageUp/PageDown keyboard highlight. clickBehavior prop. Core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.

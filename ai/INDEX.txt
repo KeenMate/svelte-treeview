@@ -195,10 +195,13 @@ Search → search-features.txt
 searchNodes → search-features.txt
 searchText → search-features.txt, basic-setup.txt
 searchValueMember → search-features.txt, data-handling.txt
-selectedNode → basic-setup.txt, events-callbacks.txt
-selectedNodeClass → styling-theming.txt
-selectedPaths → advanced-patterns.txt
-selectNode → advanced-patterns.txt
+focusedNode → basic-setup.txt, events-callbacks.txt
+highlightedNodeClass → styling-theming.txt
+highlightedPaths → advanced-patterns.txt
+highlightNode → advanced-patterns.txt
+selectedPaths → advanced-patterns.txt (checkbox data state)
+showCheckboxes → basic-setup.txt
+checkboxMode → basic-setup.txt
 shouldDisplayDebugInformation → basic-setup.txt, performance.txt
 clickBehavior → basic-setup.txt, events-callbacks.txt
 shouldUseInternalSearchIndex → search-features.txt

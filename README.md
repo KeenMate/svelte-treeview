@@ -6,11 +6,13 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## What's New in v5.0.0-rc05
+## What's New in v5.0.0-rc06
 
-- **`clickBehavior` prop**: Controls node click behavior — `'select'` (click selects, double-click expands), `'expand'` (click expands only), or `'expand-and-focus'` (click selects + expands, default). Replaces `shouldToggleOnNodeClick`. Matches canvas package's `ClickBehavior` type.
-- **`showCheckboxes` prop**: Renders a checkbox before each selectable node. Clicking toggles selection (same as Ctrl+click). Works with multi-select and all selection styles.
-- **Pluggable keyboard navigation**: New `TreeNavigation<T>` interface — each renderer (HTML, Canvas) provides its own spatial implementation. Override individual methods via `TreeNavigationOverrides<T>`.
+- **Three-level selection**: `focusedNode` (click/arrows), `highlightedPaths` (Ctrl/Shift+click), `selectedPaths` (checkbox data state). Highlight and checkbox are independent — build a selection, then check/uncheck all at once.
+- **`clickBehavior` prop**: `'select'` | `'expand'` | `'expand-and-focus'` (default). Replaces `shouldToggleOnNodeClick`.
+- **`showCheckboxes` + `checkboxMode`**: Custom styled checkboxes with `'independent'` or `'cascade'` mode (parent toggles descendants, indeterminate state).
+- **Shift+Arrow/Home/End/PageUp/PageDown**: Extends highlight range via keyboard, like file managers.
+- **Pluggable keyboard navigation**: `TreeNavigation<T>` interface — each renderer provides its own spatial implementation. Override individual methods via `TreeNavigationOverrides<T>`.
 - **Bulk subtree operations**: `insertBranch()`, `replaceBranch()`, `deleteBranch()` on TreeController — add, replace, or remove entire subtrees with a single emission.
 - **Clipboard API**: `copyNodes()`, `cutNodes()`, `pasteNodes()`, `cancelCut()` on TreeController. Cut nodes are visually dimmed. Supports auto-handle and manual (server-driven) paste modes.
 
