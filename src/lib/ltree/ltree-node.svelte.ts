@@ -19,17 +19,10 @@ export interface LTreeNode<T> {
 	hasChildren: boolean;
 	data: T | null | undefined;
 
-	useCallback: boolean;
-	priority: number | null | undefined;
-
 	isDraggable: boolean;
 	isCollapsible: boolean;
 	isDropAllowed: boolean;
 	allowedDropPositions: DropPosition[] | null | undefined;
-
-	isInsertAllowed: boolean;
-	isNestAllowed: boolean;
-	isCheckboxVisible: boolean | null | undefined;
 
 	visualState: VisualState;
 	isExpanded: boolean;
@@ -55,15 +48,10 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		hasChildren: false,
 		data: undefined,
 
-		useCallback: false,
-		priority: undefined,
 		isDraggable: true,
 		isCollapsible: true,
 		isDropAllowed: true,
 		allowedDropPositions: undefined,
-		isInsertAllowed: true,
-		isNestAllowed: true,
-		isCheckboxVisible: false,
 		visualState: VisualState.notSelected,
 		isExpanded: false,
 		isFocused: false,

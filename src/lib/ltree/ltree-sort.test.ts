@@ -12,6 +12,7 @@ describe('LTree Sorting', () => {
 			undefined, // hasChildrenMember
 			undefined, // isExpandedMember
 			undefined, // isSelectableMember
+			undefined, // isSelectedMember
 			undefined, // isDraggableMember
 			undefined, // getIsDraggableCallback
 			undefined, // isDropAllowedMember

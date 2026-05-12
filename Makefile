@@ -1,4 +1,4 @@
-.PHONY: help setup dev install build build-all build-showcase test test-watch publish publish-dry docker-build docker-start docker-stop docker-restart
+.PHONY: help setup dev install build build-all build-showcase test test-watch test-e2e test-e2e-ui test-e2e-headed publish publish-dry docker-build docker-start docker-stop docker-restart
 
 help: ## Show this help
 	@echo ""
@@ -30,6 +30,15 @@ test: ## Run tests once
 
 test-watch: ## Run tests in watch mode
 	npm run test
+
+test-e2e: ## Run Playwright e2e tests (headless)
+	npm run test:e2e
+
+test-e2e-ui: ## Run Playwright e2e tests in UI mode
+	npm run test:e2e:ui
+
+test-e2e-headed: ## Run Playwright e2e tests headed
+	npm run test:e2e:headed
 
 publish: ## Publish to npm (TAG=rc for pre-release)
 	npm publish $(if $(TAG),--tag $(TAG))

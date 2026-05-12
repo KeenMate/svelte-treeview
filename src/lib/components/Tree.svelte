@@ -31,6 +31,7 @@
 		parentPathMember?: string | null | undefined;
 		levelMember?: string | null | undefined;
 		isExpandedMember?: string | null | undefined;
+		isSelectableMember?: string | null | undefined;
 		isSelectedMember?: string | null | undefined;
 		isDraggableMember?: string | null | undefined;
 		getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
@@ -184,6 +185,7 @@
 		hasChildrenMember,
 
 		isExpandedMember,
+		isSelectableMember,
 		isSelectedMember,
 		isDraggableMember,
 		getIsDraggableCallback,
@@ -304,6 +306,7 @@
 		levelMember,
 		hasChildrenMember,
 		isExpandedMember,
+		isSelectableMember,
 		isSelectedMember,
 		isDraggableMember,
 		getIsDraggableCallback,
@@ -656,6 +659,7 @@
 				| "levelMember"
 				| "hasChildrenMember"
 				| "isExpandedMember"
+				| "isSelectableMember"
 				| "isSelectedMember"
 				| "isDraggableMember"
 				| "getIsDraggableCallback"
@@ -728,6 +732,7 @@
 		if (updates.levelMember !== undefined) levelMember = updates.levelMember;
 		if (updates.hasChildrenMember !== undefined) hasChildrenMember = updates.hasChildrenMember;
 		if (updates.isExpandedMember !== undefined) isExpandedMember = updates.isExpandedMember;
+		if (updates.isSelectableMember !== undefined) isSelectableMember = updates.isSelectableMember;
 		if (updates.isSelectedMember !== undefined) isSelectedMember = updates.isSelectedMember;
 		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
 		if (updates.getIsDraggableCallback !== undefined) getIsDraggableCallback = updates.getIsDraggableCallback;

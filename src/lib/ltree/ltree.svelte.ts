@@ -10,7 +10,7 @@ import {
 	getRelativePath
 } from '../helpers/ltree-helpers.js';
 
-import type { Ltree, Tuple, InsertArrayResult, InsertBranchResult, DeleteBranchResult } from './types.js';
+import type { Ltree, InsertArrayResult, InsertBranchResult, DeleteBranchResult } from './types.js';
 import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
 import { perfStart, perfEnd, perfSummary } from '../perf-logger.js';
@@ -28,6 +28,7 @@ export function createLTree<T>(
 	_hasChildrenMember?: string | null | undefined,
 	_isExpandedMember?: string | null | undefined,
 	_isSelectableMember?: string | null | undefined,
+	_isSelectedMember?: string | null | undefined,
 	_isDraggableMember?: string | null | undefined,
 	_getIsDraggableCallback?: (node: LTreeNode<T>) => boolean,
 	_isDropAllowedMember?: string | null | undefined,
@@ -61,6 +62,7 @@ export function createLTree<T>(
 	let shouldCalculateHasChildren: boolean = isEmptyString(_hasChildrenMember);
 	let shouldCalculateIsExpanded: boolean = isEmptyString(_isExpandedMember);
 	let shouldCalculateIsSelectable: boolean = isEmptyString(_isSelectableMember);
+	let shouldCalculateIsSelected: boolean = isEmptyString(_isSelectedMember);
 	let shouldCalculateIsDraggable: boolean = isEmptyString(_isDraggableMember);
 	let shouldCalculateIsDropAllowed: boolean = isEmptyString(_isDropAllowedMember);
 	let shouldCalculateAllowedDropPositions: boolean = isEmptyString(_allowedDropPositionsMember);
@@ -81,7 +83,6 @@ export function createLTree<T>(
 		searchIndex = _initializeIndexCallback ? _initializeIndexCallback() : createSearchIndex();
 
 	let changeTracker = $state(Symbol());
-	let size = 0;
 	let nodeCount = 0;
 	let maxLevel = 0;
 
@@ -124,6 +125,7 @@ export function createLTree<T>(
 		levelMember: _levelMember,
 		isExpandedMember: _isExpandedMember,
 		isSelectableMember: _isSelectableMember,
+		isSelectedMember: _isSelectedMember,
 		isDraggableMember: _isDraggableMember,
 		getIsDraggableCallback: _getIsDraggableCallback,
 		isDropAllowedMember: _isDropAllowedMember,
@@ -172,7 +174,6 @@ export function createLTree<T>(
 
 			// Return cached result if changeTracker hasn't changed
 			if (_tracker === cachedVisibleFlatNodesTracker && cachedVisibleFlatNodes.length > 0) {
-				// console.log(`[visibleFlatNodes] Cache HIT - returning ${cachedVisibleFlatNodes.length} nodes`);
 				return cachedVisibleFlatNodes;
 			}
 
@@ -276,6 +277,7 @@ export function createLTree<T>(
 				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
 				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+				if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
@@ -470,7 +472,6 @@ export function createLTree<T>(
 			perfStart(`[${_treeId}] createFilteredTree`);
 			filteredRoot.children = {};
 			filteredTree = null;
-			// isFiltered = false;
 
 			// 1. Expand all target paths to include their parents
 			const allRequiredPaths = new Set<string>();
@@ -607,10 +608,6 @@ export function createLTree<T>(
 				node = node.children[segment]!;
 			}
 
-			// Mark as end of path and store data
-			if (node.hasChildren) {
-				size++;
-			}
 			node.hasChildren = true;
 			node.data = data;
 
@@ -1416,6 +1413,7 @@ export function createLTree<T>(
 				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
 				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+				if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);

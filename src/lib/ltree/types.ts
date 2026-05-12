@@ -4,7 +4,6 @@ import type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 // Re-export LTreeNode and DropPosition for convenience
 export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 
-export type Tuple<T, U> = [T, U];
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
@@ -96,13 +95,12 @@ export interface Ltree<T> {
 	isSorted: boolean | null | undefined;
 	sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
 
-	indexingCompleteCallback?: () => void;
-
 	// Filtering properties
 	filteredTree: LTreeNode<T>[] | null;
 	isFiltered: boolean;
 
 	isSelectableMember: string | null | undefined;
+	isSelectedMember: string | null | undefined;
 	isDraggableMember: string | null | undefined;
 	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 	isDropAllowedMember: string | null | undefined;

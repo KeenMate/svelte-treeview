@@ -100,6 +100,7 @@ export interface TreeControllerProps<T> {
 	parentPathMember?: string | null | undefined;
 	levelMember?: string | null | undefined;
 	isExpandedMember?: string | null | undefined;
+	isSelectableMember?: string | null | undefined;
 	isSelectedMember?: string | null | undefined;
 	isDraggableMember?: string | null | undefined;
 	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
@@ -564,6 +565,7 @@ export class TreeController<T> {
 			props.levelMember,
 			props.hasChildrenMember,
 			props.isExpandedMember,
+			props.isSelectableMember,
 			props.isSelectedMember,
 			props.isDraggableMember,
 			props.getIsDraggableCallback,
@@ -697,6 +699,17 @@ export class TreeController<T> {
 				this.vsMeasuredRowHeight = null;
 				this.vsDetectedHeight = null;
 				this.insertResult = this.tree.insertArray(this.data);
+
+				// Seed selectedPaths from node.isSelected flags written by insertArray
+				if (this.tree.isSelectedMember) {
+					const seeded = new Set<string>();
+					const walk = (node: LTreeNode<T>) => {
+						if (node.isSelected) seeded.add(node.path);
+						for (const key in node.children) walk(node.children[key]!);
+					};
+					for (const key in this.tree.root.children) walk(this.tree.root.children[key]!);
+					this.selectedPaths = seeded;
+				}
 			}
 		});
 
