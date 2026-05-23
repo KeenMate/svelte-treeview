@@ -1,7 +1,9 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/context-menu.
+ * E2E coverage for /test/context-menu (minimal fixture page; the
+ * /examples/context-menu demo carries the same logic but with tutorial
+ * chrome that this spec doesn't need).
  *
  * The page hosts two trees, each in its own card:
  *   1. "Callback Approach"          — uses getContextMenuItemsCallback
@@ -25,7 +27,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *   - "Read-only file" entry has isVisible=true only for readonly items
  */
 
-const PAGE = '/examples/context-menu';
+const PAGE = '/test/context-menu';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -85,11 +87,16 @@ async function rightClick(card: Locator, path: string) {
 	// Playwright auto-scrolls offscreen targets into view before clicking —
 	// that scroll event fires async, lands *after* the menu opens, and
 	// immediately closes it. Pre-scroll and let the scroll event drain so
-	// the menu stays open after the right-click. Wait for the node to settle
-	// first so Svelte isn't mid-rerender when we ask for a scroll.
+	// the menu stays open after the right-click.
+	//
+	// Use Locator.evaluate to scroll rather than scrollIntoViewIfNeeded: the
+	// tree uses `{#key nodeRev}` per-node re-renders, so a node's DOM can be
+	// replaced between the visibility check and the action. evaluate resolves
+	// the element fresh and doesn't require the action-stability wait that
+	// scrollIntoViewIfNeeded performs (which is what flaked).
 	const content = nodeContent(nodeIn(card, path));
 	await expect(content).toBeVisible();
-	await content.scrollIntoViewIfNeeded();
+	await content.evaluate((el) => el.scrollIntoView({ block: 'center', inline: 'nearest' }));
 	await content.page().waitForTimeout(50);
 	await content.click({ button: 'right' });
 	await expect(menuIn(card)).toBeVisible();

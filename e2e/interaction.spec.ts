@@ -1,7 +1,8 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/interaction.
+ * E2E coverage for /test/interaction (minimal fixture page; /examples/interaction
+ * is the tutorial demo with the same logic plus persistence and styling controls).
  *
  * Three trees live on this page, sharing the showCheckboxes/checkboxMode
  * settings but each binding its own focusedNode / highlightedPaths /
@@ -25,7 +26,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * tree uses expandLevel=3 (everything visible).
  */
 
-const PAGE = '/examples/interaction';
+const PAGE = '/test/interaction';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

@@ -13,14 +13,16 @@ export default async function globalSetup(config: FullConfig) {
 	const baseURL = config.projects[0]?.use?.baseURL ?? 'http://localhost:17777';
 
 	const routes = [
-		'/examples/basic',
-		'/examples/interaction',
-		'/examples/drag-drop',
-		'/examples/search',
-		'/examples/context-menu',
-		'/examples/data',
-		'/examples/performance',
-		'/dev/member-props'
+		'/test/basic',
+		'/test/interaction',
+		'/test/search',
+		'/test/context-menu',
+		'/test/data',
+		'/test/performance',
+		'/test/member-props',
+		'/test/drag-drop',
+		'/test/branch-operations',
+		'/test/keyboard-nav'
 	];
 
 	const browser = await chromium.launch();

@@ -9,7 +9,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * - isSelectedMember:  data field that seeds node.isSelected and (via
  *   TreeController) the bindable selectedPaths Set.
  *
- * Fixture page: src/routes/dev/member-props/+page.svelte
+ * Fixture page: src/routes/test/member-props/+page.svelte
  *
  * Fixture data (paths and expected props):
  *   1     Documents  selectable=true  selected=false
@@ -20,7 +20,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *   2.1   Playlists  selectable=true  selected=false
  */
 
-const PAGE = '/dev/member-props';
+const PAGE = '/test/member-props';
 
 function nodeByPath(page: Page, path: string): Locator {
 	return page.locator(`.ltree-node[data-tree-path="${path}"]`).first();

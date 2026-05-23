@@ -1,9 +1,10 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/search.
+ * E2E coverage for /test/search (minimal fixture page; /examples/search is
+ * the tutorial demo with the same logic and a 160-row dataset).
  *
- * Single tree (~160 countries+cities) with a search bar above it. The page
+ * Single tree (~8 countries+cities) with a search bar above it. The page
  * supports two modes:
  *   - 'filter' (default): typing hides non-matching nodes via bind:searchText.
  *   - 'search':           tree stays whole; typing finds matches and the user
@@ -19,7 +20,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *   'xxx_no_match' → 0 results
  */
 
-const PAGE = '/examples/search';
+const PAGE = '/test/search';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

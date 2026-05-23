@@ -1,7 +1,8 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/basic.
+ * E2E coverage for /test/basic (minimal fixture page; /examples/basic is the
+ * tutorial demo with the same logic).
  *
  * Four trees, one per card:
  *   1. "Simple Tree"                    — click focus → outputs
@@ -27,7 +28,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *   '3.2'   Mobile App
  */
 
-const PAGE = '/examples/basic';
+const PAGE = '/test/basic';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

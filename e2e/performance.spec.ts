@@ -1,7 +1,9 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/performance.
+ * E2E coverage for /test/performance (minimal fixture page; /examples/performance
+ * is the full benchmark playground with the same controls plus persistence,
+ * countries-data loader, and timing metrics).
  *
  * This page is the benchmark playground: three render modes (recursive / flat
  * / virtual), a synthetic data generator, configurable node count and expand
@@ -23,11 +25,22 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * never click it from tests so the suite stays offline-friendly.
  */
 
-test.describe.configure({ mode: 'serial' });
+// Long per-test timeout for this file: a single test runs Generate (which
+// mounts ~273 nodes + builds the search index), Expand/Collapse cycles, and
+// search assertions with up to ACTION_TIMEOUT each. The project-wide 45s
+// ceiling clips that under parallel-worker dev-server load.
+test.describe.configure({ mode: 'serial', timeout: 120_000 });
 
-const PAGE = '/examples/performance';
+const PAGE = '/test/performance';
 const STORAGE_KEY = 'svelte-treeview-perf-config';
 const TARGET_NODE_COUNT = 300;
+
+// /test/performance does a lot under parallel-worker dev-server load: ~273
+// Tree nodes mount + the async search indexer + Svelte's first-mount work
+// per route. The default 10s expect.poll / assertion timeouts are too tight
+// for these specific waits, and the failures aren't real regressions — they
+// just need more headroom. Bump them across the file via this constant.
+const ACTION_TIMEOUT = 30_000;
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -99,11 +112,16 @@ async function generate(page: Page, target: number = TARGET_NODE_COUNT) {
 	// digits to dodge locale formatting (browser may render '1,000' while the
 	// runner's `toLocaleString` produces '1 000').
 	await expect
-		.poll(async () => parseDigits((await generateBtn.textContent()) ?? ''))
+		.poll(async () => parseDigits((await generateBtn.textContent()) ?? ''), {
+			timeout: ACTION_TIMEOUT
+		})
 		.toBe(target);
 	await generateBtn.click();
-	await expect(treeContainer(page)).toBeVisible();
-	await expect.poll(() => visibleNodeCount(page)).toBeGreaterThan(0);
+	// Cold-load of /test/performance + first-time generate of a few hundred
+	// nodes can push past the default 20s on a loaded dev server. Give the
+	// data card a longer window before failing the test.
+	await expect(treeContainer(page)).toBeVisible({ timeout: 60_000 });
+	await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(0);
 }
 
 async function gotoPerformance(page: Page) {
@@ -173,8 +191,8 @@ test.describe('Data lifecycle', () => {
 		const before = await visibleNodeCount(page);
 		await configCard(page).getByRole('button', { name: 'Redraw' }).click();
 		// Tree re-mounts via {#key treeKey}.
-		await expect(treeContainer(page)).toBeVisible();
-		await expect.poll(() => visibleNodeCount(page)).toBe(before);
+		await expect(treeContainer(page)).toBeVisible({ timeout: ACTION_TIMEOUT });
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBe(before);
 	});
 });
 
@@ -188,8 +206,10 @@ test.describe('Render modes', () => {
 		await expect(dataCard(page).locator('h2')).toContainText('Flat Mode');
 
 		await modeCard(page).getByText('Recursive', { exact: true }).click();
-		await expect(dataCard(page).locator('h2')).toContainText('Recursive Mode');
-		await expect.poll(() => visibleNodeCount(page)).toBeGreaterThan(0);
+		await expect(dataCard(page).locator('h2')).toContainText('Recursive Mode', {
+			timeout: ACTION_TIMEOUT
+		});
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(0);
 	});
 
 	test('switching to Virtual mode renders only a windowed subset of nodes', async ({ page }) => {
@@ -200,12 +220,14 @@ test.describe('Render modes', () => {
 		const fullCount = await visibleNodeCount(page);
 
 		await modeCard(page).getByText('Virtual Scroll', { exact: true }).click();
-		await expect(dataCard(page).locator('h2')).toContainText('Virtual Scroll');
+		await expect(dataCard(page).locator('h2')).toContainText('Virtual Scroll', {
+			timeout: ACTION_TIMEOUT
+		});
 
 		// Virtual mode only renders the rows that fit the container + overscan,
 		// so the DOM count drops well below the full tree.
-		await expect.poll(() => visibleNodeCount(page)).toBeLessThan(fullCount);
-		await expect.poll(() => visibleNodeCount(page)).toBeGreaterThan(0);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeLessThan(fullCount);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(0);
 	});
 });
 
@@ -219,10 +241,10 @@ test.describe('Expand / Collapse', () => {
 		const initial = await visibleNodeCount(page);
 
 		await dataCard(page).getByRole('button', { name: 'Expand All' }).click();
-		await expect.poll(() => visibleNodeCount(page)).toBeGreaterThan(initial);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(initial);
 
 		await dataCard(page).getByRole('button', { name: 'Collapse All' }).click();
-		await expect.poll(() => visibleNodeCount(page)).toBeLessThan(initial);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeLessThan(initial);
 	});
 
 	test('Expand One adds rows; Collapse One drops below the baseline', async ({ page }) => {
@@ -232,10 +254,10 @@ test.describe('Expand / Collapse', () => {
 		const baseline = await visibleNodeCount(page);
 
 		await dataCard(page).getByRole('button', { name: 'Expand One' }).click();
-		await expect.poll(() => visibleNodeCount(page)).toBeGreaterThan(baseline);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(baseline);
 
 		await dataCard(page).getByRole('button', { name: 'Collapse One' }).click();
-		await expect.poll(() => visibleNodeCount(page)).toBeLessThan(baseline);
+		await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeLessThan(baseline);
 	});
 });
 
@@ -253,10 +275,10 @@ test.describe('Search / Filter', () => {
 		await input.fill('Engineering');
 
 		// Counter shows N/M once the async indexer returns.
-		await expect(card.locator('.search-counter')).toContainText('/', { timeout: 10_000 });
+		await expect(card.locator('.search-counter')).toContainText('/', { timeout: ACTION_TIMEOUT });
 
 		// At least one node with 'Engineering' in its label survives the filter.
-		await expect(treeContainer(page).locator('.ltree-node-content', { hasText: 'Engineering' }).first()).toBeVisible();
+		await expect(treeContainer(page).locator('.ltree-node-content', { hasText: 'Engineering' }).first()).toBeVisible({ timeout: ACTION_TIMEOUT });
 	});
 
 	test('Escape clears the search and removes the counter', async ({ page }) => {
@@ -267,7 +289,7 @@ test.describe('Search / Filter', () => {
 		const input = card.locator('input.search-input').first();
 
 		await input.fill('Engineering');
-		await expect(card.locator('.search-counter')).toBeVisible({ timeout: 10_000 });
+		await expect(card.locator('.search-counter')).toBeVisible({ timeout: ACTION_TIMEOUT });
 
 		await input.press('Escape');
 		await expect(input).toHaveValue('');

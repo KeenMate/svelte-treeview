@@ -1,7 +1,8 @@
 import { test, expect, Page, Locator } from '@playwright/test';
 
 /**
- * E2E coverage for /examples/data.
+ * E2E coverage for /test/data (minimal fixture page; /examples/data is the
+ * tutorial demo with the same trees plus API reference panels).
  *
  * Four trees live on this page, demonstrating path-based hierarchy and the
  * `treePathSeparator` prop:
@@ -17,7 +18,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * Each tree is sorted alphabetically by name (sortByName).
  */
 
-const PAGE = '/examples/data';
+const PAGE = '/test/data';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
