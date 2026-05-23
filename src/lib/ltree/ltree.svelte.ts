@@ -97,6 +97,14 @@ export function createLTree<T>(
 	// Async search indexing infrastructure
 	let indexer: Indexer<T> | null = null;
 
+	// Last search text passed to filterNodes. The FlexSearch index is built
+	// asynchronously via the Indexer, so a filter applied while the index is
+	// still warming up returns 0 matches and hides the entire tree. We track
+	// the active query here and re-apply it from the indexer's onComplete
+	// callback so the visible filter eventually reflects the final index.
+	let _lastFilterSearchText: string | null | undefined = null;
+	let _lastFilterSearchOptions: SearchOptions | undefined = undefined;
+
 	// Initialize indexer when search index is available
 	if (_shouldUseInternalSearchIndex && searchIndex) {
 		indexer = new Indexer<T>(
@@ -367,7 +375,14 @@ export function createLTree<T>(
 				indexer.setCallbacks(
 					undefined, // no progress callback for now
 					() => {
-						// Completion callback - refresh tree when indexing is done
+						// Completion callback. Re-apply any active filter before
+						// emitting — a filterNodes() call that landed while indexing
+						// was still in flight saw an incomplete index, so the visible
+						// tree may be missing matching paths until we refresh.
+						if (!isEmptyString(_lastFilterSearchText)) {
+							// isEmptyString guarantees non-empty string here.
+							this.filterNodes(_lastFilterSearchText as string, _lastFilterSearchOptions);
+						}
 						if (!noEmitChanges) {
 							this._emitTreeChanged();
 						}
@@ -433,6 +448,13 @@ export function createLTree<T>(
 		},
 
 		filterNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): void {
+			// Remember the active query so the indexer's onComplete callback can
+			// re-apply it once the FlexSearch index has finished warming up —
+			// otherwise a filter typed while indexing is still in flight hides
+			// the entire tree and never recovers.
+			_lastFilterSearchText = _searchText;
+			_lastFilterSearchOptions = _searchOptions;
+
 			if (isEmptyString(_searchText)) {
 				// Clear filter when search is empty
 				filteredRoot.children = {};

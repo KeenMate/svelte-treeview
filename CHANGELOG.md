@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Filter race with async indexing**: A `bind:searchText` change that landed while the FlexSearch index was still being built (via `requestIdleCallback` batches) saw an empty index, hid the entire tree, and never recovered — no mechanism re-applied the filter once indexing completed. `filterNodes` now remembers the active query and the indexer's `onComplete` callback re-runs it, so the visible filter catches up automatically regardless of `indexerBatchSize`, dataset size, or how fast the user types.
+
 ## [5.0.0-rc06] - 2026-03-31
 
 ### Added
