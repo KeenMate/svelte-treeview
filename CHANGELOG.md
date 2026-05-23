@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0-rc07] - 2026-05-23
+
+### Added
+- **`isSelectedMember` prop**: Data field name that seeds `node.isSelected` at `insertArray` time. The controller walks the tree after insert and pre-populates the bindable `selectedPaths` Set with every path where the field is truthy — independent of `isSelectableMember`, so non-selectable nodes can still ship checked.
+- **`isSelectableMember` prop now publicly wired**: Previously declared on the core types but not exposed through `Tree.svelte`'s prop/update interface. Now end-to-end usable. Controls whether a node renders a checkbox and carries the `ltree-clickable` class.
+
 ### Fixed
 - **Filter race with async indexing**: A `bind:searchText` change that landed while the FlexSearch index was still being built (via `requestIdleCallback` batches) saw an empty index, hid the entire tree, and never recovered — no mechanism re-applied the filter once indexing completed. `filterNodes` now remembers the active query and the indexer's `onComplete` callback re-runs it, so the visible filter catches up automatically regardless of `indexerBatchSize`, dataset size, or how fast the user types.
 

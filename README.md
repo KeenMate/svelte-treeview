@@ -6,6 +6,12 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
+## What's New in v5.0.0-rc07
+
+- **`isSelectedMember` prop**: Seed `selectedPaths` directly from your data — point the prop at a boolean field and every node where it's truthy lands pre-checked after `insertArray`.
+- **`isSelectableMember` fully wired through `Tree`**: The prop was already on the core types but wasn't reachable via the component. Now end-to-end usable to control checkbox rendering and clickability per node.
+- **Fix: filter race during async indexing**: `bind:searchText` no longer hides the entire tree if the FlexSearch index is still being built when the filter is applied. The filter now re-applies itself automatically once indexing completes, regardless of `indexerBatchSize` or dataset size.
+
 ## What's New in v5.0.0-rc06
 
 - **Three-level selection**: `focusedNode` (click/arrows), `highlightedPaths` (Ctrl/Shift+click), `selectedPaths` (checkbox data state). Highlight and checkbox are independent — build a selection, then check/uncheck all at once.
