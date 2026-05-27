@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0-rc08] - 2026-05-27
+
+### Added
+- **`{ silent: true }` option on highlight/selection methods**: `highlightNode`, `highlightNodes`, `clearHighlight`, `deselectAll` (and deprecated `selectNode`/`selectNodes`) now accept `{ silent: true }` to update state without firing `onNodeClick` / `onHighlightChange` / `onSelectionChange`. Intended for URL-restore flows (deep links loading form data from query params) where firing the change callback would re-trigger form loaders and clobber the data the URL just supplied. Silent mode also skips focusing the tree container so it doesn't steal focus from whatever the user is interacting with.
+- **Array variants on expand/collapse methods**: `expandNodes`, `collapseNodes`, `expandAll`, and `collapseAll` now accept `string | string[]`. Single emit per call regardless of array length.
+- **`{ exclusive: true }` option on `expandNodes` and `expandAll`**: Opens the target path(s) and collapses anything currently expanded that isn't on the union-of-spines (and, for `expandAll`, not under a target subtree). Equivalent to `collapseAll() + expandNodes(path)` but in a single pass with one emit — downstream listeners (transition animations, URL sync, virtualized renderers) don't see the intermediate fully-collapsed state. Non-collapsible nodes (`isCollapsible === false`) are never touched.
+- **`{ noEmit: true }` option on all four expand/collapse methods**: Skips the change emit, enabling batching multiple operations and emitting once at the end via `tree.refresh()`.
+- **`/examples/silent-highlight` demo page**: URL-restore scenario with loud vs. silent toggle showing how form data is preserved in silent mode.
+- **`/examples/expand-collapse` demo page**: Demonstrates array variants and exclusive focus mode.
+
 ## [5.0.0-rc07] - 2026-05-23
 
 ### Added

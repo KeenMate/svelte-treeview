@@ -6,6 +6,13 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
+## What's New in v5.0.0-rc08
+
+- **`{ silent: true }` on highlight/selection methods**: Update tree state from URL params or other external sources without firing `onNodeClick` / `onHighlightChange` / `onSelectionChange` — perfect for deep links where you don't want the change callback to re-trigger your form loader. Applies to `highlightNode`, `highlightNodes`, `clearHighlight`, and `deselectAll`.
+- **Array variants for expand/collapse**: `expandNodes`, `collapseNodes`, `expandAll`, and `collapseAll` now take `string | string[]`. Open or close several places in one call.
+- **Exclusive focus mode**: Pass `{ exclusive: true }` to `expandNodes` / `expandAll` to open the target path and collapse everything else in a single pass — no two-step flicker compared to `collapseAll() + expandNodes(path)`.
+- **`noEmit` option for batching**: Suppress the change emit on individual expand/collapse calls when chaining several operations; emit once at the end.
+
 ## What's New in v5.0.0-rc07
 
 - **`isSelectedMember` prop**: Seed `selectedPaths` directly from your data — point the prop at a boolean field and every node where it's truthy lands pre-checked after `insertArray`.
@@ -27,16 +34,6 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 - **Multi-select**: Ctrl+click toggles nodes, Shift+click selects ranges, plain click replaces selection. New `selectedPaths` bindable (`Set<string>`), `onSelectionChanged` event, and `rangeSelectionMode` prop (`'visual'` vs `'logical'`).
 - **Public multi-select API**: `selectNode(path, mode)`, `selectNodes(paths)`, `deselectAll()`, `getSelectedNodes()`, `isNodeSelected(path)` on TreeController.
 - **Selection-aware context menus**: `contextMenuCallback` now receives `selectedNodes` as 3rd parameter for bulk actions.
-
-### v5.0.0-rc03
-
-- **Unified Context Menu API**: New shared type system (`ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry`) used by both svelte-treeview and canvas-tree. Breaking: `title` → `label`, `callback` → `onclick`, `isDivider` → separate `ContextMenuDivider` type.
-- **Context menu features**: Keyboard shortcuts, nested submenus, named dividers (`──── Section ────`), `isVisible`/`isDisabled` per item, `className="danger"`, async `onclick`.
-- **Svelte context menu components**: `ContextMenuItemC` and `ContextMenuDividerC` for declarative snippet-based menus alongside the callback approach.
-- **Accordion expand**: `accordionExpand={true}` — expanding a node auto-collapses its siblings.
-- **Toggle icon mode**: `toggleIconMode="rotate"` (default) smoothly rotates the expand icon vs `"swap"` which switches between two icons.
-- **Fix**: Expand/collapse icon not updating in flat rendering mode.
-- **Fix**: `vite.config.ts` no longer requires `@types/node`.
 
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
