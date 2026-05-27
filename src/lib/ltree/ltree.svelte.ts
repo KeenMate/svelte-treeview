@@ -574,8 +574,15 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 		},
 
-		expandAll(nodePath: string | null | undefined): void {
+		expandAll(
+			nodePath?: string | string[] | null | undefined,
+			options?: { exclusive?: boolean; noEmit?: boolean }
+		): void {
 			perfStart(`[${_treeId}] expandAll`);
+			const self = this;
+			const exclusive = options?.exclusive ?? false;
+			const noEmit = options?.noEmit ?? false;
+
 			function setExpandedRecursive(node: LTreeNode<T>, value: boolean) {
 				node.isExpanded = value;
 				for (const key in node.children) {
@@ -583,20 +590,79 @@ export function createLTree<T>(
 				}
 			}
 
-			if (isEmptyString(nodePath)) {
+			const paths: string[] = Array.isArray(nodePath)
+				? nodePath.filter((p): p is string => !isEmptyString(p))
+				: isEmptyString(nodePath)
+					? []
+					: [nodePath!];
+
+			if (paths.length === 0) {
+				// Whole-tree expand. exclusive has no meaning (nothing to exclude from).
 				setExpandedRecursive(root, true);
 			} else {
-				const target = this.getNodeByPath(nodePath!);
-				if (target) setExpandedRecursive(target, true);
+				if (exclusive) {
+					// Build spine: every ancestor path of every target must stay expanded
+					// so the target subtree is reachable.
+					const spineSet = new Set<string>();
+					for (const p of paths) {
+						const segs = p.split(this.treePathSeparator);
+						for (let i = 0; i < segs.length; i++) {
+							spineSet.add(segs.slice(0, i + 1).join(this.treePathSeparator));
+						}
+					}
+					const isUnderTarget = (path: string) => {
+						for (const tp of paths) {
+							if (path === tp || path.startsWith(tp + this.treePathSeparator)) return true;
+						}
+						return false;
+					};
+					// Walk currently-expanded subtree; collapse anything not on a spine
+					// and not under a target. Only descends into expanded branches.
+					const trim = (node: LTreeNode<T>) => {
+						for (const key in node.children) {
+							const child = node.children[key];
+							if (!child.isExpanded) continue;
+							if (spineSet.has(child.path) || isUnderTarget(child.path)) {
+								trim(child);
+							} else if (self.getNodeIsCollapsible(child)) {
+								child.isExpanded = false;
+								trim(child);
+							}
+						}
+					};
+					trim(root);
+				}
+
+				// Expand spine + entire subtree under each target.
+				for (const p of paths) {
+					let node: LTreeNode<T> | undefined = root;
+					const segments = p.split(this.treePathSeparator);
+					for (let i = 0; i < segments.length; i++) {
+						const segment = segmentPrefix + segments[i];
+						if (node && node.children.hasOwnProperty(segment)) {
+							node = node.children[segment];
+							node.isExpanded = true;
+						} else {
+							node = undefined;
+							break;
+						}
+					}
+					if (node) setExpandedRecursive(node, true);
+				}
 			}
 
-			this._emitTreeChanged();
+			if (!noEmit) this._emitTreeChanged();
 			perfEnd(`[${_treeId}] expandAll`);
 		},
 
-		collapseAll(nodePath?: string | null | undefined): void {
+		collapseAll(
+			nodePath?: string | string[] | null | undefined,
+			options?: { noEmit?: boolean }
+		): void {
 			perfStart(`[${_treeId}] collapseAll`);
 			const self = this;
+			const noEmit = options?.noEmit ?? false;
+
 			function collapseRecursive(node: LTreeNode<T>) {
 				if (node.isExpanded && self.getNodeIsCollapsible(node)) {
 					node.isExpanded = false;
@@ -606,14 +672,22 @@ export function createLTree<T>(
 				}
 			}
 
-			if (isEmptyString(nodePath)) {
+			const paths: string[] = Array.isArray(nodePath)
+				? nodePath.filter((p): p is string => !isEmptyString(p))
+				: isEmptyString(nodePath)
+					? []
+					: [nodePath!];
+
+			if (paths.length === 0) {
 				collapseRecursive(root);
 			} else {
-				const target = this.getNodeByPath(nodePath!);
-				if (target) collapseRecursive(target);
+				for (const p of paths) {
+					const target = this.getNodeByPath(p);
+					if (target) collapseRecursive(target);
+				}
 			}
 
-			this._emitTreeChanged();
+			if (!noEmit) this._emitTreeChanged();
 			perfEnd(`[${_treeId}] collapseAll`);
 		},
 
@@ -638,59 +712,98 @@ export function createLTree<T>(
 			}
 		},
 
-		expandNodes: function (path: string, noEmitChanges: boolean = false) {
+		expandNodes: function (
+			path: string | string[],
+			options?: { exclusive?: boolean; noEmit?: boolean }
+		) {
 			perfStart(`[${_treeId}] expandNodes`);
-			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : root;
+			const self = this;
+			const exclusive = options?.exclusive ?? false;
+			const noEmit = options?.noEmit ?? false;
+			const rootNode = this.isFiltered ? filteredRoot : root;
+			const paths = Array.isArray(path) ? path : [path];
 			let hasChanges = false;
 
-			const segments = path.split(this.treePathSeparator);
-			for (let i = 0; i < segments.length; i++) {
-				const segment = segmentPrefix + segments[i];
+			if (exclusive) {
+				// Build spine set: union of every ancestor path across all inputs.
+				const spineSet = new Set<string>();
+				for (const p of paths) {
+					const segs = p.split(this.treePathSeparator);
+					for (let i = 0; i < segs.length; i++) {
+						spineSet.add(segs.slice(0, i + 1).join(this.treePathSeparator));
+					}
+				}
+				// Walk currently-expanded subtree, collapse anything off-spine.
+				const trim = (node: LTreeNode<T>) => {
+					for (const key in node.children) {
+						const child = node.children[key];
+						if (!child.isExpanded) continue;
+						if (spineSet.has(child.path)) {
+							trim(child);
+						} else if (self.getNodeIsCollapsible(child)) {
+							child.isExpanded = false;
+							hasChanges = true;
+							trim(child);
+						}
+					}
+				};
+				trim(rootNode);
+			}
 
-				if (node.children.hasOwnProperty(segment)) {
-					node = node.children[segment];
-					// Only mark as changed if actually changing from collapsed to expanded
-					if (!node.isExpanded) {
-						node.isExpanded = true;
-						hasChanges = true;
+			for (const p of paths) {
+				let node: LTreeNode<T> | undefined = rootNode;
+				const segments = p.split(this.treePathSeparator);
+				for (let i = 0; i < segments.length; i++) {
+					const segment = segmentPrefix + segments[i];
+					if (node && node.children.hasOwnProperty(segment)) {
+						node = node.children[segment];
+						if (!node.isExpanded) {
+							node.isExpanded = true;
+							hasChanges = true;
+						}
+					} else {
+						break;
 					}
 				}
 			}
 
-			// Only emit changes if something actually changed
-			if (!noEmitChanges && hasChanges) {
+			if (!noEmit && hasChanges) {
 				this._emitTreeChanged();
 			}
 
 			perfEnd(`[${_treeId}] expandNodes`);
-			return this; // Return the API object for chaining
+			return this;
 		},
 
-		collapseNodes: function (path: string, noEmitChanges: boolean = false) {
-			let node: LTreeNode<T> | undefined = this.isFiltered ? filteredRoot : this.root;
+		collapseNodes: function (path: string | string[], options?: { noEmit?: boolean }) {
+			const noEmit = options?.noEmit ?? false;
+			const rootNode = this.isFiltered ? filteredRoot : this.root;
+			const paths = Array.isArray(path) ? path : [path];
 			let hasChanges = false;
 
-			const segments = path.split(this.treePathSeparator);
-			for (let i = 0; i < segments.length; i++) {
-				const segment = segmentPrefix + segments[i];
-
-				if (node.children.hasOwnProperty(segment)) {
-					node = node.children[segment];
+			for (const p of paths) {
+				let node: LTreeNode<T> | undefined = rootNode;
+				const segments = p.split(this.treePathSeparator);
+				for (let i = 0; i < segments.length; i++) {
+					const segment = segmentPrefix + segments[i];
+					if (node && node.children.hasOwnProperty(segment)) {
+						node = node.children[segment];
+					} else {
+						node = undefined;
+						break;
+					}
+				}
+				if (node && node.isExpanded) {
+					node.isExpanded = false;
+					hasChanges = true;
 				}
 			}
 
-			// Only collapse the target node, not ancestors
-			if (node.isExpanded) {
-				node.isExpanded = false;
-				hasChanges = true;
-			}
-
-			// Only emit changes if something actually changed
-			if (!noEmitChanges && hasChanges) {
+			if (!noEmit && hasChanges) {
 				this._emitTreeChanged();
 			}
 
-			return this; // Return the API object for chaining
+			return this;
 		},
 
 		// Private helper methods

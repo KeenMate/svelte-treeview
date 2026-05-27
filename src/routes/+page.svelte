@@ -83,6 +83,12 @@
 			description: 'Restore tree state from URL params (deep links) without firing onHighlightChange / onSelectionChange.'
 		},
 		{
+			href: '/examples/expand-collapse',
+			icon: '🌳',
+			title: 'Expand / Collapse',
+			description: 'Array variants and exclusive focus mode for expandNodes / collapseNodes / expandAll / collapseAll.'
+		},
+		{
 			href: '/dev/logging',
 			icon: '📝',
 			title: 'Logging',

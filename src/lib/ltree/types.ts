@@ -134,16 +134,25 @@ export interface Ltree<T> {
 
 	clearFilter(): void;
 
-	expandAll(nodePath?: string | null | undefined): void;
-	collapseAll(nodePath?: string | null | undefined): void;
+	expandAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	): void;
+	collapseAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { noEmit?: boolean }
+	): void;
 
 	insert(path: string, data: T, noEmitChanges?: boolean): void;
 
 	getNodeByPath(path: string, _root?: LTreeNode<T> | null | undefined): LTreeNode<T> | null;
 
-	expandNodes(path: string): Ltree<T>; // Returns self for chaining
+	expandNodes(
+		path: string | string[],
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	): Ltree<T>;
 
-	collapseNodes(path: string): Ltree<T>; // Returns self for chaining
+	collapseNodes(path: string | string[], options?: { noEmit?: boolean }): Ltree<T>;
 
 	getNodeDisplayValue(node: LTreeNode<T>): string;
 

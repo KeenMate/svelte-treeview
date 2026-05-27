@@ -507,20 +507,32 @@
 	);
 
 	// ── Export public methods (thin proxies) ────────────────────────────
-	export async function expandNodes(nodePath: string) {
-		controller.expandNodes(nodePath);
+	export async function expandNodes(
+		nodePath: string | string[],
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	) {
+		controller.expandNodes(nodePath, options);
 	}
 
-	export async function collapseNodes(nodePath: string) {
-		controller.collapseNodes(nodePath);
+	export async function collapseNodes(
+		nodePath: string | string[],
+		options?: { noEmit?: boolean }
+	) {
+		controller.collapseNodes(nodePath, options);
 	}
 
-	export function expandAll(nodePath?: string | null | undefined) {
-		controller.expandAll(nodePath);
+	export function expandAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	) {
+		controller.expandAll(nodePath, options);
 	}
 
-	export function collapseAll(nodePath?: string | null | undefined) {
-		controller.collapseAll(nodePath);
+	export function collapseAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { noEmit?: boolean }
+	) {
+		controller.collapseAll(nodePath, options);
 	}
 
 	export function filterNodes(searchTextVal: string, searchOptions?: SearchOptions): void {

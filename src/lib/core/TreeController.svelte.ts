@@ -873,20 +873,29 @@ export class TreeController<T> {
 
 	// ── Public API methods ──────────────────────────────────────────────
 
-	async expandNodes(nodePath: string) {
-		this.tree.expandNodes(nodePath);
+	async expandNodes(
+		nodePath: string | string[],
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	) {
+		this.tree.expandNodes(nodePath, options);
 	}
 
-	async collapseNodes(nodePath: string) {
-		this.tree.collapseNodes(nodePath);
+	async collapseNodes(nodePath: string | string[], options?: { noEmit?: boolean }) {
+		this.tree.collapseNodes(nodePath, options);
 	}
 
-	expandAll(nodePath?: string | null | undefined) {
-		this.tree?.expandAll(nodePath);
+	expandAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { exclusive?: boolean; noEmit?: boolean }
+	) {
+		this.tree?.expandAll(nodePath, options);
 	}
 
-	collapseAll(nodePath?: string | null | undefined) {
-		this.tree?.collapseAll(nodePath);
+	collapseAll(
+		nodePath?: string | string[] | null | undefined,
+		options?: { noEmit?: boolean }
+	) {
+		this.tree?.collapseAll(nodePath, options);
 	}
 
 	filterNodes(searchTextVal: string, searchOptions?: SearchOptions): void {
