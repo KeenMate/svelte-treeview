@@ -19,22 +19,6 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 - **`isSelectableMember` fully wired through `Tree`**: The prop was already on the core types but wasn't reachable via the component. Now end-to-end usable to control checkbox rendering and clickability per node.
 - **Fix: filter race during async indexing**: `bind:searchText` no longer hides the entire tree if the FlexSearch index is still being built when the filter is applied. The filter now re-applies itself automatically once indexing completes, regardless of `indexerBatchSize` or dataset size.
 
-## What's New in v5.0.0-rc06
-
-- **Three-level selection**: `focusedNode` (click/arrows), `highlightedPaths` (Ctrl/Shift+click), `selectedPaths` (checkbox data state). Highlight and checkbox are independent — build a selection, then check/uncheck all at once.
-- **`clickBehavior` prop**: `'select'` | `'expand'` | `'expand-and-focus'` (default). Replaces `shouldToggleOnNodeClick`.
-- **`showCheckboxes` + `checkboxMode`**: Custom styled checkboxes with `'independent'` or `'cascade'` mode (parent toggles descendants, indeterminate state).
-- **Shift+Arrow/Home/End/PageUp/PageDown**: Extends highlight range via keyboard, like file managers.
-- **Pluggable keyboard navigation**: `TreeNavigation<T>` interface — each renderer provides its own spatial implementation. Override individual methods via `TreeNavigationOverrides<T>`.
-- **Bulk subtree operations**: `insertBranch()`, `replaceBranch()`, `deleteBranch()` on TreeController — add, replace, or remove entire subtrees with a single emission.
-- **Clipboard API**: `copyNodes()`, `cutNodes()`, `pasteNodes()`, `cancelCut()` on TreeController. Cut nodes are visually dimmed. Supports auto-handle and manual (server-driven) paste modes.
-
-### v5.0.0-rc03
-
-- **Multi-select**: Ctrl+click toggles nodes, Shift+click selects ranges, plain click replaces selection. New `selectedPaths` bindable (`Set<string>`), `onSelectionChanged` event, and `rangeSelectionMode` prop (`'visual'` vs `'logical'`).
-- **Public multi-select API**: `selectNode(path, mode)`, `selectNodes(paths)`, `deselectAll()`, `getSelectedNodes()`, `isNodeSelected(path)` on TreeController.
-- **Selection-aware context menus**: `contextMenuCallback` now receives `selectedNodes` as 3rd parameter for bulk actions.
-
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
 > [!IMPORTANT]
