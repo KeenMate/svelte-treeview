@@ -1821,13 +1821,14 @@ export class TreeController<T> {
 
 	// ── Internal event handlers ─────────────────────────────────────────
 
-	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers) {
+	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean }) {
 		if (this.contextMenuVisible) {
 			this.closeContextMenu();
 		}
 
 		const ctrl = modifiers?.ctrl ?? false;
 		const shift = modifiers?.shift ?? false;
+		const silent = options?.silent ?? false;
 
 		uiLogger.debug(`[highlight] Click on ${node.path}`, { ctrl, shift, lastAnchor: this.lastHighlightedPath, prevCount: this.highlightedPaths.size });
 
@@ -1874,12 +1875,18 @@ export class TreeController<T> {
 		// Update focus
 		this._setFocusedNode(node);
 
-		this.onNodeClickHandler?.(node);
-		this._notifyHighlightChanged();
+		if (!silent) {
+			this.onNodeClickHandler?.(node);
+			this._notifyHighlightChanged();
+		}
 		this.tree.refresh();
 
-		// Focus the tree container so keyboard navigation works after clicking a node
-		this.containerElement?.focus();
+		// Focus the tree container so keyboard navigation works after clicking a node.
+		// Skip in silent mode — programmatic highlight (e.g. from URL params) shouldn't
+		// steal focus from whatever the user is currently interacting with.
+		if (!silent) {
+			this.containerElement?.focus();
+		}
 	}
 
 	/** Get all descendant paths of a node (depth-first) */
@@ -2147,22 +2154,25 @@ export class TreeController<T> {
 
 	// ── Public highlight methods (UI selection) ────────────────────────
 
-	/** Highlight a node with the given mode */
-	highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
+	/** Highlight a node with the given mode.
+	 *  Pass `{ silent: true }` to update state without firing `onNodeClick` / `onHighlightChange`
+	 *  (useful when restoring state from URL params or other external sources). */
+	highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
 		const node = this.tree.getNodeByPath(path);
 		if (!node) return;
 
 		if (mode === 'toggle') {
-			this._onNodeClicked(node, { ctrl: true, shift: false });
+			this._onNodeClicked(node, { ctrl: true, shift: false }, options);
 		} else if (mode === 'range') {
-			this._onNodeClicked(node, { ctrl: false, shift: true });
+			this._onNodeClicked(node, { ctrl: false, shift: true }, options);
 		} else {
-			this._onNodeClicked(node);
+			this._onNodeClicked(node, undefined, options);
 		}
 	}
 
-	/** Highlight multiple nodes by paths (replaces current highlights) */
-	highlightNodes(paths: string[]) {
+	/** Highlight multiple nodes by paths (replaces current highlights).
+	 *  Pass `{ silent: true }` to skip `onHighlightChange`. */
+	highlightNodes(paths: string[], options?: { silent?: boolean }) {
 		this._clearAllHighlightFlags();
 		const newPaths = new Set<string>();
 		let lastNode: LTreeNode<T> | null = null;
@@ -2180,16 +2190,16 @@ export class TreeController<T> {
 			this._setFocusedNode(lastNode);
 			this.lastHighlightedPath = lastNode.path;
 		}
-		this._notifyHighlightChanged();
+		if (!options?.silent) this._notifyHighlightChanged();
 		this.tree.refresh();
 	}
 
-	/** Clear all highlights */
-	clearHighlight() {
+	/** Clear all highlights. Pass `{ silent: true }` to skip `onHighlightChange`. */
+	clearHighlight(options?: { silent?: boolean }) {
 		this._clearAllHighlightFlags();
 		this.highlightedPaths = new Set();
 		this.lastHighlightedPath = null;
-		this._notifyHighlightChanged();
+		if (!options?.silent) this._notifyHighlightChanged();
 		this.tree.refresh();
 	}
 
@@ -2225,22 +2235,22 @@ export class TreeController<T> {
 		return this.selectedPaths.has(path);
 	}
 
-	/** Clear all checkbox selections */
-	deselectAll() {
+	/** Clear all checkbox selections. Pass `{ silent: true }` to skip `onSelectionChange`. */
+	deselectAll(options?: { silent?: boolean }) {
 		this._clearAllSelectionFlags();
 		this.selectedPaths = new Set();
-		this._notifySelectionChanged();
+		if (!options?.silent) this._notifySelectionChanged();
 		this.tree.refresh();
 	}
 
 	/** @deprecated Use highlightNode() instead */
-	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
-		this.highlightNode(path, mode);
+	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
+		this.highlightNode(path, mode, options);
 	}
 
 	/** @deprecated Use highlightNodes() instead */
-	selectNodes(paths: string[]) {
-		this.highlightNodes(paths);
+	selectNodes(paths: string[], options?: { silent?: boolean }) {
+		this.highlightNodes(paths, options);
 	}
 
 	private _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {

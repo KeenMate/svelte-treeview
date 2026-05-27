@@ -77,6 +77,12 @@
 			description: 'Build custom UIs (breadcrumbs, badge clouds) on the headless TreeController via TreeProvider.'
 		},
 		{
+			href: '/examples/silent-highlight',
+			icon: '🔕',
+			title: 'Silent Highlight',
+			description: 'Restore tree state from URL params (deep links) without firing onHighlightChange / onSelectionChange.'
+		},
+		{
 			href: '/dev/logging',
 			icon: '📝',
 			title: 'Logging',

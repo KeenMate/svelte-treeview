@@ -613,16 +613,28 @@
 	}
 
 	// Multi-select methods
-	export function selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace') {
-		controller.selectNode(path, mode);
+	export function selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
+		controller.selectNode(path, mode, options);
 	}
 
-	export function selectNodes(paths: string[]) {
-		controller.selectNodes(paths);
+	export function selectNodes(paths: string[], options?: { silent?: boolean }) {
+		controller.selectNodes(paths, options);
 	}
 
-	export function deselectAll() {
-		controller.deselectAll();
+	export function highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
+		controller.highlightNode(path, mode, options);
+	}
+
+	export function highlightNodes(paths: string[], options?: { silent?: boolean }) {
+		controller.highlightNodes(paths, options);
+	}
+
+	export function clearHighlight(options?: { silent?: boolean }) {
+		controller.clearHighlight(options);
+	}
+
+	export function deselectAll(options?: { silent?: boolean }) {
+		controller.deselectAll(options);
 	}
 
 	export function getSelectedNodes(): LTreeNode<T>[] {
