@@ -178,6 +178,74 @@ test.describe('Click Behavior tree', () => {
 		await expect(checkboxInputOf(nodeInCard(card, '1.2'))).toBeChecked();
 	});
 
+	test('independent mode: checking children does NOT auto-check parent', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		await card.getByText('Show Checkboxes').click();
+		// Mode stays 'independent' (default).
+
+		// Check all visible children of Documents.
+		await checkboxLabelOf(nodeInCard(card, '1.1')).click();
+		await checkboxLabelOf(nodeInCard(card, '1.2')).click();
+
+		// Children are checked.
+		await expect(checkboxInputOf(nodeInCard(card, '1.1'))).toBeChecked();
+		await expect(checkboxInputOf(nodeInCard(card, '1.2'))).toBeChecked();
+
+		// Parent must remain unchecked — independent mode means no ancestor sync.
+		await expect(checkboxInputOf(nodeInCard(card, '1'))).not.toBeChecked();
+
+		const selected = outputValue(card, 'Selected / Checked');
+		await expect(selected).toContainText('1.1');
+		await expect(selected).toContainText('1.2');
+		await expect(selected).not.toContainText('(none)');
+		// Parent path '1' should NOT be in the set. Exact-match the line content.
+		await expect(selected).not.toHaveText(/(^|, )1(,|$)/);
+	});
+
+	test('clickTogglesCheckbox: plain click toggles checkbox and skips focus/highlight', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		await card.getByText('Show Checkboxes').click();
+		await card.getByText('Click row toggles checkbox').click();
+
+		// Plain click on the node row.
+		await nodeContent(nodeInCard(card, '1.1')).click();
+
+		// Checkbox toggled.
+		await expect(checkboxInputOf(nodeInCard(card, '1.1'))).toBeChecked();
+		await expect(outputValue(card, 'Selected / Checked')).toContainText('1.1');
+
+		// Focus and highlight stay empty — that's the whole point of the flag.
+		await expect(outputValue(card, 'Focused Node')).toHaveText('(none)');
+		await expect(outputValue(card, 'Highlighted')).toHaveText('(none)');
+
+		// Click again unchecks it.
+		await nodeContent(nodeInCard(card, '1.1')).click();
+		await expect(checkboxInputOf(nodeInCard(card, '1.1'))).not.toBeChecked();
+	});
+
+	test('clickTogglesCheckbox: Ctrl+click still builds multi-highlight (modifier falls through)', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		await card.getByText('Show Checkboxes').click();
+		await card.getByText('Click row toggles checkbox').click();
+
+		// Ctrl+click should bypass the checkbox-toggle gate and extend highlight.
+		await nodeContent(nodeInCard(card, '1.1')).click({ modifiers: ['Control'] });
+		await nodeContent(nodeInCard(card, '1.2')).click({ modifiers: ['Control'] });
+
+		await expect(outputValue(card, 'Highlighted')).toContainText('1.1');
+		await expect(outputValue(card, 'Highlighted')).toContainText('1.2');
+
+		// Checkboxes untouched — modifier path doesn't toggle them.
+		await expect(checkboxInputOf(nodeInCard(card, '1.1'))).not.toBeChecked();
+		await expect(checkboxInputOf(nodeInCard(card, '1.2'))).not.toBeChecked();
+	});
+
 	test('expand mode: clicking does NOT update focusedNode', async ({ page }) => {
 		await gotoInteraction(page);
 		const card = clickBehaviorCard(page);

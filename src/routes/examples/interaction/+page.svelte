@@ -67,6 +67,7 @@
 		highlightedNodeClass: string;
 		showCheckboxes: boolean;
 		checkboxMode: CheckboxMode;
+		clickTogglesCheckbox: boolean;
 		rangeSelectionMode: 'visual' | 'logical';
 	}
 
@@ -75,6 +76,7 @@
 		highlightedNodeClass: 'ltree-selected-bold',
 		showCheckboxes: false,
 		checkboxMode: 'independent',
+		clickTogglesCheckbox: false,
 		rangeSelectionMode: 'visual'
 	};
 
@@ -95,6 +97,7 @@
 				highlightedNodeClass,
 				showCheckboxes,
 				checkboxMode,
+				clickTogglesCheckbox,
 				rangeSelectionMode
 			}));
 		} catch {}
@@ -112,13 +115,14 @@
 	let highlightedNodeClass = $state(saved.highlightedNodeClass);
 	let showCheckboxes = $state(saved.showCheckboxes);
 	let checkboxMode = $state<CheckboxMode>(saved.checkboxMode);
+	let clickTogglesCheckbox = $state(saved.clickTogglesCheckbox);
 
 	// Three-level state
 	let focusedNode1 = $state<LTreeNode<Item> | null>(null);
 	let highlightedPaths1 = $state(new Set<string>());
 	let selectedPaths1 = $state(new Set<string>());
 
-	$effect(() => { clickBehavior; highlightedNodeClass; showCheckboxes; checkboxMode; rangeSelectionMode; saveSettings(); });
+	$effect(() => { clickBehavior; highlightedNodeClass; showCheckboxes; checkboxMode; clickTogglesCheckbox; rangeSelectionMode; saveSettings(); });
 
 	function onClickDemoNodeClick(node: LTreeNode<Item>) {
 	}
@@ -187,6 +191,10 @@
 						<option value="cascade">cascade (parent toggles all children)</option>
 					</select>
 				</label>
+				<label>
+					<input type="checkbox" bind:checked={clickTogglesCheckbox} />
+					Click row toggles checkbox
+				</label>
 			{/if}
 			<button class="btn btn-secondary" onclick={() => { highlightedPaths1 = new Set(); selectedPaths1 = new Set(); }}>Clear All</button>
 		</div>
@@ -204,6 +212,7 @@
 					{clickBehavior}
 					{showCheckboxes}
 					{checkboxMode}
+					{clickTogglesCheckbox}
 					bind:focusedNode={focusedNode1}
 					bind:highlightedPaths={highlightedPaths1}
 					bind:selectedPaths={selectedPaths1}
@@ -235,7 +244,7 @@
 			<pre>{`<Tree
   clickBehavior="${clickBehavior}"
   highlightedNodeClass="${highlightedNodeClass}"
-  showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}
+  showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}${showCheckboxes && clickTogglesCheckbox ? `\n  clickTogglesCheckbox` : ''}
   ...
 />
 

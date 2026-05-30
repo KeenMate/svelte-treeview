@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`clickTogglesCheckbox` prop**: Boolean (default `false`). When `true` AND `showCheckboxes` is on AND the node is selectable, a plain click on the node label runs the checkbox-toggle path instead of focusing/highlighting — `focusedNode` and `highlightedPaths` stay untouched. Expand-on-click still fires when `clickBehavior` is `'expand'` or `'expand-and-focus'`. Modified clicks (Ctrl/Shift) fall through to the normal multi-highlight path so range/toggle selection still works.
+- **`getIsExpandedCallback`, `getIsSelectableCallback`, `getIsSelectedCallback` props**: Callback variants for the existing `isExpandedMember` / `isSelectableMember` / `isSelectedMember` data-field props, matching the same pattern as `getIsDraggableCallback` and `getIsCollapsibleCallback`. All three are seed-only — invoked once per node during `insertArray` — so subsequent user mutations (checkbox clicks, expand button) aren't overridden by the callback. Precedence: callback > member > default. The post-insert `selectedPaths` seeding walk now also triggers when `getIsSelectedCallback` is set, not just when `isSelectedMember` is set.
+
+### Fixed
+- **Independent checkbox mode auto-checking parents**: In `checkboxMode="independent"`, the post-toggle ancestor walk still ran and propagated `isSelected = true` up to parents when all descendants happened to be selected — making parent checkboxes auto-check themselves despite the "independent" promise. The walk is now gated to cascade mode only; independent mode leaves parents fully alone.
+
 ## [5.0.0-rc08] - 2026-05-27
 
 ### Added

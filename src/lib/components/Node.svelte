@@ -69,6 +69,7 @@
 	const clickBehavior = $derived(config.clickBehavior);
 	const showCheckboxes = $derived(config.showCheckboxes);
 	const checkboxMode = $derived(config.checkboxMode);
+	const clickTogglesCheckbox = $derived(config.clickTogglesCheckbox);
 
 	// Indeterminate state: driven by controller's _updateAncestorVisualStates
 	const isIndeterminate = $derived(checkboxMode === 'cascade' && node.visualState === 'indeterminate');
@@ -296,6 +297,16 @@
 	function _onNodeClicked(event?: MouseEvent) {
 		uiLogger.debug(`Node clicked: ${node.path}`, { id: node.id, hasChildren: node.hasChildren })
 		const modifiers = event ? { ctrl: event.ctrlKey || event.metaKey, shift: event.shiftKey } : undefined;
+		const hasModifiers = !!(modifiers?.ctrl || modifiers?.shift);
+
+		// Plain click on a selectable node with checkboxes shown → toggle the checkbox
+		// instead of focusing/highlighting. Expand still happens if clickBehavior asks for it.
+		// Modified clicks (Ctrl/Shift) fall through to the normal multi-highlight path.
+		if (clickTogglesCheckbox && showCheckboxes && node.isSelectable && !hasModifiers) {
+			callbacks.onCheckboxToggle(node, { skipFocus: true });
+			if (clickBehavior !== 'select') toggleExpanded();
+			return;
+		}
 
 		if (clickBehavior === 'expand') {
 			// Expand only — no selection callback

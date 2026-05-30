@@ -18,8 +18,11 @@ function createTree() {
 		undefined, // levelMember
 		undefined, // hasChildrenMember
 		undefined, // isExpandedMember
+		undefined, // getIsExpandedCallback
 		undefined, // isSelectableMember
+		undefined, // getIsSelectableCallback
 		undefined, // isSelectedMember
+		undefined, // getIsSelectedCallback
 		undefined, // isDraggableMember
 		undefined, // getIsDraggableCallback
 		undefined, // isDropAllowedMember

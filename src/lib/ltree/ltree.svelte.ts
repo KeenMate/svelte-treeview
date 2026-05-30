@@ -27,8 +27,11 @@ export function createLTree<T>(
 	_levelMember?: string | null | undefined,
 	_hasChildrenMember?: string | null | undefined,
 	_isExpandedMember?: string | null | undefined,
+	_getIsExpandedCallback?: (node: LTreeNode<T>) => boolean,
 	_isSelectableMember?: string | null | undefined,
+	_getIsSelectableCallback?: (node: LTreeNode<T>) => boolean,
 	_isSelectedMember?: string | null | undefined,
+	_getIsSelectedCallback?: (node: LTreeNode<T>) => boolean,
 	_isDraggableMember?: string | null | undefined,
 	_getIsDraggableCallback?: (node: LTreeNode<T>) => boolean,
 	_isDropAllowedMember?: string | null | undefined,
@@ -132,8 +135,11 @@ export function createLTree<T>(
 		parentPathMember: _parentPathMember,
 		levelMember: _levelMember,
 		isExpandedMember: _isExpandedMember,
+		getIsExpandedCallback: _getIsExpandedCallback,
 		isSelectableMember: _isSelectableMember,
+		getIsSelectableCallback: _getIsSelectableCallback,
 		isSelectedMember: _isSelectedMember,
+		getIsSelectedCallback: _getIsSelectedCallback,
 		isDraggableMember: _isDraggableMember,
 		getIsDraggableCallback: _getIsDraggableCallback,
 		isDropAllowedMember: _isDropAllowedMember,
@@ -281,11 +287,19 @@ export function createLTree<T>(
 				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
-				if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+				// isExpanded: callback > member > expandLevel
+				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
+				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
 				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
-				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
-				if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
+				// isSelectable: callback > member (stored on node so renderers can read directly)
+				if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
+				else if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+
+				// isSelected: callback > member
+				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
+				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
+
 				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
@@ -1544,11 +1558,19 @@ export function createLTree<T>(
 				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
-				if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+				// isExpanded: callback > member > expandLevel
+				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
+				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
 				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
-				if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
-				if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
+				// isSelectable: callback > member (stored on node so renderers can read directly)
+				if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
+				else if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+
+				// isSelected: callback > member
+				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
+				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
+
 				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
 				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);

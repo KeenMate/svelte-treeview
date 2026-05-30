@@ -28,6 +28,7 @@
 	let clickBehavior = $state<ClickBehavior>('expand-and-focus');
 	let showCheckboxes = $state(false);
 	let checkboxMode = $state<CheckboxMode>('independent');
+	let clickTogglesCheckbox = $state(false);
 	let focusedNode1 = $state<LTreeNode<Item> | null>(null);
 	let highlightedPaths1 = $state(new Set<string>());
 	let selectedPaths1 = $state(new Set<string>());
@@ -76,6 +77,10 @@
 						<option value="cascade">cascade</option>
 					</select>
 				</label>
+				<label>
+					<input type="checkbox" bind:checked={clickTogglesCheckbox} />
+					Click row toggles checkbox
+				</label>
 			{/if}
 			<button onclick={() => { highlightedPaths1 = new Set(); selectedPaths1 = new Set(); }}>Clear All</button>
 		</div>
@@ -91,6 +96,7 @@
 				{clickBehavior}
 				{showCheckboxes}
 				{checkboxMode}
+				{clickTogglesCheckbox}
 				bind:focusedNode={focusedNode1}
 				bind:highlightedPaths={highlightedPaths1}
 				bind:selectedPaths={selectedPaths1}

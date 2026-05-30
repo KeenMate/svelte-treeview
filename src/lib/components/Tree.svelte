@@ -31,8 +31,11 @@
 		parentPathMember?: string | null | undefined;
 		levelMember?: string | null | undefined;
 		isExpandedMember?: string | null | undefined;
+		getIsExpandedCallback?: (node: LTreeNode<T>) => boolean;
 		isSelectableMember?: string | null | undefined;
+		getIsSelectableCallback?: (node: LTreeNode<T>) => boolean;
 		isSelectedMember?: string | null | undefined;
+		getIsSelectedCallback?: (node: LTreeNode<T>) => boolean;
 		isDraggableMember?: string | null | undefined;
 		getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 		isDropAllowedMember?: string | null | undefined;
@@ -78,6 +81,7 @@
 		clickBehavior?: ClickBehavior | null | undefined;
 		showCheckboxes?: boolean | null | undefined;
 		checkboxMode?: CheckboxMode | null | undefined;
+		clickTogglesCheckbox?: boolean | null | undefined;
 		beforeCheckboxToggleCallback?: (node: LTreeNode<T>, checked: boolean, affectedPaths: string[]) => boolean | string[] | void;
 		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
@@ -185,8 +189,11 @@
 		hasChildrenMember,
 
 		isExpandedMember,
+		getIsExpandedCallback,
 		isSelectableMember,
+		getIsSelectableCallback,
 		isSelectedMember,
+		getIsSelectedCallback,
 		isDraggableMember,
 		getIsDraggableCallback,
 		isDropAllowedMember,
@@ -225,6 +232,7 @@
 		clickBehavior = 'expand-and-focus',
 		showCheckboxes = false,
 		checkboxMode = 'independent',
+		clickTogglesCheckbox = false,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode = 'visual',
 		shouldUseInternalSearchIndex = true,
@@ -306,8 +314,11 @@
 		levelMember,
 		hasChildrenMember,
 		isExpandedMember,
+		getIsExpandedCallback,
 		isSelectableMember,
+		getIsSelectableCallback,
 		isSelectedMember,
+		getIsSelectedCallback,
 		isDraggableMember,
 		getIsDraggableCallback,
 		isDropAllowedMember,
@@ -332,6 +343,7 @@
 		clickBehavior,
 		showCheckboxes,
 		checkboxMode,
+		clickTogglesCheckbox,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode,
 		shouldUseInternalSearchIndex,
@@ -442,6 +454,7 @@
 	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
 	$effect(() => { controller.showCheckboxes = showCheckboxes ?? false; });
 	$effect(() => { controller.checkboxMode = checkboxMode ?? 'independent'; });
+	$effect(() => { controller.clickTogglesCheckbox = clickTogglesCheckbox ?? false; });
 	$effect(() => { controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback; });
 	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
@@ -683,8 +696,11 @@
 				| "levelMember"
 				| "hasChildrenMember"
 				| "isExpandedMember"
+				| "getIsExpandedCallback"
 				| "isSelectableMember"
+				| "getIsSelectableCallback"
 				| "isSelectedMember"
+				| "getIsSelectedCallback"
 				| "isDraggableMember"
 				| "getIsDraggableCallback"
 				| "isDropAllowedMember"
@@ -705,6 +721,7 @@
 				| "clickBehavior"
 				| "showCheckboxes"
 				| "checkboxMode"
+				| "clickTogglesCheckbox"
 				| "beforeCheckboxToggleCallback"
 				| "rangeSelectionMode"
 				| "shouldUseInternalSearchIndex"
@@ -756,8 +773,11 @@
 		if (updates.levelMember !== undefined) levelMember = updates.levelMember;
 		if (updates.hasChildrenMember !== undefined) hasChildrenMember = updates.hasChildrenMember;
 		if (updates.isExpandedMember !== undefined) isExpandedMember = updates.isExpandedMember;
+		if (updates.getIsExpandedCallback !== undefined) getIsExpandedCallback = updates.getIsExpandedCallback;
 		if (updates.isSelectableMember !== undefined) isSelectableMember = updates.isSelectableMember;
+		if (updates.getIsSelectableCallback !== undefined) getIsSelectableCallback = updates.getIsSelectableCallback;
 		if (updates.isSelectedMember !== undefined) isSelectedMember = updates.isSelectedMember;
+		if (updates.getIsSelectedCallback !== undefined) getIsSelectedCallback = updates.getIsSelectedCallback;
 		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
 		if (updates.getIsDraggableCallback !== undefined) getIsDraggableCallback = updates.getIsDraggableCallback;
 		if (updates.isDropAllowedMember !== undefined) isDropAllowedMember = updates.isDropAllowedMember;
@@ -778,6 +798,7 @@
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
 		if (updates.showCheckboxes !== undefined) showCheckboxes = updates.showCheckboxes;
 		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
+		if (updates.clickTogglesCheckbox !== undefined) clickTogglesCheckbox = updates.clickTogglesCheckbox;
 		if (updates.beforeCheckboxToggleCallback !== undefined) beforeCheckboxToggleCallback = updates.beforeCheckboxToggleCallback;
 		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
 		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;

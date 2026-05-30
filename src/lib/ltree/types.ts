@@ -82,6 +82,7 @@ export interface Ltree<T> {
 
 	hasChildrenMember: string | null | undefined;
 	isExpandedMember: string | null | undefined;
+	getIsExpandedCallback?: (node: LTreeNode<T>) => boolean;
 
 	displayValueMember?: string | null | undefined;
 	getDisplayValueCallback?: (node: LTreeNode<T>) => string;
@@ -100,7 +101,9 @@ export interface Ltree<T> {
 	isFiltered: boolean;
 
 	isSelectableMember: string | null | undefined;
+	getIsSelectableCallback?: (node: LTreeNode<T>) => boolean;
 	isSelectedMember: string | null | undefined;
+	getIsSelectedCallback?: (node: LTreeNode<T>) => boolean;
 	isDraggableMember: string | null | undefined;
 	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 	isDropAllowedMember: string | null | undefined;
