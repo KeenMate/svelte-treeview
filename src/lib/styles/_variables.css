@@ -84,7 +84,7 @@
 	/* -------------------------------------------------------------------------
 	   SELECTION & HIGHLIGHT STATES
 	   ------------------------------------------------------------------------- */
-	--ltree-highlight-bg: #cce8ff;
+	--ltree-highlight-bg: color-mix(in srgb, var(--ltree-primary) 30%, transparent);
 	--ltree-highlight-color: inherit;
 	--ltree-multi-selected-bg: color-mix(in srgb, var(--ltree-primary) 8%, transparent);
 	--ltree-multi-selected-outline: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
@@ -100,7 +100,7 @@
 	--ltree-drop-placeholder-min-height: calc(6.0 * var(--ltree-rem));
 
 	/* Touch drag ghost */
-	--tree-ghost-bg: rgba(59, 130, 246, 0.9);
+	--tree-ghost-bg: color-mix(in srgb, var(--ltree-primary) 90%, transparent);
 	--tree-ghost-color: #fff;
 
 	/* -------------------------------------------------------------------------
@@ -137,10 +137,11 @@
 	--ltree-drop-arrow-after-rotation: 0deg;
 	--ltree-drop-arrow-child-rotation: 45deg;
 
-	/* Drop indicator arrow SVGs (Lucide icons, stroke color baked in) */
-	--ltree-drop-arrow-before-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2386b398' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
-	--ltree-drop-arrow-after-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f2b69e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E");
-	--ltree-drop-arrow-child-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a79bc6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E");
+	/* Drop indicator arrow SVGs (Lucide icons, rendered via mask-image so they
+	   inherit the matching --ltree-drop-glow-*-color via background-color). */
+	--ltree-drop-arrow-before-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+	--ltree-drop-arrow-after-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E");
+	--ltree-drop-arrow-child-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E");
 
 	/* -------------------------------------------------------------------------
 	   CONTEXT MENU

@@ -113,7 +113,10 @@
    GLOW MODE — border-glow drop indicators with positional arrows
    ============================================================================= */
 
-/* Shared boilerplate for the arrow pseudo-element on each glow state */
+/* Shared boilerplate for the arrow pseudo-element on each glow state.
+   The arrow is rendered via mask-image, so background-color is what you see.
+   Each glow state sets its own mask source and background-color to the
+   matching --ltree-drop-glow-*-color, keeping arrow + border in sync. */
 .ltree-node-content.ltree-glow-before::after,
 .ltree-node-content.ltree-glow-after::after,
 .ltree-node-content.ltree-glow-child::after {
@@ -123,8 +126,12 @@
 	top: 50%;
 	width: var(--ltree-drop-arrow-size);
 	height: var(--ltree-drop-arrow-size);
-	background-repeat: no-repeat;
-	background-size: contain;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	-webkit-mask-size: contain;
+	mask-size: contain;
 	pointer-events: none;
 	z-index: 1;
 }
@@ -136,7 +143,9 @@
 
 .ltree-node-content.ltree-glow-before::after {
 	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-before-rotation));
-	background-image: var(--ltree-drop-arrow-before-image);
+	-webkit-mask-image: var(--ltree-drop-arrow-before-image);
+	mask-image: var(--ltree-drop-arrow-before-image);
+	background-color: var(--ltree-drop-glow-before-color);
 }
 
 .ltree-node-content.ltree-glow-after {
@@ -146,7 +155,9 @@
 
 .ltree-node-content.ltree-glow-after::after {
 	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-after-rotation));
-	background-image: var(--ltree-drop-arrow-after-image);
+	-webkit-mask-image: var(--ltree-drop-arrow-after-image);
+	mask-image: var(--ltree-drop-arrow-after-image);
+	background-color: var(--ltree-drop-glow-after-color);
 }
 
 .ltree-node-content.ltree-glow-child {
@@ -157,5 +168,7 @@
 
 .ltree-node-content.ltree-glow-child::after {
 	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-child-rotation));
-	background-image: var(--ltree-drop-arrow-child-image);
+	-webkit-mask-image: var(--ltree-drop-arrow-child-image);
+	mask-image: var(--ltree-drop-arrow-child-image);
+	background-color: var(--ltree-drop-glow-child-color);
 }
