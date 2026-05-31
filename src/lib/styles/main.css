@@ -1,0 +1,37 @@
+/* =============================================================================
+   @keenmate/svelte-treeview — Component Styles (entry point)
+   =============================================================================
+
+   File layout:
+     _variables.css     CSS custom properties at :root (theming surface)
+     _base.css          Tree container, virtual-scroll, layout foundation
+     _node.css          Node row, content, label, path
+     _toggle-icons.css  Toggle column + all 9 Lucide SVG icon classes
+     _checkbox.css      Custom-styled checkbox with indeterminate support
+     _states.css        Selection, highlight, scroll-highlight states
+     _drag-drop.css     Draggable cursor, ghost, drag-over, glow mode + arrows
+     _drop-zones.css    Drop zone overlays (around / above / below / wave / wave2)
+     _context-menu.css  Context menu, submenu, dividers
+     _debug.css         Debug info panel
+     _loading.css       Loading overlay + spinner
+
+   Import order matters — variables MUST be first; states / drag-drop / drop-zones
+   reference variables; context-menu uses some of the same colors but does not
+   depend on earlier rules.
+
+   Build: lightningcss bundles this file (resolving the @import chain) into
+   dist/styles.css during `npm run prepack`. Consumers import the bundled file:
+     import '@keenmate/svelte-treeview/styles.css';
+*/
+
+@import './_variables.css';
+@import './_base.css';
+@import './_node.css';
+@import './_toggle-icons.css';
+@import './_checkbox.css';
+@import './_states.css';
+@import './_drag-drop.css';
+@import './_drop-zones.css';
+@import './_context-menu.css';
+@import './_debug.css';
+@import './_loading.css';

@@ -8,11 +8,11 @@ CRITICAL: Styles must be imported separately
 
 IMPORT STYLES
 -------------
-// CSS (compiled)
+// Bundled CSS (all partials merged)
 import '@keenmate/svelte-treeview/styles.css';
 
-// SCSS (with variable overrides)
-import '@keenmate/svelte-treeview/styles.scss';
+// Or individual partials (override per-section)
+import '@keenmate/svelte-treeview/styles/main.css';
 
 CSS VARIABLES
 -------------
@@ -38,26 +38,27 @@ Override in your CSS:
   --tree-ghost-color: white;
 }
 
-SCSS VARIABLES
---------------
-Override BEFORE importing:
+--base-* TOKEN INTEGRATION
+--------------------------
+Every --ltree-* variable chains through a --base-* token shared with other
+@keenmate/* web components, then falls back to a hardcoded default:
 
-<style lang="scss">
-  // Override variables
-  $tree-node-indent-per-level: 1rem;
-  $ltree-primary: #6366f1;
-  $tree-node-font-family: 'Inter', sans-serif;
+  --ltree-primary: var(--base-accent-color, #0d6efd);
 
-  // Then import
-  @import '@keenmate/svelte-treeview/styles.scss';
-</style>
+Set --base-* once at :root and every KM component picks it up automatically:
 
-Available SCSS variables:
-- $tree-node-indent-per-level
-- $tree-node-font-family
-- $tree-node-content-border-radius
-- $ltree-primary, $ltree-success, $ltree-danger
-- $drop-zone-* variables (see below)
+:root {
+  --base-accent-color: #6366f1;
+  --base-font-family: 'Inter', system-ui, sans-serif;
+  --base-border-color: #e5e7eb;
+  --base-border-radius-sm: 6px;
+  --base-text-color-1: #111827;
+  --base-text-color-3: #6b7280;
+  --base-hover-bg: #f3f4f6;
+}
+
+Tree-specific --ltree-* overrides take precedence over --base-* tokens, so
+you can theme a single tree without affecting other components.
 
 SELECTED NODE CLASSES
 ---------------------

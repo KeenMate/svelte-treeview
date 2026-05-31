@@ -102,7 +102,9 @@ DEPENDENCIES:
 - dev: @sveltejs/kit ^2.22.0, typescript ^5.0.0
 
 STYLING:
-- src/lib/styles/main.scss → dist/styles.css
+- Pure CSS: src/lib/styles/*.css → bundled via lightningcss to dist/styles.css
+- Partials: _variables.css, _base.css, _node.css, _toggle-icons.css, _checkbox.css, _states.css, _drag-drop.css, _drop-zones.css, _context-menu.css, _debug.css, _loading.css
+- main.css entry uses @import; lightningcss-cli resolves at build time
 - CSS variables for theming
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
 - Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow

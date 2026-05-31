@@ -32,7 +32,7 @@ The library follows the standard SvelteKit library format with the following str
 - **Version**: `4.0.0`
 - **Main Entry**: `dist/index.js`
 - **Types**: `dist/index.d.ts`
-- **Styles**: `dist/styles.scss`
+- **Styles**: `dist/styles.css`
 - **Peer Dependencies**: `svelte ^5.0.0`
 - **Optional Dependencies**: `flexsearch ^0.8.205`
 
@@ -69,7 +69,7 @@ npm install @keenmate/svelte-treeview
 
 ```javascript
 // Import styles in your main.js or main.ts
-import '@keenmate/svelte-treeview/styles.scss';
+import '@keenmate/svelte-treeview/styles.css';
 ```
 
 ```svelte

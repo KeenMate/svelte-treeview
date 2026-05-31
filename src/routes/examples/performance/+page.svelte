@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Tree } from '$lib/index.js';
-  import '$lib/styles.scss';
+  import '$lib/styles/main.css';
   import { enablePerfLogging, disablePerfLogging, isPerfLoggingEnabled } from '$lib/perf-logger.js';
 
   // Load config from localStorage

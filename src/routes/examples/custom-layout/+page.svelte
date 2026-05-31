@@ -1304,6 +1304,7 @@
 		gap: 0.4rem;
 		padding: 0.5rem 0.85rem;
 		background: white;
+		color: #1f2937;
 		border: 1px solid #e2e8f0;
 		border-radius: 999px;
 		cursor: pointer;

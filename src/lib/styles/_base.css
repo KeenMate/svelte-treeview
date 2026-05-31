@@ -1,0 +1,41 @@
+/* =============================================================================
+   TREE CONTAINER + LAYOUT FOUNDATION
+   ============================================================================= */
+
+.ltree-tree {
+	font-family: var(--ltree-font-family);
+	overflow: visible !important; /* Allow drop zones to extend outside */
+	position: relative;
+	/* Reset default margins / padding / list bullets */
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	color: var(--ltree-body-color);
+}
+
+.ltree-tree .ltree-empty-state {
+	font-style: italic;
+	color: var(--ltree-node-path-color);
+	padding: 1rem;
+	text-align: center;
+	min-height: 60px; /* Minimum drop target size for drag events */
+}
+
+/* Ensure all tree ancestors allow overflow for drop zones */
+.ltree-tree,
+.ltree-node,
+.ltree-node-row,
+.ltree-children {
+	overflow: visible !important;
+}
+
+.ltree-container {
+	position: relative;
+	outline: none;
+}
+
+.ltree-virtual-scroll {
+	overflow-y: auto !important;
+	overflow-x: visible;
+	overscroll-behavior: contain;
+}

@@ -72,13 +72,13 @@ The component requires CSS to display correctly. Import the styles in your app:
 
 **JavaScript import** (in your main.js/main.ts or Vite/Webpack entry):
 ```javascript
-import '@keenmate/svelte-treeview/styles.scss';
+import '@keenmate/svelte-treeview/styles.css';
 ```
 
 **Svelte component import:**
 ```svelte
 <style>
-  @import '@keenmate/svelte-treeview/styles.scss';
+  @import '@keenmate/svelte-treeview/styles.css';
 </style>
 ```
 
@@ -525,7 +525,7 @@ $tree-node-indent-per-level: 1rem;
 $tree-node-font-family: 'Custom Font', sans-serif;
 $primary-color: #custom-color;
 
-@import '@keenmate/svelte-treeview/styles.scss';
+@import '@keenmate/svelte-treeview/styles.css';
 ```
 
 ### CSS Classes

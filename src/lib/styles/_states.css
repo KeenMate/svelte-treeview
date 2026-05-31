@@ -1,0 +1,86 @@
+/* =============================================================================
+   SELECTION / HIGHLIGHT / SCROLL STATES
+   ============================================================================= */
+
+.ltree-selected-bold {
+	font-weight: bold !important;
+	color: var(--ltree-primary) !important;
+}
+
+.ltree-selected-border {
+	border: 2px solid var(--ltree-primary) !important;
+	border-radius: 4px !important;
+	background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
+	padding: 6px 10px !important;
+}
+
+.ltree-selected-highlight {
+	background-color: var(--ltree-highlight-bg) !important;
+	color: var(--ltree-highlight-color) !important;
+}
+
+/* Multi-select: subtle highlight for all selected nodes (works with any highlightedNodeClass) */
+.ltree-multi-selected {
+	background-color: var(--ltree-multi-selected-bg) !important;
+	outline: 1px solid var(--ltree-multi-selected-outline);
+	outline-offset: -1px;
+}
+
+.ltree-selected-brackets {
+	position: relative;
+}
+
+.ltree-selected-brackets::before {
+	content: '❯';
+	margin-right: 6px;
+	color: var(--ltree-primary);
+	font-weight: bold;
+}
+
+.ltree-selected-brackets::after {
+	content: '❮';
+	margin-left: 6px;
+	color: var(--ltree-primary);
+	font-weight: bold;
+}
+
+/* Suppress brackets when checkboxes are shown (checkbox already indicates selection) */
+.ltree-checkbox ~ .ltree-selected-brackets::before,
+.ltree-checkbox ~ .ltree-selected-brackets::after {
+	content: none;
+}
+
+/* Scroll highlight (post-scrollToPath flash) */
+.ltree-scroll-highlight {
+	background-color: var(--ltree-scroll-highlight-bg) !important;
+	box-shadow: var(--ltree-scroll-highlight-shadow);
+	border-radius: 0.25em;
+}
+
+.ltree-scroll-highlight-arrow {
+	position: relative;
+}
+
+.ltree-scroll-highlight-arrow::before {
+	content: '⇨';
+	position: absolute;
+	left: -1.2em;
+	top: 50%;
+	transform: translateY(-57%);
+	font-size: 3em;
+	pointer-events: none;
+	color: var(--ltree-scroll-highlight-arrow-color);
+	z-index: 1;
+}
+
+.ltree-scroll-highlight-arrow::after {
+	content: '⇦';
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-57%);
+	font-size: 3em;
+	pointer-events: none;
+	color: var(--ltree-scroll-highlight-arrow-color);
+	z-index: 1;
+}

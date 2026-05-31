@@ -1,0 +1,188 @@
+/* =============================================================================
+   CSS CUSTOM PROPERTIES — :root level
+   =============================================================================
+   Every styling value is exposed as a --ltree-* custom property so end users
+   can theme the component at runtime. Each variable follows this resolution
+   chain:
+
+     1. End-user override:   element { --ltree-x: red; }
+     2. KeenMate base token: --base-x (shared across @keenmate/* components)
+     3. Hardcoded default
+
+   To override at runtime:
+     .ltree-tree { --ltree-primary: #10b981; --ltree-node-font-size: 1.6rem; }
+   Or globally for all KM components:
+     :root { --base-accent-color: #10b981; }
+
+   BASE SIZING UNIT
+   ----------------
+   --ltree-rem is the multiplier base for every dimension. Default 10px gives
+   visual parity with the previous absolute values; set --ltree-rem to 1rem to
+   make every dimension scale with document font-size (Pure-Admin pattern).
+   ============================================================================= */
+
+:root {
+	/* -------------------------------------------------------------------------
+	   BASE SIZING UNIT
+	   ------------------------------------------------------------------------- */
+	--ltree-rem: 10px;
+
+	/* -------------------------------------------------------------------------
+	   COLORS — theme integration via --base-* tokens
+	   ------------------------------------------------------------------------- */
+	--ltree-primary: var(--base-accent-color, #0d6efd);
+	--ltree-primary-rgb: var(--base-accent-color-rgb, 13, 110, 253);
+	--ltree-success: var(--base-success-color, #198754);
+	--ltree-success-rgb: var(--base-success-color-rgb, 25, 135, 84);
+	--ltree-danger: var(--base-danger-color, #dc3545);
+	--ltree-danger-rgb: var(--base-danger-color-rgb, 220, 53, 69);
+	--ltree-light: var(--base-main-bg, #f8f9fa);
+	--ltree-border: var(--base-border-color, #dee2e6);
+	--ltree-body-color: var(--base-text-color-1, #212529);
+
+	/* -------------------------------------------------------------------------
+	   TYPOGRAPHY — unitless --base-* multipliers × --ltree-rem
+	   ------------------------------------------------------------------------- */
+	--ltree-font-family: var(--base-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif);
+	--ltree-node-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
+	--ltree-node-icon-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
+	--ltree-node-icon-margin-right: calc(0.6 * var(--ltree-rem));
+	--ltree-node-label-font-weight: var(--base-font-weight-medium, 500);
+	--ltree-node-label-margin-right: calc(0.8 * var(--ltree-rem));
+	--ltree-node-path-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
+	--ltree-node-path-color: var(--base-text-color-3, #6c757d);
+
+	/* -------------------------------------------------------------------------
+	   NODE LAYOUT
+	   ------------------------------------------------------------------------- */
+	--ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));
+	--ltree-node-content-padding: calc(0.4 * var(--ltree-rem)) calc(0.8 * var(--ltree-rem));
+	--ltree-node-content-border-radius: calc(var(--base-border-radius-sm, 0) * var(--ltree-rem));
+	--ltree-node-hover-bg: var(--base-hover-bg, #f8f9fa);
+	--ltree-children-margin-top: calc(0.2 * var(--ltree-rem));
+
+	/* -------------------------------------------------------------------------
+	   TOGGLE ICON (chevron / +/- / arrow / leaf)
+	   ------------------------------------------------------------------------- */
+	--ltree-toggle-icon-width: calc(2.0 * var(--ltree-rem));
+	--ltree-toggle-icon-size: calc(1.6 * var(--ltree-rem));
+	--ltree-toggle-icon-color: var(--base-text-color-3, #6c757d);
+	--ltree-toggle-icon-margin-right: calc(0.8 * var(--ltree-rem));
+	--ltree-toggle-icon-transition: transform 0.2s;
+
+	/* -------------------------------------------------------------------------
+	   CHECKBOX
+	   ------------------------------------------------------------------------- */
+	--ltree-checkbox-size: calc(1.5 * var(--ltree-rem));
+	--ltree-checkbox-border-width: 1.5px; /* hairline — does not scale */
+	--ltree-checkbox-border-color: var(--base-border-color, #adb5bd);
+	--ltree-checkbox-border-radius: calc(var(--base-border-radius-sm, 0.3) * var(--ltree-rem));
+	--ltree-checkbox-bg: var(--base-input-bg, #fff);
+	--ltree-checkbox-checked-bg: var(--ltree-primary);
+	--ltree-checkbox-checked-border-color: var(--ltree-primary);
+	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
+	--ltree-checkbox-focus-ring: 0 0 0 2px rgba(var(--ltree-primary-rgb), 0.25);
+
+	/* -------------------------------------------------------------------------
+	   SELECTION & HIGHLIGHT STATES
+	   ------------------------------------------------------------------------- */
+	--ltree-highlight-bg: #cce8ff;
+	--ltree-highlight-color: inherit;
+	--ltree-multi-selected-bg: rgba(var(--ltree-primary-rgb), 0.08);
+	--ltree-multi-selected-outline: rgba(var(--ltree-primary-rgb), 0.25);
+
+	/* -------------------------------------------------------------------------
+	   DRAG / DROP — placeholder + dragover + ghost
+	   ------------------------------------------------------------------------- */
+	--ltree-dragover-bg: rgba(var(--ltree-primary-rgb), 0.1);
+	--ltree-dragover-shadow: 0 0 8px rgba(var(--ltree-primary-rgb), 0.4);
+	--ltree-drop-placeholder-bg: rgba(var(--ltree-primary-rgb), 0.1);
+	--ltree-drop-placeholder-color: var(--ltree-primary);
+	--ltree-drop-placeholder-border-radius: calc(0.8 * var(--ltree-rem));
+	--ltree-drop-placeholder-min-height: calc(6.0 * var(--ltree-rem));
+
+	/* Touch drag ghost */
+	--tree-ghost-bg: rgba(59, 130, 246, 0.9);
+	--tree-ghost-color: #fff;
+
+	/* -------------------------------------------------------------------------
+	   DROP ZONES (before / after / child) — pastel mode
+	   ------------------------------------------------------------------------- */
+	--ltree-drop-zone-border-radius: 0;
+	--ltree-drop-zone-before-bg: rgba(134, 179, 152, 0.25);
+	--ltree-drop-zone-before-color: rgba(62, 89, 72, 0.7);
+	--ltree-drop-zone-before-active-bg: rgba(134, 179, 152, 0.85);
+	--ltree-drop-zone-before-active-color: rgb(32, 54, 40);
+	--ltree-drop-zone-before-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4);
+	--ltree-drop-zone-after-bg: rgba(242, 182, 158, 0.25);
+	--ltree-drop-zone-after-color: rgba(120, 70, 50, 0.7);
+	--ltree-drop-zone-after-active-bg: rgba(242, 182, 158, 0.85);
+	--ltree-drop-zone-after-active-color: rgb(80, 45, 30);
+	--ltree-drop-zone-after-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4);
+	--ltree-drop-zone-child-bg: rgba(167, 155, 198, 0.25);
+	--ltree-drop-zone-child-color: rgba(72, 62, 98, 0.7);
+	--ltree-drop-zone-child-active-bg: rgba(167, 155, 198, 0.85);
+	--ltree-drop-zone-child-active-color: rgb(45, 38, 62);
+	--ltree-drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4);
+
+	/* -------------------------------------------------------------------------
+	   GLOW MODE (border glow drop indicators)
+	   ------------------------------------------------------------------------- */
+	--ltree-drop-glow-before-color: rgba(134, 179, 152, 0.8);
+	--ltree-drop-glow-after-color: rgba(242, 182, 158, 0.8);
+	--ltree-drop-glow-child-color: rgba(167, 155, 198, 0.8);
+	--ltree-drop-glow-child-bg: rgba(167, 155, 198, 0.15);
+	--ltree-drop-glow-size: 3px; /* hairline thickness, does not scale */
+	--ltree-drop-arrow-size: calc(2.4 * var(--ltree-rem));
+	--ltree-drop-arrow-position: 66%;
+	--ltree-drop-arrow-before-rotation: 0deg;
+	--ltree-drop-arrow-after-rotation: 0deg;
+	--ltree-drop-arrow-child-rotation: 45deg;
+
+	/* Drop indicator arrow SVGs (Lucide icons, stroke color baked in) */
+	--ltree-drop-arrow-before-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2386b398' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+	--ltree-drop-arrow-after-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f2b69e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E");
+	--ltree-drop-arrow-child-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a79bc6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E");
+
+	/* -------------------------------------------------------------------------
+	   CONTEXT MENU
+	   ------------------------------------------------------------------------- */
+	--ltree-context-menu-bg: var(--base-dropdown-bg, #fff);
+	--ltree-context-menu-border-color: var(--ltree-border);
+	--ltree-context-menu-border-radius: calc(var(--base-border-radius-sm, 0.4) * var(--ltree-rem));
+	--ltree-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.1));
+	--ltree-context-menu-min-width: calc(15 * var(--ltree-rem));
+	--ltree-context-menu-padding: calc(0.4 * var(--ltree-rem)) 0;
+	--ltree-context-menu-item-padding: calc(0.8 * var(--ltree-rem)) calc(1.6 * var(--ltree-rem));
+	--ltree-context-menu-item-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
+	--ltree-context-menu-item-color: var(--ltree-body-color);
+	--ltree-context-menu-item-hover-bg: var(--ltree-light);
+	--ltree-context-menu-icon-size: calc(1.6 * var(--ltree-rem));
+	--ltree-context-menu-icon-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
+	--ltree-context-menu-shortcut-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-shortcut-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
+	--ltree-context-menu-arrow-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-divider-color: var(--ltree-border);
+	--ltree-context-menu-divider-label-color: var(--base-text-color-4, #9ca3af);
+
+	/* -------------------------------------------------------------------------
+	   LOADING OVERLAY + SPINNER
+	   ------------------------------------------------------------------------- */
+	--ltree-loading-bg: rgba(255, 255, 255, 0.8);
+	--ltree-loading-color: var(--base-text-color-3, #718096);
+	--ltree-spinner-size: calc(3.2 * var(--ltree-rem));
+	--ltree-spinner-track: var(--base-border-color, #e2e8f0);
+	--ltree-spinner-color: var(--ltree-primary);
+
+	/* -------------------------------------------------------------------------
+	   SCROLL HIGHLIGHT (after scrollToPath with highlight: true)
+	   ------------------------------------------------------------------------- */
+	--ltree-scroll-highlight-bg: rgba(var(--ltree-primary-rgb), 0.3);
+	--ltree-scroll-highlight-shadow: 0 0 0.5em rgba(var(--ltree-primary-rgb), 0.4);
+	--ltree-scroll-highlight-arrow-color: var(--ltree-danger);
+
+	/* -------------------------------------------------------------------------
+	   LEGACY ALIASES — pre-rc09 names kept for backward compatibility
+	   ------------------------------------------------------------------------- */
+	--tree-node-indent-per-level: var(--ltree-node-indent-per-level);
+}
