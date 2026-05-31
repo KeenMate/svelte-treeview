@@ -1,0 +1,161 @@
+/* =============================================================================
+   DRAG / DROP — draggable cursor, ghost, placeholder, drag-over states, glow mode
+   ============================================================================= */
+
+.ltree-draggable {
+	cursor: grab;
+}
+
+.ltree-draggable:active {
+	cursor: grabbing;
+}
+
+.ltree-dragged {
+	opacity: 0.5;
+	transform: scale(0.95);
+	transition:
+		opacity 0.2s,
+		transform 0.2s;
+}
+
+/* Copy operation cursor (Ctrl+drag with allowCopy enabled) */
+.ltree-drop-copy {
+	cursor: copy !important;
+}
+
+/* Touch drag ghost element */
+.ltree-touch-ghost {
+	position: fixed;
+	transform: translate(-50%, -50%);
+	padding: 8px 12px;
+	background: var(--tree-ghost-bg);
+	color: var(--tree-ghost-color);
+	border-radius: 4px;
+	font-size: 14px;
+	font-family: var(--ltree-font-family);
+	pointer-events: none;
+	z-index: 10000;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	white-space: nowrap;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Drop placeholder for empty trees */
+.ltree-drop-placeholder {
+	border: 2px dashed var(--ltree-primary) !important;
+	background-color: var(--ltree-drop-placeholder-bg) !important;
+	border-radius: var(--ltree-drop-placeholder-border-radius);
+	min-height: var(--ltree-drop-placeholder-min-height);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+}
+
+.ltree-drop-placeholder-content {
+	color: var(--ltree-drop-placeholder-color);
+	font-size: 14px;
+	font-weight: 500;
+	padding: 16px;
+	text-align: center;
+}
+
+/* Drag-over node states (tinted background + dashed border) */
+.ltree-dragover-highlight {
+	background-color: rgba(var(--ltree-success-rgb), 0.15) !important;
+	border: 2px dashed var(--ltree-success) !important;
+	border-radius: 4px !important;
+}
+
+.ltree-dragover-glow {
+	background-color: var(--ltree-dragover-bg) !important;
+	box-shadow: var(--ltree-dragover-shadow) !important;
+}
+
+@keyframes bounce {
+	0%, 20%, 50%, 80%, 100% { transform: translateY(-50%); }
+	40% { transform: translateY(-60%); }
+	60% { transform: translateY(-40%); }
+}
+
+/* Drag-over and drop validity states applied to .ltree-node-content */
+.ltree-node-content.ltree-drag-over {
+	background-color: var(--ltree-dragover-bg) !important;
+	border: 2px dashed var(--ltree-primary);
+	border-radius: 4px;
+}
+
+.ltree-node-content.ltree-drag-over::before {
+	content: '';
+	position: absolute;
+	top: -2px;
+	left: -2px;
+	right: -2px;
+	bottom: -2px;
+	background: linear-gradient(45deg, transparent, rgba(var(--ltree-primary-rgb), 0.05));
+	pointer-events: none;
+	border-radius: 4px;
+}
+
+.ltree-node-content.ltree-drop-valid {
+	border-color: var(--ltree-success) !important;
+	background-color: rgba(var(--ltree-success-rgb), 0.1) !important;
+}
+
+.ltree-node-content.ltree-drop-invalid {
+	border-color: var(--ltree-danger) !important;
+	background-color: rgba(var(--ltree-danger-rgb), 0.1) !important;
+}
+
+/* =============================================================================
+   GLOW MODE — border-glow drop indicators with positional arrows
+   ============================================================================= */
+
+/* Shared boilerplate for the arrow pseudo-element on each glow state */
+.ltree-node-content.ltree-glow-before::after,
+.ltree-node-content.ltree-glow-after::after,
+.ltree-node-content.ltree-glow-child::after {
+	content: '';
+	position: absolute;
+	left: var(--ltree-drop-arrow-position);
+	top: 50%;
+	width: var(--ltree-drop-arrow-size);
+	height: var(--ltree-drop-arrow-size);
+	background-repeat: no-repeat;
+	background-size: contain;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.ltree-node-content.ltree-glow-before {
+	border-radius: 0 !important;
+	box-shadow: inset 0 var(--ltree-drop-glow-size) 0 0 var(--ltree-drop-glow-before-color);
+}
+
+.ltree-node-content.ltree-glow-before::after {
+	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-before-rotation));
+	background-image: var(--ltree-drop-arrow-before-image);
+}
+
+.ltree-node-content.ltree-glow-after {
+	border-radius: 0 !important;
+	box-shadow: inset 0 calc(-1 * var(--ltree-drop-glow-size)) 0 0 var(--ltree-drop-glow-after-color);
+}
+
+.ltree-node-content.ltree-glow-after::after {
+	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-after-rotation));
+	background-image: var(--ltree-drop-arrow-after-image);
+}
+
+.ltree-node-content.ltree-glow-child {
+	border-radius: 0 !important;
+	box-shadow: inset calc(-1 * var(--ltree-drop-glow-size)) 0 0 0 var(--ltree-drop-glow-child-color);
+	background-color: var(--ltree-drop-glow-child-bg);
+}
+
+.ltree-node-content.ltree-glow-child::after {
+	transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-child-rotation));
+	background-image: var(--ltree-drop-arrow-child-image);
+}

@@ -1,0 +1,270 @@
+/* =============================================================================
+   DROP ZONES — overlay drop targets (before / after / child)
+   ============================================================================= */
+
+.ltree-drop-zones {
+	pointer-events: none; /* children handle pointer events */
+	overflow: visible;
+}
+
+/* Base style for any drop zone */
+.ltree-drop-zone {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 6px 12px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+	pointer-events: auto;
+	z-index: 1000;
+	transition: all 0.15s ease;
+	border-radius: var(--ltree-drop-zone-border-radius);
+}
+
+/* Before zone (sage green) */
+.ltree-drop-zone.ltree-drop-before {
+	background: var(--ltree-drop-zone-before-bg);
+	color: var(--ltree-drop-zone-before-color);
+}
+
+.ltree-drop-zone.ltree-drop-before.ltree-drop-zone-active {
+	background: var(--ltree-drop-zone-before-active-bg);
+	color: var(--ltree-drop-zone-before-active-color);
+	box-shadow: var(--ltree-drop-zone-before-active-shadow);
+}
+
+/* After zone (coral) */
+.ltree-drop-zone.ltree-drop-after {
+	background: var(--ltree-drop-zone-after-bg);
+	color: var(--ltree-drop-zone-after-color);
+}
+
+.ltree-drop-zone.ltree-drop-after.ltree-drop-zone-active {
+	background: var(--ltree-drop-zone-after-active-bg);
+	color: var(--ltree-drop-zone-after-active-color);
+	box-shadow: var(--ltree-drop-zone-after-active-shadow);
+}
+
+/* Child zone (lavender) */
+.ltree-drop-zone.ltree-drop-child {
+	background: var(--ltree-drop-zone-child-bg);
+	color: var(--ltree-drop-zone-child-color);
+}
+
+.ltree-drop-zone.ltree-drop-child.ltree-drop-zone-active {
+	background: var(--ltree-drop-zone-child-active-bg);
+	color: var(--ltree-drop-zone-child-active-color);
+	box-shadow: var(--ltree-drop-zone-child-active-shadow);
+}
+
+/* =============================================================================
+   LAYOUT: "around" — Above on top, Below/Child on bottom (default)
+   ============================================================================= */
+.ltree-drop-zones-around .ltree-drop-before {
+	top: 0;
+	left: var(--drop-zone-start, 33%);
+	right: 0;
+	transform: translateY(-100%);
+}
+
+.ltree-drop-zones-around .ltree-drop-after {
+	bottom: 0;
+	left: var(--drop-zone-start, 33%);
+	right: calc((100% - var(--drop-zone-start, 33%)) / 2);
+	transform: translateY(100%);
+}
+
+.ltree-drop-zones-around .ltree-drop-child {
+	bottom: 0;
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
+	right: 0;
+	transform: translateY(100%);
+}
+
+/* Zone expansion: when a zone is hidden, remaining zones fill the gap */
+.ltree-drop-zones-around:not(:has(.ltree-drop-child)) .ltree-drop-after {
+	right: 0;
+}
+
+.ltree-drop-zones-around:not(:has(.ltree-drop-after)) .ltree-drop-child {
+	left: var(--drop-zone-start, 33%);
+}
+
+/* =============================================================================
+   LAYOUT: "above" — All 3 zones in a row above the node
+   ============================================================================= */
+.ltree-drop-zones-above .ltree-drop-before,
+.ltree-drop-zones-above .ltree-drop-after,
+.ltree-drop-zones-above .ltree-drop-child {
+	top: 0;
+	transform: translateY(-100%);
+}
+
+.ltree-drop-zones-above .ltree-drop-before {
+	left: var(--drop-zone-start, 33%);
+	right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
+	border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
+}
+
+.ltree-drop-zones-above .ltree-drop-after {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
+	right: calc((100% - var(--drop-zone-start, 33%)) / 3);
+	border-radius: 0;
+}
+
+.ltree-drop-zones-above .ltree-drop-child {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
+	right: 0;
+	border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
+}
+
+/* Horizontal expansion: when one or two zones are hidden, remaining zones fill */
+.ltree-drop-zones-above:not(:has(.ltree-drop-child)) .ltree-drop-before,
+.ltree-drop-zones-above:not(:has(.ltree-drop-after)) .ltree-drop-before,
+.ltree-drop-zones-above:not(:has(.ltree-drop-before)) .ltree-drop-after {
+	left: var(--drop-zone-start, 33%);
+	right: calc((100% - var(--drop-zone-start, 33%)) / 2);
+	border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
+}
+
+.ltree-drop-zones-above:not(:has(.ltree-drop-child)) .ltree-drop-after,
+.ltree-drop-zones-above:not(:has(.ltree-drop-after)) .ltree-drop-child,
+.ltree-drop-zones-above:not(:has(.ltree-drop-before)) .ltree-drop-child {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
+	right: 0;
+	border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
+}
+
+.ltree-drop-zones-above:not(:has(.ltree-drop-after)):not(:has(.ltree-drop-child)) .ltree-drop-before,
+.ltree-drop-zones-above:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-child)) .ltree-drop-after,
+.ltree-drop-zones-above:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-after)) .ltree-drop-child {
+	left: var(--drop-zone-start, 33%);
+	right: 0;
+	border-radius: var(--ltree-drop-zone-border-radius);
+}
+
+/* =============================================================================
+   LAYOUT: "below" — All 3 zones in a row below the node
+   ============================================================================= */
+.ltree-drop-zones-below .ltree-drop-before,
+.ltree-drop-zones-below .ltree-drop-after,
+.ltree-drop-zones-below .ltree-drop-child {
+	bottom: 0;
+	transform: translateY(100%);
+}
+
+.ltree-drop-zones-below .ltree-drop-before {
+	left: var(--drop-zone-start, 33%);
+	right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
+	border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
+}
+
+.ltree-drop-zones-below .ltree-drop-after {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 3);
+	right: calc((100% - var(--drop-zone-start, 33%)) / 3);
+	border-radius: 0;
+}
+
+.ltree-drop-zones-below .ltree-drop-child {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
+	right: 0;
+	border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
+}
+
+/* Horizontal expansion */
+.ltree-drop-zones-below:not(:has(.ltree-drop-child)) .ltree-drop-before,
+.ltree-drop-zones-below:not(:has(.ltree-drop-after)) .ltree-drop-before,
+.ltree-drop-zones-below:not(:has(.ltree-drop-before)) .ltree-drop-after {
+	left: var(--drop-zone-start, 33%);
+	right: calc((100% - var(--drop-zone-start, 33%)) / 2);
+	border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
+}
+
+.ltree-drop-zones-below:not(:has(.ltree-drop-child)) .ltree-drop-after,
+.ltree-drop-zones-below:not(:has(.ltree-drop-after)) .ltree-drop-child,
+.ltree-drop-zones-below:not(:has(.ltree-drop-before)) .ltree-drop-child {
+	left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
+	right: 0;
+	border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
+}
+
+.ltree-drop-zones-below:not(:has(.ltree-drop-after)):not(:has(.ltree-drop-child)) .ltree-drop-before,
+.ltree-drop-zones-below:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-child)) .ltree-drop-after,
+.ltree-drop-zones-below:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-after)) .ltree-drop-child {
+	left: var(--drop-zone-start, 33%);
+	right: 0;
+	border-radius: var(--ltree-drop-zone-border-radius);
+}
+
+/* =============================================================================
+   LAYOUT: "wave" — Zones stacked vertically (before/child/after)
+   ============================================================================= */
+.ltree-drop-zones-wave .ltree-drop-before,
+.ltree-drop-zones-wave .ltree-drop-after,
+.ltree-drop-zones-wave .ltree-drop-child {
+	left: var(--drop-zone-start, 33%);
+	right: auto;
+	width: var(--drop-zone-max-width, 120px);
+	max-width: var(--drop-zone-max-width, 120px);
+	height: auto;
+	transform: none;
+}
+
+.ltree-drop-zones-wave .ltree-drop-before {
+	top: 0;
+	bottom: auto;
+	transform: translateY(-100%);
+	border-radius: var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0 0;
+}
+
+.ltree-drop-zones-wave .ltree-drop-child {
+	top: 0;
+	bottom: 0;
+	border-radius: 0;
+}
+
+.ltree-drop-zones-wave .ltree-drop-after {
+	top: auto;
+	bottom: 0;
+	transform: translateY(100%);
+	border-radius: 0 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius);
+}
+
+/* =============================================================================
+   LAYOUT: "wave2" — Diagonal wave pattern (above/below offset 7% left, child centered)
+   ============================================================================= */
+.ltree-drop-zones-wave2 .ltree-drop-before,
+.ltree-drop-zones-wave2 .ltree-drop-after,
+.ltree-drop-zones-wave2 .ltree-drop-child {
+	right: auto;
+	width: var(--drop-zone-max-width, 120px);
+	max-width: var(--drop-zone-max-width, 120px);
+	height: auto;
+}
+
+.ltree-drop-zones-wave2 .ltree-drop-before {
+	left: calc(var(--drop-zone-start, 33%) - 7%);
+	top: 10%;
+	bottom: auto;
+	height: 80%; /* Match Child zone height */
+	transform: translateY(-100%);
+	border-radius: var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0 0;
+}
+
+.ltree-drop-zones-wave2 .ltree-drop-child {
+	left: var(--drop-zone-start, 33%);
+	top: 10%;
+	bottom: 10%;
+	border-radius: 0;
+}
+
+.ltree-drop-zones-wave2 .ltree-drop-after {
+	left: calc(var(--drop-zone-start, 33%) - 7%);
+	top: auto;
+	bottom: 10%;
+	height: 80%;
+	transform: translateY(100%);
+	border-radius: 0 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius);
+}

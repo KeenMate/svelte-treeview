@@ -1,0 +1,40 @@
+/* =============================================================================
+   LOADING OVERLAY + SPINNER
+   ============================================================================= */
+
+.ltree-loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: var(--ltree-loading-bg);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+}
+
+.ltree-loading-spinner {
+	width: var(--ltree-spinner-size);
+	height: var(--ltree-spinner-size);
+	border: 3px solid var(--ltree-spinner-track);
+	border-top-color: var(--ltree-spinner-color);
+	border-radius: 50%;
+	animation: ltree-spin 0.8s linear infinite;
+}
+
+@keyframes ltree-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Progressive rendering loading indicator */
+.ltree-loading-more {
+	padding: 4px 8px;
+	margin-left: var(--ltree-node-indent-per-level);
+	font-size: 12px;
+	color: var(--ltree-loading-color);
+	font-style: italic;
+}

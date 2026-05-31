@@ -1,6 +1,6 @@
 <script>
 	// Import the treeview styles from source during development
-	import '$lib/styles/main.scss';
+	import '$lib/styles/main.css';
 </script>
 
 <svelte:head>

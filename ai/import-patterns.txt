@@ -11,9 +11,8 @@ BASIC IMPORT
 // Component import
 import { Tree } from '@keenmate/svelte-treeview';
 
-// Style import (pick one)
-import '@keenmate/svelte-treeview/styles.css';   // Compiled CSS
-import '@keenmate/svelte-treeview/styles.scss';  // SCSS source
+// Style import (bundled, contains all partials)
+import '@keenmate/svelte-treeview/styles.css';
 
 COMPONENT EXPORTS
 -----------------
@@ -63,22 +62,30 @@ Option 3: In component file
   import '@keenmate/svelte-treeview/styles.css';
 </script>
 
-Option 4: In Svelte style block (SCSS only)
-<style lang="scss">
-  @import '@keenmate/svelte-treeview/styles.scss';
+Option 4: In Svelte style block
+<style>
+  @import '@keenmate/svelte-treeview/styles.css';
 </style>
 
-SCSS CUSTOMIZATION
-------------------
-Override variables before importing:
+THEMING VIA CSS VARIABLES
+-------------------------
+Override CSS custom properties to customize the look:
 
-<style lang="scss">
-  // Override variables
-  $tree-node-indent-per-level: 1.5rem;
-  $ltree-primary: #6366f1;
+<style>
+  @import '@keenmate/svelte-treeview/styles.css';
 
-  // Then import
-  @import '@keenmate/svelte-treeview/styles.scss';
+  /* Component-scope override */
+  .my-tree-wrapper {
+    --ltree-primary: #6366f1;
+    --ltree-node-indent-per-level: 1.5rem;
+    --ltree-node-font-size: 16px;
+  }
+
+  /* Or globally for all KeenMate components: */
+  :root {
+    --base-accent-color: #6366f1;
+    --base-font-family: 'Inter', system-ui, sans-serif;
+  }
 </style>
 
 TYPE IMPORTS
@@ -226,8 +233,20 @@ PACKAGE STRUCTURE
 ├── dist/
 │   ├── index.js          # Main entry (ESM)
 │   ├── index.d.ts        # TypeScript declarations
-│   ├── styles.css        # Compiled CSS
-│   └── styles.scss       # SCSS source
+│   ├── styles.css        # Bundled CSS (all partials merged)
+│   └── styles/           # Individual partials (override per-section if needed)
+│       ├── main.css
+│       ├── _variables.css
+│       ├── _base.css
+│       ├── _node.css
+│       ├── _toggle-icons.css
+│       ├── _checkbox.css
+│       ├── _states.css
+│       ├── _drag-drop.css
+│       ├── _drop-zones.css
+│       ├── _context-menu.css
+│       ├── _debug.css
+│       └── _loading.css
 └── package.json
 
 PEER DEPENDENCIES

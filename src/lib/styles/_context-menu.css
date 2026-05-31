@@ -1,0 +1,134 @@
+/* =============================================================================
+   CONTEXT MENU
+   ============================================================================= */
+
+.ltree-context-menu {
+	position: fixed;
+	z-index: 1000;
+	background: var(--ltree-context-menu-bg);
+	border: 1px solid var(--ltree-context-menu-border-color);
+	border-radius: var(--ltree-context-menu-border-radius);
+	box-shadow: var(--ltree-context-menu-shadow);
+	padding: var(--ltree-context-menu-padding);
+	min-width: var(--ltree-context-menu-min-width);
+}
+
+.ltree-context-menu-item {
+	display: flex;
+	align-items: center;
+	padding: var(--ltree-context-menu-item-padding);
+	border: none;
+	background: none;
+	width: 100%;
+	text-align: left;
+	cursor: pointer;
+	color: var(--ltree-context-menu-item-color);
+	text-decoration: none;
+	font-size: var(--ltree-context-menu-item-font-size);
+	position: relative;
+}
+
+.ltree-context-menu-item:hover {
+	background-color: var(--ltree-context-menu-item-hover-bg);
+}
+
+.ltree-context-menu-item.ltree-context-menu-item-disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.ltree-context-menu-item.danger {
+	color: var(--ltree-danger);
+}
+
+.ltree-context-menu-item.danger:hover {
+	background-color: rgba(var(--ltree-danger-rgb), 0.1);
+}
+
+/* Submenu: show on hover */
+.ltree-context-menu-item.ltree-context-menu-has-children {
+	cursor: default;
+}
+
+.ltree-context-menu-item.ltree-context-menu-has-children > .ltree-context-submenu {
+	display: none;
+}
+
+.ltree-context-menu-item.ltree-context-menu-has-children:hover > .ltree-context-submenu {
+	display: block;
+}
+
+.ltree-context-menu-icon {
+	margin-right: 8px;
+	font-size: var(--ltree-context-menu-icon-font-size);
+	width: var(--ltree-context-menu-icon-size);
+	text-align: center;
+	flex-shrink: 0;
+}
+
+.ltree-context-menu-label {
+	flex-grow: 1;
+}
+
+.ltree-context-menu-shortcut {
+	margin-left: auto;
+	padding-left: 16px;
+	color: var(--ltree-context-menu-shortcut-color);
+	font-size: var(--ltree-context-menu-shortcut-font-size);
+	flex-shrink: 0;
+}
+
+.ltree-context-menu-arrow {
+	margin-left: 8px;
+	font-size: 10px;
+	color: var(--ltree-context-menu-arrow-color);
+	flex-shrink: 0;
+}
+
+.ltree-context-menu-divider {
+	display: flex;
+	align-items: center;
+	margin: 4px 0;
+}
+
+/* Default: simple line */
+.ltree-context-menu-divider:not(:has(.ltree-context-menu-divider-label)) {
+	height: 1px;
+	background-color: var(--ltree-context-menu-divider-color);
+}
+
+/* Named divider: ──── [label] ──── */
+.ltree-context-menu-divider:has(.ltree-context-menu-divider-label) {
+	gap: 8px;
+	padding: 0 12px;
+}
+
+.ltree-context-menu-divider:has(.ltree-context-menu-divider-label)::before,
+.ltree-context-menu-divider:has(.ltree-context-menu-divider-label)::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background-color: var(--ltree-context-menu-divider-color);
+}
+
+.ltree-context-menu-divider-label {
+	font-size: 11px;
+	color: var(--ltree-context-menu-divider-label-color);
+	white-space: nowrap;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+/* Submenu */
+.ltree-context-submenu {
+	position: absolute;
+	left: 100%;
+	top: 0;
+	background: var(--ltree-context-menu-bg);
+	border: 1px solid var(--ltree-context-menu-border-color);
+	border-radius: var(--ltree-context-menu-border-radius);
+	box-shadow: var(--ltree-context-menu-shadow);
+	padding: var(--ltree-context-menu-padding);
+	min-width: var(--ltree-context-menu-min-width);
+	z-index: 1001;
+}

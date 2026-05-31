@@ -1,0 +1,83 @@
+/* =============================================================================
+   CHECKBOX — custom styled, indeterminate support
+   ============================================================================= */
+
+.ltree-checkbox {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 4px;
+	cursor: pointer;
+	position: relative;
+	vertical-align: middle;
+}
+
+/* Hide native input but keep it accessible */
+.ltree-checkbox input[type="checkbox"] {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	pointer-events: none;
+}
+
+.ltree-checkbox__box {
+	display: inline-block;
+	width: var(--ltree-checkbox-size);
+	height: var(--ltree-checkbox-size);
+	border: var(--ltree-checkbox-border-width) solid var(--ltree-checkbox-border-color);
+	border-radius: var(--ltree-checkbox-border-radius);
+	background: var(--ltree-checkbox-bg);
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+	position: relative;
+	flex-shrink: 0;
+}
+
+/* Checkmark / dash (hidden by default) */
+.ltree-checkbox__box::after {
+	content: '';
+	position: absolute;
+	display: none;
+}
+
+.ltree-checkbox:hover .ltree-checkbox__box {
+	border-color: var(--ltree-primary);
+}
+
+/* Checked state */
+.ltree-checkbox input:checked + .ltree-checkbox__box {
+	background: var(--ltree-checkbox-checked-bg);
+	border-color: var(--ltree-checkbox-checked-border-color);
+}
+
+.ltree-checkbox input:checked + .ltree-checkbox__box::after {
+	display: block;
+	left: 4px;
+	top: 1px;
+	width: 4px;
+	height: 8px;
+	border: solid var(--ltree-checkbox-checkmark-color);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+/* Indeterminate state — dash */
+.ltree-checkbox input:indeterminate + .ltree-checkbox__box {
+	background: var(--ltree-checkbox-checked-bg);
+	border-color: var(--ltree-checkbox-checked-border-color);
+}
+
+.ltree-checkbox input:indeterminate + .ltree-checkbox__box::after {
+	display: block;
+	left: 3px;
+	top: 50%;
+	width: calc(var(--ltree-checkbox-size) - 8px);
+	height: 0;
+	border: solid var(--ltree-checkbox-checkmark-color);
+	border-width: 0 0 2px 0;
+	transform: translateY(-50%);
+}
+
+/* Focus ring */
+.ltree-checkbox input:focus-visible + .ltree-checkbox__box {
+	box-shadow: var(--ltree-checkbox-focus-ring);
+}

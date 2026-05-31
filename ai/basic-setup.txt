@@ -24,9 +24,6 @@ The component requires CSS to display correctly:
 // In your main.js/main.ts or +layout.svelte
 import '@keenmate/svelte-treeview/styles.css';
 
-// Or SCSS (if you have sass configured)
-import '@keenmate/svelte-treeview/styles.scss';
-
 MINIMAL EXAMPLE
 ---------------
 <script lang="ts">
