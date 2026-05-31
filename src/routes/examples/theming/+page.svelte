@@ -56,7 +56,9 @@
 		<p class="description">
 			Override these CSS variables to customize the tree appearance. Each one chains to a
 			<code>--base-*</code> token shared across other <code>@keenmate/*</code> web components
-			(see "Base token integration" below), then falls back to the listed default.
+			(see "Base token integration" below), then falls back to the listed default. Sized
+			values are <code>calc(N × var(--ltree-rem))</code> where <code>--ltree-rem</code>
+			defaults to <code>10px</code> — change it once to scale everything.
 		</p>
 
 		<table>
@@ -68,6 +70,9 @@
 				</tr>
 			</thead>
 			<tbody>
+				<tr class="section-row"><td colspan="3">Base sizing unit</td></tr>
+				<tr><td><code>--ltree-rem</code></td><td><code>10px</code></td><td>Base unit multiplied into every size/spacing value. Set to <code>12px</code> for 20% scale, or to <code>1rem</code> to follow document font-size.</td></tr>
+
 				<tr class="section-row"><td colspan="3">Colors</td></tr>
 				<tr><td><code>--ltree-primary</code></td><td><code>var(--base-accent-color, #0d6efd)</code></td><td>Primary color (selection, highlights)</td></tr>
 				<tr><td><code>--ltree-primary-rgb</code></td><td><code>var(--base-accent-color-rgb, 13, 110, 253)</code></td><td>Primary color as RGB values</td></tr>
@@ -81,33 +86,33 @@
 
 				<tr class="section-row"><td colspan="3">Typography</td></tr>
 				<tr><td><code>--ltree-font-family</code></td><td><code>var(--base-font-family, system stack)</code></td><td>Font family for all tree text</td></tr>
-				<tr><td><code>--ltree-node-font-size</code></td><td><code>var(--base-font-size-sm, 14px)</code></td><td>Node text size</td></tr>
-				<tr><td><code>--ltree-node-icon-font-size</code></td><td><code>14px</code></td><td>Per-node icon font size</td></tr>
-				<tr><td><code>--ltree-node-icon-margin-right</code></td><td><code>6px</code></td><td>Gap between node icon and label</td></tr>
+				<tr><td><code>--ltree-node-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Node text size</td></tr>
+				<tr><td><code>--ltree-node-icon-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Per-node icon font size</td></tr>
+				<tr><td><code>--ltree-node-icon-margin-right</code></td><td><code>0.6 × rem</code> (= 6px)</td><td>Gap between node icon and label</td></tr>
 				<tr><td><code>--ltree-node-label-font-weight</code></td><td><code>var(--base-font-weight-medium, 500)</code></td><td>Label weight</td></tr>
-				<tr><td><code>--ltree-node-label-margin-right</code></td><td><code>8px</code></td><td>Gap after node label</td></tr>
-				<tr><td><code>--ltree-node-path-font-size</code></td><td><code>var(--base-font-size-xs, 12px)</code></td><td>Path / debug text size</td></tr>
+				<tr><td><code>--ltree-node-label-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap after node label</td></tr>
+				<tr><td><code>--ltree-node-path-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Path / debug text size</td></tr>
 				<tr><td><code>--ltree-node-path-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Path / muted text color</td></tr>
 
 				<tr class="section-row"><td colspan="3">Node layout</td></tr>
-				<tr><td><code>--ltree-node-indent-per-level</code></td><td><code>0.5rem</code></td><td>Indentation per nesting level</td></tr>
-				<tr><td><code>--ltree-node-content-padding</code></td><td><code>4px 8px</code></td><td>Inner padding of a node row</td></tr>
-				<tr><td><code>--ltree-node-content-border-radius</code></td><td><code>var(--base-border-radius-sm, 0)</code></td><td>Node row corner rounding</td></tr>
+				<tr><td><code>--ltree-node-indent-per-level</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Indentation per nesting level</td></tr>
+				<tr><td><code>--ltree-node-content-padding</code></td><td><code>0.4 × rem / 0.8 × rem</code> (= 4px 8px)</td><td>Inner padding of a node row (V / H)</td></tr>
+				<tr><td><code>--ltree-node-content-border-radius</code></td><td><code>(--base-border-radius-sm, 0) × rem</code></td><td>Node row corner rounding</td></tr>
 				<tr><td><code>--ltree-node-hover-bg</code></td><td><code>var(--base-hover-bg, #f8f9fa)</code></td><td>Hover background</td></tr>
-				<tr><td><code>--ltree-children-margin-top</code></td><td><code>2px</code></td><td>Top margin of child list</td></tr>
+				<tr><td><code>--ltree-children-margin-top</code></td><td><code>0.2 × rem</code> (= 2px)</td><td>Top margin of child list</td></tr>
 
 				<tr class="section-row"><td colspan="3">Toggle icon</td></tr>
-				<tr><td><code>--ltree-toggle-icon-size</code></td><td><code>16px</code></td><td>SVG icon size (chevron / +/- / arrow / leaf)</td></tr>
-				<tr><td><code>--ltree-toggle-icon-width</code></td><td><code>20px</code></td><td>Width reserved for the toggle column</td></tr>
+				<tr><td><code>--ltree-toggle-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>SVG icon size (chevron / +/- / arrow / leaf)</td></tr>
+				<tr><td><code>--ltree-toggle-icon-width</code></td><td><code>2.0 × rem</code> (= 20px)</td><td>Width reserved for the toggle column</td></tr>
 				<tr><td><code>--ltree-toggle-icon-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Icon color (via <code>currentColor</code> mask)</td></tr>
-				<tr><td><code>--ltree-toggle-icon-margin-right</code></td><td><code>8px</code></td><td>Gap between toggle and node label</td></tr>
-				<tr><td><code>--ltree-toggle-icon-transition</code></td><td><code>transform 0.2s</code></td><td>Rotate animation timing</td></tr>
+				<tr><td><code>--ltree-toggle-icon-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap between toggle and node label</td></tr>
+				<tr><td><code>--ltree-toggle-icon-transition</code></td><td><code>transform 0.2s</code></td><td>Rotate animation timing (does not scale)</td></tr>
 
 				<tr class="section-row"><td colspan="3">Checkbox</td></tr>
-				<tr><td><code>--ltree-checkbox-size</code></td><td><code>15px</code></td><td>Checkbox square dimension</td></tr>
-				<tr><td><code>--ltree-checkbox-border-width</code></td><td><code>1.5px</code></td><td>Border thickness</td></tr>
+				<tr><td><code>--ltree-checkbox-size</code></td><td><code>1.5 × rem</code> (= 15px)</td><td>Checkbox square dimension</td></tr>
+				<tr><td><code>--ltree-checkbox-border-width</code></td><td><code>1.5px</code></td><td>Border thickness (hairline, does not scale)</td></tr>
 				<tr><td><code>--ltree-checkbox-border-color</code></td><td><code>var(--base-border-color, #adb5bd)</code></td><td>Unchecked border</td></tr>
-				<tr><td><code>--ltree-checkbox-border-radius</code></td><td><code>var(--base-border-radius-sm, 3px)</code></td><td>Corner rounding</td></tr>
+				<tr><td><code>--ltree-checkbox-border-radius</code></td><td><code>(--base-border-radius-sm, 0.3) × rem</code> (= 3px)</td><td>Corner rounding</td></tr>
 				<tr><td><code>--ltree-checkbox-bg</code></td><td><code>var(--base-input-bg, #fff)</code></td><td>Unchecked background</td></tr>
 				<tr><td><code>--ltree-checkbox-checked-bg</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate background</td></tr>
 				<tr><td><code>--ltree-checkbox-checked-border-color</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate border</td></tr>
@@ -125,8 +130,8 @@
 				<tr><td><code>--ltree-dragover-shadow</code></td><td><code>0 0 8px rgba(primary, 0.4)</code></td><td>Drag-over glow shadow</td></tr>
 				<tr><td><code>--ltree-drop-placeholder-bg</code></td><td><code>rgba(primary, 0.1)</code></td><td>Empty-tree placeholder background</td></tr>
 				<tr><td><code>--ltree-drop-placeholder-color</code></td><td><code>var(--ltree-primary)</code></td><td>Placeholder text color</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-border-radius</code></td><td><code>8px</code></td><td>Placeholder corner rounding</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-min-height</code></td><td><code>60px</code></td><td>Placeholder min height</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-border-radius</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Placeholder corner rounding</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-min-height</code></td><td><code>6.0 × rem</code> (= 60px)</td><td>Placeholder min height</td></tr>
 				<tr><td><code>--tree-ghost-bg</code></td><td><code>rgba(59, 130, 246, 0.9)</code></td><td>Touch drag ghost background</td></tr>
 				<tr><td><code>--tree-ghost-color</code></td><td><code>#fff</code></td><td>Touch drag ghost text color</td></tr>
 
@@ -141,25 +146,26 @@
 				<tr class="section-row"><td colspan="3">Drop zones (glow mode)</td></tr>
 				<tr><td><code>--ltree-drop-glow-[before|after|child]-color</code></td><td><code>0.8-alpha pastel variants</code></td><td>Glow border color per zone</td></tr>
 				<tr><td><code>--ltree-drop-glow-child-bg</code></td><td><code>rgba(167, 155, 198, 0.15)</code></td><td>Glow child zone background tint</td></tr>
-				<tr><td><code>--ltree-drop-glow-size</code></td><td><code>3px</code></td><td>Glow border thickness</td></tr>
-				<tr><td><code>--ltree-drop-arrow-size</code></td><td><code>24px</code></td><td>Direction arrow size</td></tr>
+				<tr><td><code>--ltree-drop-glow-size</code></td><td><code>3px</code></td><td>Glow border thickness (hairline, does not scale)</td></tr>
+				<tr><td><code>--ltree-drop-arrow-size</code></td><td><code>2.4 × rem</code> (= 24px)</td><td>Direction arrow size</td></tr>
 				<tr><td><code>--ltree-drop-arrow-position</code></td><td><code>66%</code></td><td>Horizontal arrow position</td></tr>
 				<tr><td><code>--ltree-drop-arrow-[before|after|child]-rotation</code></td><td><code>0 / 0 / 45deg</code></td><td>Arrow rotation per zone</td></tr>
 
 				<tr class="section-row"><td colspan="3">Context menu</td></tr>
 				<tr><td><code>--ltree-context-menu-bg</code></td><td><code>var(--base-dropdown-bg, #fff)</code></td><td>Menu background</td></tr>
 				<tr><td><code>--ltree-context-menu-border-color</code></td><td><code>var(--ltree-border)</code></td><td>Menu border</td></tr>
-				<tr><td><code>--ltree-context-menu-border-radius</code></td><td><code>var(--base-border-radius-sm, 4px)</code></td><td>Menu rounding</td></tr>
+				<tr><td><code>--ltree-context-menu-border-radius</code></td><td><code>(--base-border-radius-sm, 0.4) × rem</code> (= 4px)</td><td>Menu rounding</td></tr>
 				<tr><td><code>--ltree-context-menu-shadow</code></td><td><code>var(--base-dropdown-box-shadow, …)</code></td><td>Menu drop shadow</td></tr>
-				<tr><td><code>--ltree-context-menu-min-width</code></td><td><code>150px</code></td><td>Menu minimum width</td></tr>
-				<tr><td><code>--ltree-context-menu-item-padding</code></td><td><code>8px 16px</code></td><td>Item padding</td></tr>
-				<tr><td><code>--ltree-context-menu-item-font-size</code></td><td><code>14px</code></td><td>Item font size</td></tr>
+				<tr><td><code>--ltree-context-menu-min-width</code></td><td><code>15 × rem</code> (= 150px)</td><td>Menu minimum width</td></tr>
+				<tr><td><code>--ltree-context-menu-padding</code></td><td><code>0.4 × rem / 0</code></td><td>Menu inner padding</td></tr>
+				<tr><td><code>--ltree-context-menu-item-padding</code></td><td><code>0.8 × rem / 1.6 × rem</code> (= 8px 16px)</td><td>Item padding</td></tr>
+				<tr><td><code>--ltree-context-menu-item-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Item font size</td></tr>
 				<tr><td><code>--ltree-context-menu-item-color</code></td><td><code>var(--ltree-body-color)</code></td><td>Item color</td></tr>
 				<tr><td><code>--ltree-context-menu-item-hover-bg</code></td><td><code>var(--ltree-light)</code></td><td>Item hover background</td></tr>
-				<tr><td><code>--ltree-context-menu-icon-size</code></td><td><code>16px</code></td><td>Icon column width</td></tr>
-				<tr><td><code>--ltree-context-menu-icon-font-size</code></td><td><code>12px</code></td><td>Icon font size</td></tr>
+				<tr><td><code>--ltree-context-menu-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>Icon column width</td></tr>
+				<tr><td><code>--ltree-context-menu-icon-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Icon font size</td></tr>
 				<tr><td><code>--ltree-context-menu-shortcut-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Shortcut hint color</td></tr>
-				<tr><td><code>--ltree-context-menu-shortcut-font-size</code></td><td><code>12px</code></td><td>Shortcut hint size</td></tr>
+				<tr><td><code>--ltree-context-menu-shortcut-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Shortcut hint size</td></tr>
 				<tr><td><code>--ltree-context-menu-arrow-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Submenu arrow color</td></tr>
 				<tr><td><code>--ltree-context-menu-divider-color</code></td><td><code>var(--ltree-border)</code></td><td>Divider line color</td></tr>
 				<tr><td><code>--ltree-context-menu-divider-label-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Named divider label color</td></tr>
@@ -167,7 +173,7 @@
 				<tr class="section-row"><td colspan="3">Loading + spinner</td></tr>
 				<tr><td><code>--ltree-loading-bg</code></td><td><code>rgba(255, 255, 255, 0.8)</code></td><td>Loading overlay background</td></tr>
 				<tr><td><code>--ltree-loading-color</code></td><td><code>var(--base-text-color-3, #718096)</code></td><td>"Loading more..." text color</td></tr>
-				<tr><td><code>--ltree-spinner-size</code></td><td><code>32px</code></td><td>Spinner diameter</td></tr>
+				<tr><td><code>--ltree-spinner-size</code></td><td><code>3.2 × rem</code> (= 32px)</td><td>Spinner diameter</td></tr>
 				<tr><td><code>--ltree-spinner-track</code></td><td><code>var(--base-border-color, #e2e8f0)</code></td><td>Spinner track (background ring)</td></tr>
 				<tr><td><code>--ltree-spinner-color</code></td><td><code>var(--ltree-primary)</code></td><td>Spinner active color</td></tr>
 
@@ -179,11 +185,22 @@
 		</table>
 
 		<div class="code-block">
-			<pre>{`:root {
+			<pre>{`/* Override individual variables */
+.my-tree {
   --ltree-primary: #667eea;
   --ltree-primary-rgb: 102, 126, 234;
   --ltree-success: #10b981;
   --ltree-danger: #ef4444;
+}
+
+/* Scale everything proportionally with one knob */
+.my-bigger-tree {
+  --ltree-rem: 12px;   /* 20% larger — all dimensions follow */
+}
+
+/* Or scale with document font-size (Pure Admin pattern) */
+.my-tree {
+  --ltree-rem: 1rem;   /* now respects html { font-size: ... } */
 }`}</pre>
 		</div>
 	</div>
@@ -200,19 +217,28 @@
 		</p>
 
 		<div class="code-block">
-			<pre>{`/* One theme, every KM component */
+			<pre>{`/* One theme, every KM component.
+   --base-font-size-* and --base-border-radius-* are UNITLESS multipliers
+   that the component multiplies by its own --*-rem unit. */
 :root {
+  /* Colors — direct values */
   --base-accent-color: #10b981;
   --base-accent-color-rgb: 16, 185, 129;
-  --base-font-family: 'Inter', system-ui, sans-serif;
-  --base-font-size-sm: 14px;
-  --base-border-color: #e5e7eb;
-  --base-border-radius-sm: 6px;
   --base-text-color-1: #111827;
   --base-text-color-3: #6b7280;
   --base-text-color-4: #9ca3af;
+  --base-border-color: #e5e7eb;
   --base-hover-bg: #f3f4f6;
   --base-dropdown-bg: #ffffff;
+
+  /* Typography — unitless multipliers (× --ltree-rem) */
+  --base-font-family: 'Inter', system-ui, sans-serif;
+  --base-font-size-xs: 1.2;       /* 12px at default --ltree-rem: 10px */
+  --base-font-size-sm: 1.4;       /* 14px */
+  --base-font-weight-medium: 500;
+
+  /* Radii — unitless multipliers (× --ltree-rem) */
+  --base-border-radius-sm: 0.4;   /* 4px */
 }`}</pre>
 		</div>
 
