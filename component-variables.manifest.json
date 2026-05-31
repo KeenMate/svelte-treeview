@@ -3,12 +3,9 @@
 	"component": "@keenmate/svelte-treeview",
 	"prefix": "ltree",
 	"baseVariables": [
-		{ "name": "base-accent-color", "required": true, "usage": "Primary accent — selection, drop-zones, focus rings, debug panel" },
-		{ "name": "base-accent-color-rgb", "required": true, "usage": "Primary accent as RGB triple — used in rgba() for tints" },
+		{ "name": "base-accent-color", "required": true, "usage": "Primary accent — selection, drop-zones, focus rings, debug panel. Tints derived via color-mix()." },
 		{ "name": "base-success-color", "required": false, "usage": "Drop-valid border and dragover highlight" },
-		{ "name": "base-success-color-rgb", "required": false, "usage": "Success color as RGB triple" },
 		{ "name": "base-danger-color", "required": false, "usage": "Drop-invalid border, danger context-menu items, scroll-highlight arrows" },
-		{ "name": "base-danger-color-rgb", "required": false, "usage": "Danger color as RGB triple" },
 		{ "name": "base-main-bg", "required": false, "usage": "Used for --ltree-light (context-menu hover tint, debug stat chips)" },
 		{ "name": "base-border-color", "required": true, "usage": "Default border color (checkbox, context-menu, spinner track)" },
 		{ "name": "base-hover-bg", "required": false, "usage": "Node row hover background" },
@@ -28,12 +25,9 @@
 	"componentVariables": [
 		{ "name": "ltree-rem", "category": "sizing", "usage": "Base sizing unit for proportional scaling (default 10px). Set to 1rem to scale with document font-size." },
 
-		{ "name": "ltree-primary", "category": "color", "usage": "Primary accent color (selection, focus, links)" },
-		{ "name": "ltree-primary-rgb", "category": "color", "usage": "Primary accent as RGB triple (for rgba() tints)" },
+		{ "name": "ltree-primary", "category": "color", "usage": "Primary accent color (selection, focus, links). Tints derived via color-mix()." },
 		{ "name": "ltree-success", "category": "color", "usage": "Success color (drop-valid border, dragover-highlight)" },
-		{ "name": "ltree-success-rgb", "category": "color", "usage": "Success as RGB triple" },
 		{ "name": "ltree-danger", "category": "color", "usage": "Danger color (drop-invalid, scroll-highlight arrows, danger menu items)" },
-		{ "name": "ltree-danger-rgb", "category": "color", "usage": "Danger as RGB triple" },
 		{ "name": "ltree-light", "category": "color", "usage": "Light surface (context-menu hover, debug stat chips)" },
 		{ "name": "ltree-border", "category": "color", "usage": "Default border color" },
 		{ "name": "ltree-body-color", "category": "color", "usage": "Default body text color" },

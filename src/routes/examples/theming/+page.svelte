@@ -74,12 +74,9 @@
 				<tr><td><code>--ltree-rem</code></td><td><code>10px</code></td><td>Base unit multiplied into every size/spacing value. Set to <code>12px</code> for 20% scale, or to <code>1rem</code> to follow document font-size.</td></tr>
 
 				<tr class="section-row"><td colspan="3">Colors</td></tr>
-				<tr><td><code>--ltree-primary</code></td><td><code>var(--base-accent-color, #0d6efd)</code></td><td>Primary color (selection, highlights)</td></tr>
-				<tr><td><code>--ltree-primary-rgb</code></td><td><code>var(--base-accent-color-rgb, 13, 110, 253)</code></td><td>Primary color as RGB values</td></tr>
+				<tr><td><code>--ltree-primary</code></td><td><code>var(--base-accent-color, #0d6efd)</code></td><td>Primary color (selection, highlights). Tints derived via <code>color-mix()</code>.</td></tr>
 				<tr><td><code>--ltree-success</code></td><td><code>var(--base-success-color, #198754)</code></td><td>Success color (valid drop targets)</td></tr>
-				<tr><td><code>--ltree-success-rgb</code></td><td><code>25, 135, 84</code></td><td>Success RGB values</td></tr>
 				<tr><td><code>--ltree-danger</code></td><td><code>var(--base-danger-color, #dc3545)</code></td><td>Danger color (invalid drops)</td></tr>
-				<tr><td><code>--ltree-danger-rgb</code></td><td><code>220, 53, 69</code></td><td>Danger RGB values</td></tr>
 				<tr><td><code>--ltree-light</code></td><td><code>var(--base-main-bg, #f8f9fa)</code></td><td>Light background</td></tr>
 				<tr><td><code>--ltree-border</code></td><td><code>var(--base-border-color, #dee2e6)</code></td><td>Border color</td></tr>
 				<tr><td><code>--ltree-body-color</code></td><td><code>var(--base-text-color-1, #212529)</code></td><td>Default text color</td></tr>
@@ -117,18 +114,18 @@
 				<tr><td><code>--ltree-checkbox-checked-bg</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate background</td></tr>
 				<tr><td><code>--ltree-checkbox-checked-border-color</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate border</td></tr>
 				<tr><td><code>--ltree-checkbox-checkmark-color</code></td><td><code>var(--base-text-color-on-accent, #fff)</code></td><td>Tick / dash color</td></tr>
-				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 2px rgba(primary, 0.25)</code></td><td>Focus-visible box-shadow ring</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 2px color-mix(primary 25%, transparent)</code></td><td>Focus-visible box-shadow ring</td></tr>
 
 				<tr class="section-row"><td colspan="3">Selection &amp; highlight states</td></tr>
 				<tr><td><code>--ltree-highlight-bg</code></td><td><code>#cce8ff</code></td><td>Explorer-style highlight background</td></tr>
 				<tr><td><code>--ltree-highlight-color</code></td><td><code>inherit</code></td><td>Highlight text color</td></tr>
-				<tr><td><code>--ltree-multi-selected-bg</code></td><td><code>rgba(primary, 0.08)</code></td><td>Multi-select tint</td></tr>
-				<tr><td><code>--ltree-multi-selected-outline</code></td><td><code>rgba(primary, 0.25)</code></td><td>Multi-select outline</td></tr>
+				<tr><td><code>--ltree-multi-selected-bg</code></td><td><code>color-mix(primary 8%, transparent)</code></td><td>Multi-select tint</td></tr>
+				<tr><td><code>--ltree-multi-selected-outline</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Multi-select outline</td></tr>
 
 				<tr class="section-row"><td colspan="3">Drag / drop states</td></tr>
-				<tr><td><code>--ltree-dragover-bg</code></td><td><code>rgba(primary, 0.1)</code></td><td>Drag-over background tint</td></tr>
-				<tr><td><code>--ltree-dragover-shadow</code></td><td><code>0 0 8px rgba(primary, 0.4)</code></td><td>Drag-over glow shadow</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-bg</code></td><td><code>rgba(primary, 0.1)</code></td><td>Empty-tree placeholder background</td></tr>
+				<tr><td><code>--ltree-dragover-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Drag-over background tint</td></tr>
+				<tr><td><code>--ltree-dragover-shadow</code></td><td><code>0 0 8px color-mix(primary 40%, transparent)</code></td><td>Drag-over glow shadow</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Empty-tree placeholder background</td></tr>
 				<tr><td><code>--ltree-drop-placeholder-color</code></td><td><code>var(--ltree-primary)</code></td><td>Placeholder text color</td></tr>
 				<tr><td><code>--ltree-drop-placeholder-border-radius</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Placeholder corner rounding</td></tr>
 				<tr><td><code>--ltree-drop-placeholder-min-height</code></td><td><code>6.0 × rem</code> (= 60px)</td><td>Placeholder min height</td></tr>
@@ -178,17 +175,17 @@
 				<tr><td><code>--ltree-spinner-color</code></td><td><code>var(--ltree-primary)</code></td><td>Spinner active color</td></tr>
 
 				<tr class="section-row"><td colspan="3">Scroll highlight (after <code>scrollToPath</code>)</td></tr>
-				<tr><td><code>--ltree-scroll-highlight-bg</code></td><td><code>rgba(primary, 0.3)</code></td><td>Highlight background</td></tr>
-				<tr><td><code>--ltree-scroll-highlight-shadow</code></td><td><code>0 0 0.5em rgba(primary, 0.4)</code></td><td>Highlight glow</td></tr>
+				<tr><td><code>--ltree-scroll-highlight-bg</code></td><td><code>color-mix(primary 30%, transparent)</code></td><td>Highlight background</td></tr>
+				<tr><td><code>--ltree-scroll-highlight-shadow</code></td><td><code>0 0 0.5em color-mix(primary 40%, transparent)</code></td><td>Highlight glow</td></tr>
 				<tr><td><code>--ltree-scroll-highlight-arrow-color</code></td><td><code>var(--ltree-danger)</code></td><td>Arrow icon color</td></tr>
 			</tbody>
 		</table>
 
 		<div class="code-block">
-			<pre>{`/* Override individual variables */
+			<pre>{`/* Override individual variables — tints follow automatically */
 .my-tree {
-  --ltree-primary: #667eea;
-  --ltree-primary-rgb: 102, 126, 234;
+  --ltree-primary: #667eea;   /* hover/dragover/multi-select tints
+                                  derived via color-mix() */
   --ltree-success: #10b981;
   --ltree-danger: #ef4444;
 }
@@ -221,9 +218,8 @@
    --base-font-size-* and --base-border-radius-* are UNITLESS multipliers
    that the component multiplies by its own --*-rem unit. */
 :root {
-  /* Colors — direct values */
+  /* Colors — direct values; tints derived via color-mix() */
   --base-accent-color: #10b981;
-  --base-accent-color-rgb: 16, 185, 129;
   --base-text-color-1: #111827;
   --base-text-color-3: #6b7280;
   --base-text-color-4: #9ca3af;
@@ -569,31 +565,22 @@
 		<p class="description">Copy this CSS to create a custom theme.</p>
 
 		<div class="code-block">
-			<pre>{`/* Custom Purple Theme */
+			<pre>{`/* Custom Purple Theme — set primary once, tints follow via color-mix() */
 .my-custom-theme {
   --ltree-primary: #667eea;
-  --ltree-primary-rgb: 102, 126, 234;
   --ltree-success: #10b981;
-  --ltree-success-rgb: 16, 185, 129;
   --ltree-danger: #ef4444;
-  --ltree-danger-rgb: 239, 68, 68;
   --ltree-light: #f3f4f6;
   --ltree-border: #e5e7eb;
   --ltree-body-color: #1f2937;
-  --tree-node-indent-per-level: 1rem;
-  --tree-ghost-bg: rgba(102, 126, 234, 0.9);
+  --ltree-node-indent-per-level: calc(1.0 * var(--ltree-rem));
+  --tree-ghost-bg: color-mix(in srgb, #667eea 90%, transparent);
   --tree-ghost-color: white;
-}
-
-/* Apply to container */
-.my-custom-theme .ltree-node-content:hover {
-  background-color: rgba(102, 126, 234, 0.1);
 }
 
 /* Dark mode variant */
 .my-dark-theme {
   --ltree-primary: #818cf8;
-  --ltree-primary-rgb: 129, 140, 248;
   --ltree-light: #374151;
   --ltree-border: #4b5563;
   --ltree-body-color: #f9fafb;
@@ -608,30 +595,23 @@
 </div>
 
 <style>
-	/* Purple theme */
+	/* Purple theme — primary tints (multi-select, dragover) follow via color-mix();
+	   hover bg is a separate variable so override explicitly when you want a tinted hover. */
 	.purple-theme {
 		--ltree-primary: #667eea;
-		--ltree-primary-rgb: 102, 126, 234;
-	}
-
-	.purple-theme :global(.ltree-node-content:hover) {
-		background-color: rgba(102, 126, 234, 0.1) !important;
+		--ltree-node-hover-bg: color-mix(in srgb, #667eea 10%, transparent);
 	}
 
 	/* Dark theme */
 	.dark-theme {
 		--ltree-primary: #818cf8;
-		--ltree-primary-rgb: 129, 140, 248;
+		--ltree-node-hover-bg: color-mix(in srgb, #818cf8 20%, transparent);
 		--ltree-body-color: #f9fafb;
 		--ltree-light: #374151;
 		--ltree-border: #4b5563;
 		background: #1f2937;
 		padding: 1rem;
 		border-radius: 8px;
-	}
-
-	.dark-theme :global(.ltree-node-content:hover) {
-		background-color: rgba(129, 140, 248, 0.2) !important;
 	}
 
 	.dark-theme :global(.ltree-toggle-icon) {
@@ -641,11 +621,7 @@
 	/* Green theme */
 	.green-theme {
 		--ltree-primary: #10b981;
-		--ltree-primary-rgb: 16, 185, 129;
-	}
-
-	.green-theme :global(.ltree-node-content:hover) {
-		background-color: rgba(16, 185, 129, 0.1) !important;
+		--ltree-node-hover-bg: color-mix(in srgb, #10b981 10%, transparent);
 	}
 
 	/* Toggle icon live demo */

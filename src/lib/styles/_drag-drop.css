@@ -64,7 +64,7 @@
 
 /* Drag-over node states (tinted background + dashed border) */
 .ltree-dragover-highlight {
-	background-color: rgba(var(--ltree-success-rgb), 0.15) !important;
+	background-color: color-mix(in srgb, var(--ltree-success) 15%, transparent) !important;
 	border: 2px dashed var(--ltree-success) !important;
 	border-radius: 4px !important;
 }
@@ -94,19 +94,19 @@
 	left: -2px;
 	right: -2px;
 	bottom: -2px;
-	background: linear-gradient(45deg, transparent, rgba(var(--ltree-primary-rgb), 0.05));
+	background: linear-gradient(45deg, transparent, color-mix(in srgb, var(--ltree-primary) 5%, transparent));
 	pointer-events: none;
 	border-radius: 4px;
 }
 
 .ltree-node-content.ltree-drop-valid {
 	border-color: var(--ltree-success) !important;
-	background-color: rgba(var(--ltree-success-rgb), 0.1) !important;
+	background-color: color-mix(in srgb, var(--ltree-success) 10%, transparent) !important;
 }
 
 .ltree-node-content.ltree-drop-invalid {
 	border-color: var(--ltree-danger) !important;
-	background-color: rgba(var(--ltree-danger-rgb), 0.1) !important;
+	background-color: color-mix(in srgb, var(--ltree-danger) 10%, transparent) !important;
 }
 
 /* =============================================================================

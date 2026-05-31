@@ -42,7 +42,7 @@
 }
 
 .ltree-context-menu-item.danger:hover {
-	background-color: rgba(var(--ltree-danger-rgb), 0.1);
+	background-color: color-mix(in srgb, var(--ltree-danger) 10%, transparent);
 }
 
 /* Submenu: show on hover */

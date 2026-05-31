@@ -5,8 +5,8 @@
 .ltree-debug-info {
 	font-family: var(--ltree-font-family);
 	font-size: 0.75em;
-	background-color: rgba(var(--ltree-primary-rgb), 0.05);
-	border: 1px solid rgba(var(--ltree-primary-rgb), 0.2);
+	background-color: color-mix(in srgb, var(--ltree-primary) 5%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ltree-primary) 20%, transparent);
 	border-radius: 0.25em;
 	padding: 0.5em;
 	margin-bottom: 0.5em;
@@ -20,12 +20,12 @@
 }
 
 .ltree-debug-info details summary:hover {
-	color: rgba(var(--ltree-primary-rgb), 0.8);
+	color: color-mix(in srgb, var(--ltree-primary) 80%, transparent);
 }
 
 .ltree-debug-info details[open] summary {
 	margin-bottom: 0.5em;
-	border-bottom: 1px solid rgba(var(--ltree-primary-rgb), 0.2);
+	border-bottom: 1px solid color-mix(in srgb, var(--ltree-primary) 20%, transparent);
 }
 
 .ltree-debug-stats {

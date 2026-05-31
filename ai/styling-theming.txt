@@ -19,16 +19,16 @@ CSS VARIABLES
 Override in your CSS:
 
 :root {
-  /* Indentation */
-  --tree-node-indent-per-level: 0.5rem;
+  /* Base sizing unit — scale all dimensions with one knob */
+  --ltree-rem: 10px;
 
-  /* Colors */
+  /* Indentation */
+  --ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));
+
+  /* Colors — tints derived automatically via color-mix() */
   --ltree-primary: #0d6efd;
-  --ltree-primary-rgb: 13, 110, 253;
   --ltree-success: #198754;
-  --ltree-success-rgb: 25, 135, 84;
   --ltree-danger: #dc3545;
-  --ltree-danger-rgb: 220, 53, 69;
   --ltree-light: #f8f9fa;
   --ltree-border: #dee2e6;
   --ltree-body-color: #212529;

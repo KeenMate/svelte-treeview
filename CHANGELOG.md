@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 - **`./styles.scss` package export removed.** Consumers using `import '@keenmate/svelte-treeview/styles.scss'` must switch to `import '@keenmate/svelte-treeview/styles.css'` (the canonical export, unchanged). For per-section theming, individual partials are now available under `./styles/_<section>.css`.
+- **`--ltree-primary-rgb` / `--ltree-success-rgb` / `--ltree-danger-rgb` removed** (along with `--base-accent-color-rgb` / `--base-success-color-rgb` / `--base-danger-color-rgb` from the `--base-*` chain). Tinted variants are now derived from the parent color via `color-mix(in srgb, var(--ltree-x) N%, transparent)` — so setting `--ltree-primary: red` automatically tints the multi-select background, dragover background, drop placeholder, focus ring, scroll highlight, debug panel, and danger context-menu hover without needing a companion `-rgb` variable. Matches the `@keenmate/web-multiselect` pattern. Minimum browser baseline: Chrome 111 / Safari 16.4 / Firefox 113 (all from March-May 2023).
 - **SCSS variable overrides (`$tree-*`, `$drop-*`, `$primary-*`) no longer supported.** Migrate to CSS custom properties at runtime: `--ltree-node-font-size: 16px` instead of `@use '@keenmate/svelte-treeview/styles.scss' with ($tree-node-font-size: 16px)`. The full variable surface is documented at `/examples/theming`.
 
 ### Fixed

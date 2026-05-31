@@ -29,13 +29,11 @@
 
 	/* -------------------------------------------------------------------------
 	   COLORS — theme integration via --base-* tokens
+	   Tinted variants are derived via color-mix(); no -rgb companion needed.
 	   ------------------------------------------------------------------------- */
 	--ltree-primary: var(--base-accent-color, #0d6efd);
-	--ltree-primary-rgb: var(--base-accent-color-rgb, 13, 110, 253);
 	--ltree-success: var(--base-success-color, #198754);
-	--ltree-success-rgb: var(--base-success-color-rgb, 25, 135, 84);
 	--ltree-danger: var(--base-danger-color, #dc3545);
-	--ltree-danger-rgb: var(--base-danger-color-rgb, 220, 53, 69);
 	--ltree-light: var(--base-main-bg, #f8f9fa);
 	--ltree-border: var(--base-border-color, #dee2e6);
 	--ltree-body-color: var(--base-text-color-1, #212529);
@@ -81,22 +79,22 @@
 	--ltree-checkbox-checked-bg: var(--ltree-primary);
 	--ltree-checkbox-checked-border-color: var(--ltree-primary);
 	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
-	--ltree-checkbox-focus-ring: 0 0 0 2px rgba(var(--ltree-primary-rgb), 0.25);
+	--ltree-checkbox-focus-ring: 0 0 0 2px color-mix(in srgb, var(--ltree-primary) 25%, transparent);
 
 	/* -------------------------------------------------------------------------
 	   SELECTION & HIGHLIGHT STATES
 	   ------------------------------------------------------------------------- */
 	--ltree-highlight-bg: #cce8ff;
 	--ltree-highlight-color: inherit;
-	--ltree-multi-selected-bg: rgba(var(--ltree-primary-rgb), 0.08);
-	--ltree-multi-selected-outline: rgba(var(--ltree-primary-rgb), 0.25);
+	--ltree-multi-selected-bg: color-mix(in srgb, var(--ltree-primary) 8%, transparent);
+	--ltree-multi-selected-outline: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
 
 	/* -------------------------------------------------------------------------
 	   DRAG / DROP — placeholder + dragover + ghost
 	   ------------------------------------------------------------------------- */
-	--ltree-dragover-bg: rgba(var(--ltree-primary-rgb), 0.1);
-	--ltree-dragover-shadow: 0 0 8px rgba(var(--ltree-primary-rgb), 0.4);
-	--ltree-drop-placeholder-bg: rgba(var(--ltree-primary-rgb), 0.1);
+	--ltree-dragover-bg: color-mix(in srgb, var(--ltree-primary) 10%, transparent);
+	--ltree-dragover-shadow: 0 0 8px color-mix(in srgb, var(--ltree-primary) 40%, transparent);
+	--ltree-drop-placeholder-bg: color-mix(in srgb, var(--ltree-primary) 10%, transparent);
 	--ltree-drop-placeholder-color: var(--ltree-primary);
 	--ltree-drop-placeholder-border-radius: calc(0.8 * var(--ltree-rem));
 	--ltree-drop-placeholder-min-height: calc(6.0 * var(--ltree-rem));
@@ -177,8 +175,8 @@
 	/* -------------------------------------------------------------------------
 	   SCROLL HIGHLIGHT (after scrollToPath with highlight: true)
 	   ------------------------------------------------------------------------- */
-	--ltree-scroll-highlight-bg: rgba(var(--ltree-primary-rgb), 0.3);
-	--ltree-scroll-highlight-shadow: 0 0 0.5em rgba(var(--ltree-primary-rgb), 0.4);
+	--ltree-scroll-highlight-bg: color-mix(in srgb, var(--ltree-primary) 30%, transparent);
+	--ltree-scroll-highlight-shadow: 0 0 0.5em color-mix(in srgb, var(--ltree-primary) 40%, transparent);
 	--ltree-scroll-highlight-arrow-color: var(--ltree-danger);
 
 	/* -------------------------------------------------------------------------

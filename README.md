@@ -500,33 +500,37 @@ The component uses CSS custom properties for easy theming:
 
 ```css
 :root {
-  --tree-node-indent-per-level: 0.5rem;  /* Controls indentation for each hierarchy level */
-  --ltree-primary: #0d6efd;
-  --ltree-primary-rgb: 13, 110, 253;
+  --ltree-rem: 10px;                              /* Base sizing unit — scale all dimensions */
+  --ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));  /* Indent per nesting level */
+  --ltree-primary: #0d6efd;                       /* Tints (multi-select, dragover) derived
+                                                       automatically via color-mix() */
   --ltree-success: #198754;
-  --ltree-success-rgb: 25, 135, 84;
   --ltree-danger: #dc3545;
-  --ltree-danger-rgb: 220, 53, 69;
   --ltree-light: #f8f9fa;
   --ltree-border: #dee2e6;
   --ltree-body-color: #212529;
 }
 ```
 
-**Note**: The `--tree-node-indent-per-level` variable controls the consistent indentation applied at each hierarchy level. Each nested level receives this fixed indent amount, creating proper visual hierarchy without exponential indentation growth.
+**Note**: All dimensions are `calc(N × var(--ltree-rem))`. Set `--ltree-rem` once (default `10px`) to scale every size proportionally, or set it to `1rem` to make the component follow document font-size.
 
-### SCSS Variables (if using SCSS)
+### Scaling and Theme Integration
 
-If you're building the styles from SCSS source, you can override these variables:
+```css
+/* Scale everything 20% larger */
+.my-bigger-tree {
+  --ltree-rem: 12px;
+}
 
-```scss
-// Import your overrides before the library styles
-$tree-node-indent-per-level: 1rem;
-$tree-node-font-family: 'Custom Font', sans-serif;
-$primary-color: #custom-color;
-
-@import '@keenmate/svelte-treeview/styles.css';
+/* Shared theme tokens — picked up by every @keenmate/* component */
+:root {
+  --base-accent-color: #6366f1;
+  --base-font-family: 'Inter', system-ui, sans-serif;
+  --base-border-radius-sm: 0.4;  /* unitless multiplier (× rem) */
+}
 ```
+
+See `/examples/theming` for the full CSS variable reference and a live demo.
 
 ### CSS Classes
 
