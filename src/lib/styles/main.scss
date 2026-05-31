@@ -1,7 +1,29 @@
 // Svelte TreeView Component Styles
 // Standalone version without Bootstrap dependencies
+//
+// THEMING ARCHITECTURE
+// --------------------
+// Every styling value is exposed as a CSS custom property (--ltree-*) so end users
+// can theme the component at runtime without recompiling SCSS. Each variable
+// follows this resolution chain:
+//
+//   1. End-user override:   element { --ltree-x: red; }
+//   2. KeenMate base token: --base-x (shared across @keenmate/* components)
+//   3. Hardcoded default
+//
+// SCSS variables ($tree-*, $drop-*, $primary-*) are retained ONLY as compile-time
+// defaults for downstream SCSS consumers using `@use '...' with (...)`. They are
+// interpolated into the CSS `var()` fallback so SCSS-overridden values still ship
+// as the hardcoded default in compiled CSS.
+//
+// To override at runtime without touching SCSS:
+//   .ltree-tree { --ltree-primary: #10b981; --ltree-node-font-size: 16px; }
+// Or globally:
+//   :root { --base-accent-color: #10b981; }  /* affects all KM components */
 
-// Tree Component Variables
+// =============================================================================
+// SCSS DEFAULTS (compile-time overrides for SCSS consumers)
+// =============================================================================
 $tree-node-indent-per-level: 0.5rem !default;
 $tree-node-font-family:
 	-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
@@ -22,38 +44,30 @@ $tree-node-path-font-size: 12px !default;
 $tree-node-path-color: #6c757d !default;
 $tree-children-margin-top: 2px !default;
 
-// Drop Zone Variables
 $drop-zone-border-radius: 0 !default;
-
-// Before zone (soft sage green)
 $drop-zone-before-bg: rgba(134, 179, 152, 0.25) !default;
 $drop-zone-before-color: rgba(62, 89, 72, 0.7) !default;
 $drop-zone-before-active-bg: rgba(134, 179, 152, 0.85) !default;
 $drop-zone-before-active-color: rgb(32, 54, 40) !default;
 $drop-zone-before-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4) !default;
-
-// After zone (soft peach/coral)
 $drop-zone-after-bg: rgba(242, 182, 158, 0.25) !default;
 $drop-zone-after-color: rgba(120, 70, 50, 0.7) !default;
 $drop-zone-after-active-bg: rgba(242, 182, 158, 0.85) !default;
 $drop-zone-after-active-color: rgb(80, 45, 30) !default;
 $drop-zone-after-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4) !default;
-
-// Child zone (soft lavender)
 $drop-zone-child-bg: rgba(167, 155, 198, 0.25) !default;
 $drop-zone-child-color: rgba(72, 62, 98, 0.7) !default;
 $drop-zone-child-active-bg: rgba(167, 155, 198, 0.85) !default;
 $drop-zone-child-active-color: rgb(45, 38, 62) !default;
 $drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4) !default;
 
-// Border glow drop indicators (for glow mode)
 $drop-glow-before-color: rgba(134, 179, 152, 0.8) !default;
 $drop-glow-after-color: rgba(242, 182, 158, 0.8) !default;
 $drop-glow-child-color: rgba(167, 155, 198, 0.8) !default;
 $drop-glow-child-bg: rgba(167, 155, 198, 0.15) !default;
 $drop-glow-size: 3px !default;
 
-// Drop indicator arrows (Lucide icons as data URIs)
+// Drop indicator arrows (Lucide icons as data URIs — stroke color baked in)
 $drop-arrow-before: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2386b398' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E") !default;
 $drop-arrow-after: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f2b69e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E") !default;
 $drop-arrow-child: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a79bc6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E") !default;
@@ -63,7 +77,6 @@ $drop-arrow-before-rotation: 0deg !default;
 $drop-arrow-after-rotation: 0deg !default;
 $drop-arrow-child-rotation: 45deg !default;
 
-// Color variables for selected states and drag/drop
 $primary-color: #0d6efd !default;
 $primary-color-rgb: 13, 110, 253 !default;
 $success-color: #198754 !default;
@@ -74,211 +87,197 @@ $light-color: #f8f9fa !default;
 $border-color: #dee2e6 !default;
 $body-color: #212529 !default;
 
-// Mixin: expand horizontal zone layout when zones are hidden (used by "above" and "below" layouts)
+// =============================================================================
+// CSS CUSTOM PROPERTIES — runtime overrides at :root
+// =============================================================================
+:root {
+	// -----------------------------------------------------------------------
+	// COLORS — theme integration via --base-* tokens
+	// -----------------------------------------------------------------------
+	--ltree-primary: var(--base-accent-color, #{$primary-color});
+	--ltree-primary-rgb: var(--base-accent-color-rgb, #{$primary-color-rgb});
+	--ltree-success: var(--base-success-color, #{$success-color});
+	--ltree-success-rgb: var(--base-success-color-rgb, #{$success-color-rgb});
+	--ltree-danger: var(--base-danger-color, #{$danger-color});
+	--ltree-danger-rgb: var(--base-danger-color-rgb, #{$danger-color-rgb});
+	--ltree-light: var(--base-main-bg, #{$light-color});
+	--ltree-border: var(--base-border-color, #{$border-color});
+	--ltree-body-color: var(--base-text-color-1, #{$body-color});
+
+	// -----------------------------------------------------------------------
+	// TYPOGRAPHY
+	// -----------------------------------------------------------------------
+	--ltree-font-family: var(--base-font-family, #{$tree-node-font-family});
+	--ltree-node-font-size: var(--base-font-size-sm, #{$tree-node-font-size});
+	--ltree-node-icon-font-size: var(--base-font-size-sm, #{$tree-node-icon-font-size});
+	--ltree-node-icon-margin-right: #{$tree-node-icon-margin-right};
+	--ltree-node-label-font-weight: var(--base-font-weight-medium, #{$tree-node-label-font-weight});
+	--ltree-node-label-margin-right: #{$tree-node-label-margin-right};
+	--ltree-node-path-font-size: var(--base-font-size-xs, #{$tree-node-path-font-size});
+	--ltree-node-path-color: var(--base-text-color-3, #{$tree-node-path-color});
+
+	// -----------------------------------------------------------------------
+	// NODE LAYOUT
+	// -----------------------------------------------------------------------
+	--ltree-node-indent-per-level: #{$tree-node-indent-per-level};
+	--ltree-node-content-padding: #{$tree-node-content-padding};
+	--ltree-node-content-border-radius: var(--base-border-radius-sm, #{$tree-node-content-border-radius});
+	--ltree-node-hover-bg: var(--base-hover-bg, #{$tree-node-hover-bg});
+	--ltree-children-margin-top: #{$tree-children-margin-top};
+
+	// -----------------------------------------------------------------------
+	// TOGGLE ICON (chevron / +/- / arrow / leaf)
+	// -----------------------------------------------------------------------
+	--ltree-toggle-icon-width: #{$tree-toggle-icon-width};
+	--ltree-toggle-icon-size: #{$tree-toggle-icon-font-size};
+	--ltree-toggle-icon-color: var(--base-text-color-3, #{$tree-toggle-icon-color});
+	--ltree-toggle-icon-margin-right: #{$tree-toggle-icon-margin-right};
+	--ltree-toggle-icon-transition: transform 0.2s;
+
+	// -----------------------------------------------------------------------
+	// CHECKBOX
+	// -----------------------------------------------------------------------
+	--ltree-checkbox-size: 15px;
+	--ltree-checkbox-border-width: 1.5px;
+	--ltree-checkbox-border-color: var(--base-border-color, #adb5bd);
+	--ltree-checkbox-border-radius: var(--base-border-radius-sm, 3px);
+	--ltree-checkbox-bg: var(--base-input-bg, #fff);
+	--ltree-checkbox-checked-bg: var(--ltree-primary);
+	--ltree-checkbox-checked-border-color: var(--ltree-primary);
+	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
+	--ltree-checkbox-focus-ring: 0 0 0 2px rgba(var(--ltree-primary-rgb), 0.25);
+
+	// -----------------------------------------------------------------------
+	// SELECTION & HIGHLIGHT STATES
+	// -----------------------------------------------------------------------
+	--ltree-highlight-bg: #cce8ff;
+	--ltree-highlight-color: inherit;
+	--ltree-multi-selected-bg: rgba(var(--ltree-primary-rgb), 0.08);
+	--ltree-multi-selected-outline: rgba(var(--ltree-primary-rgb), 0.25);
+
+	// -----------------------------------------------------------------------
+	// DRAG / DROP — placeholder + dragover + ghost
+	// -----------------------------------------------------------------------
+	--ltree-dragover-bg: rgba(var(--ltree-primary-rgb), 0.1);
+	--ltree-dragover-shadow: 0 0 8px rgba(var(--ltree-primary-rgb), 0.4);
+	--ltree-drop-placeholder-bg: rgba(var(--ltree-primary-rgb), 0.1);
+	--ltree-drop-placeholder-color: var(--ltree-primary);
+	--ltree-drop-placeholder-border-radius: 8px;
+	--ltree-drop-placeholder-min-height: 60px;
+
+	// Touch drag ghost
+	--tree-ghost-bg: rgba(59, 130, 246, 0.9);
+	--tree-ghost-color: #fff;
+
+	// -----------------------------------------------------------------------
+	// DROP ZONES (before / after / child) — pastel mode
+	// -----------------------------------------------------------------------
+	--ltree-drop-zone-border-radius: #{$drop-zone-border-radius};
+	--ltree-drop-zone-before-bg: #{$drop-zone-before-bg};
+	--ltree-drop-zone-before-color: #{$drop-zone-before-color};
+	--ltree-drop-zone-before-active-bg: #{$drop-zone-before-active-bg};
+	--ltree-drop-zone-before-active-color: #{$drop-zone-before-active-color};
+	--ltree-drop-zone-before-active-shadow: #{$drop-zone-before-active-shadow};
+	--ltree-drop-zone-after-bg: #{$drop-zone-after-bg};
+	--ltree-drop-zone-after-color: #{$drop-zone-after-color};
+	--ltree-drop-zone-after-active-bg: #{$drop-zone-after-active-bg};
+	--ltree-drop-zone-after-active-color: #{$drop-zone-after-active-color};
+	--ltree-drop-zone-after-active-shadow: #{$drop-zone-after-active-shadow};
+	--ltree-drop-zone-child-bg: #{$drop-zone-child-bg};
+	--ltree-drop-zone-child-color: #{$drop-zone-child-color};
+	--ltree-drop-zone-child-active-bg: #{$drop-zone-child-active-bg};
+	--ltree-drop-zone-child-active-color: #{$drop-zone-child-active-color};
+	--ltree-drop-zone-child-active-shadow: #{$drop-zone-child-active-shadow};
+
+	// -----------------------------------------------------------------------
+	// GLOW MODE (border glow drop indicators)
+	// -----------------------------------------------------------------------
+	--ltree-drop-glow-before-color: #{$drop-glow-before-color};
+	--ltree-drop-glow-after-color: #{$drop-glow-after-color};
+	--ltree-drop-glow-child-color: #{$drop-glow-child-color};
+	--ltree-drop-glow-child-bg: #{$drop-glow-child-bg};
+	--ltree-drop-glow-size: #{$drop-glow-size};
+	--ltree-drop-arrow-size: #{$drop-arrow-size};
+	--ltree-drop-arrow-position: #{$drop-arrow-position};
+	--ltree-drop-arrow-before-rotation: #{$drop-arrow-before-rotation};
+	--ltree-drop-arrow-after-rotation: #{$drop-arrow-after-rotation};
+	--ltree-drop-arrow-child-rotation: #{$drop-arrow-child-rotation};
+
+	// -----------------------------------------------------------------------
+	// CONTEXT MENU
+	// -----------------------------------------------------------------------
+	--ltree-context-menu-bg: var(--base-dropdown-bg, #fff);
+	--ltree-context-menu-border-color: var(--ltree-border);
+	--ltree-context-menu-border-radius: var(--base-border-radius-sm, 4px);
+	--ltree-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.1));
+	--ltree-context-menu-min-width: 150px;
+	--ltree-context-menu-padding: 4px 0;
+	--ltree-context-menu-item-padding: 8px 16px;
+	--ltree-context-menu-item-font-size: 14px;
+	--ltree-context-menu-item-color: var(--ltree-body-color);
+	--ltree-context-menu-item-hover-bg: var(--ltree-light);
+	--ltree-context-menu-icon-size: 16px;
+	--ltree-context-menu-icon-font-size: 12px;
+	--ltree-context-menu-shortcut-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-shortcut-font-size: 12px;
+	--ltree-context-menu-arrow-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-divider-color: var(--ltree-border);
+	--ltree-context-menu-divider-label-color: var(--base-text-color-4, #9ca3af);
+
+	// -----------------------------------------------------------------------
+	// LOADING OVERLAY + SPINNER
+	// -----------------------------------------------------------------------
+	--ltree-loading-bg: rgba(255, 255, 255, 0.8);
+	--ltree-loading-color: var(--base-text-color-3, #718096);
+	--ltree-spinner-size: 32px;
+	--ltree-spinner-track: var(--base-border-color, #e2e8f0);
+	--ltree-spinner-color: var(--ltree-primary);
+
+	// -----------------------------------------------------------------------
+	// SCROLL HIGHLIGHT (after scrollToPath with highlight: true)
+	// -----------------------------------------------------------------------
+	--ltree-scroll-highlight-bg: rgba(var(--ltree-primary-rgb), 0.3);
+	--ltree-scroll-highlight-shadow: 0 0 0.5em rgba(var(--ltree-primary-rgb), 0.4);
+	--ltree-scroll-highlight-arrow-color: var(--ltree-danger);
+
+	// -----------------------------------------------------------------------
+	// LEGACY ALIASES — pre-rc09 names kept for backward compatibility
+	// -----------------------------------------------------------------------
+	--tree-node-indent-per-level: var(--ltree-node-indent-per-level);
+}
+
+// =============================================================================
+// SHARED MIXINS
+// =============================================================================
+
+// Expand horizontal zone layout when zones are hidden (used by "above" and "below" layouts)
 @mixin zone-horizontal-expansion {
-	// Two zones: first present zone gets left half
 	&:not(:has(.ltree-drop-child)) .ltree-drop-before,
 	&:not(:has(.ltree-drop-after)) .ltree-drop-before,
 	&:not(:has(.ltree-drop-before)) .ltree-drop-after {
 		left: var(--drop-zone-start, 33%);
 		right: calc((100% - var(--drop-zone-start, 33%)) / 2);
-		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+		border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
 	}
 
-	// Two zones: second present zone gets right half
 	&:not(:has(.ltree-drop-child)) .ltree-drop-after,
 	&:not(:has(.ltree-drop-after)) .ltree-drop-child,
 	&:not(:has(.ltree-drop-before)) .ltree-drop-child {
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
 		right: 0;
-		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+		border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
 	}
 
-	// Single zone: full width
 	&:not(:has(.ltree-drop-after)):not(:has(.ltree-drop-child)) .ltree-drop-before,
 	&:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-child)) .ltree-drop-after,
 	&:not(:has(.ltree-drop-before)):not(:has(.ltree-drop-after)) .ltree-drop-child {
 		left: var(--drop-zone-start, 33%);
 		right: 0;
-		border-radius: $drop-zone-border-radius;
+		border-radius: var(--ltree-drop-zone-border-radius);
 	}
 }
 
-:root {
-	--tree-node-indent-per-level: #{$tree-node-indent-per-level};
-	--ltree-primary: #{$primary-color};
-	--ltree-primary-rgb: #{$primary-color-rgb};
-	--ltree-success: #{$success-color};
-	--ltree-success-rgb: #{$success-color-rgb};
-	--ltree-danger: #{$danger-color};
-	--ltree-danger-rgb: #{$danger-color-rgb};
-	--ltree-light: #{$light-color};
-	--ltree-border: #{$border-color};
-	--ltree-body-color: #{$body-color};
-}
-
-// Tree Component Styles
-.ltree-tree {
-	font-family: $tree-node-font-family;
-	overflow: visible !important; // Allow drop zones to extend outside
-	position: relative;
-
-	// Empty state
-	.ltree-empty-state {
-		font-style: italic;
-		color: $tree-node-path-color;
-		padding: 1rem;
-		text-align: center;
-		min-height: 60px; // Ensure minimum drop target size for drag events
-	}
-}
-
-// Ensure all tree ancestors allow overflow for drop zones
-.ltree-tree,
-.ltree-node,
-.ltree-node-row,
-.ltree-children {
-	overflow: visible !important;
-}
-
-.ltree-node {
-	font-family: $tree-node-font-family;
-	font-size: $tree-node-font-size;
-	position: relative; // Required for absolutely positioned drop zones
-	overflow: visible; // Allow drop zones to extend outside
-
-	.ltree-node-row {
-		display: flex;
-		align-items: center;
-		overflow: visible; // Allow drop zones to extend outside
-		position: relative; // Required for zone positioning
-	}
-
-	.ltree-node-content {
-		display: flex;
-		align-items: center;
-		padding: $tree-node-content-padding;
-		border-radius: $tree-node-content-border-radius;
-		transition: background-color 0.2s, box-shadow 0.15s ease;
-		flex: 1;
-		position: relative; // Required for drop zone positioning
-		overflow: visible; // IMPORTANT: Allow drop zones to extend outside
-
-		// Prevent text selection during touch drag
-		-webkit-user-select: none;
-		user-select: none;
-		-webkit-touch-callout: none;
-
-		&:hover {
-			background-color: $tree-node-hover-bg;
-		}
-
-		// Border glow drop indicators (glow mode)
-		&.ltree-glow-before {
-			border-radius: 0 !important;
-			box-shadow: inset 0 $drop-glow-size 0 0 $drop-glow-before-color;
-
-			// Arrow indicator
-			&::after {
-				content: '';
-				position: absolute;
-				left: $drop-arrow-position;
-				top: 50%;
-				transform: translate(-50%, -50%) rotate($drop-arrow-before-rotation);
-				width: $drop-arrow-size;
-				height: $drop-arrow-size;
-				background-image: $drop-arrow-before;
-				background-repeat: no-repeat;
-				background-size: contain;
-				pointer-events: none;
-				z-index: 1;
-			}
-		}
-
-		&.ltree-glow-after {
-			border-radius: 0 !important;
-			box-shadow: inset 0 (-$drop-glow-size) 0 0 $drop-glow-after-color;
-
-			// Arrow indicator
-			&::after {
-				content: '';
-				position: absolute;
-				left: $drop-arrow-position;
-				top: 50%;
-				transform: translate(-50%, -50%) rotate($drop-arrow-after-rotation);
-				width: $drop-arrow-size;
-				height: $drop-arrow-size;
-				background-image: $drop-arrow-after;
-				background-repeat: no-repeat;
-				background-size: contain;
-				pointer-events: none;
-				z-index: 1;
-			}
-		}
-
-		&.ltree-glow-child {
-			border-radius: 0 !important;
-			box-shadow: inset (-$drop-glow-size) 0 0 0 $drop-glow-child-color;
-			background-color: $drop-glow-child-bg;
-
-			// Arrow indicator
-			&::after {
-				content: '';
-				position: absolute;
-				left: $drop-arrow-position;
-				top: 50%;
-				transform: translate(-50%, -50%) rotate($drop-arrow-child-rotation);
-				width: $drop-arrow-size;
-				height: $drop-arrow-size;
-				background-image: $drop-arrow-child;
-				background-repeat: no-repeat;
-				background-size: contain;
-				pointer-events: none;
-				z-index: 1;
-			}
-		}
-	}
-
-	.ltree-clickable {
-		cursor: pointer;
-	}
-
-	.ltree-toggle-icon {
-		width: var(--ltree-toggle-icon-width, #{$tree-toggle-icon-width});
-		display: inline-block;
-		text-align: center;
-		margin-right: $tree-toggle-icon-margin-right;
-		font-size: var(--ltree-toggle-icon-size, #{$tree-toggle-icon-font-size});
-		color: var(--ltree-toggle-icon-color, #{$tree-toggle-icon-color});
-		transition: transform 0.2s;
-		flex-shrink: 0;
-
-		&.expanded {
-			transform: rotate(90deg);
-		}
-	}
-
-	.ltree-node-icon {
-		margin-right: $tree-node-icon-margin-right;
-		font-size: $tree-node-icon-font-size;
-	}
-
-	.ltree-node-label {
-		font-weight: $tree-node-label-font-weight;
-		margin-right: $tree-node-label-margin-right;
-	}
-
-	.ltree-node-path {
-		font-size: $tree-node-path-font-size;
-		color: $tree-node-path-color;
-	}
-
-	.ltree-children {
-		margin-top: $tree-children-margin-top;
-	}
-}
-
-// Expand/Collapse Icon Classes — Lucide SVG icons rendered via mask-image so they inherit currentColor.
+// Lucide SVG icon rendered via mask-image so it inherits currentColor
 @mixin svg-icon($mask) {
 	content: '';
 	display: inline-block;
@@ -295,6 +294,170 @@ $body-color: #212529 !default;
 	        mask-size: contain;
 	vertical-align: -0.15em;
 }
+
+// =============================================================================
+// COMPONENT STYLES
+// =============================================================================
+
+.ltree-tree {
+	font-family: var(--ltree-font-family);
+	overflow: visible !important; // Allow drop zones to extend outside
+	position: relative;
+
+	.ltree-empty-state {
+		font-style: italic;
+		color: var(--ltree-node-path-color);
+		padding: 1rem;
+		text-align: center;
+		min-height: 60px;
+	}
+}
+
+// Ensure all tree ancestors allow overflow for drop zones
+.ltree-tree,
+.ltree-node,
+.ltree-node-row,
+.ltree-children {
+	overflow: visible !important;
+}
+
+.ltree-node {
+	font-family: var(--ltree-font-family);
+	font-size: var(--ltree-node-font-size);
+	position: relative;
+	overflow: visible;
+
+	.ltree-node-row {
+		display: flex;
+		align-items: center;
+		overflow: visible;
+		position: relative;
+	}
+
+	.ltree-node-content {
+		display: flex;
+		align-items: center;
+		padding: var(--ltree-node-content-padding);
+		border-radius: var(--ltree-node-content-border-radius);
+		transition: background-color 0.2s, box-shadow 0.15s ease;
+		flex: 1;
+		position: relative;
+		overflow: visible;
+
+		// Prevent text selection during touch drag
+		-webkit-user-select: none;
+		user-select: none;
+		-webkit-touch-callout: none;
+
+		&:hover {
+			background-color: var(--ltree-node-hover-bg);
+		}
+
+		// Border glow drop indicators (glow mode)
+		&.ltree-glow-before {
+			border-radius: 0 !important;
+			box-shadow: inset 0 var(--ltree-drop-glow-size) 0 0 var(--ltree-drop-glow-before-color);
+
+			&::after {
+				content: '';
+				position: absolute;
+				left: var(--ltree-drop-arrow-position);
+				top: 50%;
+				transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-before-rotation));
+				width: var(--ltree-drop-arrow-size);
+				height: var(--ltree-drop-arrow-size);
+				background-image: $drop-arrow-before;
+				background-repeat: no-repeat;
+				background-size: contain;
+				pointer-events: none;
+				z-index: 1;
+			}
+		}
+
+		&.ltree-glow-after {
+			border-radius: 0 !important;
+			box-shadow: inset 0 calc(-1 * var(--ltree-drop-glow-size)) 0 0 var(--ltree-drop-glow-after-color);
+
+			&::after {
+				content: '';
+				position: absolute;
+				left: var(--ltree-drop-arrow-position);
+				top: 50%;
+				transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-after-rotation));
+				width: var(--ltree-drop-arrow-size);
+				height: var(--ltree-drop-arrow-size);
+				background-image: $drop-arrow-after;
+				background-repeat: no-repeat;
+				background-size: contain;
+				pointer-events: none;
+				z-index: 1;
+			}
+		}
+
+		&.ltree-glow-child {
+			border-radius: 0 !important;
+			box-shadow: inset calc(-1 * var(--ltree-drop-glow-size)) 0 0 0 var(--ltree-drop-glow-child-color);
+			background-color: var(--ltree-drop-glow-child-bg);
+
+			&::after {
+				content: '';
+				position: absolute;
+				left: var(--ltree-drop-arrow-position);
+				top: 50%;
+				transform: translate(-50%, -50%) rotate(var(--ltree-drop-arrow-child-rotation));
+				width: var(--ltree-drop-arrow-size);
+				height: var(--ltree-drop-arrow-size);
+				background-image: $drop-arrow-child;
+				background-repeat: no-repeat;
+				background-size: contain;
+				pointer-events: none;
+				z-index: 1;
+			}
+		}
+	}
+
+	.ltree-clickable {
+		cursor: pointer;
+	}
+
+	.ltree-toggle-icon {
+		width: var(--ltree-toggle-icon-width);
+		display: inline-block;
+		text-align: center;
+		margin-right: var(--ltree-toggle-icon-margin-right);
+		font-size: var(--ltree-toggle-icon-size);
+		color: var(--ltree-toggle-icon-color);
+		transition: var(--ltree-toggle-icon-transition);
+		flex-shrink: 0;
+
+		&.expanded {
+			transform: rotate(90deg);
+		}
+	}
+
+	.ltree-node-icon {
+		margin-right: var(--ltree-node-icon-margin-right);
+		font-size: var(--ltree-node-icon-font-size);
+	}
+
+	.ltree-node-label {
+		font-weight: var(--ltree-node-label-font-weight);
+		margin-right: var(--ltree-node-label-margin-right);
+	}
+
+	.ltree-node-path {
+		font-size: var(--ltree-node-path-font-size);
+		color: var(--ltree-node-path-color);
+	}
+
+	.ltree-children {
+		margin-top: var(--ltree-children-margin-top);
+	}
+}
+
+// =============================================================================
+// EXPAND/COLLAPSE ICON CLASSES (Lucide SVG via mask-image, inherit currentColor)
+// =============================================================================
 
 // Default — Lucide chevron
 .ltree-icon-expand::before {
@@ -336,7 +499,9 @@ $body-color: #212529 !default;
 	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>"));
 }
 
-// Checkbox — custom styled with indeterminate support
+// =============================================================================
+// CHECKBOX
+// =============================================================================
 .ltree-checkbox {
 	display: inline-flex;
 	align-items: center;
@@ -345,7 +510,6 @@ $body-color: #212529 !default;
 	position: relative;
 	vertical-align: middle;
 
-	// Hide native input but keep it accessible
 	input[type="checkbox"] {
 		position: absolute;
 		opacity: 0;
@@ -354,19 +518,17 @@ $body-color: #212529 !default;
 		pointer-events: none;
 	}
 
-	// Custom visual box
 	.ltree-checkbox__box {
 		display: inline-block;
-		width: var(--ltree-checkbox-size, 15px);
-		height: var(--ltree-checkbox-size, 15px);
-		border: var(--ltree-checkbox-border-width, 1.5px) solid var(--ltree-checkbox-border-color, #adb5bd);
-		border-radius: var(--ltree-checkbox-border-radius, 3px);
-		background: var(--ltree-checkbox-bg, #fff);
+		width: var(--ltree-checkbox-size);
+		height: var(--ltree-checkbox-size);
+		border: var(--ltree-checkbox-border-width) solid var(--ltree-checkbox-border-color);
+		border-radius: var(--ltree-checkbox-border-radius);
+		background: var(--ltree-checkbox-bg);
 		transition: background-color 0.15s ease, border-color 0.15s ease;
 		position: relative;
 		flex-shrink: 0;
 
-		// Checkmark (hidden by default)
 		&::after {
 			content: '';
 			position: absolute;
@@ -374,15 +536,13 @@ $body-color: #212529 !default;
 		}
 	}
 
-	// Hover
 	&:hover .ltree-checkbox__box {
-		border-color: var(--ltree-primary, #0d6efd);
+		border-color: var(--ltree-primary);
 	}
 
-	// Checked state
 	input:checked + .ltree-checkbox__box {
-		background: var(--ltree-primary, #0d6efd);
-		border-color: var(--ltree-primary, #0d6efd);
+		background: var(--ltree-checkbox-checked-bg);
+		border-color: var(--ltree-checkbox-checked-border-color);
 
 		&::after {
 			display: block;
@@ -390,36 +550,36 @@ $body-color: #212529 !default;
 			top: 1px;
 			width: 4px;
 			height: 8px;
-			border: solid var(--ltree-checkbox-checkmark-color, #fff);
+			border: solid var(--ltree-checkbox-checkmark-color);
 			border-width: 0 2px 2px 0;
 			transform: rotate(45deg);
 		}
 	}
 
-	// Indeterminate state — dash
 	input:indeterminate + .ltree-checkbox__box {
-		background: var(--ltree-primary, #0d6efd);
-		border-color: var(--ltree-primary, #0d6efd);
+		background: var(--ltree-checkbox-checked-bg);
+		border-color: var(--ltree-checkbox-checked-border-color);
 
 		&::after {
 			display: block;
 			left: 3px;
 			top: 50%;
-			width: calc(var(--ltree-checkbox-size, 15px) - 8px);
+			width: calc(var(--ltree-checkbox-size) - 8px);
 			height: 0;
-			border: solid var(--ltree-checkbox-checkmark-color, #fff);
+			border: solid var(--ltree-checkbox-checkmark-color);
 			border-width: 0 0 2px 0;
 			transform: translateY(-50%);
 		}
 	}
 
-	// Focus ring
 	input:focus-visible + .ltree-checkbox__box {
-		box-shadow: 0 0 0 2px rgba(var(--ltree-primary-rgb, 13, 110, 253), 0.25);
+		box-shadow: var(--ltree-checkbox-focus-ring);
 	}
 }
 
-// Selected Node Styles
+// =============================================================================
+// SELECTION / HIGHLIGHT STATES
+// =============================================================================
 .ltree-selected-bold {
 	font-weight: bold !important;
 	color: var(--ltree-primary) !important;
@@ -433,14 +593,13 @@ $body-color: #212529 !default;
 }
 
 .ltree-selected-highlight {
-	background-color: var(--ltree-highlight-bg, #cce8ff) !important;
-	color: var(--ltree-highlight-color, inherit) !important;
+	background-color: var(--ltree-highlight-bg) !important;
+	color: var(--ltree-highlight-color) !important;
 }
 
-// Multi-select: subtle highlight for all selected nodes (works with any highlightedNodeClass)
 .ltree-multi-selected {
-	background-color: rgba(var(--ltree-primary-rgb), 0.08) !important;
-	outline: 1px solid rgba(var(--ltree-primary-rgb), 0.25);
+	background-color: var(--ltree-multi-selected-bg) !important;
+	outline: 1px solid var(--ltree-multi-selected-outline);
 	outline-offset: -1px;
 }
 
@@ -462,7 +621,7 @@ $body-color: #212529 !default;
 	}
 }
 
-// Suppress brackets when checkboxes are shown (checkbox already indicates selection)
+// Suppress brackets when checkboxes are shown
 .ltree-checkbox ~ .ltree-selected-brackets {
 	&::before,
 	&::after {
@@ -470,7 +629,9 @@ $body-color: #212529 !default;
 	}
 }
 
-// Drag-over Node Styles
+// =============================================================================
+// DRAG-OVER STATES
+// =============================================================================
 .ltree-dragover-highlight {
 	background-color: rgba(var(--ltree-success-rgb), 0.15) !important;
 	border: 2px dashed var(--ltree-success) !important;
@@ -478,27 +639,19 @@ $body-color: #212529 !default;
 }
 
 .ltree-dragover-glow {
-	background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
-	box-shadow: 0 0 8px rgba(var(--ltree-primary-rgb), 0.4) !important;
+	background-color: var(--ltree-dragover-bg) !important;
+	box-shadow: var(--ltree-dragover-shadow) !important;
 }
 
 @keyframes bounce {
-	0%,
-	20%,
-	50%,
-	80%,
-	100% {
-		transform: translateY(-50%);
-	}
-	40% {
-		transform: translateY(-60%);
-	}
-	60% {
-		transform: translateY(-40%);
-	}
+	0%, 20%, 50%, 80%, 100% { transform: translateY(-50%); }
+	40% { transform: translateY(-60%); }
+	60% { transform: translateY(-40%); }
 }
 
-// Drag and Drop Styles
+// =============================================================================
+// DRAG & DROP
+// =============================================================================
 .ltree-draggable {
 	cursor: grab;
 
@@ -515,21 +668,21 @@ $body-color: #212529 !default;
 		transform 0.2s;
 }
 
-// Copy operation cursor (when Ctrl+drag with allowCopy enabled)
+// Copy operation cursor (Ctrl+drag with allowCopy)
 .ltree-drop-copy {
 	cursor: copy !important;
 }
 
-// Touch drag ghost element (for mobile drag and drop)
+// Touch drag ghost element
 .ltree-touch-ghost {
 	position: fixed;
 	transform: translate(-50%, -50%);
 	padding: 8px 12px;
-	background: var(--tree-ghost-bg, rgba(59, 130, 246, 0.9));
-	color: var(--tree-ghost-color, white);
+	background: var(--tree-ghost-bg);
+	color: var(--tree-ghost-color);
 	border-radius: 4px;
 	font-size: 14px;
-	font-family: $tree-node-font-family;
+	font-family: var(--ltree-font-family);
 	pointer-events: none;
 	z-index: 10000;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -542,9 +695,9 @@ $body-color: #212529 !default;
 // Drop placeholder for empty trees
 .ltree-drop-placeholder {
 	border: 2px dashed var(--ltree-primary) !important;
-	background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
-	border-radius: 8px;
-	min-height: 60px;
+	background-color: var(--ltree-drop-placeholder-bg) !important;
+	border-radius: var(--ltree-drop-placeholder-border-radius);
+	min-height: var(--ltree-drop-placeholder-min-height);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -552,7 +705,7 @@ $body-color: #212529 !default;
 }
 
 .ltree-drop-placeholder-content {
-	color: var(--ltree-primary);
+	color: var(--ltree-drop-placeholder-color);
 	font-size: 14px;
 	font-weight: 500;
 	padding: 16px;
@@ -561,7 +714,7 @@ $body-color: #212529 !default;
 
 .ltree-node-content {
 	&.ltree-drag-over {
-		background-color: rgba(var(--ltree-primary-rgb), 0.1) !important;
+		background-color: var(--ltree-dragover-bg) !important;
 		border: 2px dashed var(--ltree-primary);
 		border-radius: 4px;
 
@@ -589,33 +742,35 @@ $body-color: #212529 !default;
 	}
 }
 
-// Context Menu Styles
+// =============================================================================
+// CONTEXT MENU
+// =============================================================================
 .ltree-context-menu {
 	position: fixed;
 	z-index: 1000;
-	background: white;
-	border: 1px solid var(--ltree-border);
-	border-radius: 4px;
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-	padding: 4px 0;
-	min-width: 150px;
+	background: var(--ltree-context-menu-bg);
+	border: 1px solid var(--ltree-context-menu-border-color);
+	border-radius: var(--ltree-context-menu-border-radius);
+	box-shadow: var(--ltree-context-menu-shadow);
+	padding: var(--ltree-context-menu-padding);
+	min-width: var(--ltree-context-menu-min-width);
 
 	.ltree-context-menu-item {
 		display: flex;
 		align-items: center;
-		padding: 8px 16px;
+		padding: var(--ltree-context-menu-item-padding);
 		border: none;
 		background: none;
 		width: 100%;
 		text-align: left;
 		cursor: pointer;
-		color: var(--ltree-body-color);
+		color: var(--ltree-context-menu-item-color);
 		text-decoration: none;
-		font-size: 14px;
+		font-size: var(--ltree-context-menu-item-font-size);
 		position: relative;
 
 		&:hover {
-			background-color: var(--ltree-light);
+			background-color: var(--ltree-context-menu-item-hover-bg);
 		}
 
 		&.ltree-context-menu-item-disabled {
@@ -647,8 +802,8 @@ $body-color: #212529 !default;
 
 	.ltree-context-menu-icon {
 		margin-right: 8px;
-		font-size: 12px;
-		width: 16px;
+		font-size: var(--ltree-context-menu-icon-font-size);
+		width: var(--ltree-context-menu-icon-size);
 		text-align: center;
 		flex-shrink: 0;
 	}
@@ -660,15 +815,15 @@ $body-color: #212529 !default;
 	.ltree-context-menu-shortcut {
 		margin-left: auto;
 		padding-left: 16px;
-		color: #9ca3af;
-		font-size: 12px;
+		color: var(--ltree-context-menu-shortcut-color);
+		font-size: var(--ltree-context-menu-shortcut-font-size);
 		flex-shrink: 0;
 	}
 
 	.ltree-context-menu-arrow {
 		margin-left: 8px;
 		font-size: 10px;
-		color: #9ca3af;
+		color: var(--ltree-context-menu-arrow-color);
 		flex-shrink: 0;
 	}
 
@@ -680,7 +835,7 @@ $body-color: #212529 !default;
 		// Default: simple line
 		&:not(:has(.ltree-context-menu-divider-label)) {
 			height: 1px;
-			background-color: var(--ltree-border);
+			background-color: var(--ltree-context-menu-divider-color);
 		}
 
 		// Named divider: ──── [label] ────
@@ -693,37 +848,38 @@ $body-color: #212529 !default;
 				content: '';
 				flex: 1;
 				height: 1px;
-				background-color: var(--ltree-border);
+				background-color: var(--ltree-context-menu-divider-color);
 			}
 		}
 	}
 
 	.ltree-context-menu-divider-label {
 		font-size: 11px;
-		color: #9ca3af;
+		color: var(--ltree-context-menu-divider-label-color);
 		white-space: nowrap;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
 
-	// Submenu positioning
 	.ltree-context-submenu {
 		position: absolute;
 		left: 100%;
 		top: 0;
-		background: white;
-		border: 1px solid var(--ltree-border);
-		border-radius: 4px;
-		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-		padding: 4px 0;
-		min-width: 150px;
+		background: var(--ltree-context-menu-bg);
+		border: 1px solid var(--ltree-context-menu-border-color);
+		border-radius: var(--ltree-context-menu-border-radius);
+		box-shadow: var(--ltree-context-menu-shadow);
+		padding: var(--ltree-context-menu-padding);
+		min-width: var(--ltree-context-menu-min-width);
 		z-index: 1001;
 	}
 }
 
-// Debug Information Styles
+// =============================================================================
+// DEBUG INFO
+// =============================================================================
 .ltree-debug-info {
-	font-family: $tree-node-font-family;
+	font-family: var(--ltree-font-family);
 	font-size: 0.75em;
 	background-color: rgba(var(--ltree-primary-rgb), 0.05);
 	border: 1px solid rgba(var(--ltree-primary-rgb), 0.2);
@@ -766,49 +922,49 @@ $body-color: #212529 !default;
 	}
 }
 
-// Scroll Highlight Styles
+// =============================================================================
+// SCROLL HIGHLIGHT (post-scrollToPath flash)
+// =============================================================================
 .ltree-scroll-highlight {
-	background-color: rgba(var(--ltree-primary-rgb), 0.3) !important;
-	box-shadow: 0 0 0.5em rgba(var(--ltree-primary-rgb), 0.4);
+	background-color: var(--ltree-scroll-highlight-bg) !important;
+	box-shadow: var(--ltree-scroll-highlight-shadow);
 	border-radius: 0.25em;
 }
 
 .ltree-scroll-highlight-arrow {
 	position: relative;
 	&::before {
-		content: '⇨'; /* arrow pointing right */
+		content: '⇨';
 		position: absolute;
-		left: -1.2em; /* place outside row */
-		top: 50%; /* vertical center */
+		left: -1.2em;
+		top: 50%;
 		transform: translateY(-57%);
 		font-size: 3em;
-		pointer-events: none; /* arrow doesn’t block hover */
-		color: var(--ltree-danger);
-
+		pointer-events: none;
+		color: var(--ltree-scroll-highlight-arrow-color);
 		z-index: 1;
 	}
 	&::after {
-		content: '⇦'; /* arrow pointing right */
+		content: '⇦';
 		position: absolute;
-		right: 0em; /* place outside row */
-		top: 50%; /* vertical center */
+		right: 0em;
+		top: 50%;
 		transform: translateY(-57%);
 		font-size: 3em;
-		pointer-events: none; /* arrow doesn’t block hover */
-		color: var(--ltree-danger);
-
+		pointer-events: none;
+		color: var(--ltree-scroll-highlight-arrow-color);
 		z-index: 1;
 	}
 }
 
-// Drop Zone Container - wraps all zones with CSS variable for start position
-// Positioning is handled by inline styles (position:fixed from Tree.svelte)
+// =============================================================================
+// DROP ZONES (overlay drop targets — before / after / child)
+// =============================================================================
 .ltree-drop-zones {
-	pointer-events: none; // Let children handle pointer events
+	pointer-events: none;
 	overflow: visible;
 }
 
-// Drop Zone Base Styles
 .ltree-drop-zone {
 	position: absolute;
 	display: flex;
@@ -821,71 +977,63 @@ $body-color: #212529 !default;
 	pointer-events: auto;
 	z-index: 1000;
 	transition: all 0.15s ease;
-	border-radius: $drop-zone-border-radius;
+	border-radius: var(--ltree-drop-zone-border-radius);
 
-	// Above zone (green)
 	&.ltree-drop-before {
-		background: $drop-zone-before-bg;
-		color: $drop-zone-before-color;
+		background: var(--ltree-drop-zone-before-bg);
+		color: var(--ltree-drop-zone-before-color);
 
 		&.ltree-drop-zone-active {
-			background: $drop-zone-before-active-bg;
-			color: $drop-zone-before-active-color;
-			box-shadow: $drop-zone-before-active-shadow;
+			background: var(--ltree-drop-zone-before-active-bg);
+			color: var(--ltree-drop-zone-before-active-color);
+			box-shadow: var(--ltree-drop-zone-before-active-shadow);
 		}
 	}
 
-	// Below zone (yellow)
 	&.ltree-drop-after {
-		background: $drop-zone-after-bg;
-		color: $drop-zone-after-color;
+		background: var(--ltree-drop-zone-after-bg);
+		color: var(--ltree-drop-zone-after-color);
 
 		&.ltree-drop-zone-active {
-			background: $drop-zone-after-active-bg;
-			color: $drop-zone-after-active-color;
-			box-shadow: $drop-zone-after-active-shadow;
+			background: var(--ltree-drop-zone-after-active-bg);
+			color: var(--ltree-drop-zone-after-active-color);
+			box-shadow: var(--ltree-drop-zone-after-active-shadow);
 		}
 	}
 
-	// Child zone (blue)
 	&.ltree-drop-child {
-		background: $drop-zone-child-bg;
-		color: $drop-zone-child-color;
+		background: var(--ltree-drop-zone-child-bg);
+		color: var(--ltree-drop-zone-child-color);
 
 		&.ltree-drop-zone-active {
-			background: $drop-zone-child-active-bg;
-			color: $drop-zone-child-active-color;
-			box-shadow: $drop-zone-child-active-shadow;
+			background: var(--ltree-drop-zone-child-active-bg);
+			color: var(--ltree-drop-zone-child-active-color);
+			box-shadow: var(--ltree-drop-zone-child-active-shadow);
 		}
 	}
 }
 
-// Layout: "around" - Above on top, Below/Child on bottom (default)
+// Layout: "around" — Above on top, Below/Child on bottom (default)
 .ltree-drop-zones-around {
 	.ltree-drop-before {
 		top: 0;
 		left: var(--drop-zone-start, 33%);
 		right: 0;
 		transform: translateY(-100%);
-		// border-radius: 4px 4px 0 0;
 	}
 
 	.ltree-drop-after {
 		bottom: 0;
 		left: var(--drop-zone-start, 33%);
-		// Middle third of available space
 		right: calc((100% - var(--drop-zone-start, 33%)) / 2);
 		transform: translateY(100%);
-		// border-radius: 0 0 0 4px;
 	}
 
 	.ltree-drop-child {
 		bottom: 0;
-		// Start at middle of available space
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) / 2);
 		right: 0;
 		transform: translateY(100%);
-		// border-radius: 0 0 4px 0;
 	}
 
 	// Zone expansion: when a zone is hidden, remaining zones fill the gap
@@ -897,7 +1045,7 @@ $body-color: #212529 !default;
 	}
 }
 
-// Layout: "above" - All 3 zones in a row above the node
+// Layout: "above" — All 3 zones in a row above the node
 .ltree-drop-zones-above {
 	.ltree-drop-before,
 	.ltree-drop-after,
@@ -909,7 +1057,7 @@ $body-color: #212529 !default;
 	.ltree-drop-before {
 		left: var(--drop-zone-start, 33%);
 		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
-		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+		border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
 	}
 
 	.ltree-drop-after {
@@ -921,14 +1069,13 @@ $body-color: #212529 !default;
 	.ltree-drop-child {
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
 		right: 0;
-		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+		border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
 	}
 
-	// Zone expansion: when a zone is hidden, remaining zones fill the gap
 	@include zone-horizontal-expansion;
 }
 
-// Layout: "below" - All 3 zones in a row below the node
+// Layout: "below" — All 3 zones in a row below the node
 .ltree-drop-zones-below {
 	.ltree-drop-before,
 	.ltree-drop-after,
@@ -940,7 +1087,7 @@ $body-color: #212529 !default;
 	.ltree-drop-before {
 		left: var(--drop-zone-start, 33%);
 		right: calc((100% - var(--drop-zone-start, 33%)) * 2 / 3);
-		border-radius: $drop-zone-border-radius 0 0 $drop-zone-border-radius;
+		border-radius: var(--ltree-drop-zone-border-radius) 0 0 var(--ltree-drop-zone-border-radius);
 	}
 
 	.ltree-drop-after {
@@ -952,14 +1099,13 @@ $body-color: #212529 !default;
 	.ltree-drop-child {
 		left: calc(var(--drop-zone-start, 33%) + (100% - var(--drop-zone-start, 33%)) * 2 / 3);
 		right: 0;
-		border-radius: 0 $drop-zone-border-radius $drop-zone-border-radius 0;
+		border-radius: 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0;
 	}
 
-	// Zone expansion: when a zone is hidden, remaining zones fill the gap
 	@include zone-horizontal-expansion;
 }
 
-// Layout: "wave" - Zones stacked vertically (before/child/after)
+// Layout: "wave" — Zones stacked vertically (before/child/after)
 .ltree-drop-zones-wave {
 	.ltree-drop-before,
 	.ltree-drop-after,
@@ -976,7 +1122,7 @@ $body-color: #212529 !default;
 		top: 0;
 		bottom: auto;
 		transform: translateY(-100%);
-		border-radius: $drop-zone-border-radius $drop-zone-border-radius 0 0;
+		border-radius: var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0 0;
 	}
 
 	.ltree-drop-child {
@@ -989,12 +1135,11 @@ $body-color: #212529 !default;
 		top: auto;
 		bottom: 0;
 		transform: translateY(100%);
-		border-radius: 0 0 $drop-zone-border-radius $drop-zone-border-radius;
+		border-radius: 0 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius);
 	}
 }
 
-// Layout: "wave2" - Diagonal wave pattern
-// Above and Below are offset 7% to the left, Child stays at dropZoneStart
+// Layout: "wave2" — Diagonal wave pattern
 .ltree-drop-zones-wave2 {
 	.ltree-drop-before,
 	.ltree-drop-after,
@@ -1009,9 +1154,9 @@ $body-color: #212529 !default;
 		left: calc(var(--drop-zone-start, 33%) - 7%);
 		top: 10%;
 		bottom: auto;
-		height: 80%; // Match Child zone height
+		height: 80%;
 		transform: translateY(-100%);
-		border-radius: $drop-zone-border-radius $drop-zone-border-radius 0 0;
+		border-radius: var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius) 0 0;
 	}
 
 	.ltree-drop-child {
@@ -1025,15 +1170,17 @@ $body-color: #212529 !default;
 		left: calc(var(--drop-zone-start, 33%) - 7%);
 		top: auto;
 		bottom: 10%;
-		height: 80%; // Match Child zone height
+		height: 80%;
 		transform: translateY(100%);
-		border-radius: 0 0 $drop-zone-border-radius $drop-zone-border-radius;
+		border-radius: 0 0 var(--ltree-drop-zone-border-radius) var(--ltree-drop-zone-border-radius);
 	}
 }
 
-// Utility classes for spacing (minimal Bootstrap-like utilities)
+// =============================================================================
+// TREE CONTAINER & UTILITIES
+// =============================================================================
 .ltree-tree {
-	// Reset any default margins/padding
+	// Reset default margins/padding
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -1042,27 +1189,27 @@ $body-color: #212529 !default;
 	color: var(--ltree-body-color);
 }
 
-// Virtual scroll container
 .ltree-virtual-scroll {
 	overflow-y: auto !important;
 	overflow-x: visible;
 	overscroll-behavior: contain;
 }
 
-// Tree Container
 .ltree-container {
 	position: relative;
 	outline: none;
 }
 
-// Loading Overlay
+// =============================================================================
+// LOADING OVERLAY
+// =============================================================================
 .ltree-loading-overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: var(--ltree-loading-bg, rgba(255, 255, 255, 0.8));
+	background: var(--ltree-loading-bg);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1070,10 +1217,10 @@ $body-color: #212529 !default;
 }
 
 .ltree-loading-spinner {
-	width: var(--ltree-spinner-size, 32px);
-	height: var(--ltree-spinner-size, 32px);
-	border: 3px solid var(--ltree-spinner-track, #e2e8f0);
-	border-top-color: var(--ltree-spinner-color, var(--ltree-primary, #667eea));
+	width: var(--ltree-spinner-size);
+	height: var(--ltree-spinner-size);
+	border: 3px solid var(--ltree-spinner-track);
+	border-top-color: var(--ltree-spinner-color);
 	border-radius: 50%;
 	animation: ltree-spin 0.8s linear infinite;
 }
@@ -1087,8 +1234,8 @@ $body-color: #212529 !default;
 // Progressive rendering loading indicator
 .ltree-loading-more {
 	padding: 4px 8px;
-	margin-left: var(--tree-node-indent-per-level, 0.5rem);
+	margin-left: var(--ltree-node-indent-per-level);
 	font-size: 12px;
-	color: var(--ltree-loading-color, #718096);
+	color: var(--ltree-loading-color);
 	font-style: italic;
 }

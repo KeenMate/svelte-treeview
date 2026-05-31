@@ -176,8 +176,8 @@
 	// — only applied before first-child nodes (where level > previous node's level).
 	const indentStyle = $derived(
 		flatMode
-			? `margin-left: calc(${node?.level || 1} * var(--tree-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
-			: `margin-left: var(--tree-node-indent-per-level, 0.5rem)`,
+			? `margin-left: calc(${node?.level || 1} * var(--ltree-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
+			: `margin-left: var(--ltree-node-indent-per-level, 0.5rem)`,
 	)
 
 	// Progressive rendering state - only used in recursive mode
