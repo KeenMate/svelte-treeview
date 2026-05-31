@@ -11,7 +11,7 @@ $tree-node-content-padding: 4px 8px !default;
 $tree-node-content-border-radius: 0 !default;
 $tree-node-hover-bg: #f8f9fa !default;
 $tree-toggle-icon-width: 20px !default;
-$tree-toggle-icon-font-size: 12px !default;
+$tree-toggle-icon-font-size: 16px !default;
 $tree-toggle-icon-color: #6c757d !default;
 $tree-toggle-icon-margin-right: 8px !default;
 $tree-node-icon-margin-right: 6px !default;
@@ -244,12 +244,12 @@ $body-color: #212529 !default;
 	}
 
 	.ltree-toggle-icon {
-		width: $tree-toggle-icon-width;
+		width: var(--ltree-toggle-icon-width, #{$tree-toggle-icon-width});
 		display: inline-block;
 		text-align: center;
 		margin-right: $tree-toggle-icon-margin-right;
-		font-size: $tree-toggle-icon-font-size;
-		color: $tree-toggle-icon-color;
+		font-size: var(--ltree-toggle-icon-size, #{$tree-toggle-icon-font-size});
+		color: var(--ltree-toggle-icon-color, #{$tree-toggle-icon-color});
 		transition: transform 0.2s;
 		flex-shrink: 0;
 
@@ -278,42 +278,62 @@ $body-color: #212529 !default;
 	}
 }
 
-// Expand/Collapse Icon Classes
+// Expand/Collapse Icon Classes — Lucide SVG icons rendered via mask-image so they inherit currentColor.
+@mixin svg-icon($mask) {
+	content: '';
+	display: inline-block;
+	width: 1em;
+	height: 1em;
+	background-color: currentColor;
+	-webkit-mask-image: $mask;
+	        mask-image: $mask;
+	-webkit-mask-repeat: no-repeat;
+	        mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	        mask-position: center;
+	-webkit-mask-size: contain;
+	        mask-size: contain;
+	vertical-align: -0.15em;
+}
+
+// Default — Lucide chevron
 .ltree-icon-expand::before {
-	content: '▶';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>"));
 }
 
 .ltree-icon-collapse::before {
-	content: '▼';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>"));
 }
 
 .ltree-icon-leaf::before {
-	content: '•';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>"));
 }
 
-// Alternative icon sets
+// Alternative — filled triangles
 .ltree-icon-expand-alt::before {
-	content: '⯈';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>"));
 }
 
 .ltree-icon-collapse-alt::before {
-	content: '⯆';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 8l7 11 7-11z'/></svg>"));
 }
 
+// Plus / Minus — Lucide square-plus / square-minus
 .ltree-icon-expand-plus::before {
-	content: '+';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>"));
 }
 
 .ltree-icon-collapse-minus::before {
-	content: '−';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/></svg>"));
 }
 
+// Arrow — Lucide arrow-right / arrow-down
 .ltree-icon-expand-arrow::before {
-	content: '→';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>"));
 }
 
 .ltree-icon-collapse-arrow::before {
-	content: '↓';
+	@include svg-icon(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>"));
 }
 
 // Checkbox — custom styled with indeterminate support

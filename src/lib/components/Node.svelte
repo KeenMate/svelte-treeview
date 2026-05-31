@@ -54,18 +54,16 @@
 	const callbacks = getContext<NodeCallbacks<T>>('NodeCallbacks');
 	const config = getContext<NodeConfig>('NodeConfig');
 
-	// Destructure config for convenience.
-	// Works reactively because nodeConfig uses $state() (not .raw()) and is mutated
-	// in-place via Object.assign, so the proxy reference stays the same.
-	const {
-		expandIconClass,
-		collapseIconClass,
-		leafIconClass,
-		highlightedNodeClass,
-		focusedNodeClass,
-		dragOverNodeClass,
-		allowCopy,
-	} = config;
+	// Read every config field through $derived so updates from controller.update()
+	// or the controller's runtime $effect syncs propagate into this Node's render.
+	// Plain destructuring would snapshot primitives once and never react.
+	const expandIconClass = $derived(config.expandIconClass);
+	const collapseIconClass = $derived(config.collapseIconClass);
+	const leafIconClass = $derived(config.leafIconClass);
+	const highlightedNodeClass = $derived(config.highlightedNodeClass);
+	const focusedNodeClass = $derived(config.focusedNodeClass);
+	const dragOverNodeClass = $derived(config.dragOverNodeClass);
+	const allowCopy = $derived(config.allowCopy);
 	const clickBehavior = $derived(config.clickBehavior);
 	const showCheckboxes = $derived(config.showCheckboxes);
 	const checkboxMode = $derived(config.checkboxMode);

@@ -23,6 +23,19 @@
 	function sortByName(items: LTreeNode<FileItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
+
+	// Toggle icon demo state
+	const iconSets = {
+		default: { expand: 'ltree-icon-expand', collapse: 'ltree-icon-collapse', label: 'Chevron' },
+		alt: { expand: 'ltree-icon-expand-alt', collapse: 'ltree-icon-collapse-alt', label: 'Filled triangle' },
+		plusminus: { expand: 'ltree-icon-expand-plus', collapse: 'ltree-icon-collapse-minus', label: 'Plus / Minus' },
+		arrows: { expand: 'ltree-icon-expand-arrow', collapse: 'ltree-icon-collapse-arrow', label: 'Arrows' }
+	} as const;
+	type IconSetKey = keyof typeof iconSets;
+
+	let iconSet = $state<IconSetKey>('default');
+	let toggleIconMode = $state<'rotate' | 'swap'>('rotate');
+	const activeIcons = $derived(iconSets[iconSet]);
 </script>
 
 <svelte:head>
@@ -90,6 +103,21 @@
 					<td><code>--ltree-body-color</code></td>
 					<td><code>#212529</code></td>
 					<td>Default text color</td>
+				</tr>
+				<tr>
+					<td><code>--ltree-toggle-icon-size</code></td>
+					<td><code>16px</code></td>
+					<td>Toggle icon (chevron / +/- / arrow) size — scales the built-in SVG icons</td>
+				</tr>
+				<tr>
+					<td><code>--ltree-toggle-icon-width</code></td>
+					<td><code>20px</code></td>
+					<td>Width reserved for the toggle column</td>
+				</tr>
+				<tr>
+					<td><code>--ltree-toggle-icon-color</code></td>
+					<td><code>#6c757d</code></td>
+					<td>Toggle icon color (uses <code>currentColor</code> via mask)</td>
 				</tr>
 				<tr>
 					<td><code>--tree-ghost-bg</code></td>
@@ -241,6 +269,99 @@
   {/snippet}
 </Tree>`}</pre>
 		</div>
+	</div>
+
+	<!-- Toggle Icon Live Demo -->
+	<div class="card">
+		<h2>Toggle Icon — Live Demo</h2>
+		<p class="description">
+			Customize the expand/collapse toggle via four props:
+			<code>expandIconClass</code>, <code>collapseIconClass</code>, <code>leafIconClass</code>,
+			and <code>toggleIconMode</code> (<code>'rotate'</code> or <code>'swap'</code>).
+		</p>
+
+		<div class="toggle-demo">
+			<div class="toggle-controls">
+				<fieldset>
+					<legend>Icon set</legend>
+					{#each Object.entries(iconSets) as [key, set] (key)}
+						<label class="radio-row">
+							<input
+								type="radio"
+								name="icon-set"
+								value={key}
+								checked={iconSet === key}
+								onchange={() => (iconSet = key as IconSetKey)}
+							/>
+							<span class="preview"
+								><span class={set.expand}></span> / <span class={set.collapse}></span></span
+							>
+							<span>{set.label}</span>
+						</label>
+					{/each}
+				</fieldset>
+
+				<fieldset>
+					<legend>toggleIconMode</legend>
+					<label class="radio-row">
+						<input
+							type="radio"
+							name="toggle-mode"
+							value="rotate"
+							checked={toggleIconMode === 'rotate'}
+							onchange={() => (toggleIconMode = 'rotate')}
+						/>
+						<span><code>rotate</code> — rotate expand icon 90°</span>
+					</label>
+					<label class="radio-row">
+						<input
+							type="radio"
+							name="toggle-mode"
+							value="swap"
+							checked={toggleIconMode === 'swap'}
+							onchange={() => (toggleIconMode = 'swap')}
+						/>
+						<span><code>swap</code> — swap expand ↔ collapse class</span>
+					</label>
+				</fieldset>
+			</div>
+
+			<div class="tree-container toggle-demo-tree">
+				<Tree
+					data={sampleData}
+					idMember="id"
+					pathMember="path"
+					sortCallback={sortByName}
+					isSorted={true}
+					expandLevel={3}
+					expandIconClass={activeIcons.expand}
+					collapseIconClass={activeIcons.collapse}
+					{toggleIconMode}
+					{...getTreeProps()}
+				>
+					{#snippet nodeTemplate(node: any)}
+						<span>{node.data?.icon} {node.data?.name}</span>
+					{/snippet}
+				</Tree>
+			</div>
+		</div>
+
+		<div class="code-block">
+			<pre>{`<Tree
+  ...
+  expandIconClass="${activeIcons.expand}"
+  collapseIconClass="${activeIcons.collapse}"
+  toggleIconMode="${toggleIconMode}"
+/>`}</pre>
+		</div>
+
+		<p class="hint">
+			Tip: <code>rotate</code> works best with chevron/arrow sets where the same glyph
+			points in two directions. <code>swap</code> is required for sets where expand and
+			collapse use visually different glyphs (plus/minus). All built-in icons are
+			Lucide SVGs rendered via <code>mask-image</code>, so they inherit
+			<code>currentColor</code> from the surrounding text.
+		</p>
 	</div>
 
 	<!-- Icon Classes -->
@@ -418,6 +539,94 @@
 
 	.green-theme :global(.ltree-node-content:hover) {
 		background-color: rgba(16, 185, 129, 0.1) !important;
+	}
+
+	/* Toggle icon live demo */
+	.toggle-demo {
+		display: grid;
+		grid-template-columns: minmax(220px, 320px) 1fr;
+		gap: 1.5rem;
+		align-items: start;
+	}
+
+	.toggle-demo-tree {
+		min-height: 220px;
+	}
+
+	.toggle-controls fieldset {
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		padding: 0.75rem 1rem 0.9rem;
+		margin: 0 0 1rem;
+	}
+
+	.toggle-controls legend {
+		padding: 0 0.4rem;
+		font-weight: 600;
+		font-size: 0.85rem;
+		color: #374151;
+	}
+
+	.toggle-controls .radio-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.15rem 0;
+		font-size: 0.9rem;
+		cursor: pointer;
+	}
+
+	.toggle-controls .preview {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		min-width: 2.5rem;
+		color: #6b7280;
+	}
+
+	.hint {
+		margin-top: 0.75rem;
+		font-size: 0.85rem;
+		color: #6b7280;
+	}
+
+	@media (max-width: 720px) {
+		.toggle-demo {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	/* Lucide SVG icons — applied via mask-image so currentColor still works */
+	:global(.demo-lucide-expand::before),
+	:global(.demo-lucide-collapse::before),
+	:global(.demo-lucide-leaf::before) {
+		content: '';
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		background-color: currentColor;
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-position: center;
+		mask-position: center;
+		-webkit-mask-size: contain;
+		mask-size: contain;
+		vertical-align: -0.15em;
+	}
+
+	:global(.demo-lucide-expand::before) {
+		-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
+		mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
+	}
+
+	:global(.demo-lucide-collapse::before) {
+		-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+		mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+	}
+
+	:global(.demo-lucide-leaf::before) {
+		-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>");
+		mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>");
 	}
 
 	/* Icon preview styles */
