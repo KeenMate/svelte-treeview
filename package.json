@@ -26,7 +26,8 @@
 		"!dist/**/*.spec.*",
 		"!dist/demo",
 		"ai",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"component-variables.manifest.json"
 	],
 	"sideEffects": [
 		"**/*.css"
@@ -40,7 +41,8 @@
 			"svelte": "./dist/index.js"
 		},
 		"./styles.css": "./dist/styles.css",
-		"./styles/*": "./dist/styles/*"
+		"./styles/*": "./dist/styles/*",
+		"./component-variables.manifest.json": "./component-variables.manifest.json"
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0"
