@@ -56,7 +56,7 @@
 	--ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));
 	--ltree-node-content-padding: calc(0.4 * var(--ltree-rem)) calc(0.8 * var(--ltree-rem));
 	--ltree-node-content-border-radius: calc(var(--base-border-radius-sm, 0) * var(--ltree-rem));
-	--ltree-node-hover-bg: var(--base-hover-bg, #f8f9fa);
+	--ltree-node-hover-bg: var(--base-hover-bg, color-mix(in srgb, var(--ltree-primary) 8%, transparent));
 	--ltree-children-margin-top: calc(0.2 * var(--ltree-rem));
 
 	/* -------------------------------------------------------------------------
@@ -79,7 +79,9 @@
 	--ltree-checkbox-checked-bg: var(--ltree-primary);
 	--ltree-checkbox-checked-border-color: var(--ltree-primary);
 	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
-	--ltree-checkbox-focus-ring: 0 0 0 2px color-mix(in srgb, var(--ltree-primary) 25%, transparent);
+	--ltree-checkbox-focus-ring-width: 2px;
+	--ltree-checkbox-focus-ring-color: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
+	--ltree-checkbox-focus-ring: 0 0 0 var(--ltree-checkbox-focus-ring-width) var(--ltree-checkbox-focus-ring-color);
 
 	/* -------------------------------------------------------------------------
 	   SELECTION & HIGHLIGHT STATES

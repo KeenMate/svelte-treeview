@@ -95,7 +95,7 @@
 				<tr><td><code>--ltree-node-indent-per-level</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Indentation per nesting level</td></tr>
 				<tr><td><code>--ltree-node-content-padding</code></td><td><code>0.4 × rem / 0.8 × rem</code> (= 4px 8px)</td><td>Inner padding of a node row (V / H)</td></tr>
 				<tr><td><code>--ltree-node-content-border-radius</code></td><td><code>(--base-border-radius-sm, 0) × rem</code></td><td>Node row corner rounding</td></tr>
-				<tr><td><code>--ltree-node-hover-bg</code></td><td><code>var(--base-hover-bg, #f8f9fa)</code></td><td>Hover background</td></tr>
+				<tr><td><code>--ltree-node-hover-bg</code></td><td><code>var(--base-hover-bg, color-mix(primary 8%, transparent))</code></td><td>Hover background — follows <code>--ltree-primary</code> by default</td></tr>
 				<tr><td><code>--ltree-children-margin-top</code></td><td><code>0.2 × rem</code> (= 2px)</td><td>Top margin of child list</td></tr>
 
 				<tr class="section-row"><td colspan="3">Toggle icon</td></tr>
@@ -114,7 +114,9 @@
 				<tr><td><code>--ltree-checkbox-checked-bg</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate background</td></tr>
 				<tr><td><code>--ltree-checkbox-checked-border-color</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate border</td></tr>
 				<tr><td><code>--ltree-checkbox-checkmark-color</code></td><td><code>var(--base-text-color-on-accent, #fff)</code></td><td>Tick / dash color</td></tr>
-				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 2px color-mix(primary 25%, transparent)</code></td><td>Focus-visible box-shadow ring</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring-width</code></td><td><code>2px</code></td><td>Focus-visible ring thickness</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring-color</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Focus-visible ring color</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 [ring-width] [ring-color]</code></td><td>Composed box-shadow; override directly for full control, or tune the two parts above</td></tr>
 
 				<tr class="section-row"><td colspan="3">Selection &amp; highlight states</td></tr>
 				<tr><td><code>--ltree-highlight-bg</code></td><td><code>#cce8ff</code></td><td>Explorer-style highlight background</td></tr>
@@ -595,14 +597,14 @@
 </div>
 
 <style>
-	/* Purple theme — primary tints (multi-select, dragover) follow via color-mix();
-	   hover bg is a separate variable so override explicitly when you want a tinted hover. */
+	/* Purple theme — set primary once; hover/multi-select/dragover tints follow
+	   via color-mix() in the variable defaults. */
 	.purple-theme {
 		--ltree-primary: #667eea;
-		--ltree-node-hover-bg: color-mix(in srgb, #667eea 10%, transparent);
 	}
 
-	/* Dark theme */
+	/* Dark theme — explicit hover override because 8% primary over dark cards
+	   is barely visible; 20% punches through. */
 	.dark-theme {
 		--ltree-primary: #818cf8;
 		--ltree-node-hover-bg: color-mix(in srgb, #818cf8 20%, transparent);
@@ -621,7 +623,6 @@
 	/* Green theme */
 	.green-theme {
 		--ltree-primary: #10b981;
-		--ltree-node-hover-bg: color-mix(in srgb, #10b981 10%, transparent);
 	}
 
 	/* Toggle icon live demo */

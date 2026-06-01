@@ -61,7 +61,9 @@
 		{ "name": "ltree-checkbox-checked-bg", "category": "surface", "usage": "Checked / indeterminate checkbox background" },
 		{ "name": "ltree-checkbox-checked-border-color", "category": "color", "usage": "Checked checkbox border" },
 		{ "name": "ltree-checkbox-checkmark-color", "category": "color", "usage": "Tick / dash glyph color" },
-		{ "name": "ltree-checkbox-focus-ring", "category": "border", "usage": "Focus-visible box-shadow ring" },
+		{ "name": "ltree-checkbox-focus-ring-width", "category": "border", "usage": "Focus-visible ring thickness" },
+		{ "name": "ltree-checkbox-focus-ring-color", "category": "color", "usage": "Focus-visible ring color (defaults to a 25% tint of --ltree-primary)" },
+		{ "name": "ltree-checkbox-focus-ring", "category": "border", "usage": "Composed focus-visible box-shadow (uses the two parts above; override directly for full control)" },
 
 		{ "name": "ltree-highlight-bg", "category": "state", "usage": "Explorer-style highlighted node background" },
 		{ "name": "ltree-highlight-color", "category": "state", "usage": "Highlighted node text color" },
