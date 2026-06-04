@@ -62,7 +62,8 @@
 	const leafIconClass = $derived(config.leafIconClass);
 	const highlightedNodeClass = $derived(config.highlightedNodeClass);
 	const focusedNodeClass = $derived(config.focusedNodeClass);
-	const dragOverNodeClass = $derived(config.dragOverNodeClass);
+	// dragOverNodeClass is applied to the DOM directly by the controller
+	// (see hoveredNodeForDrop $effect in TreeController) — no per-Node binding.
 	const allowCopy = $derived(config.allowCopy);
 	const clickBehavior = $derived(config.clickBehavior);
 	const showCheckboxes = $derived(config.showCheckboxes);
@@ -80,14 +81,14 @@
 	const accordionExpand = $derived(config.accordionExpand);
 	const toggleIconMode = $derived(config.toggleIconMode);
 
-	// Compute if THIS node is the one being hovered for drop
+	// Compute if THIS node is the one being hovered for drop.
+	// Single source of truth from the controller — guarantees exactly one highlighted
+	// row at a time, unlike the per-node local flag we used before (HTML5 dragleave
+	// is unreliable and leaked stale highlights when moving fast between rows).
 	const isHoveredForDrop = $derived(hoveredNodeForDropPath === node.path);
 
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
-
-	// Drag over state
-	let isDraggedOver = $state(false);
 
 	// Track glow position for glow mode
 	let glowPosition = $state<'before' | 'after' | 'child' | null>(null);
@@ -374,7 +375,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''} {isDraggedOver && dragOverNodeClass ? dragOverNodeClass : ''}"
+			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isHighlightAnchor ? 'ltree-highlight-anchor' : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
 			class:ltree-draggable={node?.isDraggable}
@@ -412,7 +413,6 @@
 					if (e.dataTransfer) {
 						e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
 					}
-					isDraggedOver = true;
 					// In glow mode, calculate and update the glow position
 					if (dropZoneMode === 'glow') {
 						glowPosition = calculateGlowPosition(e, e.currentTarget as HTMLElement);
@@ -426,7 +426,6 @@
 				const y = e.clientY;
 
 				if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
-					isDraggedOver = false;
 					glowPosition = null;
 					callbacks.onNodeDragLeave(node, e);
 				}
@@ -437,7 +436,6 @@
 				if (e.dataTransfer) {
 					e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
 				}
-				isDraggedOver = false;
 				// In glow mode, use the calculated glowPosition for the drop
 				if (dropZoneMode === 'glow' && glowPosition) {
 					callbacks.onZoneDrop(node, glowPosition, e);

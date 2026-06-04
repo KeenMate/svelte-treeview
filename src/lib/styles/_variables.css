@@ -90,6 +90,8 @@
 	--ltree-highlight-color: inherit;
 	--ltree-multi-selected-bg: color-mix(in srgb, var(--ltree-primary) 8%, transparent);
 	--ltree-multi-selected-outline: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
+	--ltree-highlight-anchor-width: 3px;
+	--ltree-highlight-anchor-color: var(--ltree-primary);
 
 	/* -------------------------------------------------------------------------
 	   DRAG / DROP — placeholder + dragover + ghost

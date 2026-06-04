@@ -50,6 +50,21 @@
 	content: none;
 }
 
+/* Fallback visual when brackets are suppressed — without this the highlight is invisible */
+.ltree-checkbox ~ .ltree-selected-brackets {
+	font-weight: bold;
+	color: var(--ltree-primary);
+}
+
+/* Anchor of the multi-select range (last clicked plain/Ctrl click).
+   Subtle left-border so users can see the "point of origin" for Shift+click range.
+   Commented out for A/B testing on /examples/interaction — uncomment to re-enable.
+   The class is still applied to the DOM by Node.svelte and the controller still
+   tracks isHighlightAnchor; only the visual marker is suppressed. */
+/* .ltree-highlight-anchor {
+	box-shadow: inset var(--ltree-highlight-anchor-width) 0 0 0 var(--ltree-highlight-anchor-color);
+} */
+
 /* Scroll highlight (post-scrollToPath flash) */
 .ltree-scroll-highlight {
 	background-color: var(--ltree-scroll-highlight-bg) !important;

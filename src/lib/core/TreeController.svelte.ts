@@ -878,6 +878,31 @@ export class TreeController<T> {
 				this.isDebugMenuActive = false;
 			}
 		});
+
+		// Mirror hoveredNodeForDrop → dragOverNodeClass on a single DOM element.
+		// Direct classList mutation (same approach as the touch path's updateDropTarget) so
+		// the cost is O(1) per node-crossing — no per-Node prop propagation across the tree.
+		let prevHoveredDragPath: string | null = null;
+		let prevDragOverClass: string | null = null;
+		$effect(() => {
+			const current = this.hoveredNodeForDrop?.path ?? null;
+			const cls = this.dragOverNodeClass ?? null;
+			if (current === prevHoveredDragPath && cls === prevDragOverClass) return;
+
+			const root: ParentNode = this.containerElement ?? document;
+			if (prevHoveredDragPath && prevDragOverClass) {
+				root.querySelector(
+					`[data-tree-path="${prevHoveredDragPath}"] .ltree-node-content`
+				)?.classList.remove(prevDragOverClass);
+			}
+			if (current && cls) {
+				root.querySelector(
+					`[data-tree-path="${current}"] .ltree-node-content`
+				)?.classList.add(cls);
+			}
+			prevHoveredDragPath = current;
+			prevDragOverClass = cls;
+		});
 	}
 
 	// ── Virtual scroll handler ──────────────────────────────────────────
@@ -1875,7 +1900,7 @@ export class TreeController<T> {
 			}
 			node._rev = (node._rev || 0) + 1;
 			this.highlightedPaths = newPaths;
-			this.lastHighlightedPath = node.path;
+			this._setHighlightAnchor(node.path);
 		} else if (shift && this.lastHighlightedPath) {
 			// Range highlight from lastHighlightedPath to this node
 			const rangePaths = this._getNodesBetween(this.lastHighlightedPath, node.path);
@@ -1900,7 +1925,7 @@ export class TreeController<T> {
 			const newPaths = new Set<string>();
 			newPaths.add(node.path);
 			this.highlightedPaths = newPaths;
-			this.lastHighlightedPath = node.path;
+			this._setHighlightAnchor(node.path);
 		}
 
 		// Update focus
@@ -2080,6 +2105,26 @@ export class TreeController<T> {
 		this.focusedNode = node;
 	}
 
+	/** Set the multi-select anchor (origin for Shift+click ranges), flipping isHighlightAnchor flags */
+	private _setHighlightAnchor(path: string | null) {
+		if (this.lastHighlightedPath === path) return;
+		if (this.lastHighlightedPath) {
+			const prev = this.tree.getNodeByPath(this.lastHighlightedPath);
+			if (prev) {
+				prev.isHighlightAnchor = false;
+				prev._rev = (prev._rev || 0) + 1;
+			}
+		}
+		if (path) {
+			const next = this.tree.getNodeByPath(path);
+			if (next) {
+				next.isHighlightAnchor = true;
+				next._rev = (next._rev || 0) + 1;
+			}
+		}
+		this.lastHighlightedPath = path;
+	}
+
 	/** Clear isHighlighted flag on all currently highlighted nodes */
 	private _clearAllHighlightFlags() {
 		for (const path of this.highlightedPaths) {
@@ -2220,7 +2265,7 @@ export class TreeController<T> {
 		this.highlightedPaths = newPaths;
 		if (lastNode) {
 			this._setFocusedNode(lastNode);
-			this.lastHighlightedPath = lastNode.path;
+			this._setHighlightAnchor(lastNode.path);
 		}
 		if (!options?.silent) this._notifyHighlightChanged();
 		this.tree.refresh();
@@ -2230,7 +2275,7 @@ export class TreeController<T> {
 	clearHighlight(options?: { silent?: boolean }) {
 		this._clearAllHighlightFlags();
 		this.highlightedPaths = new Set();
-		this.lastHighlightedPath = null;
+		this._setHighlightAnchor(null);
 		if (!options?.silent) this._notifyHighlightChanged();
 		this.tree.refresh();
 	}
@@ -2297,7 +2342,7 @@ export class TreeController<T> {
 			node._rev = (node._rev || 0) + 1;
 			this.highlightedPaths = new Set([node.path]);
 			this._setFocusedNode(node);
-			this.lastHighlightedPath = node.path;
+			this._setHighlightAnchor(node.path);
 			this._notifyHighlightChanged();
 			this.tree.refresh();
 		}
@@ -3154,9 +3199,9 @@ export class TreeController<T> {
 	private _navHighlightTo(path: string) {
 		// Set anchor if not set
 		if (!this.lastHighlightedPath && this.focusedNode) {
-			this.lastHighlightedPath = this.focusedNode.path;
-			// Ensure anchor is highlighted
 			const anchorNode = this.focusedNode;
+			this._setHighlightAnchor(anchorNode.path);
+			// Ensure anchor is highlighted
 			if (!anchorNode.isHighlighted) {
 				anchorNode.isHighlighted = true;
 				anchorNode._rev = (anchorNode._rev || 0) + 1;

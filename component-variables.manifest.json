@@ -69,6 +69,8 @@
 		{ "name": "ltree-highlight-color", "category": "state", "usage": "Highlighted node text color" },
 		{ "name": "ltree-multi-selected-bg", "category": "state", "usage": "Multi-select tint background" },
 		{ "name": "ltree-multi-selected-outline", "category": "state", "usage": "Multi-select outline" },
+		{ "name": "ltree-highlight-anchor-width", "category": "state", "usage": "Left-border width on the Shift+click anchor node" },
+		{ "name": "ltree-highlight-anchor-color", "category": "state", "usage": "Left-border color on the Shift+click anchor node" },
 
 		{ "name": "ltree-dragover-bg", "category": "state", "usage": "Drag-over background tint" },
 		{ "name": "ltree-dragover-shadow", "category": "state", "usage": "Drag-over glow shadow" },

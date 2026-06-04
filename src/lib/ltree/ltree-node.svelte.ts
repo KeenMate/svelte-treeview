@@ -28,6 +28,7 @@ export interface LTreeNode<T> {
 	isExpanded: boolean;
 	isFocused: boolean;
 	isHighlighted: boolean;
+	isHighlightAnchor: boolean;
 	isSelected: boolean;
 
 	isSelectable: boolean;
@@ -56,6 +57,7 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		isExpanded: false,
 		isFocused: false,
 		isHighlighted: false,
+		isHighlightAnchor: false,
 		isSelected: false,
 
 		isSelectable: true,
