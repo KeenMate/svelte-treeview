@@ -1,69 +1,51 @@
 # Selection vs highlight model
 
-> Design discussion for resolving the long-standing tension between
-> `highlightedPaths`, `selectedPaths`, and the legacy `ltree-selected-*`
-> CSS class names. Status: discussed, not implemented yet.
+> Decision record for resolving the long-standing tension between
+> `highlightedPaths`, `selectedPaths`, and the legacy `ltree-selected-*` CSS
+> class names. **Status: decided, not implemented yet.**
 
 ## The three states we maintain
 
 We track three distinct concepts on every tree instance:
 
 **`focusedNode`** — single node (or `null`). The keyboard / cursor "current"
-position. Arrow keys move it; plain click sets it; it is the origin for
-keyboard navigation. Windows Explorer renders this as the dotted-outline row.
+position. Arrow keys move it; plain click sets it. **Also serves as the
+anchor for Shift-range operations** — there is no separate anchor state.
+Useful as a single hook for downstream UI (detail panels, breadcrumbs).
 
 **`highlightedPaths`** — `Set<string>`. The multi-select set from
-Ctrl/Shift+click and Shift+arrow. It is the thing that visually marks what
-the user has gathered up across rows. Size: 0..N.
+Ctrl/Shift+click and Shift+arrow. Visually marks what the user has gathered
+up. Size: 0..N (capped at 1 in `selectionMode = 'single'`).
 
-**`selectedPaths`** — `Set<string>`. The checkbox data model. Bound via
-`bind:selectedPaths`. This is what a form / persistence layer reads to know
-"which items did the user pick". Size: 0..N.
+**`selectedPaths`** — `Set<string>`. The "real picks". Bound via
+`bind:selectedPaths`. What a form / persistence layer reads. The
+*mechanism* that puts paths into this set depends on `showCheckboxes`:
 
-## The collision
+- `showCheckboxes = false` → `selectedPaths` is auto-mirrored from
+  `highlightedPaths`. Highlighting commits.
+- `showCheckboxes = true` → `selectedPaths` is driven *only* by checkbox
+  interaction. Highlighting is just gathering; the click on the checkbox
+  commits.
 
-In modes *without* checkboxes only two of these exist (focused +
-highlighted). To a normal user, "highlighted" *is* "selected" — what they
-have clicked, what a delete button or context menu should act on. Windows
-Explorer, Finder, VS Code's tree, IDE explorers all use the word "selected"
-for this. Our CSS class names (`ltree-selected-bold`, `ltree-selected-border`,
-`ltree-selected-highlight`, `ltree-selected-brackets`) come from this world
-and were correct when written.
+## The naming collision (background)
 
-When checkboxes were added the form-picker model needed its own state slot —
-and "selected" was the right word for *that* (a checked checkbox is selected;
+In modes *without* checkboxes only two states exist (focused + highlighted)
+and to users "highlighted" *is* "selected" — what they clicked is what a
+delete button should act on. Windows Explorer, Finder, VS Code's tree all
+use the word "selected" for this. Our CSS class names (`ltree-selected-bold`,
+`ltree-selected-border`, `ltree-selected-highlight`, `ltree-selected-brackets`)
+come from this world and were correct when written.
+
+When checkboxes were added the form-picker model needed its own state slot
+— "selected" was the right word for *that* (a checked checkbox is selected;
 a highlighted row with no check is not selected from a form's POV). So
 `selectedPaths` got bound to the checkbox model and the older mouse-selection
 state was renamed to `highlightedPaths`. The CSS classes never moved.
 
-Today:
-
-- The **CSS class names** are correct for no-checkbox mode and misleading
-  in checkbox mode.
-- The **prop names** are correct for checkbox mode and awkward in
-  no-checkbox mode ("highlighted" is an odd word for "the things I selected
-  with the mouse" when there is no other selection state competing for the
-  name).
-
-## What hinges on this
-
-This is not only cosmetic — concrete behaviour questions depend on which
-state is the "real" selection:
-
-1. **What does a context-menu "Delete" act on?** Just the right-clicked
-   node? `focusedNode`? `highlightedPaths`? `selectedPaths`?
-2. **What does drag-and-drop drag?** Today: the dragged node only.
-   Multi-drag of highlighted is a plausible future request — but only if
-   highlighted = selected semantically.
-3. **What does `Enter` on a focused node do?** Toggle highlight? Toggle
-   check? Both? Neither?
-4. **External integrations (server / URL state)**: which set roundtrips?
-   Today it is `selectedPaths` (bindable, stable). Highlight is implicitly
-   transient. Is that right in no-checkbox mode?
-5. **A11y / screen reader announcements**: `aria-selected` is the WAI-ARIA
-   term. It should map to whichever state behaves like selection in the
-   current mode — which is highlighted when no checkboxes and checked when
-   there are.
+Under the model below, the CSS class names become semantically correct in
+no-checkbox mode (highlight = selection, so `ltree-selected-*` is honest)
+and remain misleading in checkbox mode (the classes style the highlight,
+not the real selection). The rename is deferred — see Decision 7.
 
 ## The chosen framing
 
@@ -80,119 +62,187 @@ state is the "real" selection:
 In English: without checkboxes, highlighting commits; with checkboxes,
 highlighting is just gathering, and the click on the checkbox commits.
 
-## Design knobs
+## Decisions
 
-### 1. The mirroring mechanism
+### 1. Mirroring mechanism — implicit, derived from `showCheckboxes`
 
-(a) **Implicit / derived from `showCheckboxes`** — no new prop. When
-`!showCheckboxes`, every change to `highlightedPaths` writes the same set
-into `selectedPaths`. Simplest API. Brittle if anyone wants to override
-the rule.
+No new toggle prop. When `!showCheckboxes`, every change to
+`highlightedPaths` writes the same set into `selectedPaths`. When
+`showCheckboxes`, the two are decoupled.
 
-(b) **Explicit `selectionFollowsHighlight: boolean | undefined`** prop with
-`undefined` (default) deriving from `!showCheckboxes`. Same default, but
-escape hatch for unusual cases:
+### 2. New prop: `selectionMode: 'single' | 'multi'`, default `'single'`
 
-- Checkbox-less trees that *do not* auto-select on highlight (read-only
-  browser where click is just navigation).
-- Checkboxed trees that *do* mirror (Gmail-style "Shift-click highlights
-  *and* checks the range").
+Controls highlight cardinality and modifier-key behaviour.
 
-**Recommendation: (b).**
+| | `'single'` (default) | `'multi'` |
+|---|---|---|
+| `highlightedPaths.size` | always 0 or 1 | 0..N |
+| Plain click | focus → X, highlight = {X} | focus → X, highlight = {X} |
+| Ctrl+click | **no-op** (acts as plain click) | focus → X, highlight toggles X |
+| Shift+click | **no-op** (acts as plain click) | focus stays, highlight extends from focus to clicked |
+| Plain Arrow | focus → neighbour, highlight = {neighbour} | focus → neighbour, highlight = {neighbour} |
+| Shift+Arrow | n/a (no-op) | focus stays, highlight extends one step from focus |
+| `Enter` | **no-op** | toggles focused node in highlight |
+| `Space` (with checkboxes) | toggles focused node's checkbox | toggles focused node's checkbox |
 
-### 2. Range-check via Shift+click on checkbox
+Open detail: in `'single'` mode + `showCheckboxes = true`, should checking
+a second box clear the first (radio-group style) or allow multi-check? The
+literal reading of "single selection mode" suggests radio-group — confirm
+during implementation.
 
-Only relevant in `showCheckboxes = true`. Today Shift+click on the row only
-highlights. We could:
+### 3. `isSelectable` — selection gate, not focus gate
 
-- **Leave it** — highlight ≠ check; user must click each checkbox manually
-  after highlighting.
-- **Add range-check** — Shift+click on the *checkbox* itself toggles the
-  range from anchor → here. Different gesture, different effect, still
-  consistent with the rule above.
+`!isSelectable` blocks: highlight, selected (so also blocks the mirror in
+no-checkbox mode), checkbox render. **Does not** block focus or arrow
+navigation — the focused node can still land on `!isSelectable` rows so
+consumers can show external detail (a side panel, breadcrumb, etc.).
 
-**Recommendation: defer until users ask for it.**
+Already implemented as `isSelectableMember` + `getIsSelectableCallback`
+props resolving into `node.isSelectable`. Today `node.isSelectable` only
+gates the checkbox render and the `ltree-clickable` class — needs to be
+extended to also block highlight in click handlers and arrow nav.
 
-### 3. CSS class rename
+### 4. Shift+Arrow extension — hidden internal cursor
 
-Once mirroring is in:
+Internal `_shiftCursor` field on the controller, not exposed via props.
+Set on first Shift+Arrow / Shift+click; advances on subsequent
+Shift+Arrows; cleared on any non-Shift navigation. Consumers never see it
+— they read `focusedNode` (anchor) and `highlightedPaths` (the range).
 
-- `ltree-selected-*` is semantically correct in no-checkbox mode.
-- `ltree-selected-*` is misleading in checkbox mode (those classes style
-  the highlight, not the real selection).
+### 5. Focus and the anchor are the same
 
-Options:
+The `focusedNode` IS the anchor. Drop `lastHighlightedPath`,
+`isHighlightAnchor` flag, `_setHighlightAnchor` helper, the
+`.ltree-highlight-anchor` CSS rule, the two CSS variables, and the
+matching manifest entries.
 
-- **Single set** — keep `ltree-selected-*`, document the dual meaning.
-- **Two sets** — rename existing four to `ltree-highlight-*`; reserve
-  `ltree-selected-*` for true-selection rendering in checkbox mode.
-  Backward-compat aliases for one release.
+### 6. Drag-and-drop of multi-selection
 
-**Recommendation: separate decision after (1) lands.**
+When a node that's in `highlightedPaths` is dragged, drag the whole
+highlight set. The algorithm:
 
-### 4. Mode transition behaviour
+1. Compute **top-level selected** = highlighted nodes whose nearest
+   highlighted ancestor is not in the set.
+2. For each top-level selected node, drag its **whole subtree** to the
+   drop target. Selected descendants are **absorbed** — they ride along
+   inside the subtree and are not extracted separately.
+3. Non-highlighted siblings of dragged nodes stay where they are; only
+   the highlighted top-level nodes (and their subtrees) move.
 
-If a consumer flips `showCheckboxes` at runtime:
+**Worked examples:**
 
-- Hidden → shown: previously-mirrored `selectedPaths` keeps existing
-  entries. Their checkboxes appear pre-checked. No reconciliation needed.
-- Shown → hidden: previously-checked `selectedPaths` stays as-is.
-  `highlightedPaths` is unchanged. The two sets may diverge until the user
-  interacts.
+- *Siblings* A, B, C; highlight A and C: top-level = {A, C}; drop both at
+  target → both at target root.
+- *Chain* A→B→C; highlight all three: top-level = {A} (B's nearest
+  highlighted ancestor is A, C's is B); drop A's subtree → A→B→C preserved.
+- *Chain* A→B→C; highlight A and C only (skip B): top-level = {A} (C's
+  nearest highlighted ancestor is A, which IS in the set). C is absorbed
+  under A's subtree. Drop A's subtree → A→B→C lands at target (B comes
+  along because it's in A's subtree, even though it wasn't highlighted).
+  **C does not also appear at target root.**
 
-**Recommendation: leave as-is, document that runtime toggling is the
-consumer's responsibility to reconcile.**
+### 7. CSS class rename — deferred
 
-### 5. Events
+Once mirroring is in, `ltree-selected-*` is honest in no-checkbox mode and
+misleading in checkbox mode. The rename to `ltree-highlight-*` (with
+backward-compat aliases for one release) is a separate decision, taken
+after the model lands.
 
-Today we fire `onSelectionChange` (for `selectedPaths`) and
-`onHighlightChange` (for `highlightedPaths`).
+### 8. Mode transition
 
-Under mirroring, every highlight change in no-checkbox mode also mutates
-`selectedPaths`. Do we fire both events? Or coalesce?
+If a consumer toggles `showCheckboxes` at runtime: leave both sets as-is.
+No reconciliation. The checkboxes that appear/disappear reflect the
+current `selectedPaths`. Documented as consumer's responsibility to
+reconcile if they want different behaviour.
 
-**Recommendation: fire both** — external code may listen to just one and we
-do not want it to miss the change.
+### 9. Events
 
-## The anchor question (related)
+`onHighlightChange` and `onSelectionChange` both keep their existing
+signature `(paths: Set<string>, nodes: LTreeNode<T>[]) => void`. Fire with
+the full new set, not per-node.
 
-The Shift+click "point of origin" — `lastHighlightedPath` on the controller,
-visualised as `.ltree-highlight-anchor` — is also affected by this model.
+Under mirroring (no checkboxes), every highlight change *also* fires
+`onSelectionChange` with the same payload. Both events fire in the same
+tick. Listeners pick whichever they care about; no coalescing.
 
-When `highlightedPaths.size <= 1`, the anchor is either the lone highlighted
-node or null. The visual marker is then redundant (the highlight style
-already marks the same single node).
+### 10. Programmatic API mirrors
 
-When `highlightedPaths.size > 1`, the anchor identifies which of the
-highlighted nodes a Shift+click would extend the range *from*. The marker
-adds information here.
+`highlightNode`, `highlightNodes`, `clearHighlight` (and the deprecated
+`selectNode`/`selectNodes`) mirror into `selectedPaths` when
+`!showCheckboxes`, emitting `onSelectionChange` alongside
+`onHighlightChange`. The existing `{ silent: true }` option still
+suppresses both.
 
-Open questions:
+### 11. Cascade + `isSelectable`
 
-- Should the marker be gated to render only when `size > 1`?
-- Should the marker move on Shift+click (to the newly-selected far end), or
-  stay on the original Ctrl/plain-click anchor (so further Shift+clicks all
-  extend from the same origin)? Current behaviour: it stays.
-- Does the marker make sense at all in `showCheckboxes = true` mode, where
-  highlight is a transient cursor and the user's selection lives in
-  checkboxes? Probably yes — Shift+click still extends the highlight range
-  even when that is "just gathering".
+When `checkboxMode = 'cascade'` and a parent has children of which some
+are `!isSelectable`, checking the parent should cascade only to
+selectable descendants. This is the existing intended behaviour — verify
+during implementation that the cascade walk respects `isSelectable`.
 
-The CSS rule (`box-shadow: inset W 0 0 0 C`) is currently commented out in
-`src/lib/styles/_states.css` pending A/B testing on `/examples/interaction`.
-The flag, helper, and CSS variables remain wired in so re-enabling is a
-one-line toggle.
+### 12. Right-click
 
-## Open questions
+Right-click does NOT move focus or highlight. Only opens the context
+menu at the right-clicked node. (Today `_onNodeRightClicked` does move
+focus — change.)
 
-- Should `aria-selected` follow the framing automatically or stay an
-  explicit consumer choice?
-- Are there integrations (canvas-tree, web-treeview) that already rely on
-  the current `highlightedPaths` / `selectedPaths` independence? Audit
-  before changing default behaviour.
-- Should `focusedNode` also be part of `aria-selected` or is
-  `aria-current="true"` the right mapping? Probably the latter.
-- What about keyboard `Enter` on a focused node? Currently a no-op for
-  selection state. Under the new framing it could:
-  - In no-checkbox mode: toggle highlight (= toggle selection).
-  - In checkbox mode: toggle the checkbox.
+### 13. Checkbox click does NOT move focus
+
+The checkbox is treated as an orthogonal control. Clicking a checkbox
+only mutates `selectedPaths`; focus stays where it was. (Already the
+case — confirm no regression.)
+
+## Implementation surface
+
+Files / areas that change:
+
+- `src/lib/components/Tree.svelte` — new prop `selectionMode`; thread to
+  controller. Drop the `hoveredNodeForDropPath` analogue if any leftover.
+- `src/lib/core/TreeController.svelte.ts`:
+  - Add `selectionMode` state and prop wiring.
+  - Add internal `_shiftCursor`.
+  - Add mirror logic: after every highlight change, if `!showCheckboxes`
+    write the same set into `selectedPaths` and emit `onSelectionChange`.
+  - Gate click/arrow handlers on `selectionMode === 'multi'` for
+    Ctrl/Shift behaviour.
+  - Gate highlight + mirror updates on `node.isSelectable`.
+  - Remove `lastHighlightedPath`, `_setHighlightAnchor`, all call sites.
+  - Change `_onNodeRightClicked` to not move focus.
+  - Implement multi-drag set computation (top-level absorption).
+- `src/lib/ltree/ltree-node.svelte.ts` — remove `isHighlightAnchor` field.
+- `src/lib/components/Node.svelte` — remove `isHighlightAnchor` class
+  binding; ensure click handlers respect `selectionMode` (for Ctrl/Shift
+  no-op in single mode).
+- `src/lib/styles/_states.css` — remove the commented-out
+  `.ltree-highlight-anchor` block.
+- `src/lib/styles/_variables.css` — remove `--ltree-highlight-anchor-*`.
+- `component-variables.manifest.json` — remove the two anchor entries.
+- `CHANGELOG.md` — Breaking entry for `selectionMode` default `'single'`
+  changing today's implicit multi behaviour; Changed entry for mirror
+  semantics; Removed entry for anchor infra.
+
+## Breaking changes summary
+
+- Default `selectionMode = 'single'` is a behavioural break: existing
+  multi-select users must opt in with `selectionMode='multi'`.
+- `selectedPaths` becomes non-empty in no-checkbox mode (previously stayed
+  empty unless populated programmatically). Consumers reading
+  `selectedPaths` in no-checkbox trees will see new values.
+- `lastHighlightedPath` (private), `isHighlightAnchor` (public on
+  `LTreeNode`), `.ltree-highlight-anchor` (CSS), `--ltree-highlight-anchor-*`
+  (CSS vars) removed.
+- Right-click no longer moves focus.
+
+## Open implementation questions
+
+- `selectionMode='single'` + `showCheckboxes=true`: radio-group behaviour
+  (checking unchecks the previous) or allow multi-check? Confirm during
+  implementation.
+- Should arrow nav stop at `!isSelectable` nodes (skip) or land on them
+  (current default)? Decision text says "still land on it" — confirm
+  during implementation.
+- `aria-selected` mapping: follow framing automatically? Probably yes —
+  apply to highlighted in no-checkbox mode, to checked in checkbox mode.
+- Audit other packages (canvas-tree, web-treeview) that depend on
+  current independence of `highlightedPaths` / `selectedPaths` before
+  shipping the mirror.
