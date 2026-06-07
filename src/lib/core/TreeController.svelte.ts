@@ -2576,16 +2576,24 @@ export class TreeController<T> {
 				position
 			});
 			let allOk = true;
-			// First top-level node uses the requested position relative to dropNode;
-			// subsequent ones drop as children of dropNode so they all land at the
-			// same destination grouping. (Could also be 'after' the previously moved
-			// node — kept simple here.)
-			let firstPosition: DropPosition = position;
+			// First top-level node uses the requested position relative to dropNode.
+			// Subsequent ones chain 'after' the previously moved node so the whole
+			// set lands as siblings in source order: dropping A,B,C 'after D' yields
+			// [D, A, B, C]; 'before D' yields [A, B, C, D]; 'child of D' yields D's
+			// children = [A, B, C]. moveNode mutates the source LTreeNode in place,
+			// so reading the held reference's .path post-move gives the new path.
+			let prevMovedNode: LTreeNode<T> | null = null;
 			for (let i = 0; i < topLevelPaths.length; i++) {
 				const sourcePath = topLevelPaths[i];
-				const pos = i === 0 ? firstPosition : 'child';
-				const r = this.moveNode(sourcePath, dropNode!.path, pos);
-				if (!r.success) allOk = false;
+				const targetPath = i === 0 ? dropNode!.path : prevMovedNode!.path;
+				const pos: DropPosition = i === 0 ? position : 'after';
+				const sourceNode = this.tree.getNodeByPath(sourcePath);
+				const r = this.moveNode(sourcePath, targetPath, pos);
+				if (!r.success) {
+					allOk = false;
+				} else if (sourceNode) {
+					prevMovedNode = sourceNode;
+				}
 			}
 			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
 			return allOk;

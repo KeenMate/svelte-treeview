@@ -402,6 +402,44 @@ test.describe('multi-drag (selectionMode=multi)', () => {
 		await expect(page.getByTestId('multi-drop-dragged')).toHaveText('Multi-A');
 	});
 
+	test('multi-drag (after position): all top-level highlighted subtrees become siblings after dropNode', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Highlight A, B, C and drop A 'after' D. The chained-after behaviour
+		// should yield root order [D, A, B, C] — A lands after D, B after A,
+		// C after B, all as siblings at root.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '4')), 'after');
+
+		const afterRoots = await rootNodeNamesInOrder(section);
+		expect(afterRoots).toEqual(['Multi-D', 'Multi-A', 'Multi-B', 'Multi-C']);
+
+		// Total node count unchanged (6 — A still has children A-1, A-2).
+		await expect(section.locator('.ltree-node[data-tree-path]')).toHaveCount(6);
+	});
+
+	test('multi-drag (before position): all top-level highlighted subtrees become siblings before dropNode', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Highlight B, C and drop B 'before' D. Expected root order: [A, B, C, D].
+		await nodeRow(nodeByPath(section, '2')).click();
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await dragNodeTo(nodeRow(nodeByPath(section, '2')), nodeRow(nodeByPath(section, '4')), 'before');
+
+		const afterRoots = await rootNodeNamesInOrder(section);
+		expect(afterRoots).toEqual(['Multi-A', 'Multi-B', 'Multi-C', 'Multi-D']);
+	});
+
 	test('top-level absorption: descendant of a highlighted ancestor rides along inside', async ({
 		page
 	}) => {
