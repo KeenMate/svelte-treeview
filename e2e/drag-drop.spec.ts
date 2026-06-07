@@ -308,7 +308,131 @@ test.describe('Ctrl-drag copy (allowCopy=true)', () => {
 	});
 });
 
-// ── Section 6: touch drag ──────────────────────────────────────────────────
+// ── Section 6: multi-drag (selectionMode='multi') ──────────────────────────
+
+test.describe('multi-drag (selectionMode=multi)', () => {
+	// Resolve all root-level node names in sorted DOM order. The library
+	// reassigns sortOrders during multi-drag, so we can't index by path —
+	// reading the rendered names is the cleanest way to assert the new order.
+	// Tree renders in flat mode (all nodes DOM siblings, indent via margin),
+	// so "root" = path without a separator dot.
+	async function rootNodeNamesInOrder(section: Locator): Promise<string[]> {
+		const roots = section.locator('.ltree-node[data-tree-path]:not([data-tree-path*="."])');
+		return await roots.locator('.ltree-node-row .ltree-node-content > span').allInnerTexts();
+	}
+
+	test('grabbing a non-highlighted node replaces the highlight with just that node', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Build a 2-node highlight: Multi-A + Multi-B.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('multi-highlighted-size')).toHaveText('2');
+
+		// Drag Multi-C (NOT in the highlight set) onto Multi-D as child.
+		await dragNodeTo(nodeRow(nodeByPath(section, '3')), nodeRow(nodeByPath(section, '4')), 'child');
+
+		// Highlight replaced with just the dragged node (OS-explorer convention).
+		await expect(page.getByTestId('multi-highlighted-size')).toHaveText('1');
+		// Drop event fired once for the single non-highlighted drag.
+		await expect(page.getByTestId('multi-drop-count')).toHaveText('1');
+		await expect(page.getByTestId('multi-drop-dragged')).toHaveText('Multi-C');
+	});
+
+	test('grabbing a highlighted node preserves the highlight set', async ({ page }) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Highlight Multi-A, Multi-B, Multi-C.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('multi-highlighted-size')).toHaveText('3');
+
+		// Drag Multi-A (which IS highlighted) onto Multi-D as child.
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '4')), 'child');
+
+		// Highlight set is not collapsed to one — the library kept it intact.
+		await expect(page.getByTestId('multi-highlighted-size')).not.toHaveText('1');
+	});
+
+	test('multi-drag (child position): all top-level highlighted subtrees land under dropNode', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Initial root order: Multi-A, Multi-B, Multi-C, Multi-D (sortOrder 10/20/30/40).
+		const initialRoots = await rootNodeNamesInOrder(section);
+		expect(initialRoots).toEqual(['Multi-A', 'Multi-B', 'Multi-C', 'Multi-D']);
+
+		// Highlight A, B, C.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('multi-highlighted-size')).toHaveText('3');
+
+		// Drag Multi-A (in the set) onto Multi-D as 'child'. All three move under D.
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '4')), 'child');
+
+		// Only Multi-D remains at root; A, B, C are now its children. Multi-A
+		// still has its own children A-1, A-2 absorbed inside.
+		const afterRoots = await rootNodeNamesInOrder(section);
+		expect(afterRoots).toEqual(['Multi-D']);
+
+		// Total node count unchanged (6 — no orphans, no duplicates).
+		await expect(section.locator('.ltree-node[data-tree-path]')).toHaveCount(6);
+
+		// All three moved nodes + the absorbed child still rendered as tree nodes
+		// (scoped to node spans so we don't pick up the drop-state display).
+		const nodeSpans = section.locator('[data-testid^="multi-node-"]');
+		await expect(nodeSpans.filter({ hasText: /^Multi-A$/ })).toHaveCount(1);
+		await expect(nodeSpans.filter({ hasText: /^Multi-B$/ })).toHaveCount(1);
+		await expect(nodeSpans.filter({ hasText: /^Multi-C$/ })).toHaveCount(1);
+		await expect(nodeSpans.filter({ hasText: /^A-1$/ })).toHaveCount(1);
+
+		// Single drop event for the lead node — internal multi-move handles the rest.
+		await expect(page.getByTestId('multi-drop-count')).toHaveText('1');
+		await expect(page.getByTestId('multi-drop-dragged')).toHaveText('Multi-A');
+	});
+
+	test('top-level absorption: descendant of a highlighted ancestor rides along inside', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Highlight Multi-A (path 1) AND its child A-1 (path 1.1). A-1's nearest
+		// highlighted ancestor IS in the set → absorbed, not separately moved.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '1.1')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('multi-highlighted-size')).toHaveText('2');
+
+		// Drag Multi-A as 'child' of Multi-D. Only Multi-A is top-level highlighted
+		// (A-1's nearest highlighted ancestor IS in the set → absorbed). So only ONE
+		// subtree moves; Multi-B and Multi-C stay put.
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '4')), 'child');
+
+		// Roots should be: B, C, D — Multi-A moved inside D, A-1 rides along inside A.
+		const afterRoots = await rootNodeNamesInOrder(section);
+		expect(afterRoots).toEqual(['Multi-B', 'Multi-C', 'Multi-D']);
+
+		// Total node count unchanged (6 — nothing orphaned, nothing duplicated).
+		await expect(section.locator('.ltree-node[data-tree-path]')).toHaveCount(6);
+		// A-1 still rendered — its path was reassigned but the text persists.
+		const nodeSpans = section.locator('[data-testid^="multi-node-"]');
+		await expect(nodeSpans.filter({ hasText: /^A-1$/ })).toHaveCount(1);
+	});
+});
+
+// ── Section 7: touch drag ──────────────────────────────────────────────────
 
 test.describe('touch drag', () => {
 	// Touch events only fire on contexts with hasTouch=true; the default Desktop

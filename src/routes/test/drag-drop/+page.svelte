@@ -244,7 +244,53 @@
 		};
 	}
 
-	// ── Section 6: touch drag ──────────────────────────────────────────────
+	// ── Section 6: multi-drag (selectionMode='multi') ──────────────────────
+
+	function initialMultiData(): Item[] {
+		return [
+			{ id: 61, path: '1', name: 'Multi-A', sortOrder: 10 },
+			{ id: 62, path: '1.1', name: 'A-1', sortOrder: 10 },
+			{ id: 63, path: '1.2', name: 'A-2', sortOrder: 20 },
+			{ id: 64, path: '2', name: 'Multi-B', sortOrder: 20 },
+			{ id: 65, path: '3', name: 'Multi-C', sortOrder: 30 },
+			{ id: 66, path: '4', name: 'Multi-D', sortOrder: 40 }
+		];
+	}
+
+	let multiData: Item[] = $state(initialMultiData());
+	let multiHighlighted = $state(new Set<string>());
+	let multiFocused = $state<LTreeNode<Item> | null>(null);
+	let multiDrop: DropState = $state(emptyDropState());
+
+	const multiHighlightedSorted = $derived(
+		[...multiHighlighted].sort((a, b) => a.localeCompare(b)).join(',')
+	);
+
+	function onMultiDrop(
+		dropNode: LTreeNode<Item> | null,
+		draggedNode: LTreeNode<Item>,
+		position: string,
+		_event: DragEvent | TouchEvent,
+		operation: DropOperation
+	) {
+		multiDrop = {
+			count: multiDrop.count + 1,
+			dragged: draggedNode.data?.name ?? '',
+			target: dropNode?.data?.name ?? '(root)',
+			position,
+			operation,
+			tree: 'multi'
+		};
+	}
+
+	function resetMulti() {
+		multiData = initialMultiData();
+		multiHighlighted = new Set();
+		multiFocused = null;
+		multiDrop = emptyDropState();
+	}
+
+	// ── Section 7: touch drag ──────────────────────────────────────────────
 
 	let touchData: Item[] = $state([
 		{ id: 51, path: '1', name: 'TouchA', sortOrder: 10 },
@@ -453,6 +499,43 @@
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
 					<span data-testid="copy-node-{node.path}">{node.data?.name}</span>
+				{/snippet}
+			</Tree>
+		</div>
+	</section>
+
+	<section data-testid="section-multi">
+		<h2>Multi-Drag (selectionMode='multi')</h2>
+		<button data-testid="multi-reset" onclick={resetMulti}>Reset</button>
+		<div class="drop-state">
+			<span>count: <b data-testid="multi-drop-count">{multiDrop.count}</b></span>
+			<span>dragged: <b data-testid="multi-drop-dragged">{multiDrop.dragged}</b></span>
+			<span>target: <b data-testid="multi-drop-target">{multiDrop.target}</b></span>
+			<span>pos: <b data-testid="multi-drop-position">{multiDrop.position}</b></span>
+			<span>hi.size: <b data-testid="multi-highlighted-size">{multiHighlighted.size}</b></span>
+			<span>hi.sorted: <b data-testid="multi-highlighted-sorted">{multiHighlightedSorted}</b></span>
+			<span>focused: <b data-testid="multi-focused-path">{multiFocused?.path ?? ''}</b></span>
+		</div>
+		<div class="tree-box">
+			<Tree
+				treeId="multi"
+				data={multiData}
+				idMember="id"
+				pathMember="path"
+				orderMember="sortOrder"
+				sortCallback={sortByOrder}
+				isSorted={true}
+				expandLevel={10}
+				dragDropMode="self"
+				clickBehavior="select"
+				selectionMode="multi"
+				highlightedNodeClass="ltree-selected-bold"
+				bind:focusedNode={multiFocused}
+				bind:highlightedPaths={multiHighlighted}
+				onNodeDrop={onMultiDrop}
+			>
+				{#snippet nodeTemplate(node: LTreeNode<Item>)}
+					<span data-testid="multi-node-{node.path}">{node.data?.name}</span>
 				{/snippet}
 			</Tree>
 		</div>
