@@ -93,6 +93,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={2}
+				selectionMode="multi"
 				{clickBehavior}
 				{showCheckboxes}
 				{checkboxMode}
@@ -135,6 +136,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={3}
+				selectionMode="multi"
 				bind:focusedNode={focusedNode2}
 				bind:highlightedPaths={highlightedPaths2}
 				bind:selectedPaths={selectedPaths2}

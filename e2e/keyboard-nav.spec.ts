@@ -115,9 +115,9 @@ test.describe('ArrowRight / ArrowLeft — descend and ascend', () => {
 	test('ArrowRight on a collapsed parent first expands, then moves into the first child', async ({
 		page
 	}) => {
-		// Collapse '1' first (Enter toggles).
+		// Collapse '1' first (Space toggles expand/collapse when no checkboxes).
 		await clickToFocus(page, '1');
-		await page.keyboard.press('Enter');
+		await page.keyboard.press('Space');
 		// Collapsing '1' removes 7 descendants from the visible flat list.
 		await expect.poll(() => visibleCount(page)).toBe(11);
 
@@ -179,35 +179,35 @@ test.describe('Backspace — collapse parent and focus it', () => {
 	});
 });
 
-// ── Enter / Space: navToggle ───────────────────────────────────────────────
+// ── Space: navToggle (Enter is reserved for selection / highlight) ─────────
 
-test.describe('Enter / Space — toggle expand state of focused node', () => {
-	test('Enter collapses an expanded parent', async ({ page }) => {
+test.describe('Space — toggle expand state of focused node', () => {
+	test('Space collapses an expanded parent', async ({ page }) => {
 		await clickToFocus(page, '1');
 		// Starts with 18 visible (beforeEach asserts), so '1' must be expanded.
-		await page.keyboard.press('Enter');
+		await page.keyboard.press('Space');
 		await expect.poll(() => visibleCount(page)).toBe(11);
 	});
 
-	test('Enter re-expands a collapsed parent', async ({ page }) => {
+	test('Space re-expands a collapsed parent', async ({ page }) => {
 		await clickToFocus(page, '1');
-		await page.keyboard.press('Enter');
+		await page.keyboard.press('Space');
 		await expect.poll(() => visibleCount(page)).toBe(11);
 
-		await page.keyboard.press('Enter');
+		await page.keyboard.press('Space');
 		await expect.poll(() => visibleCount(page)).toBe(18);
 	});
 
-	test('Space toggles like Enter', async ({ page }) => {
+	test('Space on a different expanded node also collapses', async ({ page }) => {
 		await clickToFocus(page, '2');
-		await page.keyboard.press(' ');
+		await page.keyboard.press('Space');
 		// '2' has 4 descendants (2.1, 2.1.1, 2.1.2, 2.2) → 14 visible.
 		await expect.poll(() => visibleCount(page)).toBe(14);
 	});
 
-	test('Enter on a leaf is a no-op', async ({ page }) => {
+	test('Space on a leaf is a no-op', async ({ page }) => {
 		await clickToFocus(page, '1.3');
-		await page.keyboard.press('Enter');
+		await page.keyboard.press('Space');
 		// '1.3' has no children, so visible count is unchanged.
 		await expect.poll(() => visibleCount(page)).toBe(18);
 	});

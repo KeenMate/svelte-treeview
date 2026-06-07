@@ -117,6 +117,7 @@
 				isSorted={true}
 				expandLevel={10}
 				clickBehavior="select"
+				selectionMode="multi"
 				bind:focusedNode
 				bind:highlightedPaths
 			>
