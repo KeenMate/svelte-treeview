@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0-rc09] - 2026-06-07
+
 ### Added
 - **`selectionMode: 'single' | 'multi'` prop** (default `'single'`): Decides how highlight cardinality and modifier keys behave. In `'single'`, plain click sets highlight to one node and Ctrl/Shift+click degrade to plain click; Shift+Arrow and Enter are no-ops. In `'multi'`, Ctrl+click toggles, Shift+click extends a range from the focused node, Shift+Arrow extends one step, and Enter toggles highlight on the focused node. Matches the [selection-highlight-model.md](selection-highlight-model.md) decision record.
 - **Implicit highlight → selection mirroring when `showCheckboxes` is false**: Every change to `highlightedPaths` is mirrored into `selectedPaths`, and `onSelectionChange` fires alongside `onHighlightChange`. When checkboxes are visible the two sets stay decoupled — highlight is the cursor / range cursor, checkbox state is the form selection. No new toggle prop; the rule follows `showCheckboxes` directly. Programmatic API (`highlightNode`, `highlightNodes`, `clearHighlight`) mirrors too and respects `{ silent: true }`.

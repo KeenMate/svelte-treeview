@@ -6,18 +6,24 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
+## What's New in v5.0.0-rc09
+
+- **Three-level selection model**: New `selectionMode: 'single' | 'multi'` prop (default `'single'`) cleanly separates the **focused** node (cursor), the **highlighted** set (Ctrl/Shift+click range), and **selected** checkboxes. When `showCheckboxes` is off, highlight mirrors into `selectedPaths` automatically — so consumers always have a single "what's selected" set to read regardless of UI style. Programmatic `highlightNode` / `highlightNodes` / `clearHighlight` respect `{ silent: true }`.
+- **Multi-drag the whole highlight set**: With `selectionMode='multi'`, Ctrl/Shift+click several rows and drag any one of them — the entire top-level-selected subset moves together. Descendants of highlighted ancestors ride along inside their subtree (not extracted). The set lands as siblings after/before/under `dropNode` in source order.
+- **OS-explorer drag-start sync**: Grabbing a non-highlighted node now replaces the highlight with just that node before the drag begins, matching Windows Explorer / macOS Finder. Previously the prior highlight stayed visually stuck while the drag silently carried only the grabbed node.
+- **Keyboard convention reshuffle**: **Enter** now toggles highlight on the focused node (in `multi` mode); **Space** is the universal expand/collapse toggle (when no checkbox). Ctrl/Shift+click no longer auto-toggles expand/collapse — modifier clicks are reserved for highlight management so multi-selecting folders doesn't open them.
+- **`clickTogglesCheckbox` prop**: Opt-in flag that makes a plain row click toggle the checkbox instead of focusing/highlighting, for checkbox-first UIs. Modified clicks still build the multi-highlight.
+- **Full CSS-variable theming surface**: ~50 new `--ltree-*` variables (typography, layout, toggle/checkbox/selection/drag-zone/context-menu state) on a `--base-*` token chain shared with other `@keenmate/*` web components. Set `--ltree-primary` once and the hover tint, drag-zone background, focus ring, and danger menu hover all derive from it via `color-mix()`. New `--ltree-rem` scales the whole component proportionally. Lucide SVG toggle icons replace the UTF-8 glyphs.
+- **SCSS → pure CSS**: `main.scss` (1095 lines) split into eleven `_*.css` partials bundled by `lightningcss-cli` into `dist/styles.css`. `sass` removed from devDependencies. `./styles.scss` package export removed — switch to `./styles.css`.
+
+> **Breaking changes** in this release include the `selectionMode='single'` default (Ctrl/Shift+click no longer auto-multi-selects without opt-in), `selectedPaths` becoming populated in no-checkbox trees (mirrored from highlight), removal of `lastHighlightedPath` / `isHighlightAnchor` / `--ltree-*-rgb` / SCSS variable overrides, and `--ltree-node-indent-per-level` now scaling with `--ltree-rem` instead of document `rem`. See CHANGELOG for migration notes.
+
 ## What's New in v5.0.0-rc08
 
 - **`{ silent: true }` on highlight/selection methods**: Update tree state from URL params or other external sources without firing `onNodeClick` / `onHighlightChange` / `onSelectionChange` — perfect for deep links where you don't want the change callback to re-trigger your form loader. Applies to `highlightNode`, `highlightNodes`, `clearHighlight`, and `deselectAll`.
 - **Array variants for expand/collapse**: `expandNodes`, `collapseNodes`, `expandAll`, and `collapseAll` now take `string | string[]`. Open or close several places in one call.
 - **Exclusive focus mode**: Pass `{ exclusive: true }` to `expandNodes` / `expandAll` to open the target path and collapse everything else in a single pass — no two-step flicker compared to `collapseAll() + expandNodes(path)`.
 - **`noEmit` option for batching**: Suppress the change emit on individual expand/collapse calls when chaining several operations; emit once at the end.
-
-## What's New in v5.0.0-rc07
-
-- **`isSelectedMember` prop**: Seed `selectedPaths` directly from your data — point the prop at a boolean field and every node where it's truthy lands pre-checked after `insertArray`.
-- **`isSelectableMember` fully wired through `Tree`**: The prop was already on the core types but wasn't reachable via the component. Now end-to-end usable to control checkbox rendering and clickability per node.
-- **Fix: filter race during async indexing**: `bind:searchText` no longer hides the entire tree if the FlexSearch index is still being built when the filter is applied. The filter now re-applies itself automatically once indexing completes, regardless of `indexerBatchSize` or dataset size.
 
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
