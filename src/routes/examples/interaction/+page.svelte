@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
-	import type { ClickBehavior, CheckboxMode } from '$lib/ltree/types.js';
+	import type { ClickBehavior, CheckboxMode, SelectionMode } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -64,7 +64,9 @@
 	// ── Persisted settings ───────────────────────────────────────────
 	interface Settings {
 		clickBehavior: ClickBehavior;
+		selectionMode: SelectionMode;
 		highlightedNodeClass: string;
+		focusedNodeClass: string;
 		showCheckboxes: boolean;
 		checkboxMode: CheckboxMode;
 		clickTogglesCheckbox: boolean;
@@ -73,7 +75,11 @@
 
 	const defaultSettings: Settings = {
 		clickBehavior: 'expand-and-focus',
+		// Default this demo to multi so Ctrl/Shift+click work out of the box —
+		// the library default is 'single'.
+		selectionMode: 'multi',
 		highlightedNodeClass: 'ltree-selected-bold',
+		focusedNodeClass: 'demo-focused-outline',
 		showCheckboxes: false,
 		checkboxMode: 'independent',
 		clickTogglesCheckbox: false,
@@ -94,7 +100,9 @@
 		try {
 			localStorage?.setItem(STORAGE_KEY, JSON.stringify({
 				clickBehavior,
+				selectionMode,
 				highlightedNodeClass,
+				focusedNodeClass,
 				showCheckboxes,
 				checkboxMode,
 				clickTogglesCheckbox,
@@ -110,9 +118,21 @@
 		{ value: 'ltree-selected-highlight', label: 'Highlight (Explorer-style)' }
 	];
 
+	// Focused-style options are page-scoped demo classes (see the style block below).
+	// In production you'd define your own .my-focused class and pass it via the
+	// focusedNodeClass prop — there's no built-in default focus styling.
+	const focusedNodeClassOptions = [
+		{ value: '', label: 'None (invisible focus)' },
+		{ value: 'demo-focused-outline', label: 'Outline (left-border)' },
+		{ value: 'demo-focused-underline', label: 'Underline' },
+		{ value: 'demo-focused-bg', label: 'Background tint' }
+	];
+
 	// ── Click Behavior demo ──────────────────────────────────────────
 	let clickBehavior = $state<ClickBehavior>(saved.clickBehavior);
+	let selectionMode = $state<SelectionMode>(saved.selectionMode);
 	let highlightedNodeClass = $state(saved.highlightedNodeClass);
+	let focusedNodeClass = $state(saved.focusedNodeClass);
 	let showCheckboxes = $state(saved.showCheckboxes);
 	let checkboxMode = $state<CheckboxMode>(saved.checkboxMode);
 	let clickTogglesCheckbox = $state(saved.clickTogglesCheckbox);
@@ -122,7 +142,7 @@
 	let highlightedPaths1 = $state(new Set<string>());
 	let selectedPaths1 = $state(new Set<string>());
 
-	$effect(() => { clickBehavior; highlightedNodeClass; showCheckboxes; checkboxMode; clickTogglesCheckbox; rangeSelectionMode; saveSettings(); });
+	$effect(() => { clickBehavior; selectionMode; highlightedNodeClass; focusedNodeClass; showCheckboxes; checkboxMode; clickTogglesCheckbox; rangeSelectionMode; saveSettings(); });
 
 	function onClickDemoNodeClick(node: LTreeNode<Item>) {
 	}
@@ -172,9 +192,24 @@
 				</select>
 			</label>
 			<label>
-				Selected Style:
+				Selection Mode:
+				<select bind:value={selectionMode}>
+					<option value="single">single (Ctrl/Shift+click = plain click)</option>
+					<option value="multi">multi (Ctrl-toggle, Shift-range, Shift+Arrow)</option>
+				</select>
+			</label>
+			<label>
+				Highlighted Style:
 				<select bind:value={highlightedNodeClass}>
 					{#each highlightedNodeClassOptions as opt}
+						<option value={opt.value}>{opt.label}</option>
+					{/each}
+				</select>
+			</label>
+			<label>
+				Focused Style:
+				<select bind:value={focusedNodeClass}>
+					{#each focusedNodeClassOptions as opt}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
 				</select>
@@ -199,6 +234,19 @@
 			<button class="btn btn-secondary" onclick={() => { highlightedPaths1 = new Set(); selectedPaths1 = new Set(); }}>Clear All</button>
 		</div>
 
+		<div class="note">
+			<p class="note-title">How the styles stack</p>
+			<p>
+				<strong>Highlighted Style</strong> applies to every row in <code>highlightedPaths</code>.
+				<strong>Focused Style</strong> is <em>additive</em> — it stacks on top of the highlight, only on
+				the single row in <code>focusedNode</code>. After a plain click the same row is both highlighted
+				and focused, so you'll see both styles on it. After a <kbd>Shift</kbd>+click range, the anchor and
+				intermediate rows are highlighted only, while the row you clicked last is highlighted <em>and</em>
+				focused. After <kbd>Ctrl</kbd>+click (or Arrow over an unselectable row) the focused row can have
+				no highlight at all — that's when Focused Style alone shows.
+			</p>
+		</div>
+
 		<div class="grid-2">
 			<div class="tree-container tree-container-tall">
 				<Tree
@@ -209,7 +257,9 @@
 					isSorted={true}
 					expandLevel={2}
 					{highlightedNodeClass}
+					{focusedNodeClass}
 					{clickBehavior}
+					{selectionMode}
 					{showCheckboxes}
 					{checkboxMode}
 					{clickTogglesCheckbox}
@@ -243,7 +293,8 @@
 		<div class="code-block">
 			<pre>{`<Tree
   clickBehavior="${clickBehavior}"
-  highlightedNodeClass="${highlightedNodeClass}"
+  selectionMode="${selectionMode}"
+  highlightedNodeClass="${highlightedNodeClass}"${focusedNodeClass ? `\n  focusedNodeClass="${focusedNodeClass}"` : ''}
   showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}${showCheckboxes && clickTogglesCheckbox ? `\n  clickTogglesCheckbox` : ''}
   ...
 />
@@ -252,6 +303,10 @@
   'expand-and-focus' — click selects + expands (default)
   'select'           — click selects, double-click expands
   'expand'           — click expands only, no selection
+
+<!-- selectionMode options:
+  'single' — plain click only; Ctrl/Shift+click degrade to plain click (default)
+  'multi'  — Ctrl-toggle, Shift-range, Shift+Arrow extends, Enter toggles
 
 <!-- checkboxMode options:
   'independent' — each checkbox standalone (default)
@@ -264,10 +319,12 @@
 	<div class="card">
 		<h2>Multi-Select</h2>
 		<p class="description">
-			Hold <code>Ctrl</code> (or <code>Cmd</code>) and click to toggle individual nodes.
-			Hold <code>Shift</code> and click to select a range.
-			Enable checkboxes above for a click-friendly multi-select experience.
-			The <code>rangeSelectionMode</code> prop controls whether range selection includes collapsed children.
+			Requires <code>selectionMode="multi"</code> (set above). Then hold <code>Ctrl</code> (or
+			<code>Cmd</code>) and click to toggle individual nodes, or hold <code>Shift</code> and
+			click to select a range. <code>Shift+ArrowUp/Down</code> extends the range from the
+			focused node. <code>Enter</code> toggles the focused node in/out of the highlight set.
+			Enable checkboxes for a click-friendly variant. The <code>rangeSelectionMode</code>
+			prop controls whether range selection includes collapsed children.
 		</p>
 
 		<div class="controls">
@@ -291,6 +348,8 @@
 					isSorted={true}
 					expandLevel={3}
 					{highlightedNodeClass}
+					{focusedNodeClass}
+					{selectionMode}
 					{showCheckboxes}
 					{checkboxMode}
 					{rangeSelectionMode}
@@ -357,6 +416,7 @@
 					isSorted={true}
 					expandLevel={2}
 					{highlightedNodeClass}
+					{focusedNodeClass}
 					bind:focusedNode={navFocusedNode}
 					onNodeClick={onNavNodeClick}
 					{...getTreeProps()}
@@ -418,3 +478,21 @@ End    Go to last visible node
 		<p><a href="/">&larr; Back to Examples</a></p>
 	</footer>
 </div>
+
+<style>
+	/* Demo focus styles. The component itself ships no default for the focused
+	   row — applications define their own and pass via `focusedNodeClass`.
+	   These are :global so they apply to nodes rendered inside <Tree>. */
+	:global(.demo-focused-outline) {
+		box-shadow: inset 3px 0 0 0 var(--ltree-primary, #0d6efd);
+	}
+	:global(.demo-focused-underline) {
+		text-decoration: underline;
+		text-decoration-color: var(--ltree-primary, #0d6efd);
+		text-decoration-thickness: 2px;
+		text-underline-offset: 3px;
+	}
+	:global(.demo-focused-bg) {
+		background-color: color-mix(in srgb, var(--ltree-primary, #0d6efd) 12%, transparent);
+	}
+</style>

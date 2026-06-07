@@ -308,12 +308,15 @@
 		}
 
 		if (clickBehavior === 'expand') {
-			// Expand only — no selection callback
-			toggleExpanded()
+			// Expand only — no selection callback. Ctrl/Shift have no meaning here
+			// (no selection to extend), so they shouldn't toggle expand either.
+			if (!hasModifiers) toggleExpanded()
 		} else if (clickBehavior === 'expand-and-focus') {
-			// Select + expand on single click
+			// Select + expand on single click. Modified clicks are reserved for
+			// highlight management — don't also toggle expand (matches OS file
+			// explorers where Ctrl/Shift+click manages selection without opening).
 			callbacks.onNodeClicked(node, modifiers)
-			toggleExpanded()
+			if (!hasModifiers) toggleExpanded()
 		} else {
 			// 'select' — single click selects only
 			callbacks.onNodeClicked(node, modifiers)
@@ -375,7 +378,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isHighlightAnchor ? 'ltree-highlight-anchor' : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
+			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
 			class:ltree-clickable={node.isSelectable}
 			class:ltree-dragged={isDraggedNode}
 			class:ltree-draggable={node?.isDraggable}

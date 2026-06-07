@@ -12,6 +12,7 @@
 		type DropOperation,
 		type ClickBehavior,
 		type CheckboxMode,
+		type SelectionMode,
 		type TreeChange,
 		type ApplyChangesResult
 	} from '../ltree/types.js';
@@ -79,6 +80,13 @@
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
 		clickBehavior?: ClickBehavior | null | undefined;
+		/**
+		 * `'single'` (default): plain click highlights one node; Ctrl/Shift+click
+		 * degrade to plain click; Shift+Arrow / Enter are no-ops.
+		 * `'multi'`: Ctrl-toggle, Shift-range, Shift+Arrow extend, Enter toggles
+		 * highlight on the focused node.
+		 */
+		selectionMode?: SelectionMode | null | undefined;
 		showCheckboxes?: boolean | null | undefined;
 		checkboxMode?: CheckboxMode | null | undefined;
 		clickTogglesCheckbox?: boolean | null | undefined;
@@ -230,6 +238,7 @@
 		expandLevel = 2,
 
 		clickBehavior = 'expand-and-focus',
+		selectionMode = 'single',
 		showCheckboxes = false,
 		checkboxMode = 'independent',
 		clickTogglesCheckbox = false,
@@ -341,6 +350,7 @@
 		selectedPaths,
 		expandLevel,
 		clickBehavior,
+		selectionMode,
 		showCheckboxes,
 		checkboxMode,
 		clickTogglesCheckbox,
@@ -452,6 +462,7 @@
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
 	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
+	$effect(() => { controller.selectionMode = selectionMode ?? 'single'; });
 	$effect(() => { controller.showCheckboxes = showCheckboxes ?? false; });
 	$effect(() => { controller.checkboxMode = checkboxMode ?? 'independent'; });
 	$effect(() => { controller.clickTogglesCheckbox = clickTogglesCheckbox ?? false; });
@@ -719,6 +730,7 @@
 				| "selectedPaths"
 				| "expandLevel"
 				| "clickBehavior"
+				| "selectionMode"
 				| "showCheckboxes"
 				| "checkboxMode"
 				| "clickTogglesCheckbox"
@@ -796,6 +808,7 @@
 		if (updates.selectedPaths !== undefined) selectedPaths = updates.selectedPaths;
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
+		if (updates.selectionMode !== undefined) selectionMode = updates.selectionMode;
 		if (updates.showCheckboxes !== undefined) showCheckboxes = updates.showCheckboxes;
 		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
 		if (updates.clickTogglesCheckbox !== undefined) clickTogglesCheckbox = updates.clickTogglesCheckbox;
@@ -858,6 +871,8 @@
 
 		let handled = true;
 
+		// Shift+nav extends the highlight range. In single mode the controller
+		// short-circuits these to no-ops (see _navHighlightTo).
 		switch (event.key) {
 			case 'ArrowDown':  event.shiftKey ? controller.navHighlightNext() : controller.navNextSibling(); break;
 			case 'ArrowUp':    event.shiftKey ? controller.navHighlightPrev() : controller.navPrevSibling(); break;
@@ -869,7 +884,19 @@
 			case 'PageDown':   event.shiftKey ? controller.navHighlightPageDown() : controller.navPageDown(); break;
 			case 'PageUp':     event.shiftKey ? controller.navHighlightPageUp() : controller.navPageUp(); break;
 			case 'Enter':
-			case ' ':          controller.navToggle(); break;
+				// single: no-op (per spec); multi: toggle highlight on focused node.
+				if (controller.selectionMode === 'multi') controller.toggleFocusedHighlight();
+				else handled = false;
+				break;
+			case ' ':
+				// With checkboxes: toggle the focused node's checkbox.
+				// Without: keep the legacy expand/collapse behaviour as a useful fallback.
+				if (controller.showCheckboxes && controller.focusedNode?.isSelectable) {
+					controller.nodeCallbacks.onCheckboxToggle(controller.focusedNode);
+				} else {
+					controller.navToggle();
+				}
+				break;
 			default:           handled = false;
 		}
 

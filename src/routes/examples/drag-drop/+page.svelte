@@ -46,6 +46,18 @@
 	let dropZoneMaxWidth = $state(120);
 	let allowCopy = $state(false); // Enable Ctrl+drag to copy
 
+	// Selection mode for the source tree. Defaulting to 'multi' so the new
+	// multi-drag feature (drag the whole highlighted set with top-level
+	// subtree absorption) is demoable. The library default is 'single'.
+	let selectionMode = $state<'single' | 'multi'>('multi');
+
+	// Bindable highlight sets so users can see what they're about to multi-drag
+	// in each tree. The drag/drop logic in TreeController reads the same set
+	// internally to decide whether a single-node drag should become a multi-drag.
+	let sourceHighlightedPaths = $state(new Set<string>());
+	let targetHighlightedPaths = $state(new Set<string>());
+	let restrictedHighlightedPaths = $state(new Set<string>());
+
 	// Load settings from localStorage on mount
 	onMount(() => {
 		const saved = localStorage.getItem('dropZoneConfig');
@@ -92,6 +104,21 @@
 		addLog(`Started dragging: ${node.data?.name}`);
 	}
 
+	// Given a set of paths under a "." separator, return only the ones whose
+	// nearest highlighted ancestor is NOT in the set — i.e. the top-level
+	// subtrees. Mirrors the library's same-tree multi-drag absorption.
+	function topLevelPaths(paths: string[], separator = '.'): string[] {
+		const set = new Set(paths);
+		return paths.filter((p) => {
+			const parts = p.split(separator);
+			for (let i = 1; i < parts.length; i++) {
+				const ancestor = parts.slice(0, i).join(separator);
+				if (set.has(ancestor)) return false;
+			}
+			return true;
+		});
+	}
+
 	function handleTargetDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
 		// Same-tree operations are auto-handled by the library - just log
 		const isSameTreeDrag = draggedNode.treeId === 'target-tree';
@@ -119,24 +146,56 @@
 			copyPosition = position as 'before' | 'after';
 		}
 
-		// Copy the node and all its descendants with new IDs
-		const result = targetTreeRef.copyNodeWithDescendants(
-			draggedNode,
-			parentPath,
-			(data: FileItem) => ({
-				...data,
-				id: nextId++,
-				path: '', // Will be assigned by addNode
-				sortOrder: data.sortOrder || 10
-			}),
-			siblingPath,
-			copyPosition
-		);
+		// Multi-drag across trees: cross-tree multi-drag isn't auto-handled by the
+		// library (the drop handler only receives one node ref). When the source
+		// tree has a multi-highlight that includes the dragged node, copy each
+		// top-level highlighted subtree in turn so the whole set rides along.
+		const sourcePaths =
+			sourceHighlightedPaths.size > 1 && sourceHighlightedPaths.has(draggedNode.path)
+				? topLevelPaths([...sourceHighlightedPaths])
+				: [draggedNode.path];
 
-		if (result.success) {
-			addLog(`[CROSS-TREE] Copied ${result.count} node(s) to "${parentPath || 'root'}"${siblingPath ? ` ${copyPosition} "${siblingPath}"` : ''}`);
+		let copied = 0;
+		let failed = 0;
+		// First node uses the requested position relative to dropNode; subsequent
+		// ones drop as children of dropNode so the whole set lands together.
+		let firstSibling = siblingPath;
+		let firstPos = copyPosition;
+		// Re-number sortOrder across the batch so the dropped set keeps its source
+		// order. Without this, siblings with equal sortOrder (e.g. File A=10 and
+		// Document 1=10) interleave under the target's sortByOrder callback.
+		let batchSort = 10;
+		for (let i = 0; i < sourcePaths.length; i++) {
+			const srcNode = sourceTreeRef.getNodeByPath(sourcePaths[i]);
+			if (!srcNode) { failed++; continue; }
+			const useParent = i === 0 ? parentPath : (dropNode ? dropNode.path : '');
+			const useSibling = i === 0 ? firstSibling : undefined;
+			const usePos = i === 0 ? firstPos : undefined;
+			const rootSort = batchSort;
+			batchSort += 10;
+			const result = targetTreeRef.copyNodeWithDescendants(
+				srcNode,
+				useParent,
+				(data: FileItem) => ({
+					...data,
+					id: nextId++,
+					path: '',
+					// Only the top-level node of each copied subtree gets the
+					// batch-assigned sortOrder; descendants keep their original
+					// relative ordering within their own subtree.
+					sortOrder: data.id === srcNode.data?.id ? rootSort : (data.sortOrder || 10)
+				}),
+				useSibling,
+				usePos
+			);
+			if (result.success) copied += result.count; else failed++;
+		}
+
+		if (failed === 0) {
+			const label = sourcePaths.length > 1 ? `${sourcePaths.length} subtrees (${copied} nodes)` : `${copied} node(s)`;
+			addLog(`[CROSS-TREE] Copied ${label} to "${parentPath || 'root'}"${siblingPath ? ` ${copyPosition} "${siblingPath}"` : ''}`);
 		} else {
-			addLog(`Error: ${result.error}`);
+			addLog(`Error: ${failed} of ${sourcePaths.length} subtree(s) failed to copy`);
 		}
 	}
 
@@ -286,7 +345,11 @@
 		<h2>Drag Between Trees</h2>
 		<p class="description">
 			<strong>Source tree (left):</strong> Drag to reorganize nodes (move). Enable "Allow Ctrl+drag to copy" then hold Ctrl while dragging to copy nodes.
+			With <code>selectionMode="multi"</code> (default below), Ctrl/Shift+click multiple nodes
+			and drag any one of them — the whole highlight set moves together (top-level subtrees
+			only; descendants ride along inside).
 			<strong>Target tree (right):</strong> Drag from source to add nodes. Starts empty to demo drop placeholder.
+			Once it has nodes, multi-drag works inside the target tree the same way.
 		</p>
 
 		<div class="controls">
@@ -327,6 +390,13 @@
 				<input type="checkbox" bind:checked={allowCopy} />
 				Allow Ctrl+drag to copy
 			</label>
+			<label style="display: flex; align-items: center; gap: 0.5rem;">
+				Selection mode:
+				<select bind:value={selectionMode}>
+					<option value="single">single (one highlight; one node per drag)</option>
+					<option value="multi">multi (Ctrl/Shift+click; drag the whole highlight set)</option>
+				</select>
+			</label>
 		</div>
 
 		<div class="trees-side-by-side">
@@ -344,6 +414,9 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="both"
+						{selectionMode}
+						highlightedNodeClass="ltree-selected-bold"
+						bind:highlightedPaths={sourceHighlightedPaths}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{allowCopy}
@@ -374,6 +447,9 @@
 						sortCallback={sortByOrder}
 						expandLevel={3}
 						dragDropMode="both"
+						{selectionMode}
+						highlightedNodeClass="ltree-selected-bold"
+						bind:highlightedPaths={targetHighlightedPaths}
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
 						{allowCopy}
@@ -398,6 +474,20 @@
 			</div>
 		</div>
 
+		{#if sourceHighlightedPaths.size > 0}
+			<div class="output">
+				<p class="output-label">Source highlight ({sourceHighlightedPaths.size}) — dragging any of these moves the whole set</p>
+				<pre>{[...sourceHighlightedPaths].join(', ')}</pre>
+			</div>
+		{/if}
+
+		{#if targetHighlightedPaths.size > 0}
+			<div class="output">
+				<p class="output-label">Target highlight ({targetHighlightedPaths.size}) — dragging any of these moves the whole set within the target tree</p>
+				<pre>{[...targetHighlightedPaths].join(', ')}</pre>
+			</div>
+		{/if}
+
 		{#if activityLog.length > 0}
 			<div class="output">
 				<p class="output-label">Activity Log:</p>
@@ -411,7 +501,9 @@
 		<h2>Restricted Drop Positions</h2>
 		<p class="description">
 			Control which drop positions are valid per node using <code>allowedDropPositions</code>.
-			Try dragging items to different targets:
+			Try dragging items to different targets. With <code>selectionMode="multi"</code>, Ctrl/Shift+click
+			several items first and drag any one of them to move the whole set — per-node
+			<code>allowedDropPositions</code> are still enforced on the drop target.
 		</p>
 
 		<div class="note">
@@ -436,6 +528,9 @@
 				isSorted={true}
 				expandLevel={3}
 				dragDropMode="self"
+				{selectionMode}
+				highlightedNodeClass="ltree-selected-bold"
+				bind:highlightedPaths={restrictedHighlightedPaths}
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
 				{dropZoneLayout}
@@ -451,6 +546,13 @@
 				{/snippet}
 			</Tree>
 		</div>
+
+		{#if restrictedHighlightedPaths.size > 0}
+			<div class="output">
+				<p class="output-label">Highlight ({restrictedHighlightedPaths.size}) — drag any of these to move the whole set (per-node <code>allowedDropPositions</code> still apply)</p>
+				<pre>{[...restrictedHighlightedPaths].join(', ')}</pre>
+			</div>
+		{/if}
 
 		{#if restrictedLog.length > 0}
 			<div class="output">

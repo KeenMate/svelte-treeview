@@ -8,6 +8,7 @@ export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type CheckboxMode = 'independent' | 'cascade';
+export type SelectionMode = 'single' | 'multi';
 export type DropZoneLayout = 'around' | 'above' | 'below' | 'wave' | 'wave2';
 export type DropOperation = 'move' | 'copy';
 

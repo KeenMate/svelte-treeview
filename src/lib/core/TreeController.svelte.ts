@@ -14,7 +14,8 @@ import {
 	type ApplyChangesResult,
 	type ToggleIconMode,
 	type ClickBehavior,
-	type CheckboxMode
+	type CheckboxMode,
+	type SelectionMode
 } from '../ltree/types.js';
 import { tick } from 'svelte';
 import {
@@ -137,6 +138,12 @@ export interface TreeControllerProps<T> {
 	// BEHAVIOUR
 	expandLevel?: number | null | undefined;
 	clickBehavior?: ClickBehavior | null | undefined;
+	/**
+	 * `'single'` (default): Ctrl/Shift+click act as plain click, Shift+Arrow is no-op,
+	 * Enter is no-op. `'multi'`: Ctrl-toggle, Shift-range, Shift+Arrow extends, Enter
+	 * toggles highlight on the focused node.
+	 */
+	selectionMode?: SelectionMode | null | undefined;
 	showCheckboxes?: boolean | null | undefined;
 	checkboxMode?: CheckboxMode | null | undefined;
 	/**
@@ -306,7 +313,10 @@ export class TreeController<T> {
 	data = $state.raw<T[]>([]);
 	focusedNode = $state.raw<LTreeNode<T> | null | undefined>(null);
 	highlightedPaths = $state.raw<Set<string>>(new Set());
-	lastHighlightedPath: string | null = null;
+	/** Hidden internal cursor used by Shift+Arrow / Shift+click to extend ranges
+	 *  from the focused node. Set on first Shift action, advances on subsequent
+	 *  Shift actions, cleared on any plain navigation. Not exposed via props. */
+	private _shiftCursor: string | null = null;
 	selectedPaths = $state.raw<Set<string>>(new Set());
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
@@ -355,6 +365,7 @@ export class TreeController<T> {
 
 	// Visual config (for nodeConfig updates)
 	clickBehavior = $state<ClickBehavior>('expand-and-focus');
+	selectionMode = $state<SelectionMode>('single');
 	showCheckboxes = $state(false);
 	checkboxMode = $state<CheckboxMode>('independent');
 	clickTogglesCheckbox = $state(false);
@@ -527,6 +538,7 @@ export class TreeController<T> {
 		this.accordionExpand = props.accordionExpand ?? false;
 
 		this.clickBehavior = props.clickBehavior ?? 'expand-and-focus';
+		this.selectionMode = props.selectionMode ?? 'single';
 		this.showCheckboxes = props.showCheckboxes ?? false;
 		this.checkboxMode = props.checkboxMode ?? 'independent';
 		this.clickTogglesCheckbox = props.clickTogglesCheckbox ?? false;
@@ -1807,6 +1819,8 @@ export class TreeController<T> {
 
 		if (updates.clickBehavior !== undefined)
 			this.clickBehavior = updates.clickBehavior ?? 'expand-and-focus';
+		if (updates.selectionMode !== undefined)
+			this.selectionMode = updates.selectionMode ?? 'single';
 		if (updates.showCheckboxes !== undefined)
 			this.showCheckboxes = updates.showCheckboxes ?? false;
 		if (updates.checkboxMode !== undefined)
@@ -1877,18 +1891,26 @@ export class TreeController<T> {
 
 	// ── Internal event handlers ─────────────────────────────────────────
 
-	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean }) {
+	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean; forceMultiSemantics?: boolean }) {
 		if (this.contextMenuVisible) {
 			this.closeContextMenu();
 		}
 
-		const ctrl = modifiers?.ctrl ?? false;
-		const shift = modifiers?.shift ?? false;
+		// In single mode, mouse Ctrl/Shift+click degrade to plain click. Programmatic
+		// callers (highlightNode with mode='toggle'/'range') pass forceMultiSemantics
+		// to opt out of the gate — the API contract should not depend on selectionMode.
+		const isMulti = options?.forceMultiSemantics || this.selectionMode === 'multi';
+		const ctrl = isMulti && (modifiers?.ctrl ?? false);
+		const shift = isMulti && (modifiers?.shift ?? false);
 		const silent = options?.silent ?? false;
 
-		uiLogger.debug(`[highlight] Click on ${node.path}`, { ctrl, shift, lastAnchor: this.lastHighlightedPath, prevCount: this.highlightedPaths.size });
+		uiLogger.debug(`[highlight] Click on ${node.path}`, { ctrl, shift, mode: this.selectionMode, shiftCursor: this._shiftCursor, prevCount: this.highlightedPaths.size });
 
-		if (ctrl) {
+		// !isSelectable blocks highlight (and therefore the mirror in no-checkbox mode).
+		// Focus still moves so consumers can show detail panels for unselectable rows.
+		const canHighlight = node.isSelectable;
+
+		if (ctrl && canHighlight) {
 			// Toggle this node in/out of highlight
 			const newPaths = new Set([...this.highlightedPaths]);
 			if (newPaths.has(node.path)) {
@@ -1900,40 +1922,46 @@ export class TreeController<T> {
 			}
 			node._rev = (node._rev || 0) + 1;
 			this.highlightedPaths = newPaths;
-			this._setHighlightAnchor(node.path);
-		} else if (shift && this.lastHighlightedPath) {
-			// Range highlight from lastHighlightedPath to this node
-			const rangePaths = this._getNodesBetween(this.lastHighlightedPath, node.path);
-			// Clear previous highlights
+			this._shiftCursor = node.path;
+		} else if (shift && canHighlight && (this._shiftCursor || this.focusedNode)) {
+			// Range highlight from the shift cursor (or focused node if no cursor yet) to this node
+			const anchor = this._shiftCursor ?? this.focusedNode!.path;
+			const rangePaths = this._getNodesBetween(anchor, node.path);
 			this._clearAllHighlightFlags();
 			const newPaths = new Set<string>();
 			for (const path of rangePaths) {
-				newPaths.add(path);
 				const n = this.tree.getNodeByPath(path);
-				if (n) {
-					n.isHighlighted = true;
-					n._rev = (n._rev || 0) + 1;
-				}
+				if (!n || !n.isSelectable) continue;
+				newPaths.add(path);
+				n.isHighlighted = true;
+				n._rev = (n._rev || 0) + 1;
 			}
 			this.highlightedPaths = newPaths;
-			// Don't update lastHighlightedPath on shift+click (anchor stays)
-		} else {
-			// Normal click: clear all highlights, highlight only this node
+			// Anchor stays put on shift+click — _shiftCursor unchanged
+		} else if (canHighlight) {
+			// Plain click (or Ctrl/Shift+click in single mode → treated as plain):
+			// clear all highlights, highlight only this node.
 			this._clearAllHighlightFlags();
 			node.isHighlighted = true;
 			node._rev = (node._rev || 0) + 1;
-			const newPaths = new Set<string>();
-			newPaths.add(node.path);
-			this.highlightedPaths = newPaths;
-			this._setHighlightAnchor(node.path);
+			this.highlightedPaths = new Set([node.path]);
+			this._shiftCursor = node.path;
+		} else {
+			// Not selectable: clear any prior highlights but don't highlight this row.
+			if (this.highlightedPaths.size > 0) {
+				this._clearAllHighlightFlags();
+				this.highlightedPaths = new Set();
+			}
+			this._shiftCursor = null;
 		}
 
-		// Update focus
+		// Update focus (always — focus is independent of selectability)
 		this._setFocusedNode(node);
 
 		if (!silent) {
 			this.onNodeClickHandler?.(node);
 			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
 		}
 		this.tree.refresh();
 
@@ -1943,6 +1971,31 @@ export class TreeController<T> {
 		if (!silent) {
 			this.containerElement?.focus();
 		}
+	}
+
+	/**
+	 * Top-level paths within `highlightedPaths` — paths whose nearest highlighted
+	 * ancestor is NOT in the highlighted set. Used by multi-drag to figure out
+	 * which subtrees actually need to move (descendants ride along inside).
+	 */
+	private _getTopLevelHighlightedPaths(): string[] {
+		const paths = this.highlightedPaths;
+		if (paths.size === 0) return [];
+		const sep = this.treePathSeparator;
+		const result: string[] = [];
+		for (const p of paths) {
+			let cursor = p;
+			let absorbed = false;
+			while (cursor.includes(sep)) {
+				cursor = cursor.substring(0, cursor.lastIndexOf(sep));
+				if (paths.has(cursor)) {
+					absorbed = true;
+					break;
+				}
+			}
+			if (!absorbed) result.push(p);
+		}
+		return result;
 	}
 
 	/** Get all descendant paths of a node (depth-first) */
@@ -2094,35 +2147,60 @@ export class TreeController<T> {
 
 	/** Set focused node, clearing previous focus flag */
 	private _setFocusedNode(node: LTreeNode<T> | null) {
-		if (this.focusedNode && this.focusedNode.path !== node?.path) {
-			this.focusedNode.isFocused = false;
-			this.focusedNode._rev = (this.focusedNode._rev || 0) + 1;
-		}
-		if (node) {
-			node.isFocused = true;
-			node._rev = (node._rev || 0) + 1;
-		}
-		this.focusedNode = node;
-	}
-
-	/** Set the multi-select anchor (origin for Shift+click ranges), flipping isHighlightAnchor flags */
-	private _setHighlightAnchor(path: string | null) {
-		if (this.lastHighlightedPath === path) return;
-		if (this.lastHighlightedPath) {
-			const prev = this.tree.getNodeByPath(this.lastHighlightedPath);
+		// IMPORTANT: bidirectional bind on `focusedNode` can route the value through
+		// the parent's `$state`, which deep-clones the node into a reactive proxy.
+		// That clone shares the path but is a different object from the tree's
+		// canonical node. We MUST mutate the tree's actual node — otherwise
+		// `node.isFocused = false` writes to the clone and the rendered row
+		// (which reads the canonical node's flag) never updates. Same applies to
+		// the incoming `node`: prefer the tree's canonical ref.
+		const prevPath = this.focusedNode?.path;
+		if (prevPath && prevPath !== node?.path) {
+			const prev = this.tree.getNodeByPath(prevPath);
 			if (prev) {
-				prev.isHighlightAnchor = false;
+				prev.isFocused = false;
 				prev._rev = (prev._rev || 0) + 1;
 			}
 		}
-		if (path) {
-			const next = this.tree.getNodeByPath(path);
-			if (next) {
-				next.isHighlightAnchor = true;
-				next._rev = (next._rev || 0) + 1;
+		const canonical = node ? (this.tree.getNodeByPath(node.path) ?? node) : null;
+		if (canonical) {
+			canonical.isFocused = true;
+			canonical._rev = (canonical._rev || 0) + 1;
+		}
+		this.focusedNode = canonical;
+	}
+
+	/**
+	 * Mirror highlightedPaths → selectedPaths when checkboxes are off.
+	 * Decision 1 + 10 from selection-highlight-model.md: in no-checkbox mode the
+	 * highlight set IS the form selection, so writes to highlightedPaths cascade
+	 * to selectedPaths and fire onSelectionChange alongside onHighlightChange.
+	 */
+	private _mirrorHighlightToSelected() {
+		if (this.showCheckboxes) return;
+		// Take a snapshot to avoid identity-loop on parent rebinding
+		const next = new Set(this.highlightedPaths);
+		// Sync the per-node isSelected flag with the mirrored set.
+		// First clear isSelected on anything currently in selectedPaths but not in next.
+		for (const path of this.selectedPaths) {
+			if (!next.has(path)) {
+				const n = this.tree.getNodeByPath(path);
+				if (n) {
+					n.isSelected = false;
+					n._rev = (n._rev || 0) + 1;
+				}
 			}
 		}
-		this.lastHighlightedPath = path;
+		// Then set isSelected on the new set.
+		for (const path of next) {
+			const n = this.tree.getNodeByPath(path);
+			if (n && !n.isSelected) {
+				n.isSelected = true;
+				n._rev = (n._rev || 0) + 1;
+			}
+		}
+		this.selectedPaths = next;
+		this._notifySelectionChanged();
 	}
 
 	/** Clear isHighlighted flag on all currently highlighted nodes */
@@ -2239,9 +2317,9 @@ export class TreeController<T> {
 		if (!node) return;
 
 		if (mode === 'toggle') {
-			this._onNodeClicked(node, { ctrl: true, shift: false }, options);
+			this._onNodeClicked(node, { ctrl: true, shift: false }, { ...options, forceMultiSemantics: true });
 		} else if (mode === 'range') {
-			this._onNodeClicked(node, { ctrl: false, shift: true }, options);
+			this._onNodeClicked(node, { ctrl: false, shift: true }, { ...options, forceMultiSemantics: true });
 		} else {
 			this._onNodeClicked(node, undefined, options);
 		}
@@ -2255,7 +2333,7 @@ export class TreeController<T> {
 		let lastNode: LTreeNode<T> | null = null;
 		for (const path of paths) {
 			const node = this.tree.getNodeByPath(path);
-			if (node) {
+			if (node && node.isSelectable) {
 				node.isHighlighted = true;
 				node._rev = (node._rev || 0) + 1;
 				newPaths.add(path);
@@ -2265,9 +2343,12 @@ export class TreeController<T> {
 		this.highlightedPaths = newPaths;
 		if (lastNode) {
 			this._setFocusedNode(lastNode);
-			this._setHighlightAnchor(lastNode.path);
+			this._shiftCursor = lastNode.path;
 		}
-		if (!options?.silent) this._notifyHighlightChanged();
+		if (!options?.silent) {
+			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
+		}
 		this.tree.refresh();
 	}
 
@@ -2275,8 +2356,11 @@ export class TreeController<T> {
 	clearHighlight(options?: { silent?: boolean }) {
 		this._clearAllHighlightFlags();
 		this.highlightedPaths = new Set();
-		this._setHighlightAnchor(null);
-		if (!options?.silent) this._notifyHighlightChanged();
+		this._shiftCursor = null;
+		if (!options?.silent) {
+			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
+		}
 		this.tree.refresh();
 	}
 
@@ -2293,6 +2377,14 @@ export class TreeController<T> {
 	/** Check if a specific node path is highlighted */
 	isNodeHighlighted(path: string): boolean {
 		return this.highlightedPaths.has(path);
+	}
+
+	/** Toggle the focused node in/out of the highlight set. Multi-mode only. */
+	toggleFocusedHighlight(): void {
+		if (this.selectionMode !== 'multi') return;
+		const node = this.focusedNode;
+		if (!node || !node.isSelectable) return;
+		this._onNodeClicked(node, { ctrl: true, shift: false }, { forceMultiSemantics: true });
 	}
 
 	// ── Public selection methods (checkbox data state) ───────────────
@@ -2335,18 +2427,10 @@ export class TreeController<T> {
 			return;
 		}
 
-		// If right-clicking on an unhighlighted node, clear highlights and highlight only this node
-		if (!this.highlightedPaths.has(node.path)) {
-			this._clearAllHighlightFlags();
-			node.isHighlighted = true;
-			node._rev = (node._rev || 0) + 1;
-			this.highlightedPaths = new Set([node.path]);
-			this._setFocusedNode(node);
-			this._setHighlightAnchor(node.path);
-			this._notifyHighlightChanged();
-			this.tree.refresh();
-		}
-
+		// Decision 12: right-click does NOT move focus or highlight. It only opens
+		// the context menu at the right-clicked node. If the consumer needs the
+		// menu to act on something other than the highlight set, they can read
+		// the node passed to their getContextMenuItemsCallback.
 		uiLogger.debug(`Context menu opened: ${node.path}`);
 		event.preventDefault();
 		this.openContextMenu(node, event.clientX, event.clientY);
@@ -2380,9 +2464,36 @@ export class TreeController<T> {
 			allowCopy: this.allowCopy,
 			treeId: this.treeId
 		});
+
 		this.draggedNode = node;
 		this.isDragInProgress = true;
 		this.onNodeDragStartHandler?.(node, event);
+
+		// OS-convention selection sync: if the user grabs a node that isn't part
+		// of the current highlight set, replace the highlight with just that node.
+		// Mirrors Windows Explorer / macOS Finder where mousedown on an unselected
+		// item selects it. Without this, the prior highlight stayed visible while
+		// the drag silently carried only the single grabbed node — confusing the
+		// user about what's moving. Deferred to rAF (not microtask): microtasks
+		// drain before the browser commits the drag image, so mutating the source
+		// row's DOM there causes `tree.refresh()` to re-create the dragged element
+		// and the browser silently aborts the drag (no dragend fires). rAF runs as
+		// part of the rendering steps, after the drag is committed. Drop handlers
+		// fire well after this rAF, so they read the updated `highlightedPaths`.
+		// Skipped when the node is already in the set (multi-drag) or not
+		// selectable (preserves prior highlight state for unselectable rows).
+		if (node.isSelectable && !this.highlightedPaths.has(node.path)) {
+			requestAnimationFrame(() => {
+				this._clearAllHighlightFlags();
+				node.isHighlighted = true;
+				node._rev = (node._rev || 0) + 1;
+				this.highlightedPaths = new Set([node.path]);
+				this._shiftCursor = node.path;
+				this._notifyHighlightChanged();
+				this._mirrorHighlightToSelected();
+				this.tree.refresh();
+			});
+		}
 	}
 
 	_onNodeDragEnd = (event: DragEvent) => {
@@ -2441,6 +2552,45 @@ export class TreeController<T> {
 		}
 
 		const isSameTreeDrag = draggedNodeRef.treeId === this.treeId;
+
+		// Multi-drag (Decision 6 in selection-highlight-model.md):
+		// When the dragged node is part of a multi-highlight, move the whole highlight
+		// set as top-level-selected subtrees. Descendants whose nearest highlighted
+		// ancestor is in the set are absorbed (ride along inside the subtree).
+		const isMultiDrag =
+			isSameTreeDrag &&
+			operation === 'move' &&
+			dropNode &&
+			this.autoHandleMove &&
+			this.highlightedPaths.has(draggedNodeRef.path) &&
+			this.highlightedPaths.size > 1;
+
+		if (isMultiDrag) {
+			const topLevelPaths = this._getTopLevelHighlightedPaths()
+				// drop target can't be moved onto itself
+				.filter((p) => p !== dropNode!.path);
+			dragLogger.info(`Multi-drag: moving ${topLevelPaths.length} top-level subtree(s)`, {
+				topLevelPaths,
+				totalHighlighted: this.highlightedPaths.size,
+				dropTarget: dropNode!.path,
+				position
+			});
+			let allOk = true;
+			// First top-level node uses the requested position relative to dropNode;
+			// subsequent ones drop as children of dropNode so they all land at the
+			// same destination grouping. (Could also be 'after' the previously moved
+			// node — kept simple here.)
+			let firstPosition: DropPosition = position;
+			for (let i = 0; i < topLevelPaths.length; i++) {
+				const sourcePath = topLevelPaths[i];
+				const pos = i === 0 ? firstPosition : 'child';
+				const r = this.moveNode(sourcePath, dropNode!.path, pos);
+				if (!r.success) allOk = false;
+			}
+			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+			return allOk;
+		}
+
 		if (isSameTreeDrag && operation === 'move' && dropNode) {
 			if (this.autoHandleMove) {
 				const result = this.moveNode(draggedNodeRef.path, dropNode.path, position);
@@ -3195,14 +3345,16 @@ export class TreeController<T> {
 		};
 	}
 
-	/** Extend highlight to target path (Shift+nav) — uses range from anchor, moves focus */
+	/** Extend highlight to target path (Shift+nav) — uses range from the shift cursor
+	 *  (or current focus if no cursor yet), moves focus. No-op in single mode. */
 	private _navHighlightTo(path: string) {
-		// Set anchor if not set
-		if (!this.lastHighlightedPath && this.focusedNode) {
+		if (this.selectionMode !== 'multi') return;
+		// Seed the shift cursor from the focused node on the first Shift+Arrow
+		if (!this._shiftCursor && this.focusedNode) {
 			const anchorNode = this.focusedNode;
-			this._setHighlightAnchor(anchorNode.path);
-			// Ensure anchor is highlighted
-			if (!anchorNode.isHighlighted) {
+			this._shiftCursor = anchorNode.path;
+			// Ensure anchor is highlighted so range computation has a starting point visible
+			if (anchorNode.isSelectable && !anchorNode.isHighlighted) {
 				anchorNode.isHighlighted = true;
 				anchorNode._rev = (anchorNode._rev || 0) + 1;
 				this.highlightedPaths = new Set([anchorNode.path]);
