@@ -48,9 +48,9 @@ export function createLTreeNode<T>(data?: Partial<LTreeNode<T>>): LTreeNode<T> {
 		hasChildren: false,
 		data: undefined,
 
-		isDraggable: true,
+		isDraggable: false,
 		isCollapsible: true,
-		isDropAllowed: true,
+		isDropAllowed: false,
 		allowedDropPositions: undefined,
 		visualState: VisualState.notSelected,
 		isExpanded: false,

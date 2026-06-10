@@ -36,6 +36,62 @@
 	let iconSet = $state<IconSetKey>('default');
 	let toggleIconMode = $state<'rotate' | 'swap'>('rotate');
 	const activeIcons = $derived(iconSets[iconSet]);
+
+	// ---- Dark Mode Playground state -----------------------------------------
+	type PageScheme = 'normal' | 'light dark' | 'dark' | 'light';
+	type AncestorSignal = 'none' | 'data-theme-dark' | 'data-bs-theme-dark' | 'dark-class' | 'data-theme-light';
+	type InstanceTheme = 'none' | 'dark' | 'light';
+	type BrandTheme = 'default' | 'material' | 'neon' | 'sharp' | 'soft' | 'glass' | 'forest';
+
+	let pageScheme = $state<PageScheme>('normal');
+	let ancestorSignal = $state<AncestorSignal>('none');
+	let instanceTheme = $state<InstanceTheme>('none');
+	let brandTheme = $state<BrandTheme>('default');
+	// Pre-highlight a node so the accent (multi-select bg + outline, both derived
+	// from --ltree-primary via color-mix) is visible at rest — otherwise switching
+	// brand themes only changes interaction states the user has to trigger.
+	let playgroundHighlight = $state<Set<string>>(new Set(['1.1']));
+
+	// User-driven INPUT: sets color-scheme on <html> via the page-scheme radio.
+	// This is the consumer side of the contract (a hand-rolled theme toggle would
+	// do the same). It is NOT detection — CSS resolves everything from here on.
+	$effect(() => {
+		if (typeof document === 'undefined') return;
+		const html = document.documentElement;
+		const prev = html.style.colorScheme;
+		html.style.colorScheme = pageScheme === 'normal' ? '' : pageScheme;
+		return () => { html.style.colorScheme = prev; };
+	});
+
+	// Brand theme is applied as a class on the playground wrapper. Because the
+	// library now declares its --ltree-* variables on .ltree-container (not on
+	// :root), setting --base-* on the wrapper correctly re-tints the descendant
+	// .ltree-container — no document-level hackery needed.
+
+	const wrapperClass = $derived(ancestorSignal === 'dark-class' ? 'dark' : '');
+	const wrapperDataTheme = $derived(
+		ancestorSignal === 'data-theme-dark' ? 'dark'
+		: ancestorSignal === 'data-theme-light' ? 'light'
+		: undefined
+	);
+	const wrapperBsTheme = $derived(ancestorSignal === 'data-bs-theme-dark' ? 'dark' : undefined);
+	const treeTheme = $derived<'dark' | 'light' | undefined>(
+		instanceTheme === 'dark' ? 'dark' : instanceTheme === 'light' ? 'light' : undefined
+	);
+
+	const winningSignal = $derived.by(() => {
+		if (instanceTheme !== 'none') return `Per-instance: <Tree theme="${instanceTheme}" />`;
+		if (ancestorSignal !== 'none') {
+			if (ancestorSignal === 'dark-class') return 'Ancestor class: .dark (Tailwind)';
+			if (ancestorSignal === 'data-theme-dark') return 'Ancestor attr: [data-theme="dark"]';
+			if (ancestorSignal === 'data-theme-light') return 'Ancestor attr: [data-theme="light"]';
+			if (ancestorSignal === 'data-bs-theme-dark') return 'Ancestor attr: [data-bs-theme="dark"] (Bootstrap)';
+		}
+		if (pageScheme === 'dark') return 'Page color-scheme: dark (light-dark() resolves to dark branch)';
+		if (pageScheme === 'light') return 'Page color-scheme: light';
+		if (pageScheme === 'light dark') return 'Page color-scheme: light dark (follows OS preference via light-dark())';
+		return 'No signal active — hardcoded light defaults';
+	});
 </script>
 
 <svelte:head>
@@ -50,200 +106,87 @@
 		<RenderModeSwitch />
 	</header>
 
-	<!-- CSS Variables Reference -->
+	<!-- Dark mode playground (interactive control panel) -->
 	<div class="card">
-		<h2>CSS Variables Reference</h2>
+		<h2>Dark Mode Playground</h2>
 		<p class="description">
-			Override these CSS variables to customize the tree appearance. Each one chains to a
-			<code>--base-*</code> token shared across other <code>@keenmate/*</code> web components
-			(see "Base token integration" below), then falls back to the listed default. Sized
-			values are <code>calc(N × var(--ltree-rem))</code> where <code>--ltree-rem</code>
-			defaults to <code>10px</code> — change it once to scale everything.
+			Toggle each signal independently and watch the demo tree react. The
+			"winning signal" line shows which input the CSS is actually responding to
+			based on the precedence order from <code>color-scheme.md</code>.
+			OS <code>prefers-color-scheme</code> can't be controlled from JavaScript —
+			flip your OS or browser dev-tools setting to test that path.
 		</p>
 
-		<table>
-			<thead>
-				<tr>
-					<th>Variable</th>
-					<th>Default</th>
-					<th>Description</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr class="section-row"><td colspan="3">Base sizing unit</td></tr>
-				<tr><td><code>--ltree-rem</code></td><td><code>10px</code></td><td>Base unit multiplied into every size/spacing value. Set to <code>12px</code> for 20% scale, or to <code>1rem</code> to follow document font-size.</td></tr>
+		<div class="playground-controls">
+			<fieldset>
+				<legend>1. Page <code>color-scheme</code> (applied to <code>&lt;html&gt;</code>)</legend>
+				<label><input type="radio" bind:group={pageScheme} value="normal" /> none</label>
+				<label><input type="radio" bind:group={pageScheme} value="light dark" /> <code>light dark</code> (OS-aware)</label>
+				<label><input type="radio" bind:group={pageScheme} value="dark" /> <code>dark</code> (force)</label>
+				<label><input type="radio" bind:group={pageScheme} value="light" /> <code>light</code> (force)</label>
+			</fieldset>
 
-				<tr class="section-row"><td colspan="3">Colors</td></tr>
-				<tr><td><code>--ltree-primary</code></td><td><code>var(--base-accent-color, #0d6efd)</code></td><td>Primary color (selection, highlights). Tints derived via <code>color-mix()</code>.</td></tr>
-				<tr><td><code>--ltree-success</code></td><td><code>var(--base-success-color, #198754)</code></td><td>Success color (valid drop targets)</td></tr>
-				<tr><td><code>--ltree-danger</code></td><td><code>var(--base-danger-color, #dc3545)</code></td><td>Danger color (invalid drops)</td></tr>
-				<tr><td><code>--ltree-light</code></td><td><code>var(--base-main-bg, #f8f9fa)</code></td><td>Light background</td></tr>
-				<tr><td><code>--ltree-border</code></td><td><code>var(--base-border-color, #dee2e6)</code></td><td>Border color</td></tr>
-				<tr><td><code>--ltree-body-color</code></td><td><code>var(--base-text-color-1, #212529)</code></td><td>Default text color</td></tr>
+			<fieldset>
+				<legend>2. Ancestor theme class / attribute (wraps the demo tree)</legend>
+				<label><input type="radio" bind:group={ancestorSignal} value="none" /> none</label>
+				<label><input type="radio" bind:group={ancestorSignal} value="data-theme-dark" /> <code>[data-theme="dark"]</code></label>
+				<label><input type="radio" bind:group={ancestorSignal} value="data-bs-theme-dark" /> <code>[data-bs-theme="dark"]</code></label>
+				<label><input type="radio" bind:group={ancestorSignal} value="dark-class" /> <code>.dark</code> (Tailwind)</label>
+				<label><input type="radio" bind:group={ancestorSignal} value="data-theme-light" /> <code>[data-theme="light"]</code> (force light)</label>
+			</fieldset>
 
-				<tr class="section-row"><td colspan="3">Typography</td></tr>
-				<tr><td><code>--ltree-font-family</code></td><td><code>var(--base-font-family, system stack)</code></td><td>Font family for all tree text</td></tr>
-				<tr><td><code>--ltree-node-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Node text size</td></tr>
-				<tr><td><code>--ltree-node-icon-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Per-node icon font size</td></tr>
-				<tr><td><code>--ltree-node-icon-margin-right</code></td><td><code>0.6 × rem</code> (= 6px)</td><td>Gap between node icon and label</td></tr>
-				<tr><td><code>--ltree-node-label-font-weight</code></td><td><code>var(--base-font-weight-medium, 500)</code></td><td>Label weight</td></tr>
-				<tr><td><code>--ltree-node-label-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap after node label</td></tr>
-				<tr><td><code>--ltree-node-path-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Path / debug text size</td></tr>
-				<tr><td><code>--ltree-node-path-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Path / muted text color</td></tr>
+			<fieldset>
+				<legend>3. Per-instance <code>theme</code> prop (highest precedence)</legend>
+				<label><input type="radio" bind:group={instanceTheme} value="none" /> inherit</label>
+				<label><input type="radio" bind:group={instanceTheme} value="dark" /> <code>theme="dark"</code></label>
+				<label><input type="radio" bind:group={instanceTheme} value="light" /> <code>theme="light"</code></label>
+			</fieldset>
 
-				<tr class="section-row"><td colspan="3">Node layout</td></tr>
-				<tr><td><code>--ltree-node-indent-per-level</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Indentation per nesting level</td></tr>
-				<tr><td><code>--ltree-node-content-padding</code></td><td><code>0.4 × rem / 0.8 × rem</code> (= 4px 8px)</td><td>Inner padding of a node row (V / H)</td></tr>
-				<tr><td><code>--ltree-node-content-border-radius</code></td><td><code>(--base-border-radius-sm, 0) × rem</code></td><td>Node row corner rounding</td></tr>
-				<tr><td><code>--ltree-node-hover-bg</code></td><td><code>var(--base-hover-bg, color-mix(primary 8%, transparent))</code></td><td>Hover background — follows <code>--ltree-primary</code> by default</td></tr>
-				<tr><td><code>--ltree-children-margin-top</code></td><td><code>0.2 × rem</code> (= 2px)</td><td>Top margin of child list</td></tr>
-
-				<tr class="section-row"><td colspan="3">Toggle icon</td></tr>
-				<tr><td><code>--ltree-toggle-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>SVG icon size (chevron / +/- / arrow / leaf)</td></tr>
-				<tr><td><code>--ltree-toggle-icon-width</code></td><td><code>2.0 × rem</code> (= 20px)</td><td>Width reserved for the toggle column</td></tr>
-				<tr><td><code>--ltree-toggle-icon-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Icon color (via <code>currentColor</code> mask)</td></tr>
-				<tr><td><code>--ltree-toggle-icon-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap between toggle and node label</td></tr>
-				<tr><td><code>--ltree-toggle-icon-transition</code></td><td><code>transform 0.2s</code></td><td>Rotate animation timing (does not scale)</td></tr>
-
-				<tr class="section-row"><td colspan="3">Checkbox</td></tr>
-				<tr><td><code>--ltree-checkbox-size</code></td><td><code>1.5 × rem</code> (= 15px)</td><td>Checkbox square dimension</td></tr>
-				<tr><td><code>--ltree-checkbox-border-width</code></td><td><code>1.5px</code></td><td>Border thickness (hairline, does not scale)</td></tr>
-				<tr><td><code>--ltree-checkbox-border-color</code></td><td><code>var(--base-border-color, #adb5bd)</code></td><td>Unchecked border</td></tr>
-				<tr><td><code>--ltree-checkbox-border-radius</code></td><td><code>(--base-border-radius-sm, 0.3) × rem</code> (= 3px)</td><td>Corner rounding</td></tr>
-				<tr><td><code>--ltree-checkbox-bg</code></td><td><code>var(--base-input-bg, #fff)</code></td><td>Unchecked background</td></tr>
-				<tr><td><code>--ltree-checkbox-checked-bg</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate background</td></tr>
-				<tr><td><code>--ltree-checkbox-checked-border-color</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate border</td></tr>
-				<tr><td><code>--ltree-checkbox-checkmark-color</code></td><td><code>var(--base-text-color-on-accent, #fff)</code></td><td>Tick / dash color</td></tr>
-				<tr><td><code>--ltree-checkbox-focus-ring-width</code></td><td><code>2px</code></td><td>Focus-visible ring thickness</td></tr>
-				<tr><td><code>--ltree-checkbox-focus-ring-color</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Focus-visible ring color</td></tr>
-				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 [ring-width] [ring-color]</code></td><td>Composed box-shadow; override directly for full control, or tune the two parts above</td></tr>
-
-				<tr class="section-row"><td colspan="3">Selection &amp; highlight states</td></tr>
-				<tr><td><code>--ltree-highlight-bg</code></td><td><code>#cce8ff</code></td><td>Explorer-style highlight background</td></tr>
-				<tr><td><code>--ltree-highlight-color</code></td><td><code>inherit</code></td><td>Highlight text color</td></tr>
-				<tr><td><code>--ltree-multi-selected-bg</code></td><td><code>color-mix(primary 8%, transparent)</code></td><td>Multi-select tint</td></tr>
-				<tr><td><code>--ltree-multi-selected-outline</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Multi-select outline</td></tr>
-
-				<tr class="section-row"><td colspan="3">Drag / drop states</td></tr>
-				<tr><td><code>--ltree-dragover-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Drag-over background tint</td></tr>
-				<tr><td><code>--ltree-dragover-shadow</code></td><td><code>0 0 8px color-mix(primary 40%, transparent)</code></td><td>Drag-over glow shadow</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Empty-tree placeholder background</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-color</code></td><td><code>var(--ltree-primary)</code></td><td>Placeholder text color</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-border-radius</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Placeholder corner rounding</td></tr>
-				<tr><td><code>--ltree-drop-placeholder-min-height</code></td><td><code>6.0 × rem</code> (= 60px)</td><td>Placeholder min height</td></tr>
-				<tr><td><code>--tree-ghost-bg</code></td><td><code>rgba(59, 130, 246, 0.9)</code></td><td>Touch drag ghost background</td></tr>
-				<tr><td><code>--tree-ghost-color</code></td><td><code>#fff</code></td><td>Touch drag ghost text color</td></tr>
-
-				<tr class="section-row"><td colspan="3">Drop zones (pastel mode)</td></tr>
-				<tr><td><code>--ltree-drop-zone-border-radius</code></td><td><code>0</code></td><td>Drop zone corner rounding</td></tr>
-				<tr><td><code>--ltree-drop-zone-[before|after|child]-bg</code></td><td><code>rgba sage / coral / lavender</code></td><td>Per-zone resting background</td></tr>
-				<tr><td><code>--ltree-drop-zone-[before|after|child]-color</code></td><td><code>matching dark variants</code></td><td>Per-zone resting text color</td></tr>
-				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-bg</code></td><td><code>~85% opacity variants</code></td><td>Active zone background</td></tr>
-				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-color</code></td><td><code>~darker variants</code></td><td>Active zone text color</td></tr>
-				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-shadow</code></td><td><code>0 2px 12px (color, 0.4)</code></td><td>Active zone shadow</td></tr>
-
-				<tr class="section-row"><td colspan="3">Drop zones (glow mode)</td></tr>
-				<tr><td><code>--ltree-drop-glow-[before|after|child]-color</code></td><td><code>0.8-alpha pastel variants</code></td><td>Glow border color per zone</td></tr>
-				<tr><td><code>--ltree-drop-glow-child-bg</code></td><td><code>rgba(167, 155, 198, 0.15)</code></td><td>Glow child zone background tint</td></tr>
-				<tr><td><code>--ltree-drop-glow-size</code></td><td><code>3px</code></td><td>Glow border thickness (hairline, does not scale)</td></tr>
-				<tr><td><code>--ltree-drop-arrow-size</code></td><td><code>2.4 × rem</code> (= 24px)</td><td>Direction arrow size</td></tr>
-				<tr><td><code>--ltree-drop-arrow-position</code></td><td><code>66%</code></td><td>Horizontal arrow position</td></tr>
-				<tr><td><code>--ltree-drop-arrow-[before|after|child]-rotation</code></td><td><code>0 / 0 / 45deg</code></td><td>Arrow rotation per zone</td></tr>
-
-				<tr class="section-row"><td colspan="3">Context menu</td></tr>
-				<tr><td><code>--ltree-context-menu-bg</code></td><td><code>var(--base-dropdown-bg, #fff)</code></td><td>Menu background</td></tr>
-				<tr><td><code>--ltree-context-menu-border-color</code></td><td><code>var(--ltree-border)</code></td><td>Menu border</td></tr>
-				<tr><td><code>--ltree-context-menu-border-radius</code></td><td><code>(--base-border-radius-sm, 0.4) × rem</code> (= 4px)</td><td>Menu rounding</td></tr>
-				<tr><td><code>--ltree-context-menu-shadow</code></td><td><code>var(--base-dropdown-box-shadow, …)</code></td><td>Menu drop shadow</td></tr>
-				<tr><td><code>--ltree-context-menu-min-width</code></td><td><code>15 × rem</code> (= 150px)</td><td>Menu minimum width</td></tr>
-				<tr><td><code>--ltree-context-menu-padding</code></td><td><code>0.4 × rem / 0</code></td><td>Menu inner padding</td></tr>
-				<tr><td><code>--ltree-context-menu-item-padding</code></td><td><code>0.8 × rem / 1.6 × rem</code> (= 8px 16px)</td><td>Item padding</td></tr>
-				<tr><td><code>--ltree-context-menu-item-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Item font size</td></tr>
-				<tr><td><code>--ltree-context-menu-item-color</code></td><td><code>var(--ltree-body-color)</code></td><td>Item color</td></tr>
-				<tr><td><code>--ltree-context-menu-item-hover-bg</code></td><td><code>var(--ltree-light)</code></td><td>Item hover background</td></tr>
-				<tr><td><code>--ltree-context-menu-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>Icon column width</td></tr>
-				<tr><td><code>--ltree-context-menu-icon-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Icon font size</td></tr>
-				<tr><td><code>--ltree-context-menu-shortcut-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Shortcut hint color</td></tr>
-				<tr><td><code>--ltree-context-menu-shortcut-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Shortcut hint size</td></tr>
-				<tr><td><code>--ltree-context-menu-arrow-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Submenu arrow color</td></tr>
-				<tr><td><code>--ltree-context-menu-divider-color</code></td><td><code>var(--ltree-border)</code></td><td>Divider line color</td></tr>
-				<tr><td><code>--ltree-context-menu-divider-label-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Named divider label color</td></tr>
-
-				<tr class="section-row"><td colspan="3">Loading + spinner</td></tr>
-				<tr><td><code>--ltree-loading-bg</code></td><td><code>rgba(255, 255, 255, 0.8)</code></td><td>Loading overlay background</td></tr>
-				<tr><td><code>--ltree-loading-color</code></td><td><code>var(--base-text-color-3, #718096)</code></td><td>"Loading more..." text color</td></tr>
-				<tr><td><code>--ltree-spinner-size</code></td><td><code>3.2 × rem</code> (= 32px)</td><td>Spinner diameter</td></tr>
-				<tr><td><code>--ltree-spinner-track</code></td><td><code>var(--base-border-color, #e2e8f0)</code></td><td>Spinner track (background ring)</td></tr>
-				<tr><td><code>--ltree-spinner-color</code></td><td><code>var(--ltree-primary)</code></td><td>Spinner active color</td></tr>
-
-				<tr class="section-row"><td colspan="3">Scroll highlight (after <code>scrollToPath</code>)</td></tr>
-				<tr><td><code>--ltree-scroll-highlight-bg</code></td><td><code>color-mix(primary 30%, transparent)</code></td><td>Highlight background</td></tr>
-				<tr><td><code>--ltree-scroll-highlight-shadow</code></td><td><code>0 0 0.5em color-mix(primary 40%, transparent)</code></td><td>Highlight glow</td></tr>
-				<tr><td><code>--ltree-scroll-highlight-arrow-color</code></td><td><code>var(--ltree-danger)</code></td><td>Arrow icon color</td></tr>
-			</tbody>
-		</table>
-
-		<div class="code-block">
-			<pre>{`/* Override individual variables — tints follow automatically */
-.my-tree {
-  --ltree-primary: #667eea;   /* hover/dragover/multi-select tints
-                                  derived via color-mix() */
-  --ltree-success: #10b981;
-  --ltree-danger: #ef4444;
-}
-
-/* Scale everything proportionally with one knob */
-.my-bigger-tree {
-  --ltree-rem: 12px;   /* 20% larger — all dimensions follow */
-}
-
-/* Or scale with document font-size (Pure Admin pattern) */
-.my-tree {
-  --ltree-rem: 1rem;   /* now respects html { font-size: ... } */
-}`}</pre>
+			<fieldset>
+				<legend>4. Brand theme — sets <code>--base-*</code> tokens on the wrapper</legend>
+				<label><input type="radio" bind:group={brandTheme} value="default" /> Default (Bootstrap blue)</label>
+				<label><input type="radio" bind:group={brandTheme} value="material" /> Material (calm blue, soft shadows)</label>
+				<label><input type="radio" bind:group={brandTheme} value="neon" /> Neon (dark, magenta + cyan glow)</label>
+				<label><input type="radio" bind:group={brandTheme} value="sharp" /> Sharp (high-contrast, brutalist)</label>
+				<label><input type="radio" bind:group={brandTheme} value="soft" /> Soft (peach + pink, very rounded)</label>
+				<label><input type="radio" bind:group={brandTheme} value="glass" /> Glass (translucent, blurred)</label>
+				<label><input type="radio" bind:group={brandTheme} value="forest" /> Forest (earth tones, cream ↔ deep forest)</label>
+			</fieldset>
 		</div>
-	</div>
 
-	<!-- Base token integration -->
-	<div class="card">
-		<h2>Base token integration (<code>--base-*</code>)</h2>
-		<p class="description">
-			If you're using svelte-treeview alongside other <code>@keenmate/*</code> components
-			(<code>web-multiselect</code>, <code>web-daterangepicker</code>, etc.), set the shared
-			<code>--base-*</code> tokens once at <code>:root</code> and every component picks them
-			up automatically. Each <code>--ltree-*</code> variable resolves to
-			<code>--base-{`{token}`}</code> first, then to its hardcoded default.
+		<p class="winning-signal">
+			<strong>Winning signal:</strong> {@html winningSignal}
 		</p>
 
-		<div class="code-block">
-			<pre>{`/* One theme, every KM component.
-   --base-font-size-* and --base-border-radius-* are UNITLESS multipliers
-   that the component multiplies by its own --*-rem unit. */
-:root {
-  /* Colors — direct values; tints derived via color-mix() */
-  --base-accent-color: #10b981;
-  --base-text-color-1: #111827;
-  --base-text-color-3: #6b7280;
-  --base-text-color-4: #9ca3af;
-  --base-border-color: #e5e7eb;
-  --base-hover-bg: #f3f4f6;
-  --base-dropdown-bg: #ffffff;
-
-  /* Typography — unitless multipliers (× --ltree-rem) */
-  --base-font-family: 'Inter', system-ui, sans-serif;
-  --base-font-size-xs: 1.2;       /* 12px at default --ltree-rem: 10px */
-  --base-font-size-sm: 1.4;       /* 14px */
-  --base-font-weight-medium: 500;
-
-  /* Radii — unitless multipliers (× --ltree-rem) */
-  --base-border-radius-sm: 0.4;   /* 4px */
-}`}</pre>
+		<div
+			class={['playground-wrapper', wrapperClass, `brand-${brandTheme}`]}
+			data-theme={wrapperDataTheme}
+			data-bs-theme={wrapperBsTheme}
+		>
+			<div class="tree-container playground-tree">
+				<Tree
+					data={sampleData}
+					idMember="id"
+					pathMember="path"
+					sortCallback={sortByName}
+					isSorted={true}
+					expandLevel={3}
+					theme={treeTheme}
+					selectionMode="multi"
+					bind:highlightedPaths={playgroundHighlight}
+					{...getTreeProps()}
+				>
+					{#snippet nodeTemplate(node: any)}
+						<span>{node.data?.icon} {node.data?.name}</span>
+					{/snippet}
+				</Tree>
+			</div>
 		</div>
 
 		<p class="hint">
-			<code>--ltree-*</code> overrides on the tree element itself take precedence over
-			<code>--base-*</code> tokens, so you can still tweak a single tree without affecting the
-			global theme.
+			Tip: combine signals to verify precedence. Set <code>theme="light"</code>
+			with all ancestor classes also set to dark — the per-instance prop should
+			win and the tree stays light.
 		</p>
 	</div>
 
@@ -295,10 +238,10 @@
 		</div>
 
 		<div class="grid-2" style="margin-top: 2rem;">
-			<!-- Dark Theme -->
-			<div class="dark-theme">
-				<h3 style="color: white;">Dark Theme</h3>
-				<div class="tree-container" style="background: #1a1a2e; border-color: #333;">
+			<!-- Dark Theme (via theme="dark" prop — no CSS overrides needed) -->
+			<div class="dark-card">
+				<h3 style="color: white;">Dark Theme <code class="hint-code">theme="dark"</code></h3>
+				<div class="tree-container">
 					<Tree
 						data={sampleData}
 						idMember="id"
@@ -306,6 +249,7 @@
 						sortCallback={sortByName}
 						isSorted={true}
 						expandLevel={3}
+						theme="dark"
 						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
@@ -591,38 +535,654 @@
 		</div>
 	</div>
 
+	<!-- ====== CSS reference (moved below the demos for scannability) ====== -->
+
+	<!-- CSS Variables Reference -->
+	<div class="card">
+		<h2>CSS Variables Reference</h2>
+		<p class="description">
+			Override these CSS variables to customize the tree appearance. Each one chains to a
+			<code>--base-*</code> token shared across other <code>@keenmate/*</code> web components
+			(see "Base token integration" below), then falls back to the listed default. Sized
+			values are <code>calc(N × var(--ltree-rem))</code> where <code>--ltree-rem</code>
+			defaults to <code>10px</code> — change it once to scale everything.
+		</p>
+
+		<table>
+			<thead>
+				<tr>
+					<th>Variable</th>
+					<th>Default</th>
+					<th>Description</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr class="section-row"><td colspan="3">Base sizing unit</td></tr>
+				<tr><td><code>--ltree-rem</code></td><td><code>10px</code></td><td>Base unit multiplied into every size/spacing value. Set to <code>12px</code> for 20% scale, or to <code>1rem</code> to follow document font-size.</td></tr>
+
+				<tr class="section-row"><td colspan="3">Colors</td></tr>
+				<tr><td><code>--ltree-primary</code></td><td><code>var(--base-accent-color, #0d6efd)</code></td><td>Primary color (selection, highlights). Tints derived via <code>color-mix()</code>.</td></tr>
+				<tr><td><code>--ltree-success</code></td><td><code>var(--base-success-color, #198754)</code></td><td>Success color (valid drop targets)</td></tr>
+				<tr><td><code>--ltree-danger</code></td><td><code>var(--base-danger-color, #dc3545)</code></td><td>Danger color (invalid drops)</td></tr>
+				<tr><td><code>--ltree-light</code></td><td><code>var(--base-main-bg, #f8f9fa)</code></td><td>Light background</td></tr>
+				<tr><td><code>--ltree-border</code></td><td><code>var(--base-border-color, #dee2e6)</code></td><td>Border color</td></tr>
+				<tr><td><code>--ltree-body-color</code></td><td><code>var(--base-text-color-1, #212529)</code></td><td>Default text color</td></tr>
+
+				<tr class="section-row"><td colspan="3">Typography</td></tr>
+				<tr><td><code>--ltree-font-family</code></td><td><code>var(--base-font-family, system stack)</code></td><td>Font family for all tree text</td></tr>
+				<tr><td><code>--ltree-node-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Node text size</td></tr>
+				<tr><td><code>--ltree-node-icon-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Per-node icon font size</td></tr>
+				<tr><td><code>--ltree-node-icon-margin-right</code></td><td><code>0.6 × rem</code> (= 6px)</td><td>Gap between node icon and label</td></tr>
+				<tr><td><code>--ltree-node-label-font-weight</code></td><td><code>var(--base-font-weight-medium, 500)</code></td><td>Label weight</td></tr>
+				<tr><td><code>--ltree-node-label-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap after node label</td></tr>
+				<tr><td><code>--ltree-node-path-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Path / debug text size</td></tr>
+				<tr><td><code>--ltree-node-path-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Path / muted text color</td></tr>
+
+				<tr class="section-row"><td colspan="3">Node layout</td></tr>
+				<tr><td><code>--ltree-node-indent-per-level</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Indentation per nesting level</td></tr>
+				<tr><td><code>--ltree-node-content-padding</code></td><td><code>0.4 × rem / 0.8 × rem</code> (= 4px 8px)</td><td>Inner padding of a node row (V / H)</td></tr>
+				<tr><td><code>--ltree-node-content-border-radius</code></td><td><code>(--base-border-radius-sm, 0) × rem</code></td><td>Node row corner rounding</td></tr>
+				<tr><td><code>--ltree-node-hover-bg</code></td><td><code>var(--base-hover-bg, color-mix(primary 8%, transparent))</code></td><td>Hover background — follows <code>--ltree-primary</code> by default</td></tr>
+				<tr><td><code>--ltree-children-margin-top</code></td><td><code>0.2 × rem</code> (= 2px)</td><td>Top margin of child list</td></tr>
+
+				<tr class="section-row"><td colspan="3">Toggle icon</td></tr>
+				<tr><td><code>--ltree-toggle-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>SVG icon size (chevron / +/- / arrow / leaf)</td></tr>
+				<tr><td><code>--ltree-toggle-icon-width</code></td><td><code>2.0 × rem</code> (= 20px)</td><td>Width reserved for the toggle column</td></tr>
+				<tr><td><code>--ltree-toggle-icon-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Icon color (via <code>currentColor</code> mask)</td></tr>
+				<tr><td><code>--ltree-toggle-icon-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap between toggle and node label</td></tr>
+				<tr><td><code>--ltree-toggle-icon-transition</code></td><td><code>transform 0.2s</code></td><td>Rotate animation timing (does not scale)</td></tr>
+
+				<tr class="section-row"><td colspan="3">Checkbox</td></tr>
+				<tr><td><code>--ltree-checkbox-size</code></td><td><code>1.5 × rem</code> (= 15px)</td><td>Checkbox square dimension</td></tr>
+				<tr><td><code>--ltree-checkbox-border-width</code></td><td><code>1.5px</code></td><td>Border thickness (hairline, does not scale)</td></tr>
+				<tr><td><code>--ltree-checkbox-border-color</code></td><td><code>var(--base-border-color, #adb5bd)</code></td><td>Unchecked border</td></tr>
+				<tr><td><code>--ltree-checkbox-border-radius</code></td><td><code>(--base-border-radius-sm, 0.3) × rem</code> (= 3px)</td><td>Corner rounding</td></tr>
+				<tr><td><code>--ltree-checkbox-bg</code></td><td><code>var(--base-input-bg, #fff)</code></td><td>Unchecked background</td></tr>
+				<tr><td><code>--ltree-checkbox-checked-bg</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate background</td></tr>
+				<tr><td><code>--ltree-checkbox-checked-border-color</code></td><td><code>var(--ltree-primary)</code></td><td>Checked / indeterminate border</td></tr>
+				<tr><td><code>--ltree-checkbox-checkmark-color</code></td><td><code>var(--base-text-color-on-accent, #fff)</code></td><td>Tick / dash color</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring-width</code></td><td><code>2px</code></td><td>Focus-visible ring thickness</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring-color</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Focus-visible ring color</td></tr>
+				<tr><td><code>--ltree-checkbox-focus-ring</code></td><td><code>0 0 0 [ring-width] [ring-color]</code></td><td>Composed box-shadow; override directly for full control, or tune the two parts above</td></tr>
+
+				<tr class="section-row"><td colspan="3">Selection &amp; highlight states</td></tr>
+				<tr><td><code>--ltree-highlight-bg</code></td><td><code>#cce8ff</code></td><td>Explorer-style highlight background</td></tr>
+				<tr><td><code>--ltree-highlight-color</code></td><td><code>inherit</code></td><td>Highlight text color</td></tr>
+				<tr><td><code>--ltree-multi-selected-bg</code></td><td><code>color-mix(primary 8%, transparent)</code></td><td>Multi-select tint</td></tr>
+				<tr><td><code>--ltree-multi-selected-outline</code></td><td><code>color-mix(primary 25%, transparent)</code></td><td>Multi-select outline</td></tr>
+
+				<tr class="section-row"><td colspan="3">Drag / drop states</td></tr>
+				<tr><td><code>--ltree-dragover-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Drag-over background tint</td></tr>
+				<tr><td><code>--ltree-dragover-shadow</code></td><td><code>0 0 8px color-mix(primary 40%, transparent)</code></td><td>Drag-over glow shadow</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-bg</code></td><td><code>color-mix(primary 10%, transparent)</code></td><td>Empty-tree placeholder background</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-color</code></td><td><code>var(--ltree-primary)</code></td><td>Placeholder text color</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-border-radius</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Placeholder corner rounding</td></tr>
+				<tr><td><code>--ltree-drop-placeholder-min-height</code></td><td><code>6.0 × rem</code> (= 60px)</td><td>Placeholder min height</td></tr>
+				<tr><td><code>--tree-ghost-bg</code></td><td><code>rgba(59, 130, 246, 0.9)</code></td><td>Touch drag ghost background</td></tr>
+				<tr><td><code>--tree-ghost-color</code></td><td><code>#fff</code></td><td>Touch drag ghost text color</td></tr>
+
+				<tr class="section-row"><td colspan="3">Drop zones (pastel mode)</td></tr>
+				<tr><td><code>--ltree-drop-zone-border-radius</code></td><td><code>0</code></td><td>Drop zone corner rounding</td></tr>
+				<tr><td><code>--ltree-drop-zone-[before|after|child]-bg</code></td><td><code>rgba sage / coral / lavender</code></td><td>Per-zone resting background</td></tr>
+				<tr><td><code>--ltree-drop-zone-[before|after|child]-color</code></td><td><code>matching dark variants</code></td><td>Per-zone resting text color</td></tr>
+				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-bg</code></td><td><code>~85% opacity variants</code></td><td>Active zone background</td></tr>
+				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-color</code></td><td><code>~darker variants</code></td><td>Active zone text color</td></tr>
+				<tr><td><code>--ltree-drop-zone-[before|after|child]-active-shadow</code></td><td><code>0 2px 12px (color, 0.4)</code></td><td>Active zone shadow</td></tr>
+
+				<tr class="section-row"><td colspan="3">Drop zones (glow mode)</td></tr>
+				<tr><td><code>--ltree-drop-glow-[before|after|child]-color</code></td><td><code>0.8-alpha pastel variants</code></td><td>Glow border color per zone</td></tr>
+				<tr><td><code>--ltree-drop-glow-child-bg</code></td><td><code>rgba(167, 155, 198, 0.15)</code></td><td>Glow child zone background tint</td></tr>
+				<tr><td><code>--ltree-drop-glow-size</code></td><td><code>3px</code></td><td>Glow border thickness (hairline, does not scale)</td></tr>
+				<tr><td><code>--ltree-drop-arrow-size</code></td><td><code>2.4 × rem</code> (= 24px)</td><td>Direction arrow size</td></tr>
+				<tr><td><code>--ltree-drop-arrow-position</code></td><td><code>66%</code></td><td>Horizontal arrow position</td></tr>
+				<tr><td><code>--ltree-drop-arrow-[before|after|child]-rotation</code></td><td><code>0 / 0 / 45deg</code></td><td>Arrow rotation per zone</td></tr>
+
+				<tr class="section-row"><td colspan="3">Context menu</td></tr>
+				<tr><td><code>--ltree-context-menu-bg</code></td><td><code>var(--base-dropdown-bg, #fff)</code></td><td>Menu background</td></tr>
+				<tr><td><code>--ltree-context-menu-border-color</code></td><td><code>var(--ltree-border)</code></td><td>Menu border</td></tr>
+				<tr><td><code>--ltree-context-menu-border-radius</code></td><td><code>(--base-border-radius-sm, 0.4) × rem</code> (= 4px)</td><td>Menu rounding</td></tr>
+				<tr><td><code>--ltree-context-menu-shadow</code></td><td><code>var(--base-dropdown-box-shadow, …)</code></td><td>Menu drop shadow</td></tr>
+				<tr><td><code>--ltree-context-menu-min-width</code></td><td><code>15 × rem</code> (= 150px)</td><td>Menu minimum width</td></tr>
+				<tr><td><code>--ltree-context-menu-padding</code></td><td><code>0.4 × rem / 0</code></td><td>Menu inner padding</td></tr>
+				<tr><td><code>--ltree-context-menu-item-padding</code></td><td><code>0.8 × rem / 1.6 × rem</code> (= 8px 16px)</td><td>Item padding</td></tr>
+				<tr><td><code>--ltree-context-menu-item-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Item font size</td></tr>
+				<tr><td><code>--ltree-context-menu-item-color</code></td><td><code>var(--ltree-body-color)</code></td><td>Item color</td></tr>
+				<tr><td><code>--ltree-context-menu-item-hover-bg</code></td><td><code>var(--ltree-light)</code></td><td>Item hover background</td></tr>
+				<tr><td><code>--ltree-context-menu-icon-size</code></td><td><code>1.6 × rem</code> (= 16px)</td><td>Icon column width</td></tr>
+				<tr><td><code>--ltree-context-menu-icon-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Icon font size</td></tr>
+				<tr><td><code>--ltree-context-menu-shortcut-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Shortcut hint color</td></tr>
+				<tr><td><code>--ltree-context-menu-shortcut-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Shortcut hint size</td></tr>
+				<tr><td><code>--ltree-context-menu-arrow-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Submenu arrow color</td></tr>
+				<tr><td><code>--ltree-context-menu-divider-color</code></td><td><code>var(--ltree-border)</code></td><td>Divider line color</td></tr>
+				<tr><td><code>--ltree-context-menu-divider-label-color</code></td><td><code>var(--base-text-color-4, #9ca3af)</code></td><td>Named divider label color</td></tr>
+
+				<tr class="section-row"><td colspan="3">Loading + spinner</td></tr>
+				<tr><td><code>--ltree-loading-bg</code></td><td><code>rgba(255, 255, 255, 0.8)</code></td><td>Loading overlay background</td></tr>
+				<tr><td><code>--ltree-loading-color</code></td><td><code>var(--base-text-color-3, #718096)</code></td><td>"Loading more..." text color</td></tr>
+				<tr><td><code>--ltree-spinner-size</code></td><td><code>3.2 × rem</code> (= 32px)</td><td>Spinner diameter</td></tr>
+				<tr><td><code>--ltree-spinner-track</code></td><td><code>var(--base-border-color, #e2e8f0)</code></td><td>Spinner track (background ring)</td></tr>
+				<tr><td><code>--ltree-spinner-color</code></td><td><code>var(--ltree-primary)</code></td><td>Spinner active color</td></tr>
+
+				<tr class="section-row"><td colspan="3">Scroll highlight (after <code>scrollToPath</code>)</td></tr>
+				<tr><td><code>--ltree-scroll-highlight-bg</code></td><td><code>color-mix(primary 30%, transparent)</code></td><td>Highlight background</td></tr>
+				<tr><td><code>--ltree-scroll-highlight-shadow</code></td><td><code>0 0 0.5em color-mix(primary 40%, transparent)</code></td><td>Highlight glow</td></tr>
+				<tr><td><code>--ltree-scroll-highlight-arrow-color</code></td><td><code>var(--ltree-danger)</code></td><td>Arrow icon color</td></tr>
+			</tbody>
+		</table>
+
+		<div class="code-block">
+			<pre>{`/* Override individual variables — tints follow automatically */
+.my-tree {
+  --ltree-primary: #667eea;   /* hover/dragover/multi-select tints
+                                  derived via color-mix() */
+  --ltree-success: #10b981;
+  --ltree-danger: #ef4444;
+}
+
+/* Scale everything proportionally with one knob */
+.my-bigger-tree {
+  --ltree-rem: 12px;   /* 20% larger — all dimensions follow */
+}
+
+/* Or scale with document font-size (Pure Admin pattern) */
+.my-tree {
+  --ltree-rem: 1rem;   /* now respects html { font-size: ... } */
+}`}</pre>
+		</div>
+	</div>
+
+	<!-- Base token integration -->
+	<div class="card">
+		<h2>Base token integration (<code>--base-*</code>)</h2>
+		<p class="description">
+			If you're using svelte-treeview alongside other <code>@keenmate/*</code> components
+			(<code>web-multiselect</code>, <code>web-daterangepicker</code>, etc.), set the shared
+			<code>--base-*</code> tokens once at <code>:root</code> and every component picks them
+			up automatically. Each <code>--ltree-*</code> variable resolves to
+			<code>--base-{`{token}`}</code> first, then to its hardcoded default.
+		</p>
+
+		<div class="code-block">
+			<pre>{`/* One theme, every KM component.
+   --base-font-size-* and --base-border-radius-* are UNITLESS multipliers
+   that the component multiplies by its own --*-rem unit. */
+:root {
+  /* Colors — direct values; tints derived via color-mix() */
+  --base-accent-color: #10b981;
+  --base-text-color-1: #111827;
+  --base-text-color-3: #6b7280;
+  --base-text-color-4: #9ca3af;
+  --base-border-color: #e5e7eb;
+  --base-hover-bg: #f3f4f6;
+  --base-dropdown-bg: #ffffff;
+
+  /* Typography — unitless multipliers (× --ltree-rem) */
+  --base-font-family: 'Inter', system-ui, sans-serif;
+  --base-font-size-xs: 1.2;       /* 12px at default --ltree-rem: 10px */
+  --base-font-size-sm: 1.4;       /* 14px */
+  --base-font-weight-medium: 500;
+
+  /* Radii — unitless multipliers (× --ltree-rem) */
+  --base-border-radius-sm: 0.4;   /* 4px */
+}`}</pre>
+		</div>
+
+		<p class="hint">
+			<code>--ltree-*</code> overrides on the tree element itself take precedence over
+			<code>--base-*</code> tokens, so you can still tweak a single tree without affecting the
+			global theme.
+		</p>
+	</div>
+
 	<footer>
 		<p><a href="/">&larr; Back to Examples</a></p>
 	</footer>
 </div>
 
 <style>
-	/* Purple theme — set primary once; hover/multi-select/dragover tints follow
-	   via color-mix() in the variable defaults. */
+	/* Purple theme — sets --base-accent-color on the wrapper. The tree's
+	   .ltree-container inherits it and re-substitutes --ltree-primary on its
+	   own scope; every primary-derived tint (hover, multi-select, dragover,
+	   focus ring) follows via color-mix(). */
 	.purple-theme {
-		--ltree-primary: #667eea;
-	}
-
-	/* Dark theme — explicit hover override because 8% primary over dark cards
-	   is barely visible; 20% punches through. */
-	.dark-theme {
-		--ltree-primary: #818cf8;
-		--ltree-node-hover-bg: color-mix(in srgb, #818cf8 20%, transparent);
-		--ltree-body-color: #f9fafb;
-		--ltree-light: #374151;
-		--ltree-border: #4b5563;
-		background: #1f2937;
-		padding: 1rem;
-		border-radius: 8px;
-	}
-
-	.dark-theme :global(.ltree-toggle-icon) {
-		color: #9ca3af !important;
+		--base-accent-color: #667eea;
 	}
 
 	/* Green theme */
 	.green-theme {
-		--ltree-primary: #10b981;
+		--base-accent-color: #10b981;
+	}
+
+	/* Dark theme card — the tree flips via theme="dark"; the card just paints a
+	   dark background so the embedded tree blends with the surrounding chrome. */
+	.dark-card {
+		background: #1f2937;
+		padding: 1rem;
+		border-radius: 8px;
+	}
+	.hint-code {
+		font-size: 0.75em;
+		opacity: 0.7;
+		font-weight: normal;
+		color: #c4b5fd;
+		background: rgba(255, 255, 255, 0.08);
+		padding: 0.1em 0.35em;
+		border-radius: 3px;
+	}
+
+	/* Dark mode playground — interactive controls + live demo tree */
+	.playground-controls {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 1rem;
+		margin: 1rem 0;
+	}
+	.playground-controls fieldset {
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		padding: 0.75rem 1rem;
+		margin: 0;
+		background: #f9fafb;
+	}
+	.playground-controls legend {
+		font-weight: 600;
+		font-size: 0.85rem;
+		color: #374151;
+		padding: 0 0.4rem;
+	}
+	.playground-controls legend code {
+		font-size: 0.95em;
+	}
+	.playground-controls label {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.2rem 0;
+		font-size: 0.875rem;
+		cursor: pointer;
+		line-height: 1.4;
+	}
+	.playground-controls label code {
+		font-size: 0.85em;
+		background: #f3f4f6;
+		padding: 0.05em 0.3em;
+		border-radius: 3px;
+	}
+	.winning-signal {
+		padding: 0.6rem 1rem;
+		background: #eff6ff;
+		border-left: 4px solid #3b82f6;
+		border-radius: 4px;
+		font-size: 0.9rem;
+		color: #1e3a8a;
+		margin: 0.5rem 0 1rem;
+	}
+	/* Playground surfaces — pure CSS theme detection (no JS matchMedia).
+	   Mirrors the precedence in color-scheme.md:
+	     :has(.ltree-container[data-theme]) > [data-theme] on wrapper > light-dark()
+	   Cascade order matters: per-instance :has() rules come last so they win at
+	   equal specificity against the wrapper attribute selectors. */
+
+	/* === WRAPPER === */
+	.playground-wrapper {
+		padding: 1rem;
+		border-radius: 8px;
+		transition: background 0.15s ease;
+		/* OS preference + page color-scheme — light-dark() resolves the branch
+		   from the nearest declared color-scheme (set on <html> by the page-scheme radio). */
+		background: light-dark(#f9fafb, #1f2937);
+	}
+	/* Belt-and-suspenders: catch OS dark even when no page color-scheme is set. */
+	@media (prefers-color-scheme: dark) {
+		.playground-wrapper { background: #1f2937; }
+	}
+	/* Signal #2 — framework theme class/attr set on the wrapper itself. */
+	.playground-wrapper[data-theme='dark'],
+	.playground-wrapper[data-bs-theme='dark'],
+	.playground-wrapper.dark {
+		background: #1f2937;
+	}
+	.playground-wrapper[data-theme='light'] {
+		background: #f9fafb;
+	}
+	/* Signal #3 — per-instance theme on the inner tree. The Tree component
+	   forwards `theme` as `data-theme` on its internal .ltree-container. :has()
+	   lets the wrapper react to that without JS. :global() so Svelte's CSS
+	   scoper doesn't drop the selector as unused. */
+	:global(.playground-wrapper:has(.ltree-container[data-theme='dark'])) {
+		background: #1f2937;
+	}
+	:global(.playground-wrapper:has(.ltree-container[data-theme='light'])) {
+		background: #f9fafb;
+	}
+
+	/* === INNER TREE SURFACE ===
+	   The library never paints a background on .ltree-container — that's the
+	   consumer's job. The demo provides one so dark text remains readable.
+
+	   The border uses var(--ltree-primary) so the active brand theme is visible
+	   at rest (the library's accent normally only shows in interaction states).
+	   We also bump --ltree-multi-selected-bg / outline locally so the pre-
+	   highlighted "Work" node reads strongly against either surface — the
+	   library defaults (8% bg, 25% outline) are intentionally subtle and don't
+	   make a great demo. */
+	.playground-tree {
+		border-radius: 6px;
+		padding: 0.5rem;
+		background: light-dark(#ffffff, #1a1a1a);
+		border: 2px solid var(--ltree-primary);
+		transition: background 0.15s ease;
+		--ltree-multi-selected-bg: color-mix(in srgb, var(--ltree-primary) 18%, transparent);
+		--ltree-multi-selected-outline: color-mix(in srgb, var(--ltree-primary) 50%, transparent);
+	}
+	@media (prefers-color-scheme: dark) {
+		.playground-tree { background: #1a1a1a; }
+	}
+	.playground-wrapper[data-theme='dark'] .playground-tree,
+	.playground-wrapper[data-bs-theme='dark'] .playground-tree,
+	.playground-wrapper.dark .playground-tree {
+		background: #1a1a1a;
+	}
+	.playground-wrapper[data-theme='light'] .playground-tree {
+		background: #ffffff;
+	}
+	/* Per-instance wins via :has() on the tree-container's own data-theme.
+	   :global() so Svelte's scoper doesn't drop the selector as unused. */
+	:global(.playground-tree:has(.ltree-container[data-theme='dark'])) {
+		background: #1a1a1a;
+	}
+	:global(.playground-tree:has(.ltree-container[data-theme='light'])) {
+		background: #ffffff;
+	}
+
+	/* === BRAND THEMES ===
+	   Each theme sets `--base-*` tokens on the playground wrapper. Because the
+	   library declares its --ltree-* variables on .ltree-container (a descendant
+	   of the wrapper), the wrapper's --base-* overrides flow through inheritance
+	   into the tree's scope and re-substitute at the descendant. Modeled on
+	   web-multiselect's examples-theming.html — each theme is a full visual
+	   identity, not just an accent swap. */
+
+	/* === Default — no overrides; relies on --base-accent-color default (#0d6efd). */
+
+	/* === Material — soft shadows, calm blue accent.
+	   Light: light blue + lavender gradient, dark slate text.
+	   Dark: deep indigo gradient, brighter blue accent, light blue text.
+
+	   All theme selectors are wrapped in :global() because Svelte's CSS scoper
+	   otherwise (a) appends a scope hash that inflates the base rule's
+	   specificity above the dark-variant rules, and (b) prunes :has() as
+	   "unused" because static analysis can't see runtime data-theme on the
+	   inner Tree component. With :global, every selector is plain CSS.
+
+	   --base-* color values use light-dark() so the page color-scheme signal
+	   flips them. @media catches OS preference and swaps the gradient (which
+	   can't sit inside light-dark()). The explicit attribute / :has() selectors
+	   catch framework class on the wrapper and per-instance theme on the tree. */
+	:global(.playground-wrapper.brand-material) {
+		--base-accent-color: light-dark(#1976d2, #64b5f6);
+		--base-border-radius-sm: 0.4;
+		--base-text-color-1: light-dark(#212121, #e3f2fd);
+		--base-text-color-3: light-dark(#757575, #90caf9);
+		--base-border-color: light-dark(#e0e0e0, #3949ab);
+		--base-hover-bg: light-dark(#f5f5f5, #283593);
+		background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+	}
+	:global(.playground-wrapper.brand-material .playground-tree) {
+		box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
+		border: 1px solid transparent;
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(.playground-wrapper.brand-material) {
+			--base-main-bg: #1a237e;
+			--base-elevated-bg: #283593;
+			--base-input-bg: #1a237e;
+			background: linear-gradient(135deg, #0d1654 0%, #1a237e 100%);
+		}
+		:global(.playground-wrapper.brand-material .playground-tree) {
+			box-shadow: 0 4px 16px rgba(100, 181, 246, 0.18);
+		}
+	}
+	:global(.playground-wrapper.brand-material[data-theme="dark"]),
+	:global(.playground-wrapper.brand-material[data-bs-theme="dark"]),
+	:global(.playground-wrapper.brand-material.dark),
+	:global(.playground-wrapper.brand-material:has(.ltree-container[data-theme="dark"])) {
+		--base-accent-color: #64b5f6;
+		--base-text-color-1: #e3f2fd;
+		--base-text-color-3: #90caf9;
+		--base-border-color: #3949ab;
+		--base-hover-bg: #283593;
+		--base-main-bg: #1a237e;
+		--base-elevated-bg: #283593;
+		--base-input-bg: #1a237e;
+		background: linear-gradient(135deg, #0d1654 0%, #1a237e 100%);
+	}
+	:global(.playground-wrapper.brand-material[data-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-material[data-bs-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-material.dark .playground-tree),
+	:global(.playground-wrapper.brand-material:has(.ltree-container[data-theme="dark"]) .playground-tree) {
+		box-shadow: 0 4px 16px rgba(100, 181, 246, 0.18);
+	}
+
+	/* === Neon — cyberpunk: deep purple-black surface, magenta + cyan accents,
+	   glowing borders. Intrinsically dark in both modes — its identity is dark.
+	   :global() escapes Svelte's CSS scoper (matches the other themes). */
+	:global(.playground-wrapper.brand-neon) {
+		--base-accent-color: #ff00ff;
+		--base-main-bg: #1a0a1a;
+		--base-elevated-bg: #2a1a2a;
+		--base-input-bg: #1a0a1a;
+		--base-text-color-1: #00ffff;
+		--base-text-color-3: #ff8aff;
+		--base-text-color-4: #cc99cc;
+		--base-border-color: #ff00ff;
+		background: #0a0a0a;
+		background-image: linear-gradient(45deg, rgba(255, 0, 255, 0.1), rgba(0, 255, 255, 0.08));
+	}
+	:global(.playground-wrapper.brand-neon .playground-tree) {
+		background: transparent;
+		border: 1px solid #ff00ff;
+		box-shadow: 0 0 24px rgba(255, 0, 255, 0.3), 0 0 8px rgba(0, 255, 255, 0.2);
+	}
+
+	/* === Sharp — brutalist high-contrast: square corners, thick borders, hard
+	   offset shadow.
+	   Light: black-on-white.
+	   Dark: white-on-black (full inversion — same brutalist DNA, opposite ink). */
+	:global(.playground-wrapper.brand-sharp) {
+		--base-accent-color: light-dark(#000000, #ffffff);
+		--base-text-color-1: light-dark(#000000, #ffffff);
+		--base-text-color-3: light-dark(#333333, #cccccc);
+		--base-border-color: light-dark(#000000, #ffffff);
+		--base-border-radius-sm: 0;
+		--base-font-weight-medium: 700;
+		background: #ffffff;
+		border: 2px solid #000000;
+		border-radius: 0;
+		box-shadow: 6px 6px 0 0 #000000;
+	}
+	:global(.playground-wrapper.brand-sharp .playground-tree) {
+		border: 2px solid #000000;
+		border-radius: 0;
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(.playground-wrapper.brand-sharp) {
+			--base-main-bg: #000000;
+			--base-elevated-bg: #000000;
+			--base-input-bg: #000000;
+			background: #000000;
+			border-color: #ffffff;
+			box-shadow: 6px 6px 0 0 #ffffff;
+		}
+		:global(.playground-wrapper.brand-sharp .playground-tree) {
+			border-color: #ffffff;
+		}
+	}
+	:global(.playground-wrapper.brand-sharp[data-theme="dark"]),
+	:global(.playground-wrapper.brand-sharp[data-bs-theme="dark"]),
+	:global(.playground-wrapper.brand-sharp.dark),
+	:global(.playground-wrapper.brand-sharp:has(.ltree-container[data-theme="dark"])) {
+		--base-accent-color: #ffffff;
+		--base-text-color-1: #ffffff;
+		--base-text-color-3: #cccccc;
+		--base-main-bg: #000000;
+		--base-elevated-bg: #000000;
+		--base-input-bg: #000000;
+		--base-border-color: #ffffff;
+		background: #000000;
+		border-color: #ffffff;
+		box-shadow: 6px 6px 0 0 #ffffff;
+	}
+	:global(.playground-wrapper.brand-sharp[data-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-sharp[data-bs-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-sharp.dark .playground-tree),
+	:global(.playground-wrapper.brand-sharp:has(.ltree-container[data-theme="dark"]) .playground-tree) {
+		border-color: #ffffff;
+	}
+
+	/* === Soft — extra-rounded, warm.
+	   Light: peach + apricot gradient, pink accent, earth-tone text.
+	   Dark: deep wine/burgundy gradient, dusty rose accent, pale rose text. */
+	:global(.playground-wrapper.brand-soft) {
+		--base-accent-color: light-dark(#ff6b9d, #e88aa8);
+		--base-text-color-1: light-dark(#5a3e36, #f5d4dc);
+		--base-text-color-3: light-dark(#8a6f6a, #c8a0ad);
+		--base-border-color: light-dark(#f0d0c0, #5a3a45);
+		--base-hover-bg: light-dark(#fff5f0, #3d2530);
+		--base-border-radius-sm: 1.2;
+		background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+		border-radius: 20px;
+	}
+	:global(.playground-wrapper.brand-soft .playground-tree) {
+		border: 1px solid #ffc0dd;
+		border-radius: 16px;
+		box-shadow: 0 8px 24px rgba(252, 182, 159, 0.3);
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(.playground-wrapper.brand-soft) {
+			--base-main-bg: #2c1820;
+			--base-elevated-bg: #3d2530;
+			--base-input-bg: #2c1820;
+			background: linear-gradient(135deg, #1a0f15 0%, #3a2530 100%);
+		}
+		:global(.playground-wrapper.brand-soft .playground-tree) {
+			border-color: #5a3a45;
+			box-shadow: 0 8px 24px rgba(232, 138, 168, 0.25);
+		}
+	}
+	:global(.playground-wrapper.brand-soft[data-theme="dark"]),
+	:global(.playground-wrapper.brand-soft[data-bs-theme="dark"]),
+	:global(.playground-wrapper.brand-soft.dark),
+	:global(.playground-wrapper.brand-soft:has(.ltree-container[data-theme="dark"])) {
+		--base-accent-color: #e88aa8;
+		--base-text-color-1: #f5d4dc;
+		--base-text-color-3: #c8a0ad;
+		--base-border-color: #5a3a45;
+		--base-hover-bg: #3d2530;
+		--base-main-bg: #2c1820;
+		--base-elevated-bg: #3d2530;
+		--base-input-bg: #2c1820;
+		background: linear-gradient(135deg, #1a0f15 0%, #3a2530 100%);
+	}
+	:global(.playground-wrapper.brand-soft[data-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-soft[data-bs-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-soft.dark .playground-tree),
+	:global(.playground-wrapper.brand-soft:has(.ltree-container[data-theme="dark"]) .playground-tree) {
+		border-color: #5a3a45;
+		box-shadow: 0 8px 24px rgba(232, 138, 168, 0.25);
+	}
+
+	/* === Forest — nature-inspired earth tones.
+	   Light: warm cream surface, deep forest text, dark green accent.
+	   Dark: deep forest surface, pale mint text, brighter green accent. */
+	:global(.playground-wrapper.brand-forest) {
+		--base-accent-color: light-dark(#2d6a4f, #74c69d);
+		--base-main-bg: light-dark(#f0ebe0, #1b2e23);
+		--base-elevated-bg: light-dark(#e8e1d0, #2d4a3a);
+		--base-text-color-1: light-dark(#1b4332, #d8f3dc);
+		--base-text-color-3: light-dark(#4a7c5e, #95d5b2);
+		--base-text-color-4: light-dark(#6a9b80, #6f9a82);
+		--base-border-color: light-dark(#c9b896, #2d4a3a);
+		--base-input-bg: light-dark(#f0ebe0, #1b2e23);
+		--base-hover-bg: light-dark(#e0d8c4, #243d2e);
+		--base-border-radius-sm: 0.6;
+		background: linear-gradient(135deg, #f5f0e8 0%, #d9d0b8 100%);
+		border-radius: 10px;
+	}
+	:global(.playground-wrapper.brand-forest .playground-tree) {
+		background: transparent;
+		border: 1px solid #c9b896;
+		box-shadow: 0 4px 16px rgba(45, 106, 79, 0.15);
+	}
+	/* @media swaps the gradient + dark-tone border/shadow that can't sit in light-dark(). */
+	@media (prefers-color-scheme: dark) {
+		:global(.playground-wrapper.brand-forest) {
+			background: linear-gradient(135deg, #0d1f15 0%, #1b2e23 100%);
+		}
+		:global(.playground-wrapper.brand-forest .playground-tree) {
+			border-color: #2d4a3a;
+			box-shadow: 0 4px 24px rgba(116, 198, 157, 0.2);
+		}
+	}
+	:global(.playground-wrapper.brand-forest[data-theme="dark"]),
+	:global(.playground-wrapper.brand-forest[data-bs-theme="dark"]),
+	:global(.playground-wrapper.brand-forest.dark),
+	:global(.playground-wrapper.brand-forest:has(.ltree-container[data-theme="dark"])) {
+		--base-accent-color: #74c69d;
+		--base-main-bg: #1b2e23;
+		--base-elevated-bg: #2d4a3a;
+		--base-text-color-1: #d8f3dc;
+		--base-text-color-3: #95d5b2;
+		--base-text-color-4: #6f9a82;
+		--base-border-color: #2d4a3a;
+		--base-input-bg: #1b2e23;
+		--base-hover-bg: #243d2e;
+		background: linear-gradient(135deg, #0d1f15 0%, #1b2e23 100%);
+	}
+	:global(.playground-wrapper.brand-forest[data-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-forest[data-bs-theme="dark"] .playground-tree),
+	:global(.playground-wrapper.brand-forest.dark .playground-tree),
+	:global(.playground-wrapper.brand-forest:has(.ltree-container[data-theme="dark"]) .playground-tree) {
+		border-color: #2d4a3a;
+		box-shadow: 0 4px 24px rgba(116, 198, 157, 0.2);
+	}
+
+	/* === Glass — translucent surfaces, frosted backdrop blur.
+	   Light: bold purple→violet gradient with translucent white panels.
+	   Dark: deep midnight gradient with the same translucent palette — same
+	   glass feel, dramatically deeper backdrop. */
+	:global(.playground-wrapper.brand-glass) {
+		--base-accent-color: #ffffff;
+		--base-main-bg: rgba(255, 255, 255, 0.15);
+		--base-elevated-bg: rgba(255, 255, 255, 0.2);
+		--base-input-bg: rgba(255, 255, 255, 0.15);
+		--base-text-color-1: #ffffff;
+		--base-text-color-3: rgba(255, 255, 255, 0.75);
+		--base-text-color-4: rgba(255, 255, 255, 0.55);
+		--base-border-color: rgba(255, 255, 255, 0.4);
+		--base-hover-bg: rgba(255, 255, 255, 0.25);
+		--base-border-radius-sm: 1.2;
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		border-radius: 16px;
+	}
+	:global(.playground-wrapper.brand-glass .playground-tree) {
+		background: rgba(255, 255, 255, 0.12);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 14px;
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+	}
+	@media (prefers-color-scheme: dark) {
+		:global(.playground-wrapper.brand-glass) {
+			background: linear-gradient(135deg, #1a1f4d 0%, #2d1b4d 100%);
+		}
+	}
+	:global(.playground-wrapper.brand-glass[data-theme="dark"]),
+	:global(.playground-wrapper.brand-glass[data-bs-theme="dark"]),
+	:global(.playground-wrapper.brand-glass.dark),
+	:global(.playground-wrapper.brand-glass:has(.ltree-container[data-theme="dark"])) {
+		background: linear-gradient(135deg, #1a1f4d 0%, #2d1b4d 100%);
 	}
 
 	/* Toggle icon live demo */

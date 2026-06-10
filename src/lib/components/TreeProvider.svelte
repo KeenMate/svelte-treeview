@@ -12,6 +12,7 @@
 		...controllerProps
 	}: Props = $props();
 
+	// svelte-ignore state_referenced_locally
 	const controller = createTreeController<T>(controllerProps as TreeControllerProps<T>);
 
 	// Set contexts that Node.svelte expects

@@ -24,11 +24,7 @@
 	animation: ltree-spin 0.8s linear infinite;
 }
 
-@keyframes ltree-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
+/* (@keyframes ltree-spin — moved to animations.css per canonical Tier-2 layout.) */
 
 /* Progressive rendering loading indicator */
 .ltree-loading-more {

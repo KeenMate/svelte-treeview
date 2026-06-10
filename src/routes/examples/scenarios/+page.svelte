@@ -644,6 +644,8 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="cross"
+						getIsDraggableCallback={() => true}
+						getIsDropAllowedCallback={() => true}
 						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
@@ -673,6 +675,8 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
 							onNodeDrop={handleDropA}
 							isLoading={isLoadingA}
 							{...getTreeProps()}
@@ -692,6 +696,8 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
 							onNodeDrop={handleDropB}
 							isLoading={isLoadingB}
 							{...getTreeProps()}
@@ -711,6 +717,8 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
 							onNodeDrop={handleDropC}
 							onNodeClick={onNodeClickC}
 							focusedNode={selectedNodeC}
@@ -732,6 +740,8 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
 							onNodeDrop={handleDropD}
 							isLoading={isLoadingD}
 							{...getTreeProps()}
@@ -763,6 +773,8 @@
 							sortCallback={sortByOrder}
 							expandLevel={3}
 							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
 							onNodeDrop={handleDropE}
 							isLoading={isLoadingE}
 							{...getTreeProps()}

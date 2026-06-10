@@ -345,6 +345,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				onNodeDrop={onSingleDrop}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
@@ -378,6 +380,8 @@
 					isSorted={true}
 					expandLevel={10}
 					dragDropMode="both"
+					getIsDraggableCallback={() => true}
+					getIsDropAllowedCallback={() => true}
 					onNodeDrop={onSourceDrop}
 				>
 					{#snippet nodeTemplate(node: LTreeNode<Item>)}
@@ -398,6 +402,8 @@
 					isSorted={true}
 					expandLevel={10}
 					dragDropMode="both"
+					getIsDraggableCallback={() => true}
+					getIsDropAllowedCallback={() => true}
 					onNodeDrop={onTargetDrop}
 				>
 					{#snippet nodeTemplate(node: LTreeNode<Item>)}
@@ -430,6 +436,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				onNodeDrop={onRestrictedMemberDrop}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<RestrictedItem>)}
@@ -464,6 +472,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				onNodeDrop={onRestrictedCallbackDrop}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
@@ -494,6 +504,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				allowCopy={true}
 				onNodeDrop={onCopyDrop}
 			>
@@ -527,6 +539,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				clickBehavior="select"
 				selectionMode="multi"
 				highlightedNodeClass="ltree-selected-bold"
@@ -560,6 +574,8 @@
 				isSorted={true}
 				expandLevel={10}
 				dragDropMode="self"
+				getIsDraggableCallback={() => true}
+				getIsDropAllowedCallback={() => true}
 				onNodeDrop={onTouchDrop}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}

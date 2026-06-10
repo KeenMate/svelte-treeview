@@ -1,0 +1,5 @@
+/* floating.css — no Floating-UI-anchored chrome lives here.
+   (The context menu has its own substantial styling surface in context-menu.css
+    as a Tier-3 feature; the debug popup is statically positioned. This file is
+    the canonical stub for tooltips, dropdowns, popovers, and menus when more
+    floating surfaces are added.) */

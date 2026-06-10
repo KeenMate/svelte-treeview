@@ -1,0 +1,17 @@
+/* =============================================================================
+   @keyframes — all animation declarations live here.
+   ============================================================================= */
+
+/* Loading spinner (used by .ltree-loading-spinner in loading.css). */
+@keyframes ltree-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Drop-arrow bounce indicator (used by drag-drop.css drop-arrow pseudo-elements). */
+@keyframes bounce {
+	0%, 20%, 50%, 80%, 100% { transform: translateY(-50%); }
+	40% { transform: translateY(-60%); }
+	60% { transform: translateY(-40%); }
+}

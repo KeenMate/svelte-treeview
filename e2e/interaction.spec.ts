@@ -275,6 +275,58 @@ test.describe('Click Behavior tree', () => {
 		// Child 'Work' (1.1) should still be visible — proves Documents stayed expanded.
 		await expect(nodeInCard(card, '1.1')).toBeVisible();
 	});
+
+	// ── Expand-state coverage: each mode's contract for toggling expand ──────
+
+	test('expand-and-focus mode: clicking a node toggles its expand state', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		// Default mode = 'expand-and-focus'. 'Documents' (1) starts expanded
+		// at expandLevel=2, so a click should collapse it.
+		const docs = nodeInCard(card, '1');
+		await expect(nodeInCard(card, '1.1')).toBeVisible(); // baseline
+
+		await nodeContent(docs).click();
+		await expect(nodeInCard(card, '1.1')).toBeHidden();  // collapsed
+
+		await nodeContent(docs).click();
+		await expect(nodeInCard(card, '1.1')).toBeVisible(); // expanded again
+	});
+
+	test('expand mode: clicking a node toggles its expand state', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		await card.getByLabel('Click Behavior:').selectOption('expand');
+
+		const docs = nodeInCard(card, '1');
+		await expect(nodeInCard(card, '1.1')).toBeVisible();
+
+		await nodeContent(docs).click();
+		await expect(nodeInCard(card, '1.1')).toBeHidden();
+
+		await nodeContent(docs).click();
+		await expect(nodeInCard(card, '1.1')).toBeVisible();
+	});
+
+	test('select mode: double-click toggles expand state', async ({ page }) => {
+		await gotoInteraction(page);
+		const card = clickBehaviorCard(page);
+
+		await card.getByLabel('Click Behavior:').selectOption('select');
+
+		const docs = nodeInCard(card, '1');
+		await expect(nodeInCard(card, '1.1')).toBeVisible();
+
+		// Double-click should collapse (the OS-file-explorer pattern this mode
+		// implements). Single-click only sets focus — see the test above.
+		await nodeContent(docs).dblclick();
+		await expect(nodeInCard(card, '1.1')).toBeHidden();
+
+		await nodeContent(docs).dblclick();
+		await expect(nodeInCard(card, '1.1')).toBeVisible();
+	});
 });
 
 // ── Multi-Select tree ───────────────────────────────────────────────────────

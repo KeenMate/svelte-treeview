@@ -1,37 +1,44 @@
-/* =============================================================================
-   @keenmate/svelte-treeview — Component Styles (entry point)
-   =============================================================================
+/* ==============================================================================
+   @keenmate/svelte-treeview — MAIN ENTRY POINT
+   ==============================================================================
+   Cascade layer order (later = higher priority):
+     variables  — :root { --ltree-* } declarations
+     component  — base + feature rules
+     overrides  — dark mode, framework themes, per-instance overrides
 
-   File layout:
-     _variables.css     CSS custom properties at :root (theming surface)
-     _base.css          Tree container, virtual-scroll, layout foundation
-     _node.css          Node row, content, label, path
-     _toggle-icons.css  Toggle column + all 9 Lucide SVG icon classes
-     _checkbox.css      Custom-styled checkbox with indeterminate support
-     _states.css        Selection, highlight, scroll-highlight states
-     _drag-drop.css     Draggable cursor, ghost, drag-over, glow mode + arrows
-     _drop-zones.css    Drop zone overlays (around / above / below / wave / wave2)
-     _context-menu.css  Context menu, submenu, dividers
-     _debug.css         Debug info panel
-     _loading.css       Loading overlay + spinner
+   Consumer override contract:
+   - Any unlayered consumer rule beats every rule below.
+   - Any :root --base-* or --ltree-* declaration beats the variables layer.
 
-   Import order matters — variables MUST be first; states / drag-drop / drop-zones
-   reference variables; context-menu uses some of the same colors but does not
-   depend on earlier rules.
+   BEM-ish convention:
+     .ltree-<element>             — element
+     .ltree-<element>-<modifier>  — state modifier
+   (Legacy class names predate strict BEM and are kept stable for back-compat.)
 
-   Build: lightningcss bundles this file (resolving the @import chain) into
-   dist/styles.css during `npm run prepack`. Consumers import the bundled file:
+   Build: lightningcss-cli bundles this file into dist/styles.css during
+   `npm run prepack`. Consumers import the bundled file:
      import '@keenmate/svelte-treeview/styles.css';
 */
 
-@import './_variables.css';
-@import './_base.css';
-@import './_node.css';
-@import './_toggle-icons.css';
-@import './_checkbox.css';
-@import './_states.css';
-@import './_drag-drop.css';
-@import './_drop-zones.css';
-@import './_context-menu.css';
-@import './_debug.css';
-@import './_loading.css';
+@layer variables, component, overrides;
+
+/* === SKELETON + CANONICAL CONCERNS (Tier 1 + Tier 2 — identical across the suite) === */
+@import url('./variables.css')   layer(variables);
+@import url('./base.css')        layer(component);
+@import url('./controls.css')    layer(component);
+@import url('./floating.css')    layer(component);
+@import url('./states.css')      layer(component);
+@import url('./animations.css')  layer(component);
+
+/* === COMPONENT-SPECIFIC FEATURES (Tier 3 — alphabetized) === */
+@import url('./checkbox.css')    layer(component);
+@import url('./context-menu.css') layer(component);
+@import url('./debug.css')       layer(component);
+@import url('./drag-drop.css')   layer(component);
+@import url('./drop-zones.css')  layer(component);
+@import url('./loading.css')     layer(component);
+@import url('./node.css')        layer(component);
+@import url('./toggle-icons.css') layer(component);
+
+/* === OVERRIDES === */
+@import url('./dark-mode.css')   layer(overrides);

@@ -1,18 +1,27 @@
 /* =============================================================================
-   CSS CUSTOM PROPERTIES — :root level
+   CSS CUSTOM PROPERTIES — scoped to .ltree-container
    =============================================================================
    Every styling value is exposed as a --ltree-* custom property so end users
-   can theme the component at runtime. Each variable follows this resolution
-   chain:
+   can theme the component at runtime.
 
-     1. End-user override:   element { --ltree-x: red; }
-     2. KeenMate base token: --base-x (shared across @keenmate/* components)
-     3. Hardcoded default
+   IMPORTANT: declarations are on .ltree-container (the tree's root element),
+   NOT on :root. This mirrors web-multiselect's :host-scoped pattern: var()
+   substitution happens AT the tree's own element, so an ancestor that sets
+   --base-accent-color (or any --base-*) actually re-tints the tree. Declaring
+   at :root would freeze the substituted value at the document root and ignore
+   any wrapper overrides.
 
-   To override at runtime:
-     .ltree-tree { --ltree-primary: #10b981; --ltree-node-font-size: 1.6rem; }
-   Or globally for all KM components:
-     :root { --base-accent-color: #10b981; }
+   Resolution chain (priority high → low):
+     1. Consumer rule targeting .ltree-container directly:
+          .my-wrap .ltree-container { --ltree-primary: red; }
+     2. Consumer's --base-* set on any ancestor (including :root or a wrapper):
+          .my-wrap { --base-accent-color: red; }
+     3. Hardcoded fallback inside the var() chain below.
+
+   Setting --ltree-* on a wrapper (not on .ltree-container itself) no longer
+   cascades into the tree, because .ltree-container has its own direct rule
+   for every --ltree-* token. To theme a subtree, prefer --base-* on the
+   wrapper, or write `.wrapper .ltree-container { --ltree-* }`.
 
    BASE SIZING UNIT
    ----------------
@@ -21,7 +30,7 @@
    make every dimension scale with document font-size (Pure-Admin pattern).
    ============================================================================= */
 
-:root {
+.ltree-container {
 	/* -------------------------------------------------------------------------
 	   BASE SIZING UNIT
 	   ------------------------------------------------------------------------- */
@@ -30,13 +39,23 @@
 	/* -------------------------------------------------------------------------
 	   COLORS — theme integration via --base-* tokens
 	   Tinted variants are derived via color-mix(); no -rgb companion needed.
+
+	   Color fallbacks use light-dark(<light>, <dark>) so consumers that declare
+	   `html { color-scheme: light dark }` get OS-aware behavior automatically.
+	   The brand accent (--base-accent-color) is treated as theme-independent —
+	   both themes share the same primary.
 	   ------------------------------------------------------------------------- */
 	--ltree-primary: var(--base-accent-color, #0d6efd);
-	--ltree-success: var(--base-success-color, #198754);
-	--ltree-danger: var(--base-danger-color, #dc3545);
-	--ltree-light: var(--base-main-bg, #f8f9fa);
-	--ltree-border: var(--base-border-color, #dee2e6);
-	--ltree-body-color: var(--base-text-color-1, #212529);
+	--ltree-success: var(--base-success-color, light-dark(#198754, #2ea561));
+	--ltree-danger: var(--base-danger-color, light-dark(#dc3545, #f87c86));
+	--ltree-light: var(--base-main-bg, light-dark(#f8f9fa, #1a1a1a));
+	--ltree-elevated-bg: var(--base-elevated-bg, light-dark(#ffffff, #2b2b2b));
+	--ltree-border: var(--base-border-color, light-dark(#dee2e6, #3d3d3d));
+	--ltree-body-color: var(--base-text-color-1, light-dark(#212529, #f5f5f5));
+	/* Tree surface — painted on .ltree-container in base.css so the tree shows
+	   a visible background without consumer wrapping. Override to `transparent`
+	   to retain the pre-rc10 "no surface" behavior. */
+	--ltree-bg: var(--base-main-bg, light-dark(#ffffff, #1a1a1a));
 
 	/* -------------------------------------------------------------------------
 	   TYPOGRAPHY — unitless --base-* multipliers × --ltree-rem
@@ -48,7 +67,7 @@
 	--ltree-node-label-font-weight: var(--base-font-weight-medium, 500);
 	--ltree-node-label-margin-right: calc(0.8 * var(--ltree-rem));
 	--ltree-node-path-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-node-path-color: var(--base-text-color-3, #6c757d);
+	--ltree-node-path-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
 
 	/* -------------------------------------------------------------------------
 	   NODE LAYOUT
@@ -64,7 +83,7 @@
 	   ------------------------------------------------------------------------- */
 	--ltree-toggle-icon-width: calc(2.0 * var(--ltree-rem));
 	--ltree-toggle-icon-size: calc(1.6 * var(--ltree-rem));
-	--ltree-toggle-icon-color: var(--base-text-color-3, #6c757d);
+	--ltree-toggle-icon-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
 	--ltree-toggle-icon-margin-right: calc(0.8 * var(--ltree-rem));
 	--ltree-toggle-icon-transition: transform 0.2s;
 
@@ -73,9 +92,9 @@
 	   ------------------------------------------------------------------------- */
 	--ltree-checkbox-size: calc(1.5 * var(--ltree-rem));
 	--ltree-checkbox-border-width: 1.5px; /* hairline — does not scale */
-	--ltree-checkbox-border-color: var(--base-border-color, #adb5bd);
+	--ltree-checkbox-border-color: var(--base-border-color, light-dark(#adb5bd, #5a5a5a));
 	--ltree-checkbox-border-radius: calc(var(--base-border-radius-sm, 0.3) * var(--ltree-rem));
-	--ltree-checkbox-bg: var(--base-input-bg, #fff);
+	--ltree-checkbox-bg: var(--base-input-bg, light-dark(#ffffff, #1f1f1f));
 	--ltree-checkbox-checked-bg: var(--ltree-primary);
 	--ltree-checkbox-checked-border-color: var(--ltree-primary);
 	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
@@ -104,6 +123,7 @@
 	/* Touch drag ghost */
 	--tree-ghost-bg: color-mix(in srgb, var(--ltree-primary) 90%, transparent);
 	--tree-ghost-color: #fff;
+	--tree-ghost-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
 	/* -------------------------------------------------------------------------
 	   DROP ZONES (before / after / child) — pastel mode
@@ -148,10 +168,14 @@
 	/* -------------------------------------------------------------------------
 	   CONTEXT MENU
 	   ------------------------------------------------------------------------- */
-	--ltree-context-menu-bg: var(--base-dropdown-bg, #fff);
+	/* Dropdown chain: dropdown-bg → elevated-bg → main-bg → light-dark fallback.
+	   Matches base-variables.md "Fallback chains — the four chained variables". */
+	--ltree-context-menu-bg: var(--base-dropdown-bg,
+		var(--base-elevated-bg,
+			var(--base-main-bg, light-dark(#ffffff, #2b2b2b))));
 	--ltree-context-menu-border-color: var(--ltree-border);
 	--ltree-context-menu-border-radius: calc(var(--base-border-radius-sm, 0.4) * var(--ltree-rem));
-	--ltree-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.1));
+	--ltree-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.15));
 	--ltree-context-menu-min-width: calc(15 * var(--ltree-rem));
 	--ltree-context-menu-padding: calc(0.4 * var(--ltree-rem)) 0;
 	--ltree-context-menu-item-padding: calc(0.8 * var(--ltree-rem)) calc(1.6 * var(--ltree-rem));
@@ -160,19 +184,21 @@
 	--ltree-context-menu-item-hover-bg: var(--ltree-light);
 	--ltree-context-menu-icon-size: calc(1.6 * var(--ltree-rem));
 	--ltree-context-menu-icon-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-context-menu-shortcut-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-shortcut-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
 	--ltree-context-menu-shortcut-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-context-menu-arrow-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-arrow-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
 	--ltree-context-menu-divider-color: var(--ltree-border);
-	--ltree-context-menu-divider-label-color: var(--base-text-color-4, #9ca3af);
+	--ltree-context-menu-divider-label-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
 
 	/* -------------------------------------------------------------------------
 	   LOADING OVERLAY + SPINNER
 	   ------------------------------------------------------------------------- */
-	--ltree-loading-bg: rgba(255, 255, 255, 0.8);
-	--ltree-loading-color: var(--base-text-color-3, #718096);
+	/* Loading overlay: semi-transparent surface — use main-bg so it composites
+	   correctly against both light and dark page backgrounds. */
+	--ltree-loading-bg: color-mix(in srgb, var(--base-main-bg, light-dark(#ffffff, #1a1a1a)) 80%, transparent);
+	--ltree-loading-color: var(--base-text-color-3, light-dark(#718096, #a3a3a3));
 	--ltree-spinner-size: calc(3.2 * var(--ltree-rem));
-	--ltree-spinner-track: var(--base-border-color, #e2e8f0);
+	--ltree-spinner-track: var(--base-border-color, light-dark(#e2e8f0, #3d3d3d));
 	--ltree-spinner-color: var(--ltree-primary);
 
 	/* -------------------------------------------------------------------------

@@ -103,8 +103,13 @@ DEPENDENCIES:
 
 STYLING:
 - Pure CSS: src/lib/styles/*.css → bundled via lightningcss to dist/styles.css
-- Partials: _variables.css, _base.css, _node.css, _toggle-icons.css, _checkbox.css, _states.css, _drag-drop.css, _drop-zones.css, _context-menu.css, _debug.css, _loading.css
-- main.css entry uses @import; lightningcss-cli resolves at build time
+- main.css declares `@layer variables, component, overrides;` and wraps every @import in `layer(...)`
+- Tier 1 (skeleton): variables.css, base.css, dark-mode.css (overrides layer)
+- Tier 2 (canonical): controls.css, floating.css, states.css, animations.css (stubs where not needed)
+- Tier 3 (features): node.css, toggle-icons.css, checkbox.css, drag-drop.css, drop-zones.css, context-menu.css, debug.css, loading.css
+- No underscore prefix on file names (legacy SASS convention removed)
+- lightningcss-cli resolves @import at build time
+- Dark mode: light-dark() in color fallbacks + dark-mode.css with @media (prefers-color-scheme: dark), framework classes ([data-theme], [data-bs-theme], .dark), and per-instance `<Tree theme="dark"|"light"/>` prop (forwarded as data-theme on .ltree-container)
 - CSS variables for theming
 - Classes: ltree-selected-bold, ltree-selected-border, ltree-scroll-highlight
 - Drag-over classes: ltree-dragover-highlight, ltree-dragover-glow

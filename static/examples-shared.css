@@ -3,11 +3,21 @@
    Based on web-grid examples-shared.css
    ============================================================================= */
 
-/* Base reset */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+/* Base reset.
+
+   Wrapped in a low-priority @layer so it doesn't clobber layered library
+   components (e.g. @keenmate/svelte-treeview's @layer component rules — an
+   unlayered universal `* { padding: 0 }` would beat every layered rule
+   regardless of specificity, per the CSS layer spec). Showcase-specific
+   rules elsewhere in this file remain unlayered and therefore win over both
+   this reset AND any layered library defaults — exactly the consumer
+   override contract the library documents. */
+@layer reset {
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 }
 
 /* Body and layout */

@@ -110,6 +110,7 @@ export interface TreeControllerProps<T> {
 	isDraggableMember?: string | null | undefined;
 	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 	isDropAllowedMember?: string | null | undefined;
+	getIsDropAllowedCallback?: (node: LTreeNode<T>) => boolean;
 	allowedDropPositionsMember?: string | null | undefined;
 	getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 	isCollapsibleMember?: string | null | undefined;
@@ -317,6 +318,14 @@ export class TreeController<T> {
 	 *  from the focused node. Set on first Shift action, advances on subsequent
 	 *  Shift actions, cleared on any plain navigation. Not exposed via props. */
 	private _shiftCursor: string | null = null;
+	/** Manual double-click detection state for clickBehavior='select'. We can't
+	 *  rely on the browser's native dblclick event in this mode because the first
+	 *  click triggers focus → _setFocusedNode bumps node._rev → flat-mode {#each}
+	 *  destroys and recreates the row, so the second click lands on a different
+	 *  DOM element and the browser refuses to synthesize a dblclick. Tracking
+	 *  the click on the controller (which survives the re-render) sidesteps that. */
+	private _lastSelectClickPath: string | null = null;
+	private _lastSelectClickTime: number = 0;
 	selectedPaths = $state.raw<Set<string>>(new Set());
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
@@ -600,6 +609,7 @@ export class TreeController<T> {
 			props.isDraggableMember,
 			props.getIsDraggableCallback,
 			props.isDropAllowedMember,
+			props.getIsDropAllowedCallback,
 			props.allowedDropPositionsMember,
 			props.displayValueMember,
 			props.getDisplayValueCallback,
@@ -834,6 +844,25 @@ export class TreeController<T> {
 					}
 				}
 			});
+		});
+
+		// Virtual scroll: clamp scroll position when content shrinks (e.g. after filter)
+		// Without this, vsScrollTop stays at its old (large) value while vsTotalHeight
+		// drops, so vsStartIndex falls out of range and the rendered slice is empty —
+		// the scroll appears stuck because the browser silently clamps the container's
+		// actual scrollTop but our derived state never re-reads it.
+		$effect(() => {
+			if (!this.vsActive || !this.vsContainerRef) return;
+			const maxScrollTop = Math.max(
+				0,
+				this.vsTotalHeight - this.vsContainerRef.clientHeight
+			);
+			if (this.vsScrollTop > maxScrollTop) {
+				this.vsScrollTop = maxScrollTop;
+				if (this.vsContainerRef.scrollTop > maxScrollTop) {
+					this.vsContainerRef.scrollTop = maxScrollTop;
+				}
+			}
 		});
 
 		// Context menu global event listeners
@@ -1588,7 +1617,12 @@ export class TreeController<T> {
 
 	/** Get whether a node is draggable (proxies LTree resolution: callback > member > node property). */
 	getNodeIsDraggable(node: LTreeNode<T>): boolean {
-		return this.tree?.getNodeIsDraggable(node) ?? true;
+		return this.tree?.getNodeIsDraggable(node) ?? false;
+	}
+
+	/** Get whether a node accepts drops (proxies LTree resolution: callback > member > node property). */
+	getNodeIsDropAllowed(node: LTreeNode<T>): boolean {
+		return this.tree?.getNodeIsDropAllowed(node) ?? false;
 	}
 
 	/** Get whether a node is collapsible (proxies LTree resolution: callback > member > node property). */
@@ -1894,6 +1928,33 @@ export class TreeController<T> {
 	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean; forceMultiSemantics?: boolean }) {
 		if (this.contextMenuVisible) {
 			this.closeContextMenu();
+		}
+
+		// Manual dblclick detection for clickBehavior='select' — see the comment
+		// on _lastSelectClickPath for why the browser's native dblclick can't be
+		// trusted in this mode. Threshold matches Windows' default double-click
+		// interval (500ms is the system default; we use a slightly tighter 400ms
+		// to avoid coupling unrelated clicks).
+		if (this.clickBehavior === 'select' && !modifiers?.ctrl && !modifiers?.shift) {
+			const now = Date.now();
+			const isDouble =
+				this._lastSelectClickPath === node.path &&
+				now - this._lastSelectClickTime < 400;
+			if (isDouble) {
+				this._lastSelectClickPath = null;
+				this._lastSelectClickTime = 0;
+				const canonical = this.tree.getNodeByPath(node.path) ?? node;
+				if (canonical.hasChildren && canonical.isCollapsible !== false) {
+					if (canonical.isExpanded) {
+						this.collapseNodes(canonical.path);
+					} else {
+						this.expandNodes(canonical.path);
+					}
+				}
+				return;
+			}
+			this._lastSelectClickPath = node.path;
+			this._lastSelectClickTime = now;
 		}
 
 		// In single mode, mouse Ctrl/Shift+click degrade to plain click. Programmatic
@@ -2484,6 +2545,10 @@ export class TreeController<T> {
 		// selectable (preserves prior highlight state for unselectable rows).
 		if (node.isSelectable && !this.highlightedPaths.has(node.path)) {
 			requestAnimationFrame(() => {
+				// Esc-cancel can fire dragend before this rAF runs, leaving the source
+				// node "stuck" highlighted after a cancelled drag. Bail if the drag is
+				// no longer in progress.
+				if (!this.isDragInProgress) return;
 				this._clearAllHighlightFlags();
 				node.isHighlighted = true;
 				node._rev = (node._rev || 0) + 1;

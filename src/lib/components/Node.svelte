@@ -323,12 +323,12 @@
 		}
 	}
 
-	function _onNodeDblClicked(event?: MouseEvent) {
-		if (clickBehavior === 'select') {
-			// In select mode, double-click expands/collapses
-			toggleExpanded()
-		}
-	}
+	// Note: double-click in clickBehavior='select' is detected on the controller
+	// side (see _lastSelectClickPath in TreeController). The browser's native
+	// dblclick event isn't reliable here: the first click bumps node._rev for
+	// the focus update, which destroys+recreates the row in flat-mode rendering,
+	// so the browser sees the two clicks on different elements and skips the
+	// dblclick. Manual detection on the (stable) controller avoids that.
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -390,10 +390,6 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				_onNodeClicked(e);
-			}}
-			ondblclick={(e) => {
-				e.stopPropagation();
-				_onNodeDblClicked(e);
 			}}
 			oncontextmenu={(e) => {
 				e.stopPropagation();

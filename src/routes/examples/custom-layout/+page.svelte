@@ -483,7 +483,8 @@
 
 					<!-- Sort dropdown -->
 					{#if filesShowSortMenu}
-						<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div class="ios-sort-overlay" onclick={() => { filesShowSortMenu = false; }}></div>
 						<div class="ios-sort-menu">
 							{#each [
@@ -564,7 +565,8 @@
 
 				<!-- Detail bottom sheet -->
 				{#if filesShowDetail && filesSelectedFile}
-					<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<div class="ios-overlay" onclick={() => { filesShowDetail = false; }}></div>
 					<div class="ios-detail-sheet">
 						<div class="ios-detail-handle"></div>
@@ -665,6 +667,8 @@
 			isSorted={true}
 			expandLevel={1}
 			dragDropMode="self"
+			getIsDraggableCallback={() => true}
+			getIsDropAllowedCallback={() => true}
 			onNodeDrop={(dropNode, draggedNode, position) => {
 				tokenDropLog = [`Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name}"`, ...tokenDropLog.slice(0, 4)];
 				if (position === 'child' && dropNode) {
@@ -797,6 +801,8 @@
 			isSorted={true}
 			expandLevel={1}
 			dragDropMode="self"
+			getIsDraggableCallback={() => true}
+			getIsDropAllowedCallback={() => true}
 			onNodeDrop={(dropNode, draggedNode, position) => {
 				const msg = `Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
 				dendroDropLog = [msg, ...dendroDropLog.slice(0, 4)];
@@ -855,6 +861,8 @@
 			isSorted={true}
 			expandLevel={1}
 			dragDropMode="self"
+			getIsDraggableCallback={() => true}
+			getIsDropAllowedCallback={() => true}
 			onNodeDrop={(dropNode, draggedNode, position) => {
 				const msg = `Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
 				dendroDropLog = [msg, ...dendroDropLog.slice(0, 4)];

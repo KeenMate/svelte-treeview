@@ -35,6 +35,7 @@ export function createLTree<T>(
 	_isDraggableMember?: string | null | undefined,
 	_getIsDraggableCallback?: (node: LTreeNode<T>) => boolean,
 	_isDropAllowedMember?: string | null | undefined,
+	_getIsDropAllowedCallback?: (node: LTreeNode<T>) => boolean,
 	_allowedDropPositionsMember?: string | null | undefined,
 	_displayValueMember?: string | null | undefined,
 	_getDisplayValueCallback?: (node: LTreeNode<T>) => string,
@@ -143,6 +144,7 @@ export function createLTree<T>(
 		isDraggableMember: _isDraggableMember,
 		getIsDraggableCallback: _getIsDraggableCallback,
 		isDropAllowedMember: _isDropAllowedMember,
+		getIsDropAllowedCallback: _getIsDropAllowedCallback,
 		allowedDropPositionsMember: _allowedDropPositionsMember,
 		hasChildrenMember: _hasChildrenMember,
 		displayValueMember: _displayValueMember,
@@ -300,9 +302,11 @@ export function createLTree<T>(
 				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
 				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 
-				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
+				if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
+				else if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
-				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
+				if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
+				else if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
 				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
 
 				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
@@ -875,6 +879,12 @@ export function createLTree<T>(
 			if (this.getIsDraggableCallback) return this.getIsDraggableCallback(node);
 			if (!shouldCalculateIsDraggable && node.data) return getField(node.data, _isDraggableMember!);
 			return node.isDraggable;
+		},
+
+		getNodeIsDropAllowed(node: LTreeNode<T>): boolean {
+			if (this.getIsDropAllowedCallback) return this.getIsDropAllowedCallback(node);
+			if (!shouldCalculateIsDropAllowed && node.data) return getField(node.data, _isDropAllowedMember!);
+			return node.isDropAllowed;
 		},
 
 		getNodeIsCollapsible(node: LTreeNode<T>): boolean {
@@ -1571,9 +1581,11 @@ export function createLTree<T>(
 				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
 				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 
-				if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
+				if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
+				else if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
 				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
-				if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
+				if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
+				else if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
 				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
 
 				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);

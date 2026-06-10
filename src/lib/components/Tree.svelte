@@ -40,6 +40,7 @@
 		isDraggableMember?: string | null | undefined;
 		getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 		isDropAllowedMember?: string | null | undefined;
+		getIsDropAllowedCallback?: (node: LTreeNode<T>) => boolean;
 		allowedDropPositionsMember?: string | null | undefined;
 		getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 		isCollapsibleMember?: string | null | undefined;
@@ -165,6 +166,11 @@
 		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
 
 		// VISUALS
+		/** Per-instance theme override. Forwarded to the root `.ltree-container`
+		 *  as `data-theme="dark"|"light"`, which the stylesheet uses to flip the
+		 *  tree's colors independently of the surrounding page. Leave undefined to
+		 *  inherit from the page (OS preference, framework classes, etc.). */
+		theme?: 'dark' | 'light' | null | undefined;
 		bodyClass?: string | null | undefined;
 		highlightedNodeClass?: string | null | undefined;
 		focusedNodeClass?: string | null | undefined;
@@ -205,6 +211,7 @@
 		isDraggableMember,
 		getIsDraggableCallback,
 		isDropAllowedMember,
+		getIsDropAllowedCallback,
 		allowedDropPositionsMember,
 		getAllowedDropPositionsCallback,
 		isCollapsibleMember,
@@ -299,6 +306,7 @@
 		getContextMenuItemsCallback,
 
 		// VISUALS
+		theme,
 		bodyClass,
 		expandIconClass = 'ltree-icon-expand',
 		collapseIconClass = 'ltree-icon-collapse',
@@ -316,6 +324,12 @@
 	}: Props = $props();
 
 	// ── Create controller ───────────────────────────────────────────────
+	// Each prop here captures its INITIAL value only — that's intentional. Every
+	// reactive prop is re-synced into the controller via $effect blocks below
+	// (search for "Sync props → controller"), so the controller stays in step
+	// with parent changes. The svelte-ignore suppresses the 80+ warnings the
+	// compiler would otherwise fire for each non-closure prop reference here.
+	// svelte-ignore state_referenced_locally
 	const controller = createTreeController<T>({
 		idMember,
 		pathMember,
@@ -331,6 +345,7 @@
 		isDraggableMember,
 		getIsDraggableCallback,
 		isDropAllowedMember,
+		getIsDropAllowedCallback,
 		allowedDropPositionsMember,
 		getAllowedDropPositionsCallback,
 		isCollapsibleMember,
@@ -412,7 +427,12 @@
 	});
 
 	// ── Apply navigation overrides if provided ─────────────────────────
+	// Snapshot at init only — navigation handlers aren't expected to swap mid-
+	// lifetime. Consumers passing a new object on rerender would not see it
+	// applied; if that becomes a need, hoist into an $effect.
+	// svelte-ignore state_referenced_locally
 	if (navigationOverrides) {
+		// svelte-ignore state_referenced_locally
 		controller.navigation = { ...controller.createDefaultNavigation(), ...navigationOverrides };
 	}
 
@@ -715,6 +735,7 @@
 				| "isDraggableMember"
 				| "getIsDraggableCallback"
 				| "isDropAllowedMember"
+				| "getIsDropAllowedCallback"
 				| "displayValueMember"
 				| "getDisplayValueCallback"
 				| "searchValueMember"
@@ -793,6 +814,7 @@
 		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
 		if (updates.getIsDraggableCallback !== undefined) getIsDraggableCallback = updates.getIsDraggableCallback;
 		if (updates.isDropAllowedMember !== undefined) isDropAllowedMember = updates.isDropAllowedMember;
+		if (updates.getIsDropAllowedCallback !== undefined) getIsDropAllowedCallback = updates.getIsDropAllowedCallback;
 		if (updates.displayValueMember !== undefined) displayValueMember = updates.displayValueMember;
 		if (updates.getDisplayValueCallback !== undefined) getDisplayValueCallback = updates.getDisplayValueCallback;
 		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
@@ -959,9 +981,11 @@
 <svelte:window onkeydown={handleContextMenuKeydown} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class="ltree-container"
 	tabindex="0"
+	data-theme={theme}
 	bind:this={treeContainerRef}
 	onkeydown={handleTreeKeydown}
 	ondragenter={controller.handleTreeDragEnter}

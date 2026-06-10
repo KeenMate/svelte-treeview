@@ -108,6 +108,7 @@ export interface Ltree<T> {
 	isDraggableMember: string | null | undefined;
 	getIsDraggableCallback?: (node: LTreeNode<T>) => boolean;
 	isDropAllowedMember: string | null | undefined;
+	getIsDropAllowedCallback?: (node: LTreeNode<T>) => boolean;
 	allowedDropPositionsMember: string | null | undefined;
 	getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 	isCollapsibleMember: string | null | undefined;
@@ -118,6 +119,7 @@ export interface Ltree<T> {
 	// Method to get allowed drop positions (uses callback or member)
 	getNodeAllowedDropPositions(node: LTreeNode<T>): DropPosition[] | null | undefined;
 	getNodeIsDraggable(node: LTreeNode<T>): boolean;
+	getNodeIsDropAllowed(node: LTreeNode<T>): boolean;
 	getNodeIsCollapsible(node: LTreeNode<T>): boolean;
 
 	// Methods

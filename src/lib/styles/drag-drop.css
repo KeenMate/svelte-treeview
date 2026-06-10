@@ -35,7 +35,7 @@
 	font-family: var(--ltree-font-family);
 	pointer-events: none;
 	z-index: 10000;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	box-shadow: var(--tree-ghost-shadow);
 	white-space: nowrap;
 	max-width: 200px;
 	overflow: hidden;
@@ -74,11 +74,7 @@
 	box-shadow: var(--ltree-dragover-shadow) !important;
 }
 
-@keyframes bounce {
-	0%, 20%, 50%, 80%, 100% { transform: translateY(-50%); }
-	40% { transform: translateY(-60%); }
-	60% { transform: translateY(-40%); }
-}
+/* (@keyframes bounce — moved to animations.css per canonical Tier-2 layout.) */
 
 /* Drag-over and drop validity states applied to .ltree-node-content */
 .ltree-node-content.ltree-drag-over {

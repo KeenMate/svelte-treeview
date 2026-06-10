@@ -23,7 +23,8 @@ export default async function globalSetup(config: FullConfig) {
 		'/test/drag-drop',
 		'/test/branch-operations',
 		'/test/keyboard-nav',
-		'/test/expand-collapse'
+		'/test/expand-collapse',
+		'/test/theming'
 	];
 
 	const browser = await chromium.launch();

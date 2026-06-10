@@ -32,6 +32,8 @@
 .ltree-container {
 	position: relative;
 	outline: none;
+	background: var(--ltree-bg);
+	color: var(--ltree-body-color);
 }
 
 .ltree-virtual-scroll {

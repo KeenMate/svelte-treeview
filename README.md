@@ -6,7 +6,7 @@ A high-performance, feature-rich hierarchical tree view component for Svelte 5 w
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
-## What's New in v5.0.0-rc09
+## What's New in v5.0.0-rc10
 
 - **Three-level selection model**: New `selectionMode: 'single' | 'multi'` prop (default `'single'`) cleanly separates the **focused** node (cursor), the **highlighted** set (Ctrl/Shift+click range), and **selected** checkboxes. When `showCheckboxes` is off, highlight mirrors into `selectedPaths` automatically — so consumers always have a single "what's selected" set to read regardless of UI style. Programmatic `highlightNode` / `highlightNodes` / `clearHighlight` respect `{ silent: true }`.
 - **Multi-drag the whole highlight set**: With `selectionMode='multi'`, Ctrl/Shift+click several rows and drag any one of them — the entire top-level-selected subset moves together. Descendants of highlighted ancestors ride along inside their subtree (not extracted). The set lands as siblings after/before/under `dropNode` in source order.

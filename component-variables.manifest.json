@@ -6,7 +6,8 @@
 		{ "name": "base-accent-color", "required": true, "usage": "Primary accent — selection, drop-zones, focus rings, debug panel. Tints derived via color-mix()." },
 		{ "name": "base-success-color", "required": false, "usage": "Drop-valid border and dragover highlight" },
 		{ "name": "base-danger-color", "required": false, "usage": "Drop-invalid border, danger context-menu items, scroll-highlight arrows" },
-		{ "name": "base-main-bg", "required": false, "usage": "Used for --ltree-light (context-menu hover tint, debug stat chips)" },
+		{ "name": "base-main-bg", "required": false, "usage": "Used for --ltree-light (context-menu hover tint, debug stat chips). Light fallback uses light-dark() for OS-aware dark mode." },
+		{ "name": "base-elevated-bg", "required": false, "usage": "Elevated surface for context-menu (via dropdown chain) and --ltree-elevated-bg. Light fallback uses light-dark()." },
 		{ "name": "base-border-color", "required": true, "usage": "Default border color (checkbox, context-menu, spinner track)" },
 		{ "name": "base-hover-bg", "required": false, "usage": "Node row hover background" },
 		{ "name": "base-text-color-1", "required": true, "usage": "Primary body text color (node labels, context-menu items)" },
@@ -28,8 +29,9 @@
 		{ "name": "ltree-primary", "category": "color", "usage": "Primary accent color (selection, focus, links). Tints derived via color-mix()." },
 		{ "name": "ltree-success", "category": "color", "usage": "Success color (drop-valid border, dragover-highlight)" },
 		{ "name": "ltree-danger", "category": "color", "usage": "Danger color (drop-invalid, scroll-highlight arrows, danger menu items)" },
-		{ "name": "ltree-light", "category": "color", "usage": "Light surface (context-menu hover, debug stat chips)" },
-		{ "name": "ltree-border", "category": "color", "usage": "Default border color" },
+		{ "name": "ltree-light", "category": "color", "usage": "Light surface (context-menu hover, debug stat chips). Light-dark-aware via fallback chain." },
+		{ "name": "ltree-elevated-bg", "category": "surface", "usage": "Elevated surface used as the default context-menu background (chains through --base-elevated-bg)." },
+		{ "name": "ltree-border", "category": "color", "usage": "Default border color. Light-dark-aware via fallback chain." },
 		{ "name": "ltree-body-color", "category": "color", "usage": "Default body text color" },
 
 		{ "name": "ltree-font-family", "category": "typography", "usage": "Font family for all tree text" },
@@ -110,6 +112,7 @@
 
 		{ "name": "tree-ghost-bg", "category": "state", "usage": "Touch drag ghost background (legacy prefix, kept for backward compat)" },
 		{ "name": "tree-ghost-color", "category": "state", "usage": "Touch drag ghost text color (legacy prefix)" },
+		{ "name": "tree-ghost-shadow", "category": "state", "usage": "Touch drag ghost drop shadow (legacy prefix)" },
 
 		{ "name": "ltree-context-menu-bg", "category": "context-menu", "usage": "Menu background" },
 		{ "name": "ltree-context-menu-border-color", "category": "context-menu", "usage": "Menu border color" },

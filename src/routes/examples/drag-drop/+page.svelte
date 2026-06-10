@@ -11,6 +11,7 @@
 		name: string;
 		icon: string;
 		sortOrder: number;
+		isDraggable?: boolean;
 	};
 
 	// Extended type with allowedDropPositions for restricted drop demo
@@ -18,12 +19,15 @@
 		allowedDropPositions?: DropPosition[];
 	};
 
-	// Source tree data with sortOrder for reorganization
+	// Source tree data. Most items are draggable; "File C" is pinned (not
+	// draggable) to demo per-node opt-out under the new isDraggable=false default.
+	// Draggability is resolved via getIsDraggableCallback below — items without
+	// the field default to true; only explicit `false` opts out.
 	let sourceData = $state<FileItem[]>([
 		{ id: 1, path: '1', name: 'Source Folder', icon: '📁', sortOrder: 10 },
 		{ id: 2, path: '1.1', name: 'File A', icon: '📄', sortOrder: 10 },
 		{ id: 3, path: '1.2', name: 'File B', icon: '📄', sortOrder: 20 },
-		{ id: 4, path: '1.3', name: 'File C', icon: '📄', sortOrder: 30 },
+		{ id: 4, path: '1.3', name: '🔒 File C (pinned)', icon: '📄', sortOrder: 30, isDraggable: false },
 		{ id: 5, path: '2', name: 'Another Folder', icon: '📁', sortOrder: 20 },
 		{ id: 6, path: '2.1', name: 'Document 1', icon: '📝', sortOrder: 10 },
 		{ id: 7, path: '2.2', name: 'Document 2', icon: '📝', sortOrder: 20 }
@@ -219,17 +223,20 @@
 		const nodes: FileItem[] = [];
 		let id = 1000;
 
-		// Create 10 root folders with sortOrder
+		// Create 10 root folders with sortOrder. Every 7th item is pinned
+		// (not draggable) so the demo shows the per-node opt-out at scale.
+		let counter = 0;
+		const pin = () => (++counter % 7 === 0 ? { isDraggable: false } : {});
 		for (let i = 1; i <= 10; i++) {
-			nodes.push({ id: id++, path: `${i}`, name: `Folder ${i}`, icon: '📁', sortOrder: i * 10 });
+			nodes.push({ id: id++, path: `${i}`, name: `Folder ${i}`, icon: '📁', sortOrder: i * 10, ...pin() });
 
 			// Each root has 3 subfolders
 			for (let j = 1; j <= 3; j++) {
-				nodes.push({ id: id++, path: `${i}.${j}`, name: `Subfolder ${i}.${j}`, icon: '📂', sortOrder: j * 10 });
+				nodes.push({ id: id++, path: `${i}.${j}`, name: `Subfolder ${i}.${j}`, icon: '📂', sortOrder: j * 10, ...pin() });
 
 				// Each subfolder has 2-3 files
 				for (let k = 1; k <= 2 + (i % 2); k++) {
-					nodes.push({ id: id++, path: `${i}.${j}.${k}`, name: `File ${i}.${j}.${k}`, icon: '📄', sortOrder: k * 10 });
+					nodes.push({ id: id++, path: `${i}.${j}.${k}`, name: `File ${i}.${j}.${k}`, icon: '📄', sortOrder: k * 10, ...pin() });
 				}
 			}
 		}
@@ -245,8 +252,9 @@
 	// === Restricted Drop Positions Demo ===
 	// Data with allowedDropPositions to restrict where nodes can be dropped
 	let restrictedData = $state<RestrictedFileItem[]>([
-		// Trash folder: only accepts drops as children (can't drop before/after)
-		{ id: 101, path: '1', name: '🗑️ Trash', icon: '', sortOrder: 10, allowedDropPositions: ['child'] },
+		// Trash folder: only accepts drops as children, and itself is pinned
+		// (not draggable) — you can drop INTO it but not move the folder around.
+		{ id: 101, path: '1', name: '🗑️ Trash (pinned)', icon: '', sortOrder: 10, allowedDropPositions: ['child'], isDraggable: false },
 		{ id: 102, path: '1.1', name: 'Deleted Item 1', icon: '📄', sortOrder: 10 },
 		{ id: 103, path: '1.2', name: 'Deleted Item 2', icon: '📄', sortOrder: 20 },
 
@@ -279,7 +287,7 @@
 		{ id: 503, path: '1.2', name: 'Newsletter', icon: '📰', sortOrder: 20 },
 		{ id: 504, path: '2', name: 'Archive', icon: '📦', sortOrder: 20 },
 		{ id: 505, path: '2.1', name: 'Old Stuff', icon: '📜', sortOrder: 10 },
-		{ id: 506, path: '3', name: 'Drafts', icon: '📝', sortOrder: 30 },
+		{ id: 506, path: '3', name: '🔒 Drafts (pinned)', icon: '📝', sortOrder: 30, isDraggable: false },
 	]);
 	let touchLog = $state<string[]>([]);
 
@@ -410,6 +418,8 @@
 						idMember="id"
 						pathMember="path"
 						orderMember="sortOrder"
+						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
+						getIsDropAllowedCallback={() => true}
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
@@ -444,6 +454,8 @@
 						idMember="id"
 						pathMember="path"
 						orderMember="sortOrder"
+						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
+						getIsDropAllowedCallback={() => true}
 						sortCallback={sortByOrder}
 						expandLevel={3}
 						dragDropMode="both"
@@ -523,6 +535,8 @@
 				idMember="id"
 				pathMember="path"
 				orderMember="sortOrder"
+				getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
+				getIsDropAllowedCallback={() => true}
 				allowedDropPositionsMember="allowedDropPositions"
 				sortCallback={sortByOrder}
 				isSorted={true}
@@ -594,6 +608,8 @@ const data = [
 				pathMember="path"
 				orderMember="sortOrder"
 				displayValueMember="name"
+				getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
+				getIsDropAllowedCallback={() => true}
 				sortCallback={sortByOrder}
 				isSorted={true}
 				expandLevel={3}

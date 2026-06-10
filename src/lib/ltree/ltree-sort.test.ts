@@ -19,6 +19,7 @@ describe('LTree Sorting', () => {
 			undefined, // isDraggableMember
 			undefined, // getIsDraggableCallback
 			undefined, // isDropAllowedMember
+			undefined, // getIsDropAllowedCallback
 			undefined, // allowedDropPositionsMember
 			'name', // displayValueMember
 			undefined, // getDisplayValueCallback

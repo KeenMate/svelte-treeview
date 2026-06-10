@@ -330,6 +330,8 @@
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="both"
+						getIsDraggableCallback={() => true}
+						getIsDropAllowedCallback={() => true}
 						bind:focusedNode={selectedNode}
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}

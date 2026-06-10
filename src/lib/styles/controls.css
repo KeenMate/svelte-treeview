@@ -1,0 +1,4 @@
+/* controls.css — no interactive form controls in this component.
+   (The checkbox lives in checkbox.css since it has substantial styling surface
+    and is a Tier-3 feature; this file is the canonical stub for buttons,
+    inputs, and other form chrome the tree doesn't render.) */
