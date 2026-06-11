@@ -8,6 +8,16 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 
 ## What's New in v5.0.0-rc10
 
+- **Built-in dark mode covering all four signals**: A new `dark-mode.css` partial flips the tree's surface, text, border, and accent palette when any of the canonical signals is active — OS preference (`prefers-color-scheme: dark`), page `<html style="color-scheme: dark">` resolved via `light-dark()`, framework theme classes (`[data-theme="dark"]`, `[data-bs-theme="dark"]`, `.dark`), and the new per-instance `theme` prop. Symmetric `light` selectors let a single tree force light on an otherwise-dark page. Zero JavaScript — pure CSS resolution.
+- **`theme` prop on `<Tree>`**: `'dark' | 'light' | null | undefined`. Forwarded to the root `.ltree-container` as `data-theme`, where per-instance CSS selectors take over and beat ambient signals. Leave `undefined` to inherit from the page.
+- **CSS variables rescoped from `:root` to `.ltree-container`**: Mirrors the `:host`-scoped pattern from sibling `@keenmate/*` components and is the only way `--base-*` theming actually works at subtree scope. A wrapper around the tree that sets `--base-accent-color: red` now re-tints the tree (it previously had no effect because the substitution was frozen at `:root`). Multiple trees on the same page can be themed differently via wrapper-scoped `--base-*` overrides. Consumer note: setting `--ltree-*` directly on a wrapper no longer cascades — use `--base-*` on the wrapper or target `.ltree-container` explicitly.
+- **`--ltree-bg` — the tree paints its own surface**: `.ltree-container` gets a `background: var(--ltree-bg)` so consumers don't need to wrap the tree in a colored container for a visible surface. Override to `transparent` to restore the pre-rc10 layered behavior. Companion `--ltree-elevated-bg` reads through the `--base-elevated-bg` chain for floating chrome (context menu).
+- **CSS file layout aligned with the Bliss web-component guidelines**: All `_xxx.css` partials renamed to `xxx.css`, `main.css` now declares `@layer variables, component, overrides;` and imports each partial into the matching layer. Consumers' unlayered overrides automatically beat every rule in the library — no `!important` needed. Note: if your app ships an unlayered universal CSS reset (`* { padding: 0 }` from normalize / Bootstrap / Tailwind preflight / etc.), wrap it in a low-priority `@layer reset` or the tree's defaults won't apply.
+- **`getIsDropAllowedCallback` prop + `getIsDraggableCallback` seeded at insert-time**: Callback variant for `isDropAllowedMember`, matching the pattern rc09 introduced for `getIsExpandedCallback` / `getIsSelectableCallback` / `getIsSelectedCallback`. Also, the existing `getIsDraggableCallback` prop is now actually applied during the seed walk — previously it was only consumed lazily in some paths.
+- **Bug fixes**: Virtual scroll no longer gets stuck at bottom after a filter shrinks the tree. Double-click to expand in `clickBehavior='select'` mode finally works (the browser's native `dblclick` event couldn't fire because the first click destroyed the row via the focus re-render; the controller now detects the double manually).
+
+## What's New in v5.0.0-rc09
+
 - **Three-level selection model**: New `selectionMode: 'single' | 'multi'` prop (default `'single'`) cleanly separates the **focused** node (cursor), the **highlighted** set (Ctrl/Shift+click range), and **selected** checkboxes. When `showCheckboxes` is off, highlight mirrors into `selectedPaths` automatically — so consumers always have a single "what's selected" set to read regardless of UI style. Programmatic `highlightNode` / `highlightNodes` / `clearHighlight` respect `{ silent: true }`.
 - **Multi-drag the whole highlight set**: With `selectionMode='multi'`, Ctrl/Shift+click several rows and drag any one of them — the entire top-level-selected subset moves together. Descendants of highlighted ancestors ride along inside their subtree (not extracted). The set lands as siblings after/before/under `dropNode` in source order.
 - **OS-explorer drag-start sync**: Grabbing a non-highlighted node now replaces the highlight with just that node before the drag begins, matching Windows Explorer / macOS Finder. Previously the prior highlight stayed visually stuck while the drag silently carried only the grabbed node.
@@ -17,13 +27,6 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 - **SCSS → pure CSS**: `main.scss` (1095 lines) split into eleven `_*.css` partials bundled by `lightningcss-cli` into `dist/styles.css`. `sass` removed from devDependencies. `./styles.scss` package export removed — switch to `./styles.css`.
 
 > **Breaking changes** in this release include the `selectionMode='single'` default (Ctrl/Shift+click no longer auto-multi-selects without opt-in), `selectedPaths` becoming populated in no-checkbox trees (mirrored from highlight), removal of `lastHighlightedPath` / `isHighlightAnchor` / `--ltree-*-rgb` / SCSS variable overrides, and `--ltree-node-indent-per-level` now scaling with `--ltree-rem` instead of document `rem`. See CHANGELOG for migration notes.
-
-## What's New in v5.0.0-rc08
-
-- **`{ silent: true }` on highlight/selection methods**: Update tree state from URL params or other external sources without firing `onNodeClick` / `onHighlightChange` / `onSelectionChange` — perfect for deep links where you don't want the change callback to re-trigger your form loader. Applies to `highlightNode`, `highlightNodes`, `clearHighlight`, and `deselectAll`.
-- **Array variants for expand/collapse**: `expandNodes`, `collapseNodes`, `expandAll`, and `collapseAll` now take `string | string[]`. Open or close several places in one call.
-- **Exclusive focus mode**: Pass `{ exclusive: true }` to `expandNodes` / `expandAll` to open the target path and collapse everything else in a single pass — no two-step flicker compared to `collapseAll() + expandNodes(path)`.
-- **`noEmit` option for batching**: Suppress the change emit on individual expand/collapse calls when chaining several operations; emit once at the end.
 
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
