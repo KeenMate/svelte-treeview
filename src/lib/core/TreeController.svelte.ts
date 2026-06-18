@@ -1023,10 +1023,60 @@ export class TreeController<T> {
 		position: 'before' | 'after' | 'child'
 	): { success: boolean; error?: string } {
 		this._skipInsertArray = true;
+		// Capture the affected path set BEFORE the move: any highlighted /
+		// selected path that is the source itself or a descendant of it needs
+		// to be remapped onto the new location. Without this the path Sets
+		// keep stale strings after a multi-drag, so subsequent operations work
+		// on dangling paths and `_clearAllHighlightFlags` can't find the moved
+		// nodes to reset their isHighlighted flag. Mirrors web-treeview's fix.
+		const sourceNode = this.tree?.getNodeByPath(sourcePath);
+		const sep = this.treePathSeparator;
+		const collect = (paths: Set<string>): Map<string, string> => {
+			const m = new Map<string, string>();
+			for (const p of paths) {
+				if (p === sourcePath || p.startsWith(sourcePath + sep)) {
+					m.set(p, p.substring(sourcePath.length));
+				}
+			}
+			return m;
+		};
+		const highlightAffected = collect(this.highlightedPaths);
+		const selectedAffected = collect(this.selectedPaths);
+		const shiftCursorSuffix =
+			this._shiftCursor && highlightAffected.has(this._shiftCursor)
+				? highlightAffected.get(this._shiftCursor)
+				: undefined;
+
 		const result = this.tree?.moveNode(sourcePath, targetPath, position) || {
 			success: false,
 			error: 'Tree not initialized'
 		};
+
+		if (result.success && sourceNode) {
+			const newPath = sourceNode.path; // tree.moveNode mutates this in place
+			if (highlightAffected.size > 0) {
+				const next = new Set(this.highlightedPaths);
+				for (const [oldP, suffix] of highlightAffected) {
+					next.delete(oldP);
+					next.add(newPath + suffix);
+				}
+				this.highlightedPaths = next; // reassign for $state.raw reactivity
+			}
+			if (selectedAffected.size > 0) {
+				const next = new Set(this.selectedPaths);
+				for (const [oldP, suffix] of selectedAffected) {
+					next.delete(oldP);
+					next.add(newPath + suffix);
+				}
+				this.selectedPaths = next;
+			}
+			if (shiftCursorSuffix !== undefined) {
+				this._shiftCursor = newPath + shiftCursorSuffix;
+			}
+			// focusedNode is the same LTreeNode reference; its .path was updated
+			// in place by tree.moveNode, so it auto-recovers — no remap needed.
+		}
+
 		tick().then(() => {
 			this._skipInsertArray = false;
 		});
