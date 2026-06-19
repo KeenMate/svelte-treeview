@@ -423,6 +423,12 @@ export class TreeController<T> {
 	// Drag and drop
 	draggedNode: LTreeNode<any> | null = $state.raw(null);
 	isDragInProgress = $state(false);
+	// Snapshot of highlightedPaths taken when the OS-convention selection sync
+	// in _onNodeDragStart replaces the highlight with the dragged node. Restored
+	// on dragend if the drag was cancelled (dropEffect === 'none'); cleared
+	// otherwise. Null when no replacement happened (e.g. dragging a node that
+	// was already in the highlight set).
+	private _preDragHighlightSnapshot: Set<string> | null = null;
 	hoveredNodeForDrop = $state.raw<LTreeNode<any> | null>(null);
 	activeDropPosition = $state<DropPosition | null>(null);
 	currentDropOperation = $state<DropOperation>('move');
@@ -1807,10 +1813,24 @@ export class TreeController<T> {
 
 		const elementId = `${this.treeId}-${node.id}`;
 		const rootEl = containerElement || this.containerElement;
-		const element = rootEl
-			? rootEl.querySelector(`#${CSS.escape(elementId)}`)
-			: document.getElementById(elementId);
-		const contentDiv = element?.querySelector('.ltree-node-content') as HTMLElement | null;
+		const findContent = (): HTMLElement | null => {
+			const el = rootEl
+				? rootEl.querySelector(`#${CSS.escape(elementId)}`)
+				: document.getElementById(elementId);
+			return (el?.querySelector('.ltree-node-content') as HTMLElement | null) ?? null;
+		};
+		// Progressive flat rendering adds newly-revealed rows in rAF-deferred
+		// batches (initialBatchSize, doubling each step). After expandNodes +
+		// tick() the immediate batch is in DOM but rows past that batch arrive
+		// over subsequent frames. Retry across up to ~6 frames before giving up.
+		let contentDiv = findContent();
+		if (!contentDiv) {
+			for (let i = 0; i < 6 && !contentDiv; i++) {
+				await new Promise((r) => requestAnimationFrame(r));
+				await tick();
+				contentDiv = findContent();
+			}
+		}
 
 		if (!contentDiv) {
 			console.warn(`[Tree ${this.treeId}] DOM element not found for node ID: ${elementId}`);
@@ -2575,10 +2595,32 @@ export class TreeController<T> {
 			allowCopy: this.allowCopy,
 			treeId: this.treeId
 		});
+		dragLogger.debug('[drag-esc] _onNodeDragStart', {
+			path: node.path,
+			isSelectable: node.isSelectable,
+			alreadyHighlighted: this.highlightedPaths.has(node.path),
+			highlightedPathsBefore: Array.from(this.highlightedPaths)
+		});
 
 		this.draggedNode = node;
 		this.isDragInProgress = true;
 		this.onNodeDragStartHandler?.(node, event);
+
+		// The container-level `ondragend` listener on `.ltree-container` misses
+		// the cancellation path when the rAF below calls `tree.refresh()`: the
+		// refresh detaches the source row, so the subsequent `dragend` (on the
+		// detached element) has no DOM ancestors to bubble through and never
+		// reaches the container. Attach the listener directly on the source
+		// element — direct-element listeners still fire after detachment.
+		const srcEl = event.currentTarget as HTMLElement | null;
+		if (srcEl) {
+			const onEnd = (e: DragEvent) => {
+				srcEl.removeEventListener('dragend', onEnd);
+				dragLogger.debug('[drag-esc] direct dragend listener fired on source');
+				this._onNodeDragEnd(e);
+			};
+			srcEl.addEventListener('dragend', onEnd);
+		}
 
 		// OS-convention selection sync: if the user grabs a node that isn't part
 		// of the current highlight set, replace the highlight with just that node.
@@ -2594,11 +2636,21 @@ export class TreeController<T> {
 		// Skipped when the node is already in the set (multi-drag) or not
 		// selectable (preserves prior highlight state for unselectable rows).
 		if (node.isSelectable && !this.highlightedPaths.has(node.path)) {
+			dragLogger.debug('[drag-esc] scheduling rAF selection sync');
 			requestAnimationFrame(() => {
 				// Esc-cancel can fire dragend before this rAF runs, leaving the source
 				// node "stuck" highlighted after a cancelled drag. Bail if the drag is
 				// no longer in progress.
+				dragLogger.debug('[drag-esc] rAF fired', {
+					isDragInProgress: this.isDragInProgress,
+					currentHighlight: Array.from(this.highlightedPaths)
+				});
 				if (!this.isDragInProgress) return;
+				// Snapshot the prior highlight so _onNodeDragEnd can restore it if
+				// the drag is Esc-cancelled. Without this, the user is left with the
+				// dragged node selected even though they cancelled the operation.
+				this._preDragHighlightSnapshot = new Set(this.highlightedPaths);
+				dragLogger.debug('[drag-esc] snapshot captured', Array.from(this._preDragHighlightSnapshot));
 				this._clearAllHighlightFlags();
 				node.isHighlighted = true;
 				node._rev = (node._rev || 0) + 1;
@@ -2608,14 +2660,47 @@ export class TreeController<T> {
 				this._mirrorHighlightToSelected();
 				this.tree.refresh();
 			});
+		} else {
+			dragLogger.debug('[drag-esc] rAF NOT scheduled', {
+				isSelectable: node.isSelectable,
+				alreadyHighlighted: this.highlightedPaths.has(node.path)
+			});
 		}
 	}
 
 	_onNodeDragEnd = (event: DragEvent) => {
+		const dropEffect = event.dataTransfer?.dropEffect;
 		dragLogger.debug('Drag ended', {
-			dropEffect: event.dataTransfer?.dropEffect,
+			dropEffect,
 			operation: this.currentDropOperation
 		});
+		dragLogger.debug('[drag-esc] _onNodeDragEnd', {
+			dropEffect,
+			operation: this.currentDropOperation,
+			snapshot: this._preDragHighlightSnapshot ? Array.from(this._preDragHighlightSnapshot) : null,
+			currentHighlight: Array.from(this.highlightedPaths),
+			willRestore: dropEffect === 'none' && !!this._preDragHighlightSnapshot
+		});
+		// Esc-cancel / drop-on-invalid-target: restore the pre-drag highlight
+		// so the dragged node doesn't end up "stuck" selected.
+		if (dropEffect === 'none' && this._preDragHighlightSnapshot) {
+			const prior = this._preDragHighlightSnapshot;
+			dragLogger.debug('[drag-esc] restoring highlight to', Array.from(prior));
+			this._clearAllHighlightFlags();
+			this.highlightedPaths = new Set(prior);
+			for (const path of prior) {
+				const n = this.tree.getNodeByPath(path);
+				if (n) {
+					n.isHighlighted = true;
+					n._rev = (n._rev || 0) + 1;
+				}
+			}
+			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
+			this.tree.refresh();
+			dragLogger.debug('[drag-esc] restore complete', { highlightedPathsAfter: Array.from(this.highlightedPaths) });
+		}
+		this._preDragHighlightSnapshot = null;
 		this._resetDragState();
 	};
 

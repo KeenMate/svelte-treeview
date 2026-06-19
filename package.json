@@ -1,6 +1,6 @@
 {
 	"name": "@keenmate/svelte-treeview",
-	"version": "5.0.0-rc10",
+	"version": "5.0.0-rc11",
 	"scripts": {
 		"dev": "vite dev --port 17777",
 		"build": "vite build && npm run prepack",
@@ -102,5 +102,8 @@
 	"homepage": "https://github.com/keenmate/svelte-treeview#readme",
 	"bugs": {
 		"url": "https://github.com/keenmate/svelte-treeview/issues"
+	},
+	"dependencies": {
+		"@floating-ui/dom": "^1.7.6"
 	}
 }

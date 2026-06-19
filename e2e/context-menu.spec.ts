@@ -200,12 +200,11 @@ test.describe('Callback approach', () => {
 		await rightClick(card, '1'); // Documents
 
 		const exportItem = menuItem(card, 'Export As...');
-		// Has-children class is what flips the submenu from display:none to block on hover.
 		await expect(exportItem).toHaveClass(/ltree-context-menu-has-children/);
 
-		// Submenu is in the DOM but hidden until hover.
-		const submenu = exportItem.locator('.ltree-context-submenu').first();
-		await expect(submenu).toBeHidden();
+		// Submenu mounts on hover (Floating UI), positioned as a sibling under the root menu.
+		const submenu = menuIn(card).locator('.ltree-context-submenu').first();
+		await expect(submenu).toHaveCount(0);
 
 		await exportItem.hover();
 		await expect(submenu).toBeVisible();
@@ -222,7 +221,7 @@ test.describe('Callback approach', () => {
 
 		const exportItem = menuItem(card, 'Export As...');
 		await exportItem.hover();
-		const submenu = exportItem.locator('.ltree-context-submenu').first();
+		const submenu = menuIn(card).locator('.ltree-context-submenu').first();
 		await submenu.locator('.ltree-context-menu-item', { hasText: 'JSON' }).first().click();
 
 		await expect(menuIn(card)).toHaveCount(0);

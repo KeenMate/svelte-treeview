@@ -45,17 +45,9 @@
 	background-color: color-mix(in srgb, var(--ltree-danger) 10%, transparent);
 }
 
-/* Submenu: show on hover */
+/* Items with submenus: arrow indicates expandability */
 .ltree-context-menu-item.ltree-context-menu-has-children {
 	cursor: default;
-}
-
-.ltree-context-menu-item.ltree-context-menu-has-children > .ltree-context-submenu {
-	display: none;
-}
-
-.ltree-context-menu-item.ltree-context-menu-has-children:hover > .ltree-context-submenu {
-	display: block;
 }
 
 .ltree-context-menu-icon {
@@ -119,16 +111,7 @@
 	letter-spacing: 0.05em;
 }
 
-/* Submenu */
+/* Submenu: position handled by Floating UI; inherits .ltree-context-menu chrome */
 .ltree-context-submenu {
-	position: absolute;
-	left: 100%;
-	top: 0;
-	background: var(--ltree-context-menu-bg);
-	border: 1px solid var(--ltree-context-menu-border-color);
-	border-radius: var(--ltree-context-menu-border-radius);
-	box-shadow: var(--ltree-context-menu-shadow);
-	padding: var(--ltree-context-menu-padding);
-	min-width: var(--ltree-context-menu-min-width);
 	z-index: 1001;
 }

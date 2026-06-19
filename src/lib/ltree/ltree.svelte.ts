@@ -752,6 +752,10 @@ export function createLTree<T>(
 					}
 				}
 				// Walk currently-expanded subtree, collapse anything off-spine.
+				// Bumping _rev on each mutation forces the flat-mode keyed {#each} to
+				// re-mount the affected Node component so its toggle-icon class
+				// reflects the new isExpanded value. Without the bump the row is
+				// reused, and `class:expanded` on the toggle icon ends up stale.
 				const trim = (node: LTreeNode<T>) => {
 					for (const key in node.children) {
 						const child = node.children[key];
@@ -760,6 +764,7 @@ export function createLTree<T>(
 							trim(child);
 						} else if (self.getNodeIsCollapsible(child)) {
 							child.isExpanded = false;
+							child._rev = (child._rev || 0) + 1;
 							hasChanges = true;
 							trim(child);
 						}
@@ -777,6 +782,7 @@ export function createLTree<T>(
 						node = node.children[segment];
 						if (!node.isExpanded) {
 							node.isExpanded = true;
+							node._rev = (node._rev || 0) + 1;
 							hasChanges = true;
 						}
 					} else {

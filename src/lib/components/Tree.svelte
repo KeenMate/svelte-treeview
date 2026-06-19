@@ -1,6 +1,8 @@
 <script lang="ts" generics="T">
 	import type { Index, SearchOptions } from 'flexsearch';
 	import Node from './Node.svelte';
+	import ContextMenuLevel from './ContextMenuLevel.svelte';
+	import { computePosition, autoUpdate, offset, flip, shift } from '@floating-ui/dom';
 	import { type LTreeNode } from '../ltree/ltree-node.svelte.js';
 	import {
 		type InsertArrayResult,
@@ -453,6 +455,32 @@
 		if (treeContainerRef) {
 			controller.containerElement = treeContainerRef;
 		}
+	});
+
+	// ── Context menu element + Floating UI positioning ─────────────────
+	let contextMenuEl = $state<HTMLDivElement | null>(null);
+	$effect(() => {
+		if (!controller.contextMenuVisible || !contextMenuEl) return;
+		const xOff = controller.contextMenuXOffset ?? 0;
+		const yOff = controller.contextMenuYOffset ?? 0;
+		const virtualRef = {
+			getBoundingClientRect: () => {
+				const ax = controller.contextMenuX + xOff;
+				const ay = controller.contextMenuY + yOff;
+				return { x: ax, y: ay, width: 0, height: 0, top: ay, left: ax, right: ax, bottom: ay, toJSON() { return this; } };
+			}
+		};
+		const menu = contextMenuEl;
+		return autoUpdate(virtualRef, menu, () => {
+			computePosition(virtualRef, menu, {
+				strategy: 'fixed',
+				placement: 'bottom-start',
+				middleware: [offset(0), flip(), shift({ padding: 8 })]
+			}).then(({ x, y }) => {
+				menu.style.left = `${x}px`;
+				menu.style.top = `${y}px`;
+			});
+		});
 	});
 
 	// ── Sync props → controller (one-way: parent prop changes flow in) ─
@@ -1235,63 +1263,14 @@
 
 	<!-- Context Menu -->
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
-		<div class="ltree-context-menu" style="left: {controller.contextMenuX}px; top: {controller.contextMenuY}px;" role="menu">
+		<div bind:this={contextMenuEl} class="ltree-context-menu" role="menu">
 			{#if getContextMenuItemsCallback}
 				{@const menuEntries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
-				{#snippet renderEntries(entries: ContextMenuEntry[])}
-					{#each entries as entry}
-						{#if 'divider' in entry}
-							<div class="ltree-context-menu-divider" role="separator">
-								{#if entry.label}
-									<span class="ltree-context-menu-divider-label">{entry.label}</span>
-								{/if}
-							</div>
-						{:else if entry.isVisible !== false}
-							{@const hasChildren = entry.children && entry.children.length > 0}
-							<div
-								class="ltree-context-menu-item {entry.className || ''}"
-								class:ltree-context-menu-item-disabled={entry.isDisabled}
-								class:ltree-context-menu-has-children={hasChildren}
-								role="menuitem"
-								tabindex={entry.isDisabled ? -1 : 0}
-								onclick={async () => {
-									if (!entry.isDisabled && !hasChildren) {
-										try {
-											await entry.onclick?.();
-										} catch (error) {
-											console.error('Context menu callback error:', error);
-										}
-									}
-								}}
-								onkeydown={async (e) => {
-									if ((e.key === 'Enter' || e.key === ' ') && !entry.isDisabled && !hasChildren) {
-										e.preventDefault();
-										try {
-											await entry.onclick?.();
-										} catch (error) {
-											console.error('Context menu callback error:', error);
-										}
-									}
-								}}
-							>
-								{#if entry.icon}
-									<span class="ltree-context-menu-icon">{entry.icon}</span>
-								{/if}
-								<span class="ltree-context-menu-label">{entry.label}</span>
-								{#if entry.shortcut}
-									<span class="ltree-context-menu-shortcut">{entry.shortcut}</span>
-								{/if}
-								{#if hasChildren}
-									<span class="ltree-context-menu-arrow">&#x25B8;</span>
-									<div class="ltree-context-submenu" role="menu">
-										{@render renderEntries(entry.children!)}
-									</div>
-								{/if}
-							</div>
-						{/if}
-					{/each}
-				{/snippet}
-				{@render renderEntries(menuEntries)}
+				<ContextMenuLevel
+					entries={menuEntries}
+					contextNode={controller.contextMenuNode}
+					closeContextMenu={controller.closeContextMenu.bind(controller)}
+				/>
 			{:else if contextMenu}
 				{@render contextMenu(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
 			{/if}
