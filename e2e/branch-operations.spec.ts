@@ -17,11 +17,11 @@ const PAGE = '/test/branch-operations';
 
 async function gotoFixture(page: Page) {
 	await page.goto(PAGE);
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 function nodeByPath(scope: Locator | Page, path: string): Locator {
-	return scope.locator(`.ltree-node[data-tree-path="${path}"]`).first();
+	return scope.locator(`.stv__node[data-tree-path="${path}"]`).first();
 }
 
 function readCount(page: Page, testId: string): Promise<number> {

@@ -2,8 +2,8 @@
    @keyframes — all animation declarations live here.
    ============================================================================= */
 
-/* Loading spinner (used by .ltree-loading-spinner in loading.css). */
-@keyframes ltree-spin {
+/* Loading spinner (used by .stv__loading-spinner in loading.css). */
+@keyframes stv-spin {
 	to {
 		transform: rotate(360deg);
 	}

@@ -543,7 +543,7 @@
 				getIsDropAllowedCallback={() => true}
 				clickBehavior="select"
 				selectionMode="multi"
-				highlightedNodeClass="ltree-selected-bold"
+				highlightedNodeClass="stv__node-content--highlight-bold"
 				bind:focusedNode={multiFocused}
 				bind:highlightedPaths={multiHighlighted}
 				onNodeDrop={onMultiDrop}

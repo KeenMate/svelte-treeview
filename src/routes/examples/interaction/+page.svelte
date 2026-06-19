@@ -78,7 +78,7 @@
 		// Default this demo to multi so Ctrl/Shift+click work out of the box —
 		// the library default is 'single'.
 		selectionMode: 'multi',
-		highlightedNodeClass: 'ltree-selected-bold',
+		highlightedNodeClass: 'stv__node-content--highlight-bold',
 		focusedNodeClass: 'demo-focused-outline',
 		showCheckboxes: false,
 		checkboxMode: 'independent',
@@ -112,10 +112,10 @@
 	}
 
 	const highlightedNodeClassOptions = [
-		{ value: 'ltree-selected-bold', label: 'Bold' },
-		{ value: 'ltree-selected-border', label: 'Border' },
-		{ value: 'ltree-selected-brackets', label: 'Brackets' },
-		{ value: 'ltree-selected-highlight', label: 'Highlight (Explorer-style)' }
+		{ value: 'stv__node-content--highlight-bold', label: 'Bold' },
+		{ value: 'stv__node-content--highlight-border', label: 'Border' },
+		{ value: 'stv__node-content--highlight-brackets', label: 'Brackets' },
+		{ value: 'stv__node-content--highlight-fill', label: 'Highlight (Explorer-style)' }
 	];
 
 	// Focused-style options are page-scoped demo classes (see the style block below).
@@ -484,15 +484,15 @@ End    Go to last visible node
 	   row — applications define their own and pass via `focusedNodeClass`.
 	   These are :global so they apply to nodes rendered inside <Tree>. */
 	:global(.demo-focused-outline) {
-		box-shadow: inset 3px 0 0 0 var(--ltree-primary, #0d6efd);
+		box-shadow: inset 3px 0 0 0 var(--stv-primary, #0d6efd);
 	}
 	:global(.demo-focused-underline) {
 		text-decoration: underline;
-		text-decoration-color: var(--ltree-primary, #0d6efd);
+		text-decoration-color: var(--stv-primary, #0d6efd);
 		text-decoration-thickness: 2px;
 		text-underline-offset: 3px;
 	}
 	:global(.demo-focused-bg) {
-		background-color: color-mix(in srgb, var(--ltree-primary, #0d6efd) 12%, transparent);
+		background-color: color-mix(in srgb, var(--stv-primary, #0d6efd) 12%, transparent);
 	}
 </style>

@@ -94,7 +94,7 @@ function parseDigits(s: string): number {
 }
 
 async function visibleNodeCount(page: Page): Promise<number> {
-	return treeContainer(page).locator('.ltree-node').count();
+	return treeContainer(page).locator('.stv__node').count();
 }
 
 /**
@@ -278,7 +278,7 @@ test.describe('Search / Filter', () => {
 		await expect(card.locator('.search-counter')).toContainText('/', { timeout: ACTION_TIMEOUT });
 
 		// At least one node with 'Engineering' in its label survives the filter.
-		await expect(treeContainer(page).locator('.ltree-node-content', { hasText: 'Engineering' }).first()).toBeVisible({ timeout: ACTION_TIMEOUT });
+		await expect(treeContainer(page).locator('.stv__node-content', { hasText: 'Engineering' }).first()).toBeVisible({ timeout: ACTION_TIMEOUT });
 	});
 
 	test('Escape clears the search and removes the counter', async ({ page }) => {

@@ -56,7 +56,7 @@ function treeInCard(card: Locator): Locator {
 
 function nodeByPath(tree: Locator, path: string): Locator {
 	// data-tree-path holds the raw path string, so slashes / colons just work.
-	return tree.locator(`.ltree-node[data-tree-path="${cssAttrEscape(path)}"]`).first();
+	return tree.locator(`.stv__node[data-tree-path="${cssAttrEscape(path)}"]`).first();
 }
 
 function cssAttrEscape(s: string): string {
@@ -67,7 +67,7 @@ function cssAttrEscape(s: string): string {
 
 async function gotoData(page: Page) {
 	await page.goto(PAGE);
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 // ── Path-Based Data Structure ──────────────────────────────────────────────

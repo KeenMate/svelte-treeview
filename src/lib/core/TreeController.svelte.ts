@@ -291,9 +291,9 @@ export class TreeController<T> {
 		showCheckboxes: false,
 		checkboxMode: 'independent',
 		clickTogglesCheckbox: false,
-		expandIconClass: 'ltree-icon-expand',
-		collapseIconClass: 'ltree-icon-collapse',
-		leafIconClass: 'ltree-icon-leaf',
+		expandIconClass: 'stv__toggle-icon--expand',
+		collapseIconClass: 'stv__toggle-icon--collapse',
+		leafIconClass: 'stv__toggle-icon--leaf',
 		highlightedNodeClass: undefined,
 		focusedNodeClass: undefined,
 		dragOverNodeClass: undefined,
@@ -378,9 +378,9 @@ export class TreeController<T> {
 	showCheckboxes = $state(false);
 	checkboxMode = $state<CheckboxMode>('independent');
 	clickTogglesCheckbox = $state(false);
-	expandIconClass = $state('ltree-icon-expand');
-	collapseIconClass = $state('ltree-icon-collapse');
-	leafIconClass = $state('ltree-icon-leaf');
+	expandIconClass = $state('stv__toggle-icon--expand');
+	collapseIconClass = $state('stv__toggle-icon--collapse');
+	leafIconClass = $state('stv__toggle-icon--leaf');
 	toggleIconMode = $state<ToggleIconMode>('rotate');
 	highlightedNodeClass = $state<string | null | undefined>(undefined);
 	focusedNodeClass = $state<string | null | undefined>(undefined);
@@ -390,7 +390,7 @@ export class TreeController<T> {
 	dropZoneStart = $state<number | string>(33);
 	dropZoneMaxWidth = $state(120);
 	scrollHighlightTimeout = $state(4000);
-	scrollHighlightClass = $state<string | null | undefined>('ltree-scroll-highlight');
+	scrollHighlightClass = $state<string | null | undefined>('stv__node-content--scroll-highlight');
 	contextMenuXOffset = $state(8);
 	contextMenuYOffset = $state(0);
 
@@ -558,9 +558,9 @@ export class TreeController<T> {
 		this.checkboxMode = props.checkboxMode ?? 'independent';
 		this.clickTogglesCheckbox = props.clickTogglesCheckbox ?? false;
 		this.beforeCheckboxToggleHandler = props.beforeCheckboxToggleCallback;
-		this.expandIconClass = props.expandIconClass ?? 'ltree-icon-expand';
-		this.collapseIconClass = props.collapseIconClass ?? 'ltree-icon-collapse';
-		this.leafIconClass = props.leafIconClass ?? 'ltree-icon-leaf';
+		this.expandIconClass = props.expandIconClass ?? 'stv__toggle-icon--expand';
+		this.collapseIconClass = props.collapseIconClass ?? 'stv__toggle-icon--collapse';
+		this.leafIconClass = props.leafIconClass ?? 'stv__toggle-icon--leaf';
 		this.toggleIconMode = props.toggleIconMode ?? 'rotate';
 		this.highlightedNodeClass = props.highlightedNodeClass;
 		this.focusedNodeClass = props.focusedNodeClass;
@@ -570,7 +570,7 @@ export class TreeController<T> {
 		this.dropZoneStart = props.dropZoneStart ?? 33;
 		this.dropZoneMaxWidth = props.dropZoneMaxWidth ?? 120;
 		this.scrollHighlightTimeout = props.scrollHighlightTimeout ?? 4000;
-		this.scrollHighlightClass = props.scrollHighlightClass ?? 'ltree-scroll-highlight';
+		this.scrollHighlightClass = props.scrollHighlightClass ?? 'stv__node-content--scroll-highlight';
 		this.contextMenuXOffset = props.contextMenuXOffset ?? 8;
 		this.contextMenuYOffset = props.contextMenuYOffset ?? 0;
 		this.hasContextMenuSnippet = props.hasContextMenuSnippet ?? false;
@@ -830,7 +830,7 @@ export class TreeController<T> {
 			if (this.allFlatNodes.length === 0) return;
 			tick().then(() => {
 				if (this.vsContainerRef) {
-					const firstNode = this.vsContainerRef.querySelector('.ltree-node');
+					const firstNode = this.vsContainerRef.querySelector('.stv__node');
 					if (firstNode) {
 						const height = firstNode.getBoundingClientRect().height;
 						if (height > 0) this.vsMeasuredRowHeight = height;
@@ -876,7 +876,7 @@ export class TreeController<T> {
 			if (this.contextMenuVisible) {
 				const handleGlobalClick = (event: MouseEvent) => {
 					const target = event.target as Element;
-					if (!target.closest('.ltree-context-menu')) {
+					if (!target.closest('.stv__context-menu')) {
 						this.closeContextMenu();
 					}
 				};
@@ -939,12 +939,12 @@ export class TreeController<T> {
 			const root: ParentNode = this.containerElement ?? document;
 			if (prevHoveredDragPath && prevDragOverClass) {
 				root.querySelector(
-					`[data-tree-path="${prevHoveredDragPath}"] .ltree-node-content`
+					`[data-tree-path="${prevHoveredDragPath}"] .stv__node-content`
 				)?.classList.remove(prevDragOverClass);
 			}
 			if (current && cls) {
 				root.querySelector(
-					`[data-tree-path="${current}"] .ltree-node-content`
+					`[data-tree-path="${current}"] .stv__node-content`
 				)?.classList.add(cls);
 			}
 			prevHoveredDragPath = current;
@@ -1817,7 +1817,7 @@ export class TreeController<T> {
 			const el = rootEl
 				? rootEl.querySelector(`#${CSS.escape(elementId)}`)
 				: document.getElementById(elementId);
-			return (el?.querySelector('.ltree-node-content') as HTMLElement | null) ?? null;
+			return (el?.querySelector('.stv__node-content') as HTMLElement | null) ?? null;
 		};
 		// Progressive flat rendering adds newly-revealed rows in rAF-deferred
 		// batches (initialBatchSize, doubling each step). After expandNodes +
@@ -1874,7 +1874,7 @@ export class TreeController<T> {
 		const element = rootEl
 			? rootEl.querySelector(`#${CSS.escape(elementId)}`)
 			: document.getElementById(elementId);
-		const contentDiv = element?.querySelector('.ltree-node-content') as HTMLElement | null;
+		const contentDiv = element?.querySelector('.stv__node-content') as HTMLElement | null;
 
 		if (!contentDiv || !this.scrollHighlightClass) return false;
 
@@ -1934,11 +1934,11 @@ export class TreeController<T> {
 		if (updates.beforeCheckboxToggleCallback !== undefined)
 			this.beforeCheckboxToggleHandler = updates.beforeCheckboxToggleCallback;
 		if (updates.expandIconClass !== undefined)
-			this.expandIconClass = updates.expandIconClass ?? 'ltree-icon-expand';
+			this.expandIconClass = updates.expandIconClass ?? 'stv__toggle-icon--expand';
 		if (updates.collapseIconClass !== undefined)
-			this.collapseIconClass = updates.collapseIconClass ?? 'ltree-icon-collapse';
+			this.collapseIconClass = updates.collapseIconClass ?? 'stv__toggle-icon--collapse';
 		if (updates.leafIconClass !== undefined)
-			this.leafIconClass = updates.leafIconClass ?? 'ltree-icon-leaf';
+			this.leafIconClass = updates.leafIconClass ?? 'stv__toggle-icon--leaf';
 		if (updates.highlightedNodeClass !== undefined)
 			this.highlightedNodeClass = updates.highlightedNodeClass;
 		if (updates.focusedNodeClass !== undefined)
@@ -1965,7 +1965,7 @@ export class TreeController<T> {
 		if (updates.scrollHighlightTimeout !== undefined)
 			this.scrollHighlightTimeout = updates.scrollHighlightTimeout ?? 4000;
 		if (updates.scrollHighlightClass !== undefined)
-			this.scrollHighlightClass = updates.scrollHighlightClass ?? 'ltree-scroll-highlight';
+			this.scrollHighlightClass = updates.scrollHighlightClass ?? 'stv__node-content--scroll-highlight';
 		if (updates.contextMenuXOffset !== undefined)
 			this.contextMenuXOffset = updates.contextMenuXOffset ?? 8;
 		if (updates.contextMenuYOffset !== undefined)
@@ -2606,7 +2606,7 @@ export class TreeController<T> {
 		this.isDragInProgress = true;
 		this.onNodeDragStartHandler?.(node, event);
 
-		// The container-level `ondragend` listener on `.ltree-container` misses
+		// The container-level `ondragend` listener on `.stv__container` misses
 		// the cancellation path when the rAF below calls `tree.refresh()`: the
 		// refresh detaches the source row, so the subsequent `dragend` (on the
 		// detached element) has no DOM ancestors to bubble through and never
@@ -2869,7 +2869,7 @@ export class TreeController<T> {
 		if (isValidDrop) {
 			event.preventDefault();
 			this.hoveredNodeForDrop = node;
-			const nodeElement = (event.target as Element).closest('.ltree-node-content');
+			const nodeElement = (event.target as Element).closest('.stv__node-content');
 			if (nodeElement) {
 				this.activeDropPosition = this.calculateDropPosition(event, nodeElement);
 			}
@@ -2882,7 +2882,7 @@ export class TreeController<T> {
 
 			// Capture node rect for floating drop zones (rendered at Tree level with position:fixed)
 			if (this.dropZoneMode === 'floating') {
-				const nodeRow = (event.target as Element).closest('.ltree-node-row');
+				const nodeRow = (event.target as Element).closest('.stv__node-row');
 				if (nodeRow) {
 					const r = nodeRow.getBoundingClientRect();
 					this.floatingZoneRect = { top: r.top, left: r.left, width: r.width, height: r.height };
@@ -3102,8 +3102,8 @@ export class TreeController<T> {
 			const dropElement = document.elementFromPoint(touch.clientX, touch.clientY);
 			const dropNode = this.findNodeFromElement(dropElement);
 
-			const placeholder = dropElement?.closest('.ltree-empty-state');
-			const rootDropZone = dropElement?.closest('.ltree-root-drop-zone');
+			const placeholder = dropElement?.closest('.stv__empty-state');
+			const rootDropZone = dropElement?.closest('.stv__root-drop-zone');
 			if ((placeholder || rootDropZone) && !dropNode) {
 				dragLogger.debug(`Touch drag ended: ${this.draggedNode.path} -> empty tree`);
 				this._handleDrop(null, this.draggedNode, 'child', event);
@@ -3141,10 +3141,10 @@ export class TreeController<T> {
 	private createGhostElement(node: LTreeNode<any>, x: number, y: number) {
 		// Remove any stale ghost elements (e.g. from interrupted drags)
 		this.removeGhostElement();
-		document.querySelectorAll('.ltree-touch-ghost').forEach(el => el.remove());
+		document.querySelectorAll('.stv__touch-ghost').forEach(el => el.remove());
 
 		const ghost = document.createElement('div');
-		ghost.className = 'ltree-touch-ghost';
+		ghost.className = 'stv__touch-ghost';
 		ghost.textContent = this.tree.getNodeDisplayValue(node);
 		ghost.style.left = `${x}px`;
 		ghost.style.top = `${y}px`;
@@ -3165,12 +3165,12 @@ export class TreeController<T> {
 		this._removeDocumentTouchListeners();
 		this.removeGhostElement();
 		// Remove any orphaned ghosts from document body
-		document.querySelectorAll('.ltree-touch-ghost').forEach(el => el.remove());
+		document.querySelectorAll('.stv__touch-ghost').forEach(el => el.remove());
 	}
 
 	private findNodeFromElement(element: Element | null): LTreeNode<any> | null {
 		if (!element) return null;
-		const nodeElement = element.closest('.ltree-node');
+		const nodeElement = element.closest('.stv__node');
 		if (!nodeElement) return null;
 		const path = nodeElement.getAttribute('data-tree-path');
 		if (!path) return null;
@@ -3182,12 +3182,12 @@ export class TreeController<T> {
 
 		if (this.touchDragState.currentDropTarget && this.touchDragState.currentDropTarget !== newTarget) {
 			const prevElement = document.querySelector(
-				`[data-tree-path="${this.touchDragState.currentDropTarget.path}"] .ltree-node-content`
+				`[data-tree-path="${this.touchDragState.currentDropTarget.path}"] .stv__node-content`
 			);
-			prevElement?.classList.remove(this.dragOverNodeClass || 'ltree-dragover-highlight');
+			prevElement?.classList.remove(this.dragOverNodeClass || 'stv__node-content--dragover-highlight');
 		}
 
-		const placeholder = element?.closest('.ltree-empty-state');
+		const placeholder = element?.closest('.stv__empty-state');
 		if (placeholder && !newTarget) {
 			this.isDropPlaceholderActive = true;
 			this.touchDragState.currentDropTarget = null;
@@ -3198,9 +3198,9 @@ export class TreeController<T> {
 
 		if (newTarget && newTarget !== this.draggedNode && newTarget.isDropAllowed) {
 			const targetElement = document.querySelector(
-				`[data-tree-path="${newTarget.path}"] .ltree-node-content`
+				`[data-tree-path="${newTarget.path}"] .stv__node-content`
 			);
-			targetElement?.classList.add(this.dragOverNodeClass || 'ltree-dragover-highlight');
+			targetElement?.classList.add(this.dragOverNodeClass || 'stv__node-content--dragover-highlight');
 			this.touchDragState.currentDropTarget = newTarget;
 		} else {
 			this.touchDragState.currentDropTarget = null;
@@ -3210,9 +3210,9 @@ export class TreeController<T> {
 	private clearDropTargetHighlight() {
 		if (this.touchDragState.currentDropTarget) {
 			const element = document.querySelector(
-				`[data-tree-path="${this.touchDragState.currentDropTarget.path}"] .ltree-node-content`
+				`[data-tree-path="${this.touchDragState.currentDropTarget.path}"] .stv__node-content`
 			);
-			element?.classList.remove(this.dragOverNodeClass || 'ltree-dragover-highlight');
+			element?.classList.remove(this.dragOverNodeClass || 'stv__node-content--dragover-highlight');
 		}
 	}
 

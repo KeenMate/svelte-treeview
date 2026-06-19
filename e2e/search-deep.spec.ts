@@ -37,16 +37,16 @@ async function fillUntilCounter(page: Page, query: string, expected: string) {
 
 test('search-result navigation expands ancestors and scrolls a collapsed-branch hit into view', async ({ page }) => {
 	await page.goto('/test/search-deep');
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 
 	// Sanity: the deep target is not in the DOM before search (collapsed).
-	await expect(page.locator(`.ltree-node[data-tree-path="${TARGET_PATH}"]`)).toHaveCount(0);
+	await expect(page.locator(`.stv__node[data-tree-path="${TARGET_PATH}"]`)).toHaveCount(0);
 
 	// Search auto-navigates to result 0 in the fixture's oninput handler.
 	await fillUntilCounter(page, TARGET_NAME, '1');
 
 	// Ancestors must have been expanded so the row mounts.
-	const targetRow = page.locator(`.ltree-node[data-tree-path="${TARGET_PATH}"]`).first();
+	const targetRow = page.locator(`.stv__node[data-tree-path="${TARGET_PATH}"]`).first();
 	await expect(targetRow).toBeVisible();
 	await expect(targetRow.locator('.node-name')).toHaveText(TARGET_NAME);
 
@@ -62,16 +62,16 @@ test('search-result navigation expands ancestors and scrolls a collapsed-branch 
 	expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(containerBox.y + containerBox.height + 1);
 
 	// And the scroll-highlight class must be applied to the matched row.
-	await expect(targetRow.locator('.ltree-node-content').first()).toHaveClass(/ltree-scroll-highlight/);
+	await expect(targetRow.locator('.stv__node-content').first()).toHaveClass(/stv__node-content--scroll-highlight/);
 });
 
 test('sequential search to a different collapsed branch scrolls there too', async ({ page }) => {
 	await page.goto('/test/search-deep');
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 
 	// First search: collapsed branch near the bottom.
 	await fillUntilCounter(page, TARGET_NAME, '1');
-	const first = page.locator(`.ltree-node[data-tree-path="${TARGET_PATH}"]`).first();
+	const first = page.locator(`.stv__node[data-tree-path="${TARGET_PATH}"]`).first();
 	await expect(first).toBeVisible();
 	await page.waitForTimeout(800);
 
@@ -80,7 +80,7 @@ test('sequential search to a different collapsed branch scrolls there too', asyn
 	// further from the current scroll position than it'd be on a fresh page.
 	await fillUntilCounter(page, 'AATARGETUNIQUE', '1');
 	const secondPath = '2.3.10';
-	const second = page.locator(`.ltree-node[data-tree-path="${secondPath}"]`).first();
+	const second = page.locator(`.stv__node[data-tree-path="${secondPath}"]`).first();
 	await expect(second).toBeVisible();
 
 	await page.waitForTimeout(800);
@@ -92,5 +92,5 @@ test('sequential search to a different collapsed branch scrolls there too', asyn
 	expect(rowBox.y).toBeGreaterThanOrEqual(containerBox.y - 1);
 	expect(rowBox.y + rowBox.height).toBeLessThanOrEqual(containerBox.y + containerBox.height + 1);
 
-	await expect(second.locator('.ltree-node-content').first()).toHaveClass(/ltree-scroll-highlight/);
+	await expect(second.locator('.stv__node-content').first()).toHaveClass(/stv__node-content--scroll-highlight/);
 });

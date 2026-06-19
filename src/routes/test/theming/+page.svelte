@@ -79,7 +79,7 @@
 		<!-- 2. Per-instance theme="dark" — should be DARK (green surface) -->
 		<div class="card" data-scenario="per-instance-dark">
 			<h2>2. Per-instance <code>theme="dark"</code></h2>
-			<p>Forwarded as <code>data-theme="dark"</code> on <code>.ltree-container</code>. Expected: <strong>GREEN</strong>.</p>
+			<p>Forwarded as <code>data-theme="dark"</code> on <code>.stv__container</code>. Expected: <strong>GREEN</strong>.</p>
 			<div class="wrapper brand-debug">
 				<Tree
 					data={sampleData}
@@ -291,7 +291,7 @@
 	:global([data-theme="dark"] .wrapper.brand-debug),
 	:global([data-bs-theme="dark"] .wrapper.brand-debug),
 	:global(.dark .wrapper.brand-debug),
-	:global(.wrapper.brand-debug:has(.ltree-container[data-theme="dark"])) {
+	:global(.wrapper.brand-debug:has(.stv__container[data-theme="dark"])) {
 		--base-accent-color: #06b6d4;
 		--base-main-bg: #16a34a;
 		--base-elevated-bg: #22c55e;

@@ -48,27 +48,27 @@ function treeIn(card: Locator): Locator {
 }
 
 function nodeIn(card: Locator, path: string): Locator {
-	return treeIn(card).locator(`.ltree-node[data-tree-path="${path}"]`).first();
+	return treeIn(card).locator(`.stv__node[data-tree-path="${path}"]`).first();
 }
 
 function nodeContent(node: Locator): Locator {
-	return node.locator('> .ltree-node-row .ltree-node-content').first();
+	return node.locator('> .stv__node-row .stv__node-content').first();
 }
 
 function menuIn(card: Locator): Locator {
-	return card.locator('.ltree-context-menu').first();
+	return card.locator('.stv__context-menu').first();
 }
 
 /**
  * Find a top-level menu item by its visible label. We anchor on the
- * `.ltree-context-menu-label` span (matched exactly) so partial-match collisions
+ * `.stv__context-menu-label` span (matched exactly) so partial-match collisions
  * between e.g. "Cut" and "Copy" never bite.
  */
 function menuItem(card: Locator, label: string): Locator {
 	const page = card.page();
 	return menuIn(card)
-		.locator('> .ltree-context-menu-item')
-		.filter({ has: page.locator('.ltree-context-menu-label', { hasText: new RegExp(`^${escapeRe(label)}$`) }) })
+		.locator('> .stv__context-menu-item')
+		.filter({ has: page.locator('.stv__context-menu-label', { hasText: new RegExp(`^${escapeRe(label)}$`) }) })
 		.first();
 }
 
@@ -104,7 +104,7 @@ async function rightClick(card: Locator, path: string) {
 
 async function gotoContextMenu(page: Page) {
 	await page.goto(PAGE);
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 // ── Callback approach ──────────────────────────────────────────────────────
@@ -127,9 +127,9 @@ test.describe('Callback approach', () => {
 		await expect(menuItem(card, 'Rename')).toBeVisible();
 		await expect(menuItem(card, 'Delete')).toBeVisible();
 		// Named divider "Danger zone".
-		await expect(menuIn(card).locator('.ltree-context-menu-divider-label')).toHaveText('Danger zone');
+		await expect(menuIn(card).locator('.stv__context-menu-divider-label')).toHaveText('Danger zone');
 		// Read-only entry is gated by isVisible — Documents is writable, so absent.
-		await expect(menuIn(card).locator('.ltree-context-menu-label', { hasText: 'Read-only file' })).toHaveCount(0);
+		await expect(menuIn(card).locator('.stv__context-menu-label', { hasText: 'Read-only file' })).toHaveCount(0);
 	});
 
 	test('right-click on a file hides folder-only entries and disables Paste', async ({ page }) => {
@@ -138,15 +138,15 @@ test.describe('Callback approach', () => {
 
 		await rightClick(card, '1.2'); // Notes.txt (file, writable)
 
-		await expect(menuIn(card).locator('.ltree-context-menu-label', { hasText: 'New File' })).toHaveCount(0);
-		await expect(menuIn(card).locator('.ltree-context-menu-label', { hasText: 'New Folder' })).toHaveCount(0);
+		await expect(menuIn(card).locator('.stv__context-menu-label', { hasText: 'New File' })).toHaveCount(0);
+		await expect(menuIn(card).locator('.stv__context-menu-label', { hasText: 'New Folder' })).toHaveCount(0);
 
 		// Paste is disabled on non-folders.
-		await expect(menuItem(card, 'Paste')).toHaveClass(/ltree-context-menu-item-disabled/);
+		await expect(menuItem(card, 'Paste')).toHaveClass(/stv__context-menu-item--disabled/);
 		// Cut/Rename/Delete remain enabled (Notes.txt is not readonly).
-		await expect(menuItem(card, 'Cut')).not.toHaveClass(/ltree-context-menu-item-disabled/);
-		await expect(menuItem(card, 'Rename')).not.toHaveClass(/ltree-context-menu-item-disabled/);
-		await expect(menuItem(card, 'Delete')).not.toHaveClass(/ltree-context-menu-item-disabled/);
+		await expect(menuItem(card, 'Cut')).not.toHaveClass(/stv__context-menu-item--disabled/);
+		await expect(menuItem(card, 'Rename')).not.toHaveClass(/stv__context-menu-item--disabled/);
+		await expect(menuItem(card, 'Delete')).not.toHaveClass(/stv__context-menu-item--disabled/);
 	});
 
 	test('readonly file disables Cut/Rename/Delete and surfaces the "Read-only file" entry', async ({ page }) => {
@@ -155,12 +155,12 @@ test.describe('Callback approach', () => {
 
 		await rightClick(card, '1.1.2'); // Q2 Report.pdf (readonly)
 
-		await expect(menuItem(card, 'Cut')).toHaveClass(/ltree-context-menu-item-disabled/);
-		await expect(menuItem(card, 'Rename')).toHaveClass(/ltree-context-menu-item-disabled/);
-		await expect(menuItem(card, 'Delete')).toHaveClass(/ltree-context-menu-item-disabled/);
+		await expect(menuItem(card, 'Cut')).toHaveClass(/stv__context-menu-item--disabled/);
+		await expect(menuItem(card, 'Rename')).toHaveClass(/stv__context-menu-item--disabled/);
+		await expect(menuItem(card, 'Delete')).toHaveClass(/stv__context-menu-item--disabled/);
 
 		// Only renders when node.readonly is truthy.
-		await expect(menuIn(card).locator('.ltree-context-menu-label', { hasText: 'Read-only file' })).toBeVisible();
+		await expect(menuIn(card).locator('.stv__context-menu-label', { hasText: 'Read-only file' })).toBeVisible();
 	});
 
 	test('clicking an item fires the callback, closes the menu, and appends to the activity log', async ({ page }) => {
@@ -200,17 +200,17 @@ test.describe('Callback approach', () => {
 		await rightClick(card, '1'); // Documents
 
 		const exportItem = menuItem(card, 'Export As...');
-		await expect(exportItem).toHaveClass(/ltree-context-menu-has-children/);
+		await expect(exportItem).toHaveClass(/stv__context-menu-item--has-children/);
 
 		// Submenu mounts on hover (Floating UI), positioned as a sibling under the root menu.
-		const submenu = menuIn(card).locator('.ltree-context-submenu').first();
+		const submenu = menuIn(card).locator('.stv__context-submenu').first();
 		await expect(submenu).toHaveCount(0);
 
 		await exportItem.hover();
 		await expect(submenu).toBeVisible();
-		await expect(submenu.locator('.ltree-context-menu-label', { hasText: 'JSON' })).toBeVisible();
-		await expect(submenu.locator('.ltree-context-menu-label', { hasText: 'XML' })).toBeVisible();
-		await expect(submenu.locator('.ltree-context-menu-label', { hasText: 'CSV' })).toBeVisible();
+		await expect(submenu.locator('.stv__context-menu-label', { hasText: 'JSON' })).toBeVisible();
+		await expect(submenu.locator('.stv__context-menu-label', { hasText: 'XML' })).toBeVisible();
+		await expect(submenu.locator('.stv__context-menu-label', { hasText: 'CSV' })).toBeVisible();
 	});
 
 	test('clicking a submenu entry fires the nested callback', async ({ page }) => {
@@ -221,8 +221,8 @@ test.describe('Callback approach', () => {
 
 		const exportItem = menuItem(card, 'Export As...');
 		await exportItem.hover();
-		const submenu = menuIn(card).locator('.ltree-context-submenu').first();
-		await submenu.locator('.ltree-context-menu-item', { hasText: 'JSON' }).first().click();
+		const submenu = menuIn(card).locator('.stv__context-submenu').first();
+		await submenu.locator('.stv__context-menu-item', { hasText: 'JSON' }).first().click();
 
 		await expect(menuIn(card)).toHaveCount(0);
 		await expect(activityLog(card)).toContainText('Export "Documents" as JSON');
@@ -259,7 +259,7 @@ test.describe('Callback approach', () => {
 		await rightClick(card, '1');
 
 		// The named divider is still rendered with its label.
-		await expect(menuIn(card).locator('.ltree-context-menu-divider-label')).toHaveText('Danger zone');
+		await expect(menuIn(card).locator('.stv__context-menu-divider-label')).toHaveText('Danger zone');
 	});
 });
 
@@ -276,7 +276,7 @@ test.describe('Snippet + Component approach', () => {
 		await expect(menuItem(card, 'Cut')).toBeVisible();
 		// Folder-only entry from the snippet's {#if node.data?.type === 'folder'}.
 		await expect(menuItem(card, 'Export As...')).toBeVisible();
-		await expect(menuIn(card).locator('.ltree-context-menu-divider-label')).toHaveText('Danger zone');
+		await expect(menuIn(card).locator('.stv__context-menu-divider-label')).toHaveText('Danger zone');
 		await expect(menuItem(card, 'Delete')).toBeVisible();
 	});
 
@@ -285,7 +285,7 @@ test.describe('Snippet + Component approach', () => {
 		const card = snippetCard(page);
 
 		await rightClick(card, '1.2'); // Notes.txt
-		await expect(menuIn(card).locator('.ltree-context-menu-label', { hasText: 'Export As...' })).toHaveCount(0);
+		await expect(menuIn(card).locator('.stv__context-menu-label', { hasText: 'Export As...' })).toHaveCount(0);
 		// Other items still render.
 		await expect(menuItem(card, 'Copy')).toBeVisible();
 		await expect(menuItem(card, 'Delete')).toBeVisible();
@@ -296,8 +296,8 @@ test.describe('Snippet + Component approach', () => {
 		const card = snippetCard(page);
 
 		await rightClick(card, '1.1.2'); // Q2 Report.pdf (readonly)
-		await expect(menuItem(card, 'Cut')).toHaveClass(/ltree-context-menu-item-disabled/);
-		await expect(menuItem(card, 'Delete')).toHaveClass(/ltree-context-menu-item-disabled/);
+		await expect(menuItem(card, 'Cut')).toHaveClass(/stv__context-menu-item--disabled/);
+		await expect(menuItem(card, 'Delete')).toHaveClass(/stv__context-menu-item--disabled/);
 	});
 
 	test('clicking Copy appends to the snippet card activity log', async ({ page }) => {

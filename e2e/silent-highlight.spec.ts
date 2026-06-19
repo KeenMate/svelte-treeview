@@ -21,7 +21,7 @@ const PAGE = '/test/silent-highlight';
 
 async function goto(page: Page) {
 	await page.goto(PAGE);
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 async function counter(page: Page, name: 'click' | 'highlight' | 'selection'): Promise<number> {
@@ -74,7 +74,7 @@ test.describe('highlightNode', () => {
 
 		// Visual highlight class applied on the node-content element
 		await expect(
-			page.locator('.ltree-node[data-tree-path="1.2"] .ltree-node-content').first()
+			page.locator('.stv__node[data-tree-path="1.2"] .stv__node-content').first()
 		).toHaveClass(/test-highlighted/);
 	});
 
@@ -155,7 +155,7 @@ test.describe('deselectAll', () => {
 		await goto(page);
 
 		// Check a checkbox via UI to populate selectedPaths.
-		const checkbox = page.locator('.ltree-node[data-tree-path="1.2"] .ltree-checkbox').first();
+		const checkbox = page.locator('.stv__node[data-tree-path="1.2"] .stv__checkbox').first();
 		await checkbox.click();
 		expect(await selectionSize(page)).toBeGreaterThan(0);
 
@@ -169,7 +169,7 @@ test.describe('deselectAll', () => {
 	test('silent after checkbox check: skips callback, clears state', async ({ page }) => {
 		await goto(page);
 
-		const checkbox = page.locator('.ltree-node[data-tree-path="1.2"] .ltree-checkbox').first();
+		const checkbox = page.locator('.stv__node[data-tree-path="1.2"] .stv__checkbox').first();
 		await checkbox.click();
 		expect(await selectionSize(page)).toBeGreaterThan(0);
 
@@ -194,7 +194,7 @@ test.describe('URL-restore scenario', () => {
 		expect(await counter(page, 'click')).toBe(0);
 
 		// 2. User then interacts normally — callbacks must still fire
-		await page.locator('.ltree-node[data-tree-path="2"] .ltree-node-content').first().click();
+		await page.locator('.stv__node[data-tree-path="2"] .stv__node-content').first().click();
 		expect(await counter(page, 'click')).toBe(1);
 		expect(await counter(page, 'highlight')).toBe(1);
 	});

@@ -168,7 +168,7 @@
 		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
 
 		// VISUALS
-		/** Per-instance theme override. Forwarded to the root `.ltree-container`
+		/** Per-instance theme override. Forwarded to the root `.stv__container`
 		 *  as `data-theme="dark"|"light"`, which the stylesheet uses to flip the
 		 *  tree's colors independently of the surrounding page. Leave undefined to
 		 *  inherit from the page (OS preference, framework classes, etc.). */
@@ -310,15 +310,15 @@
 		// VISUALS
 		theme,
 		bodyClass,
-		expandIconClass = 'ltree-icon-expand',
-		collapseIconClass = 'ltree-icon-collapse',
-		leafIconClass = 'ltree-icon-leaf',
+		expandIconClass = 'stv__toggle-icon--expand',
+		collapseIconClass = 'stv__toggle-icon--collapse',
+		leafIconClass = 'stv__toggle-icon--leaf',
 		toggleIconMode = 'rotate',
 		highlightedNodeClass,
 		focusedNodeClass,
 		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
-		scrollHighlightClass = 'ltree-scroll-highlight',
+		scrollHighlightClass = 'stv__node-content--scroll-highlight',
 		contextMenuXOffset = 8,
 		contextMenuYOffset = 0,
 		onTreeKeydown,
@@ -516,9 +516,9 @@
 	$effect(() => { controller.clickTogglesCheckbox = clickTogglesCheckbox ?? false; });
 	$effect(() => { controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback; });
 	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
-	$effect(() => { controller.expandIconClass = expandIconClass ?? 'ltree-icon-expand'; });
-	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'ltree-icon-collapse'; });
-	$effect(() => { controller.leafIconClass = leafIconClass ?? 'ltree-icon-leaf'; });
+	$effect(() => { controller.expandIconClass = expandIconClass ?? 'stv__toggle-icon--expand'; });
+	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'stv__toggle-icon--collapse'; });
+	$effect(() => { controller.leafIconClass = leafIconClass ?? 'stv__toggle-icon--leaf'; });
 	$effect(() => { controller.toggleIconMode = toggleIconMode ?? 'rotate'; });
 	$effect(() => { controller.highlightedNodeClass = highlightedNodeClass; });
 	$effect(() => { controller.focusedNodeClass = focusedNodeClass; });
@@ -528,7 +528,7 @@
 	$effect(() => { controller.dropZoneStart = dropZoneStart ?? 33; });
 	$effect(() => { controller.dropZoneMaxWidth = dropZoneMaxWidth ?? 120; });
 	$effect(() => { controller.scrollHighlightTimeout = scrollHighlightTimeout ?? 4000; });
-	$effect(() => { controller.scrollHighlightClass = scrollHighlightClass ?? 'ltree-scroll-highlight'; });
+	$effect(() => { controller.scrollHighlightClass = scrollHighlightClass ?? 'stv__node-content--scroll-highlight'; });
 	$effect(() => { controller.contextMenuXOffset = contextMenuXOffset ?? 8; });
 	$effect(() => { controller.contextMenuYOffset = contextMenuYOffset ?? 0; });
 
@@ -1011,7 +1011,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
-	class="ltree-container"
+	class="stv__container"
 	tabindex="0"
 	data-theme={theme}
 	bind:this={treeContainerRef}
@@ -1021,10 +1021,10 @@
 	ondragend={controller._onNodeDragEnd}
 >
 	{#if controller.shouldDisplayDebugInformation}
-		<div class="ltree-debug-info">
+		<div class="stv__debug-info">
 			<details>
 				<summary>Debug Info</summary>
-				<div class="ltree-debug-stats">
+				<div class="stv__debug-stats">
 					<span>Tree: {controller.treeId}</span>
 					<span>Data: {controller.data?.length || 0}</span>
 					<span>Expand level: {expandLevel || 0}</span>
@@ -1045,11 +1045,11 @@
 	{@render treeHeader?.()}
 
 	{#if controller.isLoading}
-		<div class="ltree-loading-overlay">
+		<div class="stv__loading-overlay">
 			{#if loadingPlaceholder}
 				{@render loadingPlaceholder()}
 			{:else}
-				<div class="ltree-loading-spinner"></div>
+				<div class="stv__loading-spinner"></div>
 			{/if}
 		</div>
 	{/if}
@@ -1059,7 +1059,7 @@
 			{#if controller.vsActive}
 				<!-- Virtual scrolling mode -->
 				<div
-					class="ltree-tree ltree-flat-mode ltree-virtual-scroll"
+					class="stv__tree stv__tree--flat stv__virtual-scroll"
 					style="height: {controller.vsContainerStyle}; overflow-y: auto;"
 					bind:this={controller.vsContainerRef}
 					onscroll={controller.handleVirtualScroll}
@@ -1087,8 +1087,8 @@
 								<!-- Empty state when tree has no items -->
 								<!-- svelte-ignore a11y_no_static_element_interactions -->
 								<div
-									class="ltree-empty-state"
-									class:ltree-drop-placeholder={controller.isDropPlaceholderActive}
+									class="stv__empty-state"
+									class:stv__drop-placeholder={controller.isDropPlaceholderActive}
 									ondragenter={controller.handleEmptyTreeDragOver}
 									ondragover={controller.handleEmptyTreeDragOver}
 									ondragleave={controller.handleEmptyTreeDragLeave}
@@ -1099,7 +1099,7 @@
 										{#if dropPlaceholder}
 											{@render dropPlaceholder()}
 										{:else}
-											<div class="ltree-drop-placeholder-content">
+											<div class="stv__drop-placeholder-content">
 												Drop here to add
 											</div>
 										{/if}
@@ -1113,7 +1113,7 @@
 				</div>
 			{:else if controller.useFlatRendering}
 				<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
-				<div class="ltree-tree ltree-flat-mode">
+				<div class="stv__tree stv__tree--flat">
 					{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
 						{@const prevNode = i > 0 ? controller.flatNodesToRender[i - 1] : null}
 						<Node
@@ -1132,8 +1132,8 @@
 						<!-- Empty state when tree has no items -->
 						<!-- svelte-ignore a11y_no_static_element_interactions -->
 						<div
-							class="ltree-empty-state"
-							class:ltree-drop-placeholder={controller.isDropPlaceholderActive}
+							class="stv__empty-state"
+							class:stv__drop-placeholder={controller.isDropPlaceholderActive}
 							ondragenter={controller.handleEmptyTreeDragOver}
 							ondragover={controller.handleEmptyTreeDragOver}
 							ondragleave={controller.handleEmptyTreeDragLeave}
@@ -1144,7 +1144,7 @@
 								{#if dropPlaceholder}
 									{@render dropPlaceholder()}
 								{:else}
-									<div class="ltree-drop-placeholder-content">
+									<div class="stv__drop-placeholder-content">
 										Drop here to add
 									</div>
 								{/if}
@@ -1157,7 +1157,7 @@
 			{:else}
 				<!-- Recursive rendering mode: uses {#key} block for forced re-renders -->
 				{#key controller.tree.changeTracker}
-					<div class="ltree-tree">
+					<div class="stv__tree">
 						{#each controller.tree.tree as node (node.id)}
 							<Node
 								{node}
@@ -1174,8 +1174,8 @@
 							<!-- Empty state when tree has no items -->
 							<!-- svelte-ignore a11y_no_static_element_interactions -->
 							<div
-								class="ltree-empty-state"
-								class:ltree-drop-placeholder={controller.isDropPlaceholderActive}
+								class="stv__empty-state"
+								class:stv__drop-placeholder={controller.isDropPlaceholderActive}
 								ondragenter={controller.handleEmptyTreeDragOver}
 								ondragover={controller.handleEmptyTreeDragOver}
 								ondragleave={controller.handleEmptyTreeDragLeave}
@@ -1186,7 +1186,7 @@
 									{#if dropPlaceholder}
 										{@render dropPlaceholder()}
 									{:else}
-										<div class="ltree-drop-placeholder-content">
+										<div class="stv__drop-placeholder-content">
 											Drop here to add
 										</div>
 									{/if}
@@ -1202,8 +1202,8 @@
 			<!-- Empty tree drop zone -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="ltree-empty-state"
-				class:ltree-drop-placeholder={controller.isDropPlaceholderActive}
+				class="stv__empty-state"
+				class:stv__drop-placeholder={controller.isDropPlaceholderActive}
 				ondragenter={controller.handleEmptyTreeDragOver}
 				ondragover={controller.handleEmptyTreeDragOver}
 				ondragleave={controller.handleEmptyTreeDragLeave}
@@ -1214,7 +1214,7 @@
 					{#if dropPlaceholder}
 						{@render dropPlaceholder()}
 					{:else}
-						<div class="ltree-drop-placeholder-content">
+						<div class="stv__drop-placeholder-content">
 							Drop here to add
 						</div>
 					{/if}
@@ -1231,28 +1231,28 @@
 	{#if controller.dropZoneMode === 'floating' && controller.isDragInProgress && controller.hoveredNodeForDrop && controller.floatingZoneRect}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-drop-zones ltree-drop-zones-{controller.dropZoneLayout}"
+			class="stv__drop-zones stv__drop-zones--{controller.dropZoneLayout}"
 			style="position: fixed; top: {controller.floatingZoneRect.top}px; left: {controller.floatingZoneRect.left}px; width: {controller.floatingZoneRect.width}px; height: {controller.floatingZoneRect.height}px; z-index: 10000; --drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {controller.dropZoneMaxWidth}px;"
 		>
 			{#if controller.isFloatingPositionAllowed('before')}
-				<div class="ltree-drop-zone ltree-drop-before"
-					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'before'}
+				<div class="stv__drop-zone stv__drop-zone--before"
+					class:stv__drop-zone--active={controller.floatingHoveredZone === 'before'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('before', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('before', e)}
 				>↑ Before</div>
 			{/if}
 			{#if controller.isFloatingPositionAllowed('after')}
-				<div class="ltree-drop-zone ltree-drop-after"
-					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'after'}
+				<div class="stv__drop-zone stv__drop-zone--after"
+					class:stv__drop-zone--active={controller.floatingHoveredZone === 'after'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('after', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('after', e)}
 				>↓ After</div>
 			{/if}
 			{#if controller.isFloatingPositionAllowed('child')}
-				<div class="ltree-drop-zone ltree-drop-child"
-					class:ltree-drop-zone-active={controller.floatingHoveredZone === 'child'}
+				<div class="stv__drop-zone stv__drop-zone--child"
+					class:stv__drop-zone--active={controller.floatingHoveredZone === 'child'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('child', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('child', e)}
@@ -1263,7 +1263,7 @@
 
 	<!-- Context Menu -->
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
-		<div bind:this={contextMenuEl} class="ltree-context-menu" role="menu">
+		<div bind:this={contextMenuEl} class="stv__context-menu" role="menu">
 			{#if getContextMenuItemsCallback}
 				{@const menuEntries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
 				<ContextMenuLevel

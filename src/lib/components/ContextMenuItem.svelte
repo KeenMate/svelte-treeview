@@ -63,9 +63,9 @@
 
 <div
 	bind:this={itemEl}
-	class="ltree-context-menu-item {className || ''}"
-	class:ltree-context-menu-item-disabled={isDisabled}
-	class:ltree-context-menu-has-children={hasChildren}
+	class="stv__context-menu-item {className || ''}"
+	class:stv__context-menu-item--disabled={isDisabled}
+	class:stv__context-menu-item--has-children={hasChildren}
 	data-context-menu-id={id}
 	role="menuitem"
 	tabindex={isDisabled ? -1 : 0}
@@ -92,21 +92,21 @@
 	}}
 >
 	{#if icon}
-		<span class="ltree-context-menu-icon">{icon}</span>
+		<span class="stv__context-menu-icon">{icon}</span>
 	{/if}
-	<span class="ltree-context-menu-label">{label}</span>
+	<span class="stv__context-menu-label">{label}</span>
 	{#if shortcut}
-		<span class="ltree-context-menu-shortcut">{shortcut}</span>
+		<span class="stv__context-menu-shortcut">{shortcut}</span>
 	{/if}
 	{#if hasChildren}
-		<span class="ltree-context-menu-arrow">&#x25B8;</span>
+		<span class="stv__context-menu-arrow">&#x25B8;</span>
 	{/if}
 </div>
 
 {#if hasChildren && submenuOpen}
 	<div
 		bind:this={submenuEl}
-		class="ltree-context-menu ltree-context-submenu"
+		class="stv__context-menu stv__context-submenu"
 		role="menu"
 		tabindex="-1"
 		onmouseenter={cancelHide}

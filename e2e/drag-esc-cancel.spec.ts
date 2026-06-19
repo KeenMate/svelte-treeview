@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
  * the highlight with the dragged node (OS-convention selection sync). If the
  * user then presses Esc, the browser fires dragend with dropEffect='none' and
  * _onNodeDragEnd must roll the highlight back. Without the rollback the user
- * is left with the dragged node visually selected (.ltree-selected-bold
+ * is left with the dragged node visually selected (.stv__node-content--highlight-bold
  * sticks on the source row).
  *
  * Playwright's mouse helpers don't synthesize HTML5 drag events, so we
@@ -21,9 +21,9 @@ test('Esc during drag restores the pre-drag highlight on the source row', async 
 	await page.waitForLoadState('networkidle');
 
 	const fileARow = page
-		.locator('.ltree-container')
+		.locator('.stv__container')
 		.first()
-		.locator('.ltree-node[data-tree-path="1.1"] .ltree-node-content')
+		.locator('.stv__node[data-tree-path="1.1"] .stv__node-content')
 		.first();
 	await expect(fileARow).toBeVisible();
 
@@ -38,7 +38,7 @@ test('Esc during drag restores the pre-drag highlight on the source row', async 
 	await page.evaluate(async () => {
 		const find = () =>
 			document.querySelector(
-				'.ltree-container .ltree-node[data-tree-path="1.1"] .ltree-node-content'
+				'.stv__container .stv__node[data-tree-path="1.1"] .stv__node-content'
 			) as HTMLElement | null;
 		const start = find();
 		if (!start) throw new Error('source row missing');

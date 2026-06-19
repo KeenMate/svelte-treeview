@@ -6,8 +6,8 @@
 	let { label }: Props = $props();
 </script>
 
-<div class="ltree-context-menu-divider" role="separator">
+<div class="stv__context-menu-divider" role="separator">
 	{#if label}
-		<span class="ltree-context-menu-divider-label">{label}</span>
+		<span class="stv__context-menu-divider-label">{label}</span>
 	{/if}
 </div>

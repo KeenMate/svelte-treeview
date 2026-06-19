@@ -59,9 +59,9 @@
 
 {#each entries as entry, i (i)}
 	{#if 'divider' in entry && entry.divider}
-		<div class="ltree-context-menu-divider" role="separator">
+		<div class="stv__context-menu-divider" role="separator">
 			{#if entry.label}
-				<span class="ltree-context-menu-divider-label">{entry.label}</span>
+				<span class="stv__context-menu-divider-label">{entry.label}</span>
 			{/if}
 		</div>
 	{:else if (entry as ContextMenuItem).isVisible !== false}
@@ -69,9 +69,9 @@
 		{@const hasChildren = !!item.children && item.children.length > 0}
 		<div
 			bind:this={itemEls[i]}
-			class="ltree-context-menu-item {item.className || ''}"
-			class:ltree-context-menu-item-disabled={item.isDisabled}
-			class:ltree-context-menu-has-children={hasChildren}
+			class="stv__context-menu-item {item.className || ''}"
+			class:stv__context-menu-item--disabled={item.isDisabled}
+			class:stv__context-menu-item--has-children={hasChildren}
 			role="menuitem"
 			tabindex={item.isDisabled ? -1 : 0}
 			onmouseenter={() => { if (hasChildren) showSubmenu(i); else cancelHide(); }}
@@ -96,14 +96,14 @@
 			}}
 		>
 			{#if item.icon}
-				<span class="ltree-context-menu-icon">{item.icon}</span>
+				<span class="stv__context-menu-icon">{item.icon}</span>
 			{/if}
-			<span class="ltree-context-menu-label">{item.label}</span>
+			<span class="stv__context-menu-label">{item.label}</span>
 			{#if item.shortcut}
-				<span class="ltree-context-menu-shortcut">{item.shortcut}</span>
+				<span class="stv__context-menu-shortcut">{item.shortcut}</span>
 			{/if}
 			{#if hasChildren}
-				<span class="ltree-context-menu-arrow">&#x25B8;</span>
+				<span class="stv__context-menu-arrow">&#x25B8;</span>
 			{/if}
 		</div>
 	{/if}
@@ -114,7 +114,7 @@
 	{#if openItem && openItem.children}
 		<div
 			bind:this={submenuEl}
-			class="ltree-context-menu ltree-context-submenu"
+			class="stv__context-menu stv__context-submenu"
 			role="menu"
 			tabindex="-1"
 			onmouseenter={cancelHide}

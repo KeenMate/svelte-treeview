@@ -47,19 +47,19 @@ function keyboardNavCard(page: Page): Locator {
 }
 
 function nodeInCard(card: Locator, path: string): Locator {
-	return card.locator(`.ltree-node[data-tree-path="${path}"]`).first();
+	return card.locator(`.stv__node[data-tree-path="${path}"]`).first();
 }
 
 function nodeContent(node: Locator): Locator {
-	return node.locator('> .ltree-node-row .ltree-node-content').first();
+	return node.locator('> .stv__node-row .stv__node-content').first();
 }
 
 function checkboxLabelOf(node: Locator): Locator {
-	return node.locator('> .ltree-node-row .ltree-checkbox').first();
+	return node.locator('> .stv__node-row .stv__checkbox').first();
 }
 
 function checkboxInputOf(node: Locator): Locator {
-	return node.locator('> .ltree-node-row .ltree-checkbox input[type="checkbox"]').first();
+	return node.locator('> .stv__node-row .stv__checkbox input[type="checkbox"]').first();
 }
 
 /**
@@ -89,7 +89,7 @@ async function gotoInteraction(page: Page) {
 		}
 	});
 	await page.goto(PAGE);
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 // ── Click Behavior tree ─────────────────────────────────────────────────────

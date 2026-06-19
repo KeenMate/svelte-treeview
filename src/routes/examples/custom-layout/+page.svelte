@@ -755,8 +755,8 @@
 
 				<!-- Still render a normal-looking tree using the Node component from context -->
 				<div class="tree-container">
-					<div class="ltree-container">
-						<div class="ltree-tree ltree-flat-mode">
+					<div class="stv__container">
+						<div class="stv__tree stv__tree--flat">
 							{#each ctrl.flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren)}
 								<Node
 									{node}

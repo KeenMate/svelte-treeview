@@ -425,7 +425,7 @@
 						expandLevel={3}
 						dragDropMode="both"
 						{selectionMode}
-						highlightedNodeClass="ltree-selected-bold"
+						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={sourceHighlightedPaths}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
@@ -460,7 +460,7 @@
 						expandLevel={3}
 						dragDropMode="both"
 						{selectionMode}
-						highlightedNodeClass="ltree-selected-bold"
+						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={targetHighlightedPaths}
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
@@ -543,7 +543,7 @@
 				expandLevel={3}
 				dragDropMode="self"
 				{selectionMode}
-				highlightedNodeClass="ltree-selected-bold"
+				highlightedNodeClass="stv__node-content--highlight-bold"
 				bind:highlightedPaths={restrictedHighlightedPaths}
 				onNodeDrop={handleRestrictedDrop}
 				{dropZoneMode}
@@ -757,57 +757,57 @@ const data = [
 			</thead>
 			<tbody>
 				<tr>
-					<td><code>ltree-dragover-highlight</code></td>
+					<td><code>stv__node-content--dragover-highlight</code></td>
 					<td>Dragging over a node</td>
 					<td>Highlights the drop target with a background color</td>
 				</tr>
 				<tr>
-					<td><code>ltree-dragover-glow</code></td>
+					<td><code>stv__node-content--dragover-glow</code></td>
 					<td>Dragging over a node</td>
 					<td>Alternative glow effect for drop target</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-placeholder</code></td>
+					<td><code>stv__drop-placeholder</code></td>
 					<td>Dragging over empty tree</td>
 					<td>Styles the drop placeholder area</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-zones</code></td>
+					<td><code>stv__drop-zones</code></td>
 					<td>Drag in progress over a node</td>
 					<td>Container for floating drop zone buttons (before/child/after)</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-before</code></td>
+					<td><code>stv__drop-zone--before</code></td>
 					<td>Position indicator active</td>
 					<td>Shows drop will insert before the node</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-child</code></td>
+					<td><code>stv__drop-zone--child</code></td>
 					<td>Position indicator active</td>
 					<td>Shows drop will insert as child of the node</td>
 				</tr>
 				<tr>
-					<td><code>ltree-drop-after</code></td>
+					<td><code>stv__drop-zone--after</code></td>
 					<td>Position indicator active</td>
 					<td>Shows drop will insert after the node</td>
 				</tr>
 				<tr>
-					<td><code>ltree-glow-before</code></td>
+					<td><code>stv__node-content--glow-before</code></td>
 					<td>Glow mode: drop position is "before"</td>
 					<td>Top border glow with arrow indicator</td>
 				</tr>
 				<tr>
-					<td><code>ltree-glow-after</code></td>
+					<td><code>stv__node-content--glow-after</code></td>
 					<td>Glow mode: drop position is "after"</td>
 					<td>Bottom border glow with arrow indicator</td>
 				</tr>
 				<tr>
-					<td><code>ltree-glow-child</code></td>
+					<td><code>stv__node-content--glow-child</code></td>
 					<td>Glow mode: drop position is "child"</td>
 					<td>Right border glow with background tint</td>
 				</tr>
 				<tr>
-					<td><code>ltree-touch-ghost</code></td>
+					<td><code>stv__touch-ghost</code></td>
 					<td>Touch drag in progress</td>
 					<td>Styles the ghost element following the finger</td>
 				</tr>
@@ -816,13 +816,13 @@ const data = [
 
 		<div class="code-block">
 			<pre>{`/* Customize drag-over highlight */
-:global(.ltree-dragover-highlight) {
+:global(.stv__node-content--dragover-highlight) {
   background-color: rgba(102, 126, 234, 0.2) !important;
   border-radius: 4px;
 }
 
 /* Customize touch ghost */
-:global(.ltree-touch-ghost) {
+:global(.stv__touch-ghost) {
   background: rgba(102, 126, 234, 0.9);
   color: white;
   padding: 8px 12px;

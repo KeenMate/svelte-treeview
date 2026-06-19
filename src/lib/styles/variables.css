@@ -1,10 +1,10 @@
 /* =============================================================================
-   CSS CUSTOM PROPERTIES — scoped to .ltree-container
+   CSS CUSTOM PROPERTIES — scoped to .stv__container
    =============================================================================
-   Every styling value is exposed as a --ltree-* custom property so end users
+   Every styling value is exposed as a --stv-* custom property so end users
    can theme the component at runtime.
 
-   IMPORTANT: declarations are on .ltree-container (the tree's root element),
+   IMPORTANT: declarations are on .stv__container (the tree's root element),
    NOT on :root. This mirrors web-multiselect's :host-scoped pattern: var()
    substitution happens AT the tree's own element, so an ancestor that sets
    --base-accent-color (or any --base-*) actually re-tints the tree. Declaring
@@ -12,29 +12,29 @@
    any wrapper overrides.
 
    Resolution chain (priority high → low):
-     1. Consumer rule targeting .ltree-container directly:
-          .my-wrap .ltree-container { --ltree-primary: red; }
+     1. Consumer rule targeting .stv__container directly:
+          .my-wrap .stv__container { --stv-primary: red; }
      2. Consumer's --base-* set on any ancestor (including :root or a wrapper):
           .my-wrap { --base-accent-color: red; }
      3. Hardcoded fallback inside the var() chain below.
 
-   Setting --ltree-* on a wrapper (not on .ltree-container itself) no longer
-   cascades into the tree, because .ltree-container has its own direct rule
-   for every --ltree-* token. To theme a subtree, prefer --base-* on the
-   wrapper, or write `.wrapper .ltree-container { --ltree-* }`.
+   Setting --stv-* on a wrapper (not on .stv__container itself) no longer
+   cascades into the tree, because .stv__container has its own direct rule
+   for every --stv-* token. To theme a subtree, prefer --base-* on the
+   wrapper, or write `.wrapper .stv__container { --stv-* }`.
 
    BASE SIZING UNIT
    ----------------
-   --ltree-rem is the multiplier base for every dimension. Default 10px gives
-   visual parity with the previous absolute values; set --ltree-rem to 1rem to
+   --stv-rem is the multiplier base for every dimension. Default 10px gives
+   visual parity with the previous absolute values; set --stv-rem to 1rem to
    make every dimension scale with document font-size (Pure-Admin pattern).
    ============================================================================= */
 
-.ltree-container {
+.stv__container {
 	/* -------------------------------------------------------------------------
 	   BASE SIZING UNIT
 	   ------------------------------------------------------------------------- */
-	--ltree-rem: 10px;
+	--stv-rem: 10px;
 
 	/* -------------------------------------------------------------------------
 	   COLORS — theme integration via --base-* tokens
@@ -45,171 +45,171 @@
 	   The brand accent (--base-accent-color) is treated as theme-independent —
 	   both themes share the same primary.
 	   ------------------------------------------------------------------------- */
-	--ltree-primary: var(--base-accent-color, #0d6efd);
-	--ltree-success: var(--base-success-color, light-dark(#198754, #2ea561));
-	--ltree-danger: var(--base-danger-color, light-dark(#dc3545, #f87c86));
-	--ltree-light: var(--base-main-bg, light-dark(#f8f9fa, #1a1a1a));
-	--ltree-elevated-bg: var(--base-elevated-bg, light-dark(#ffffff, #2b2b2b));
-	--ltree-border: var(--base-border-color, light-dark(#dee2e6, #3d3d3d));
-	--ltree-body-color: var(--base-text-color-1, light-dark(#212529, #f5f5f5));
-	/* Tree surface — painted on .ltree-container in base.css so the tree shows
+	--stv-primary: var(--base-accent-color, #0d6efd);
+	--stv-success: var(--base-success-color, light-dark(#198754, #2ea561));
+	--stv-danger: var(--base-danger-color, light-dark(#dc3545, #f87c86));
+	--stv-light: var(--base-main-bg, light-dark(#f8f9fa, #1a1a1a));
+	--stv-elevated-bg: var(--base-elevated-bg, light-dark(#ffffff, #2b2b2b));
+	--stv-border: var(--base-border-color, light-dark(#dee2e6, #3d3d3d));
+	--stv-body-color: var(--base-text-color-1, light-dark(#212529, #f5f5f5));
+	/* Tree surface — painted on .stv__container in base.css so the tree shows
 	   a visible background without consumer wrapping. Override to `transparent`
 	   to retain the pre-rc10 "no surface" behavior. */
-	--ltree-bg: var(--base-main-bg, light-dark(#ffffff, #1a1a1a));
+	--stv-bg: var(--base-main-bg, light-dark(#ffffff, #1a1a1a));
 
 	/* -------------------------------------------------------------------------
-	   TYPOGRAPHY — unitless --base-* multipliers × --ltree-rem
+	   TYPOGRAPHY — unitless --base-* multipliers × --stv-rem
 	   ------------------------------------------------------------------------- */
-	--ltree-font-family: var(--base-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif);
-	--ltree-node-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
-	--ltree-node-icon-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
-	--ltree-node-icon-margin-right: calc(0.6 * var(--ltree-rem));
-	--ltree-node-label-font-weight: var(--base-font-weight-medium, 500);
-	--ltree-node-label-margin-right: calc(0.8 * var(--ltree-rem));
-	--ltree-node-path-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-node-path-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
+	--stv-font-family: var(--base-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif);
+	--stv-node-font-size: calc(var(--base-font-size-sm, 1.4) * var(--stv-rem));
+	--stv-node-icon-font-size: calc(var(--base-font-size-sm, 1.4) * var(--stv-rem));
+	--stv-node-icon-margin-right: calc(0.6 * var(--stv-rem));
+	--stv-node-label-font-weight: var(--base-font-weight-medium, 500);
+	--stv-node-label-margin-right: calc(0.8 * var(--stv-rem));
+	--stv-node-path-font-size: calc(var(--base-font-size-xs, 1.2) * var(--stv-rem));
+	--stv-node-path-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
 
 	/* -------------------------------------------------------------------------
 	   NODE LAYOUT
 	   ------------------------------------------------------------------------- */
-	--ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));
-	--ltree-node-content-padding: calc(0.4 * var(--ltree-rem)) calc(0.8 * var(--ltree-rem));
-	--ltree-node-content-border-radius: calc(var(--base-border-radius-sm, 0) * var(--ltree-rem));
-	--ltree-node-hover-bg: var(--base-hover-bg, color-mix(in srgb, var(--ltree-primary) 8%, transparent));
-	--ltree-children-margin-top: calc(0.2 * var(--ltree-rem));
+	--stv-node-indent-per-level: calc(0.8 * var(--stv-rem));
+	--stv-node-content-padding: calc(0.4 * var(--stv-rem)) calc(0.8 * var(--stv-rem));
+	--stv-node-content-border-radius: calc(var(--base-border-radius-sm, 0) * var(--stv-rem));
+	--stv-node-hover-bg: var(--base-hover-bg, color-mix(in srgb, var(--stv-primary) 8%, transparent));
+	--stv-children-margin-top: calc(0.2 * var(--stv-rem));
 
 	/* -------------------------------------------------------------------------
 	   TOGGLE ICON (chevron / +/- / arrow / leaf)
 	   ------------------------------------------------------------------------- */
-	--ltree-toggle-icon-width: calc(2.0 * var(--ltree-rem));
-	--ltree-toggle-icon-size: calc(1.6 * var(--ltree-rem));
-	--ltree-toggle-icon-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
-	--ltree-toggle-icon-margin-right: calc(0.8 * var(--ltree-rem));
-	--ltree-toggle-icon-transition: transform 0.2s;
+	--stv-toggle-icon-width: calc(2.0 * var(--stv-rem));
+	--stv-toggle-icon-size: calc(1.6 * var(--stv-rem));
+	--stv-toggle-icon-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
+	--stv-toggle-icon-margin-right: calc(0.8 * var(--stv-rem));
+	--stv-toggle-icon-transition: transform 0.2s;
 
 	/* -------------------------------------------------------------------------
 	   CHECKBOX
 	   ------------------------------------------------------------------------- */
-	--ltree-checkbox-size: calc(1.5 * var(--ltree-rem));
-	--ltree-checkbox-border-width: 1.5px; /* hairline — does not scale */
-	--ltree-checkbox-border-color: var(--base-border-color, light-dark(#adb5bd, #5a5a5a));
-	--ltree-checkbox-border-radius: calc(var(--base-border-radius-sm, 0.3) * var(--ltree-rem));
-	--ltree-checkbox-bg: var(--base-input-bg, light-dark(#ffffff, #1f1f1f));
-	--ltree-checkbox-checked-bg: var(--ltree-primary);
-	--ltree-checkbox-checked-border-color: var(--ltree-primary);
-	--ltree-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
-	--ltree-checkbox-focus-ring-width: 2px;
-	--ltree-checkbox-focus-ring-color: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
-	--ltree-checkbox-focus-ring: 0 0 0 var(--ltree-checkbox-focus-ring-width) var(--ltree-checkbox-focus-ring-color);
+	--stv-checkbox-size: calc(1.5 * var(--stv-rem));
+	--stv-checkbox-border-width: 1.5px; /* hairline — does not scale */
+	--stv-checkbox-border-color: var(--base-border-color, light-dark(#adb5bd, #5a5a5a));
+	--stv-checkbox-border-radius: calc(var(--base-border-radius-sm, 0.3) * var(--stv-rem));
+	--stv-checkbox-bg: var(--base-input-bg, light-dark(#ffffff, #1f1f1f));
+	--stv-checkbox-checked-bg: var(--stv-primary);
+	--stv-checkbox-checked-border-color: var(--stv-primary);
+	--stv-checkbox-checkmark-color: var(--base-text-color-on-accent, #fff);
+	--stv-checkbox-focus-ring-width: 2px;
+	--stv-checkbox-focus-ring-color: color-mix(in srgb, var(--stv-primary) 25%, transparent);
+	--stv-checkbox-focus-ring: 0 0 0 var(--stv-checkbox-focus-ring-width) var(--stv-checkbox-focus-ring-color);
 
 	/* -------------------------------------------------------------------------
 	   SELECTION & HIGHLIGHT STATES
 	   ------------------------------------------------------------------------- */
-	--ltree-highlight-bg: color-mix(in srgb, var(--ltree-primary) 30%, transparent);
-	--ltree-highlight-color: inherit;
-	--ltree-multi-selected-bg: color-mix(in srgb, var(--ltree-primary) 8%, transparent);
-	--ltree-multi-selected-outline: color-mix(in srgb, var(--ltree-primary) 25%, transparent);
+	--stv-highlight-bg: color-mix(in srgb, var(--stv-primary) 30%, transparent);
+	--stv-highlight-color: inherit;
+	--stv-multi-selected-bg: color-mix(in srgb, var(--stv-primary) 8%, transparent);
+	--stv-multi-selected-outline: color-mix(in srgb, var(--stv-primary) 25%, transparent);
 
 	/* -------------------------------------------------------------------------
 	   DRAG / DROP — placeholder + dragover + ghost
 	   ------------------------------------------------------------------------- */
-	--ltree-dragover-bg: color-mix(in srgb, var(--ltree-primary) 10%, transparent);
-	--ltree-dragover-shadow: 0 0 8px color-mix(in srgb, var(--ltree-primary) 40%, transparent);
-	--ltree-drop-placeholder-bg: color-mix(in srgb, var(--ltree-primary) 10%, transparent);
-	--ltree-drop-placeholder-color: var(--ltree-primary);
-	--ltree-drop-placeholder-border-radius: calc(0.8 * var(--ltree-rem));
-	--ltree-drop-placeholder-min-height: calc(6.0 * var(--ltree-rem));
+	--stv-dragover-bg: color-mix(in srgb, var(--stv-primary) 10%, transparent);
+	--stv-dragover-shadow: 0 0 8px color-mix(in srgb, var(--stv-primary) 40%, transparent);
+	--stv-drop-placeholder-bg: color-mix(in srgb, var(--stv-primary) 10%, transparent);
+	--stv-drop-placeholder-color: var(--stv-primary);
+	--stv-drop-placeholder-border-radius: calc(0.8 * var(--stv-rem));
+	--stv-drop-placeholder-min-height: calc(6.0 * var(--stv-rem));
 
 	/* Touch drag ghost */
-	--tree-ghost-bg: color-mix(in srgb, var(--ltree-primary) 90%, transparent);
+	--tree-ghost-bg: color-mix(in srgb, var(--stv-primary) 90%, transparent);
 	--tree-ghost-color: #fff;
 	--tree-ghost-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
 	/* -------------------------------------------------------------------------
 	   DROP ZONES (before / after / child) — pastel mode
 	   ------------------------------------------------------------------------- */
-	--ltree-drop-zone-border-radius: 0;
-	--ltree-drop-zone-before-bg: rgba(134, 179, 152, 0.25);
-	--ltree-drop-zone-before-color: rgba(62, 89, 72, 0.7);
-	--ltree-drop-zone-before-active-bg: rgba(134, 179, 152, 0.85);
-	--ltree-drop-zone-before-active-color: rgb(32, 54, 40);
-	--ltree-drop-zone-before-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4);
-	--ltree-drop-zone-after-bg: rgba(242, 182, 158, 0.25);
-	--ltree-drop-zone-after-color: rgba(120, 70, 50, 0.7);
-	--ltree-drop-zone-after-active-bg: rgba(242, 182, 158, 0.85);
-	--ltree-drop-zone-after-active-color: rgb(80, 45, 30);
-	--ltree-drop-zone-after-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4);
-	--ltree-drop-zone-child-bg: rgba(167, 155, 198, 0.25);
-	--ltree-drop-zone-child-color: rgba(72, 62, 98, 0.7);
-	--ltree-drop-zone-child-active-bg: rgba(167, 155, 198, 0.85);
-	--ltree-drop-zone-child-active-color: rgb(45, 38, 62);
-	--ltree-drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4);
+	--stv-drop-zone-border-radius: 0;
+	--stv-drop-zone-before-bg: rgba(134, 179, 152, 0.25);
+	--stv-drop-zone-before-color: rgba(62, 89, 72, 0.7);
+	--stv-drop-zone-before-active-bg: rgba(134, 179, 152, 0.85);
+	--stv-drop-zone-before-active-color: rgb(32, 54, 40);
+	--stv-drop-zone-before-active-shadow: 0 2px 12px rgba(134, 179, 152, 0.4);
+	--stv-drop-zone-after-bg: rgba(242, 182, 158, 0.25);
+	--stv-drop-zone-after-color: rgba(120, 70, 50, 0.7);
+	--stv-drop-zone-after-active-bg: rgba(242, 182, 158, 0.85);
+	--stv-drop-zone-after-active-color: rgb(80, 45, 30);
+	--stv-drop-zone-after-active-shadow: 0 2px 12px rgba(242, 182, 158, 0.4);
+	--stv-drop-zone-child-bg: rgba(167, 155, 198, 0.25);
+	--stv-drop-zone-child-color: rgba(72, 62, 98, 0.7);
+	--stv-drop-zone-child-active-bg: rgba(167, 155, 198, 0.85);
+	--stv-drop-zone-child-active-color: rgb(45, 38, 62);
+	--stv-drop-zone-child-active-shadow: 0 2px 12px rgba(167, 155, 198, 0.4);
 
 	/* -------------------------------------------------------------------------
 	   GLOW MODE (border glow drop indicators)
 	   ------------------------------------------------------------------------- */
-	--ltree-drop-glow-before-color: rgba(134, 179, 152, 0.8);
-	--ltree-drop-glow-after-color: rgba(242, 182, 158, 0.8);
-	--ltree-drop-glow-child-color: rgba(167, 155, 198, 0.8);
-	--ltree-drop-glow-child-bg: rgba(167, 155, 198, 0.15);
-	--ltree-drop-glow-size: 3px; /* hairline thickness, does not scale */
-	--ltree-drop-arrow-size: calc(2.4 * var(--ltree-rem));
-	--ltree-drop-arrow-position: 66%;
-	--ltree-drop-arrow-before-rotation: 0deg;
-	--ltree-drop-arrow-after-rotation: 0deg;
-	--ltree-drop-arrow-child-rotation: 45deg;
+	--stv-drop-glow-before-color: rgba(134, 179, 152, 0.8);
+	--stv-drop-glow-after-color: rgba(242, 182, 158, 0.8);
+	--stv-drop-glow-child-color: rgba(167, 155, 198, 0.8);
+	--stv-drop-glow-child-bg: rgba(167, 155, 198, 0.15);
+	--stv-drop-glow-size: 3px; /* hairline thickness, does not scale */
+	--stv-drop-arrow-size: calc(2.4 * var(--stv-rem));
+	--stv-drop-arrow-position: 66%;
+	--stv-drop-arrow-before-rotation: 0deg;
+	--stv-drop-arrow-after-rotation: 0deg;
+	--stv-drop-arrow-child-rotation: 45deg;
 
 	/* Drop indicator arrow SVGs (Lucide icons, rendered via mask-image so they
-	   inherit the matching --ltree-drop-glow-*-color via background-color). */
-	--ltree-drop-arrow-before-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
-	--ltree-drop-arrow-after-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E");
-	--ltree-drop-arrow-child-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E");
+	   inherit the matching --stv-drop-glow-*-color via background-color). */
+	--stv-drop-arrow-before-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+	--stv-drop-arrow-after-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 11a1 1 0 0 0 1 1h2.939a1 1 0 0 1 .75 1.811l-6.835 6.836a1.207 1.207 0 0 1-1.707 0L4.31 13.81a1 1 0 0 1 .75-1.811H8a1 1 0 0 0 1-1V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1z'/%3E%3C/svg%3E");
+	--stv-drop-arrow-child-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 9a1 1 0 0 0 1-1V5.061a1 1 0 0 1 1.811-.75l6.836 6.836a1.207 1.207 0 0 1 0 1.707l-6.836 6.835a1 1 0 0 1-1.811-.75V16a1 1 0 0 0-1-1H9a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z'/%3E%3Cpath d='M4 9v6'/%3E%3C/svg%3E");
 
 	/* -------------------------------------------------------------------------
 	   CONTEXT MENU
 	   ------------------------------------------------------------------------- */
 	/* Dropdown chain: dropdown-bg → elevated-bg → main-bg → light-dark fallback.
 	   Matches base-variables.md "Fallback chains — the four chained variables". */
-	--ltree-context-menu-bg: var(--base-dropdown-bg,
+	--stv-context-menu-bg: var(--base-dropdown-bg,
 		var(--base-elevated-bg,
 			var(--base-main-bg, light-dark(#ffffff, #2b2b2b))));
-	--ltree-context-menu-border-color: var(--ltree-border);
-	--ltree-context-menu-border-radius: calc(var(--base-border-radius-sm, 0.4) * var(--ltree-rem));
-	--ltree-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.15));
-	--ltree-context-menu-min-width: calc(15 * var(--ltree-rem));
-	--ltree-context-menu-padding: calc(0.4 * var(--ltree-rem)) 0;
-	--ltree-context-menu-item-padding: calc(0.8 * var(--ltree-rem)) calc(1.6 * var(--ltree-rem));
-	--ltree-context-menu-item-font-size: calc(var(--base-font-size-sm, 1.4) * var(--ltree-rem));
-	--ltree-context-menu-item-color: var(--ltree-body-color);
-	--ltree-context-menu-item-hover-bg: var(--ltree-light);
-	--ltree-context-menu-icon-size: calc(1.6 * var(--ltree-rem));
-	--ltree-context-menu-icon-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-context-menu-shortcut-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
-	--ltree-context-menu-shortcut-font-size: calc(var(--base-font-size-xs, 1.2) * var(--ltree-rem));
-	--ltree-context-menu-arrow-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
-	--ltree-context-menu-divider-color: var(--ltree-border);
-	--ltree-context-menu-divider-label-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
+	--stv-context-menu-border-color: var(--stv-border);
+	--stv-context-menu-border-radius: calc(var(--base-border-radius-sm, 0.4) * var(--stv-rem));
+	--stv-context-menu-shadow: var(--base-dropdown-box-shadow, 0 2px 10px rgba(0, 0, 0, 0.15));
+	--stv-context-menu-min-width: calc(15 * var(--stv-rem));
+	--stv-context-menu-padding: calc(0.4 * var(--stv-rem)) 0;
+	--stv-context-menu-item-padding: calc(0.8 * var(--stv-rem)) calc(1.6 * var(--stv-rem));
+	--stv-context-menu-item-font-size: calc(var(--base-font-size-sm, 1.4) * var(--stv-rem));
+	--stv-context-menu-item-color: var(--stv-body-color);
+	--stv-context-menu-item-hover-bg: var(--stv-light);
+	--stv-context-menu-icon-size: calc(1.6 * var(--stv-rem));
+	--stv-context-menu-icon-font-size: calc(var(--base-font-size-xs, 1.2) * var(--stv-rem));
+	--stv-context-menu-shortcut-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
+	--stv-context-menu-shortcut-font-size: calc(var(--base-font-size-xs, 1.2) * var(--stv-rem));
+	--stv-context-menu-arrow-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
+	--stv-context-menu-divider-color: var(--stv-border);
+	--stv-context-menu-divider-label-color: var(--base-text-color-4, light-dark(#9ca3af, #6b7280));
 
 	/* -------------------------------------------------------------------------
 	   LOADING OVERLAY + SPINNER
 	   ------------------------------------------------------------------------- */
 	/* Loading overlay: semi-transparent surface — use main-bg so it composites
 	   correctly against both light and dark page backgrounds. */
-	--ltree-loading-bg: color-mix(in srgb, var(--base-main-bg, light-dark(#ffffff, #1a1a1a)) 80%, transparent);
-	--ltree-loading-color: var(--base-text-color-3, light-dark(#718096, #a3a3a3));
-	--ltree-spinner-size: calc(3.2 * var(--ltree-rem));
-	--ltree-spinner-track: var(--base-border-color, light-dark(#e2e8f0, #3d3d3d));
-	--ltree-spinner-color: var(--ltree-primary);
+	--stv-loading-bg: color-mix(in srgb, var(--base-main-bg, light-dark(#ffffff, #1a1a1a)) 80%, transparent);
+	--stv-loading-color: var(--base-text-color-3, light-dark(#718096, #a3a3a3));
+	--stv-spinner-size: calc(3.2 * var(--stv-rem));
+	--stv-spinner-track: var(--base-border-color, light-dark(#e2e8f0, #3d3d3d));
+	--stv-spinner-color: var(--stv-primary);
 
 	/* -------------------------------------------------------------------------
 	   SCROLL HIGHLIGHT (after scrollToPath with highlight: true)
 	   ------------------------------------------------------------------------- */
-	--ltree-scroll-highlight-bg: color-mix(in srgb, var(--ltree-primary) 30%, transparent);
-	--ltree-scroll-highlight-shadow: 0 0 0.5em color-mix(in srgb, var(--ltree-primary) 40%, transparent);
-	--ltree-scroll-highlight-arrow-color: var(--ltree-danger);
+	--stv-scroll-highlight-bg: color-mix(in srgb, var(--stv-primary) 30%, transparent);
+	--stv-scroll-highlight-shadow: 0 0 0.5em color-mix(in srgb, var(--stv-primary) 40%, transparent);
+	--stv-scroll-highlight-arrow-color: var(--stv-danger);
 
 	/* -------------------------------------------------------------------------
 	   LEGACY ALIASES — pre-rc09 names kept for backward compatibility
 	   ------------------------------------------------------------------------- */
-	--tree-node-indent-per-level: var(--ltree-node-indent-per-level);
+	--tree-node-indent-per-level: var(--stv-node-indent-per-level);
 }

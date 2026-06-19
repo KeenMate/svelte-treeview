@@ -626,7 +626,7 @@
 		background-color: rgba(0, 0, 0, 0.05);
 	}
 
-	:global(.ltree-context-menu) {
+	:global(.stv__context-menu) {
 		position: fixed;
 		background: white;
 		border: 1px solid #ccc;

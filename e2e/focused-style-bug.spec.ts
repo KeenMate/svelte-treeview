@@ -16,16 +16,16 @@ test('shift+click range only marks the clicked node as focused (not the anchor)'
 
 	await page.getByLabel('Focused Style:').selectOption('demo-focused-outline');
 
-	await page.waitForSelector('.ltree-node-content', { timeout: 5000 });
+	await page.waitForSelector('.stv__node-content', { timeout: 5000 });
 
 	const firstTree = page.locator('.tree-container').first();
-	const nodes = firstTree.locator('.ltree-node-content');
+	const nodes = firstTree.locator('.stv__node-content');
 
 	await nodes.nth(0).click();
 	await nodes.nth(2).click({ modifiers: ['Shift'] });
 
-	const focusedCount = await firstTree.locator('.ltree-node-content.demo-focused-outline').count();
-	const highlightedCount = await firstTree.locator('.ltree-node-content.ltree-selected-bold').count();
+	const focusedCount = await firstTree.locator('.stv__node-content.demo-focused-outline').count();
+	const highlightedCount = await firstTree.locator('.stv__node-content.stv__node-content--highlight-bold').count();
 
 	expect(focusedCount, 'Only one node should have focus style after Shift+click range').toBe(1);
 	expect(highlightedCount, 'Three nodes should be highlighted in the range').toBeGreaterThanOrEqual(2);

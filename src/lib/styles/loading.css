@@ -2,35 +2,35 @@
    LOADING OVERLAY + SPINNER
    ============================================================================= */
 
-.ltree-loading-overlay {
+.stv__loading-overlay {
 	position: absolute;
 	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: var(--ltree-loading-bg);
+	background: var(--stv-loading-bg);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	z-index: 10;
 }
 
-.ltree-loading-spinner {
-	width: var(--ltree-spinner-size);
-	height: var(--ltree-spinner-size);
-	border: 3px solid var(--ltree-spinner-track);
-	border-top-color: var(--ltree-spinner-color);
+.stv__loading-spinner {
+	width: var(--stv-spinner-size);
+	height: var(--stv-spinner-size);
+	border: 3px solid var(--stv-spinner-track);
+	border-top-color: var(--stv-spinner-color);
 	border-radius: 50%;
-	animation: ltree-spin 0.8s linear infinite;
+	animation: stv-spin 0.8s linear infinite;
 }
 
-/* (@keyframes ltree-spin — moved to animations.css per canonical Tier-2 layout.) */
+/* (@keyframes stv-spin — moved to animations.css per canonical Tier-2 layout.) */
 
 /* Progressive rendering loading indicator */
-.ltree-loading-more {
+.stv__loading-more {
 	padding: 4px 8px;
-	margin-left: var(--ltree-node-indent-per-level);
+	margin-left: var(--stv-node-indent-per-level);
 	font-size: 12px;
-	color: var(--ltree-loading-color);
+	color: var(--stv-loading-color);
 	font-style: italic;
 }

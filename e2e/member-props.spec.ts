@@ -5,7 +5,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * v5-rc consolidation pass.
  *
  * - isSelectableMember: data field controlling whether a node renders a checkbox
- *   and carries the ltree-clickable class.
+ *   and carries the stv__clickable class.
  * - isSelectedMember:  data field that seeds node.isSelected and (via
  *   TreeController) the bindable selectedPaths Set.
  *
@@ -23,23 +23,23 @@ import { test, expect, Page, Locator } from '@playwright/test';
 const PAGE = '/test/member-props';
 
 function nodeByPath(page: Page, path: string): Locator {
-	return page.locator(`.ltree-node[data-tree-path="${path}"]`).first();
+	return page.locator(`.stv__node[data-tree-path="${path}"]`).first();
 }
 
 function checkbox(node: Locator): Locator {
-	// .ltree-checkbox is the <label>; the actual input lives inside.
-	return node.locator('> .ltree-node-row .ltree-checkbox input[type="checkbox"]').first();
+	// .stv__checkbox is the <label>; the actual input lives inside.
+	return node.locator('> .stv__node-row .stv__checkbox input[type="checkbox"]').first();
 }
 
 function checkboxLabel(node: Locator): Locator {
 	// The visible label wrapping the (visually hidden) input + custom box span.
-	return node.locator('> .ltree-node-row .ltree-checkbox').first();
+	return node.locator('> .stv__node-row .stv__checkbox').first();
 }
 
 async function gotoFixture(page: Page) {
 	await page.goto(PAGE);
 	// Wait for the tree to render at least one node.
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 test.describe('isSelectableMember', () => {
@@ -57,28 +57,28 @@ test.describe('isSelectableMember', () => {
 		await gotoFixture(page);
 		// Direct children only — descendant selector would catch checkboxes from child rows.
 		await expect(
-			nodeByPath(page, '1.2').locator('> .ltree-node-row .ltree-checkbox')
+			nodeByPath(page, '1.2').locator('> .stv__node-row .stv__checkbox')
 		).toHaveCount(0);
 		await expect(
-			nodeByPath(page, '1.3').locator('> .ltree-node-row .ltree-checkbox')
+			nodeByPath(page, '1.3').locator('> .stv__node-row .stv__checkbox')
 		).toHaveCount(0);
 	});
 
-	test('nodes with selectable=true carry the ltree-clickable class', async ({ page }) => {
+	test('nodes with selectable=true carry the stv__clickable class', async ({ page }) => {
 		await gotoFixture(page);
 		await expect(
-			nodeByPath(page, '1').locator('> .ltree-node-row .ltree-node-content').first()
-		).toHaveClass(/(^|\s)ltree-clickable(\s|$)/);
+			nodeByPath(page, '1').locator('> .stv__node-row .stv__node-content').first()
+		).toHaveClass(/(^|\s)stv__clickable(\s|$)/);
 	});
 
-	test('nodes with selectable=false do NOT carry the ltree-clickable class', async ({ page }) => {
+	test('nodes with selectable=false do NOT carry the stv__clickable class', async ({ page }) => {
 		await gotoFixture(page);
 		await expect(
-			nodeByPath(page, '1.2').locator('> .ltree-node-row .ltree-node-content').first()
-		).not.toHaveClass(/(^|\s)ltree-clickable(\s|$)/);
+			nodeByPath(page, '1.2').locator('> .stv__node-row .stv__node-content').first()
+		).not.toHaveClass(/(^|\s)stv__clickable(\s|$)/);
 		await expect(
-			nodeByPath(page, '1.3').locator('> .ltree-node-row .ltree-node-content').first()
-		).not.toHaveClass(/(^|\s)ltree-clickable(\s|$)/);
+			nodeByPath(page, '1.3').locator('> .stv__node-row .stv__node-content').first()
+		).not.toHaveClass(/(^|\s)stv__clickable(\s|$)/);
 	});
 });
 
@@ -116,7 +116,7 @@ test.describe('isSelectedMember', () => {
 
 		// Toggle 2.1 on. Click the label (which dispatches the controller toggle);
 		// clicking the input directly is suppressed by the label onclick handler.
-		await nodeByPath(page, '2.1').locator('> .ltree-node-row .ltree-checkbox').first().click();
+		await nodeByPath(page, '2.1').locator('> .stv__node-row .stv__checkbox').first().click();
 		await expect(checkbox(nodeByPath(page, '2.1'))).toBeChecked();
 
 		// Set is now {1.1, 1.3, 2, 2.1} — size 4.
@@ -124,7 +124,7 @@ test.describe('isSelectedMember', () => {
 		await expect(page.getByTestId('selected-paths-list')).toHaveText('1.1,1.3,2,2.1');
 
 		// Toggle 1.1 off.
-		await nodeByPath(page, '1.1').locator('> .ltree-node-row .ltree-checkbox').first().click();
+		await nodeByPath(page, '1.1').locator('> .stv__node-row .stv__checkbox').first().click();
 		await expect(checkbox(nodeByPath(page, '1.1'))).not.toBeChecked();
 		await expect(page.getByTestId('selected-paths-count')).toHaveText('3');
 		await expect(page.getByTestId('selected-paths-list')).toHaveText('1.3,2,2.1');

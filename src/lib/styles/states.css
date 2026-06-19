@@ -2,72 +2,87 @@
    SELECTION / HIGHLIGHT / SCROLL STATES
    ============================================================================= */
 
-.ltree-selected-bold {
-	font-weight: bold !important;
-	color: var(--ltree-primary) !important;
+/* Always-on markers — applied automatically by Node.svelte when isHighlighted / isFocused.
+   Subtle by default so consumers can override or layer their own highlightedNodeClass on top. */
+.stv__node-content--highlighted {
+	background-color: var(--stv-highlighted-bg, color-mix(in srgb, var(--stv-primary) 10%, transparent));
+	outline: 1px solid var(--stv-highlighted-outline, color-mix(in srgb, var(--stv-primary) 25%, transparent));
+	outline-offset: -1px;
+	border-radius: var(--stv-node-content-border-radius);
 }
 
-.ltree-selected-border {
-	border: 2px solid var(--ltree-primary) !important;
+.stv__node-content--focused {
+	outline: 2px solid var(--stv-focused-outline, color-mix(in srgb, var(--stv-primary) 60%, transparent));
+	outline-offset: -2px;
+	border-radius: var(--stv-node-content-border-radius);
+}
+
+.stv__node-content--highlight-bold {
+	font-weight: bold !important;
+	color: var(--stv-primary) !important;
+}
+
+.stv__node-content--highlight-border {
+	border: 2px solid var(--stv-primary) !important;
 	border-radius: 4px !important;
-	background-color: color-mix(in srgb, var(--ltree-primary) 10%, transparent) !important;
+	background-color: color-mix(in srgb, var(--stv-primary) 10%, transparent) !important;
 	padding: 6px 10px !important;
 }
 
-.ltree-selected-highlight {
-	background-color: var(--ltree-highlight-bg) !important;
-	color: var(--ltree-highlight-color) !important;
+.stv__node-content--highlight-fill {
+	background-color: var(--stv-highlight-bg) !important;
+	color: var(--stv-highlight-color) !important;
 }
 
 /* Multi-select: subtle highlight for all selected nodes (works with any highlightedNodeClass) */
-.ltree-multi-selected {
-	background-color: var(--ltree-multi-selected-bg) !important;
-	outline: 1px solid var(--ltree-multi-selected-outline);
+.stv__node-content--multi-selected {
+	background-color: var(--stv-multi-selected-bg) !important;
+	outline: 1px solid var(--stv-multi-selected-outline);
 	outline-offset: -1px;
 }
 
-.ltree-selected-brackets {
+.stv__node-content--highlight-brackets {
 	position: relative;
 }
 
-.ltree-selected-brackets::before {
+.stv__node-content--highlight-brackets::before {
 	content: '❯';
 	margin-right: 6px;
-	color: var(--ltree-primary);
+	color: var(--stv-primary);
 	font-weight: bold;
 }
 
-.ltree-selected-brackets::after {
+.stv__node-content--highlight-brackets::after {
 	content: '❮';
 	margin-left: 6px;
-	color: var(--ltree-primary);
+	color: var(--stv-primary);
 	font-weight: bold;
 }
 
 /* Suppress brackets when checkboxes are shown (checkbox already indicates selection) */
-.ltree-checkbox ~ .ltree-selected-brackets::before,
-.ltree-checkbox ~ .ltree-selected-brackets::after {
+.stv__checkbox ~ .stv__node-content--highlight-brackets::before,
+.stv__checkbox ~ .stv__node-content--highlight-brackets::after {
 	content: none;
 }
 
 /* Fallback visual when brackets are suppressed — without this the highlight is invisible */
-.ltree-checkbox ~ .ltree-selected-brackets {
+.stv__checkbox ~ .stv__node-content--highlight-brackets {
 	font-weight: bold;
-	color: var(--ltree-primary);
+	color: var(--stv-primary);
 }
 
 /* Scroll highlight (post-scrollToPath flash) */
-.ltree-scroll-highlight {
-	background-color: var(--ltree-scroll-highlight-bg) !important;
-	box-shadow: var(--ltree-scroll-highlight-shadow);
+.stv__node-content--scroll-highlight {
+	background-color: var(--stv-scroll-highlight-bg) !important;
+	box-shadow: var(--stv-scroll-highlight-shadow);
 	border-radius: 0.25em;
 }
 
-.ltree-scroll-highlight-arrow {
+.stv__scroll-arrow {
 	position: relative;
 }
 
-.ltree-scroll-highlight-arrow::before {
+.stv__scroll-arrow::before {
 	content: '⇨';
 	position: absolute;
 	left: -1.2em;
@@ -75,11 +90,11 @@
 	transform: translateY(-57%);
 	font-size: 3em;
 	pointer-events: none;
-	color: var(--ltree-scroll-highlight-arrow-color);
+	color: var(--stv-scroll-highlight-arrow-color);
 	z-index: 1;
 }
 
-.ltree-scroll-highlight-arrow::after {
+.stv__scroll-arrow::after {
 	content: '⇦';
 	position: absolute;
 	right: 0;
@@ -87,6 +102,6 @@
 	transform: translateY(-57%);
 	font-size: 3em;
 	pointer-events: none;
-	color: var(--ltree-scroll-highlight-arrow-color);
+	color: var(--stv-scroll-highlight-arrow-color);
 	z-index: 1;
 }

@@ -2,25 +2,25 @@
    NODE — row, content, label, path
    ============================================================================= */
 
-.ltree-node {
-	font-family: var(--ltree-font-family);
-	font-size: var(--ltree-node-font-size);
+.stv__node {
+	font-family: var(--stv-font-family);
+	font-size: var(--stv-node-font-size);
 	position: relative; /* Required for absolutely positioned drop zones */
 	overflow: visible;
 }
 
-.ltree-node-row {
+.stv__node-row {
 	display: flex;
 	align-items: center;
 	overflow: visible;
 	position: relative;
 }
 
-.ltree-node-content {
+.stv__node-content {
 	display: flex;
 	align-items: center;
-	padding: var(--ltree-node-content-padding);
-	border-radius: var(--ltree-node-content-border-radius);
+	padding: var(--stv-node-content-padding);
+	border-radius: var(--stv-node-content-border-radius);
 	transition: background-color 0.2s, box-shadow 0.15s ease;
 	flex: 1;
 	position: relative;
@@ -32,29 +32,29 @@
 	-webkit-touch-callout: none;
 }
 
-.ltree-node-content:hover {
-	background-color: var(--ltree-node-hover-bg);
+.stv__node-content:hover {
+	background-color: var(--stv-node-hover-bg);
 }
 
-.ltree-clickable {
+.stv__clickable {
 	cursor: pointer;
 }
 
-.ltree-node-icon {
-	margin-right: var(--ltree-node-icon-margin-right);
-	font-size: var(--ltree-node-icon-font-size);
+.stv__node-icon {
+	margin-right: var(--stv-node-icon-margin-right);
+	font-size: var(--stv-node-icon-font-size);
 }
 
-.ltree-node-label {
-	font-weight: var(--ltree-node-label-font-weight);
-	margin-right: var(--ltree-node-label-margin-right);
+.stv__node-label {
+	font-weight: var(--stv-node-label-font-weight);
+	margin-right: var(--stv-node-label-margin-right);
 }
 
-.ltree-node-path {
-	font-size: var(--ltree-node-path-font-size);
-	color: var(--ltree-node-path-color);
+.stv__node-path {
+	font-size: var(--stv-node-path-font-size);
+	color: var(--stv-node-path-color);
 }
 
-.ltree-children {
-	margin-top: var(--ltree-children-margin-top);
+.stv__children {
+	margin-top: var(--stv-children-margin-top);
 }

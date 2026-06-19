@@ -366,7 +366,7 @@
 					sortCallback={sortByOrder}
 					isSorted={true}
 					expandLevel={3}
-					highlightedNodeClass="ltree-selected-bold"
+					highlightedNodeClass="stv__node-content--highlight-bold"
 					getContextMenuItemsCallback={getContextMenu}
 					bind:focusedNode={selectedNode}
 					{...getTreeProps()}

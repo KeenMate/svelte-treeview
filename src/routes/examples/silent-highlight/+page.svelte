@@ -133,7 +133,7 @@
 				sortCallback={sortByName}
 				isSorted={true}
 				expandLevel={2}
-				highlightedNodeClass="ltree-selected-bold"
+				highlightedNodeClass="stv__node-content--highlight-bold"
 				bind:highlightedPaths
 				onHighlightChange={handleHighlightChange}
 				{...getTreeProps()}

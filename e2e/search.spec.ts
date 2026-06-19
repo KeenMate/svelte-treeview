@@ -59,7 +59,7 @@ function resultsContainer(page: Page): Locator {
 
 function nodeByName(page: Page, name: string): Locator {
 	return treeContainer(page)
-		.locator('.ltree-node')
+		.locator('.stv__node')
 		.filter({ has: page.locator('.location-name', { hasText: new RegExp(`^${name}$`) }) })
 		.first();
 }
@@ -67,7 +67,7 @@ function nodeByName(page: Page, name: string): Locator {
 async function gotoSearch(page: Page) {
 	await page.goto(PAGE);
 	// Wait for the tree to render at least one node before tests probe state.
-	await expect(page.locator('.ltree-node').first()).toBeVisible();
+	await expect(page.locator('.stv__node').first()).toBeVisible();
 }
 
 /**

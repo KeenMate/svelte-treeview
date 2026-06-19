@@ -433,39 +433,39 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
 			</thead>
 			<tbody>
 				<tr>
-					<td><code>.ltree-context-menu</code></td>
+					<td><code>.stv__context-menu</code></td>
 					<td>The menu container</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-item</code></td>
+					<td><code>.stv__context-menu-item</code></td>
 					<td>Each menu item</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-item-disabled</code></td>
+					<td><code>.stv__context-menu-item--disabled</code></td>
 					<td>Disabled menu items</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-label</code></td>
+					<td><code>.stv__context-menu-label</code></td>
 					<td>Label text span</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-shortcut</code></td>
+					<td><code>.stv__context-menu-shortcut</code></td>
 					<td>Right-aligned shortcut hint</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-arrow</code></td>
+					<td><code>.stv__context-menu-arrow</code></td>
 					<td>Submenu arrow indicator</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-divider</code></td>
+					<td><code>.stv__context-menu-divider</code></td>
 					<td>Divider lines</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-menu-divider-label</code></td>
+					<td><code>.stv__context-menu-divider-label</code></td>
 					<td>Named divider label text</td>
 				</tr>
 				<tr>
-					<td><code>.ltree-context-submenu</code></td>
+					<td><code>.stv__context-submenu</code></td>
 					<td>Nested submenu container</td>
 				</tr>
 				<tr>

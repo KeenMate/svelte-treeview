@@ -2,18 +2,18 @@
    @keenmate/svelte-treeview — MAIN ENTRY POINT
    ==============================================================================
    Cascade layer order (later = higher priority):
-     variables  — :root { --ltree-* } declarations
+     variables  — :root { --stv-* } declarations
      component  — base + feature rules
      overrides  — dark mode, framework themes, per-instance overrides
 
    Consumer override contract:
    - Any unlayered consumer rule beats every rule below.
-   - Any :root --base-* or --ltree-* declaration beats the variables layer.
+   - Any :root --base-* or --stv-* declaration beats the variables layer.
 
-   BEM-ish convention:
-     .ltree-<element>             — element
-     .ltree-<element>-<modifier>  — state modifier
-   (Legacy class names predate strict BEM and are kept stable for back-compat.)
+   BEM convention (Bliss guidelines, two underscore levels max):
+     .stv__<element>             — element of the tree block
+     .stv__<element>--<modifier> — state modifier of that element
+     .stv__<utility>             — standalone utility (e.g. .stv__clickable)
 
    Build: lightningcss-cli bundles this file into dist/styles.css during
    `npm run prepack`. Consumers import the bundled file:

@@ -26,7 +26,7 @@
 
 		// Flat rendering mode
 		flatMode?: boolean; // When true, don't render children (Tree handles flat rendering)
-		flatGap?: boolean; // When true in flat mode, add margin-top to match recursive .ltree-children gap
+		flatGap?: boolean; // When true in flat mode, add margin-top to match recursive .stv__children gap
 	}
 
 	// Destructure props using Svelte 5 syntax
@@ -173,12 +173,12 @@
 	// In recursive mode, each nested Node compounds one level of margin-left.
 	// In flat mode, all nodes are siblings so we multiply level × indent explicitly.
 	// Both use the same CSS variable so theming works identically across modes.
-	// flatGap replicates the recursive .ltree-children { margin-top: 2px } gap
+	// flatGap replicates the recursive .stv__children { margin-top: 2px } gap
 	// — only applied before first-child nodes (where level > previous node's level).
 	const indentStyle = $derived(
 		flatMode
-			? `margin-left: calc(${node?.level || 1} * var(--ltree-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
-			: `margin-left: var(--ltree-node-indent-per-level, 0.5rem)`,
+			? `margin-left: calc(${node?.level || 1} * var(--stv-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
+			: `margin-left: var(--stv-node-indent-per-level, 0.5rem)`,
 	)
 
 	// Progressive rendering state - only used in recursive mode
@@ -333,31 +333,31 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="ltree-node"
+	class="stv__node"
 	id="{node.treeId}-{node.id}"
 	data-tree-path="{node.path}"
 	style={indentStyle}
 >
-	<div class="ltree-node-row">
+	<div class="stv__node-row">
 		<!-- Toggle icon with its own click handler -->
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		{#if hasChildren && isCollapsible}
 			<span
-				class="ltree-toggle-icon ltree-clickable {toggleIconMode === 'swap'
+				class="stv__toggle-icon stv__clickable {toggleIconMode === 'swap'
 					? (node.isExpanded ? collapseIconClass : expandIconClass)
 					: expandIconClass}"
 				class:expanded={toggleIconMode === 'rotate' && node.isExpanded}
 				onclick={toggleExpanded}
 			></span>
 		{:else}
-			<span class="ltree-toggle-icon {leafIconClass}"></span>
+			<span class="stv__toggle-icon {leafIconClass}"></span>
 		{/if}
 
 		{#if showCheckboxes && node.isSelectable}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<label
-				class="ltree-checkbox"
+				class="stv__checkbox"
 				onclick={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -370,7 +370,7 @@
 					use:setIndeterminate={isIndeterminate}
 					tabindex={-1}
 				/>
-				<span class="ltree-checkbox__box"></span>
+				<span class="stv__checkbox-box"></span>
 			</label>
 		{/if}
 
@@ -378,14 +378,16 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="ltree-node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
-			class:ltree-clickable={node.isSelectable}
-			class:ltree-dragged={isDraggedNode}
-			class:ltree-draggable={node?.isDraggable}
-			class:ltree-glow-before={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'before' && isPositionAllowed('before')}
-			class:ltree-glow-after={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'after' && isPositionAllowed('after')}
-			class:ltree-glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child' && isPositionAllowed('child')}
-			class:ltree-drop-copy={isDragInProgress && isHoveredForDrop && dropOperation === 'copy'}
+			class="stv__node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
+			class:stv__node-content--highlighted={node.isHighlighted}
+			class:stv__node-content--focused={node.isFocused}
+			class:stv__clickable={node.isSelectable}
+			class:stv__node-content--dragged={isDraggedNode}
+			class:stv__node-content--draggable={node?.isDraggable}
+			class:stv__node-content--glow-before={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'before' && isPositionAllowed('before')}
+			class:stv__node-content--glow-after={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'after' && isPositionAllowed('after')}
+			class:stv__node-content--glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child' && isPositionAllowed('child')}
+			class:stv__node-content--drop-copy={isDragInProgress && isHoveredForDrop && dropOperation === 'copy'}
 			draggable={node?.isDraggable}
 			onclick={(e) => {
 				e.stopPropagation();
@@ -458,7 +460,7 @@
 
 	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->
 	{#if !flatMode && node?.isExpanded && node?.hasChildren}
-		<div class="ltree-children">
+		<div class="stv__children">
 			{#each childrenToRender as item (item.id)}
 				<Node
 					node={item}
@@ -473,7 +475,7 @@
 				/>
 			{/each}
 			{#if hasMoreToRender}
-				<div class="ltree-loading-more">
+				<div class="stv__loading-more">
 					Loading... ({renderedCount}/{childrenArray.length})
 				</div>
 			{/if}

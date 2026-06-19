@@ -1,38 +1,38 @@
 /* =============================================================================
    TOGGLE ICON (chevron / +/- / arrow / leaf)
    =============================================================================
-   The toggle column is a span with classes `ltree-toggle-icon` + an icon class
-   (`ltree-icon-expand`, `ltree-icon-collapse-arrow`, etc.). The icon classes set
+   The toggle column is a span with classes `stv__toggle-icon` + an icon class
+   (`stv__toggle-icon--expand`, `stv__toggle-icon--collapse-arrow`, etc.). The icon classes set
    only `mask-image`; the rest of the SVG-rendering boilerplate lives on the
-   shared `.ltree-toggle-icon::before` rule below so each icon class is a one-liner.
+   shared `.stv__toggle-icon::before` rule below so each icon class is a one-liner.
 */
 
-.ltree-toggle-icon {
-	width: var(--ltree-toggle-icon-width);
+.stv__toggle-icon {
+	width: var(--stv-toggle-icon-width);
 	display: inline-block;
 	text-align: center;
-	margin-right: var(--ltree-toggle-icon-margin-right);
-	font-size: var(--ltree-toggle-icon-size);
-	color: var(--ltree-toggle-icon-color);
-	transition: var(--ltree-toggle-icon-transition);
+	margin-right: var(--stv-toggle-icon-margin-right);
+	font-size: var(--stv-toggle-icon-size);
+	color: var(--stv-toggle-icon-color);
+	transition: var(--stv-toggle-icon-transition);
 	flex-shrink: 0;
 }
 
-.ltree-toggle-icon.expanded {
+.stv__toggle-icon.expanded {
 	transform: rotate(90deg);
 }
 
-/* Shared boilerplate: every ltree-icon-* class renders its SVG via mask-image
+/* Shared boilerplate: every stv__toggle-icon--* class renders its SVG via mask-image
    so it inherits currentColor. */
-.ltree-icon-expand::before,
-.ltree-icon-collapse::before,
-.ltree-icon-leaf::before,
-.ltree-icon-expand-alt::before,
-.ltree-icon-collapse-alt::before,
-.ltree-icon-expand-plus::before,
-.ltree-icon-collapse-minus::before,
-.ltree-icon-expand-arrow::before,
-.ltree-icon-collapse-arrow::before {
+.stv__toggle-icon--expand::before,
+.stv__toggle-icon--collapse::before,
+.stv__toggle-icon--leaf::before,
+.stv__toggle-icon--expand-alt::before,
+.stv__toggle-icon--collapse-alt::before,
+.stv__toggle-icon--expand-plus::before,
+.stv__toggle-icon--collapse-minus::before,
+.stv__toggle-icon--expand-arrow::before,
+.stv__toggle-icon--collapse-arrow::before {
 	content: '';
 	display: inline-block;
 	width: 1em;
@@ -48,50 +48,50 @@
 }
 
 /* Default — Lucide chevron */
-.ltree-icon-expand::before {
+.stv__toggle-icon--expand::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
 }
 
-.ltree-icon-collapse::before {
+.stv__toggle-icon--collapse::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
 }
 
-.ltree-icon-leaf::before {
+.stv__toggle-icon--leaf::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>");
 }
 
 /* Alternative — filled triangles */
-.ltree-icon-expand-alt::before {
+.stv__toggle-icon--expand-alt::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>");
 }
 
-.ltree-icon-collapse-alt::before {
+.stv__toggle-icon--collapse-alt::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 8l7 11 7-11z'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 8l7 11 7-11z'/></svg>");
 }
 
 /* Plus / Minus — Lucide square-plus / square-minus */
-.ltree-icon-expand-plus::before {
+.stv__toggle-icon--expand-plus::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>");
 }
 
-.ltree-icon-collapse-minus::before {
+.stv__toggle-icon--collapse-minus::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/></svg>");
 }
 
 /* Arrow — Lucide arrow-right / arrow-down */
-.ltree-icon-expand-arrow::before {
+.stv__toggle-icon--expand-arrow::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>");
 }
 
-.ltree-icon-collapse-arrow::before {
+.stv__toggle-icon--collapse-arrow::before {
 	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>");
 	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>");
 }

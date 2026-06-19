@@ -2,41 +2,41 @@
    TREE CONTAINER + LAYOUT FOUNDATION
    ============================================================================= */
 
-.ltree-tree {
-	font-family: var(--ltree-font-family);
+.stv__tree {
+	font-family: var(--stv-font-family);
 	overflow: visible !important; /* Allow drop zones to extend outside */
 	position: relative;
 	/* Reset default margins / padding / list bullets */
 	margin: 0;
 	padding: 0;
 	list-style: none;
-	color: var(--ltree-body-color);
+	color: var(--stv-body-color);
 }
 
-.ltree-tree .ltree-empty-state {
+.stv__tree .stv__empty-state {
 	font-style: italic;
-	color: var(--ltree-node-path-color);
+	color: var(--stv-node-path-color);
 	padding: 1rem;
 	text-align: center;
 	min-height: 60px; /* Minimum drop target size for drag events */
 }
 
 /* Ensure all tree ancestors allow overflow for drop zones */
-.ltree-tree,
-.ltree-node,
-.ltree-node-row,
-.ltree-children {
+.stv__tree,
+.stv__node,
+.stv__node-row,
+.stv__children {
 	overflow: visible !important;
 }
 
-.ltree-container {
+.stv__container {
 	position: relative;
 	outline: none;
-	background: var(--ltree-bg);
-	color: var(--ltree-body-color);
+	background: var(--stv-bg);
+	color: var(--stv-body-color);
 }
 
-.ltree-virtual-scroll {
+.stv__virtual-scroll {
 	overflow-y: auto !important;
 	overflow-x: visible;
 	overscroll-behavior: contain;

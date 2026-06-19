@@ -2,116 +2,116 @@
    CONTEXT MENU
    ============================================================================= */
 
-.ltree-context-menu {
+.stv__context-menu {
 	position: fixed;
 	z-index: 1000;
-	background: var(--ltree-context-menu-bg);
-	border: 1px solid var(--ltree-context-menu-border-color);
-	border-radius: var(--ltree-context-menu-border-radius);
-	box-shadow: var(--ltree-context-menu-shadow);
-	padding: var(--ltree-context-menu-padding);
-	min-width: var(--ltree-context-menu-min-width);
+	background: var(--stv-context-menu-bg);
+	border: 1px solid var(--stv-context-menu-border-color);
+	border-radius: var(--stv-context-menu-border-radius);
+	box-shadow: var(--stv-context-menu-shadow);
+	padding: var(--stv-context-menu-padding);
+	min-width: var(--stv-context-menu-min-width);
 }
 
-.ltree-context-menu-item {
+.stv__context-menu-item {
 	display: flex;
 	align-items: center;
-	padding: var(--ltree-context-menu-item-padding);
+	padding: var(--stv-context-menu-item-padding);
 	border: none;
 	background: none;
 	width: 100%;
 	text-align: left;
 	cursor: pointer;
-	color: var(--ltree-context-menu-item-color);
+	color: var(--stv-context-menu-item-color);
 	text-decoration: none;
-	font-size: var(--ltree-context-menu-item-font-size);
+	font-size: var(--stv-context-menu-item-font-size);
 	position: relative;
 }
 
-.ltree-context-menu-item:hover {
-	background-color: var(--ltree-context-menu-item-hover-bg);
+.stv__context-menu-item:hover {
+	background-color: var(--stv-context-menu-item-hover-bg);
 }
 
-.ltree-context-menu-item.ltree-context-menu-item-disabled {
+.stv__context-menu-item.stv__context-menu-item--disabled {
 	opacity: 0.5;
 	cursor: not-allowed;
 }
 
-.ltree-context-menu-item.danger {
-	color: var(--ltree-danger);
+.stv__context-menu-item.danger {
+	color: var(--stv-danger);
 }
 
-.ltree-context-menu-item.danger:hover {
-	background-color: color-mix(in srgb, var(--ltree-danger) 10%, transparent);
+.stv__context-menu-item.danger:hover {
+	background-color: color-mix(in srgb, var(--stv-danger) 10%, transparent);
 }
 
 /* Items with submenus: arrow indicates expandability */
-.ltree-context-menu-item.ltree-context-menu-has-children {
+.stv__context-menu-item.stv__context-menu-item--has-children {
 	cursor: default;
 }
 
-.ltree-context-menu-icon {
+.stv__context-menu-icon {
 	margin-right: 8px;
-	font-size: var(--ltree-context-menu-icon-font-size);
-	width: var(--ltree-context-menu-icon-size);
+	font-size: var(--stv-context-menu-icon-font-size);
+	width: var(--stv-context-menu-icon-size);
 	text-align: center;
 	flex-shrink: 0;
 }
 
-.ltree-context-menu-label {
+.stv__context-menu-label {
 	flex-grow: 1;
 }
 
-.ltree-context-menu-shortcut {
+.stv__context-menu-shortcut {
 	margin-left: auto;
 	padding-left: 16px;
-	color: var(--ltree-context-menu-shortcut-color);
-	font-size: var(--ltree-context-menu-shortcut-font-size);
+	color: var(--stv-context-menu-shortcut-color);
+	font-size: var(--stv-context-menu-shortcut-font-size);
 	flex-shrink: 0;
 }
 
-.ltree-context-menu-arrow {
+.stv__context-menu-arrow {
 	margin-left: 8px;
 	font-size: 10px;
-	color: var(--ltree-context-menu-arrow-color);
+	color: var(--stv-context-menu-arrow-color);
 	flex-shrink: 0;
 }
 
-.ltree-context-menu-divider {
+.stv__context-menu-divider {
 	display: flex;
 	align-items: center;
 	margin: 4px 0;
 }
 
 /* Default: simple line */
-.ltree-context-menu-divider:not(:has(.ltree-context-menu-divider-label)) {
+.stv__context-menu-divider:not(:has(.stv__context-menu-divider-label)) {
 	height: 1px;
-	background-color: var(--ltree-context-menu-divider-color);
+	background-color: var(--stv-context-menu-divider-color);
 }
 
 /* Named divider: ──── [label] ──── */
-.ltree-context-menu-divider:has(.ltree-context-menu-divider-label) {
+.stv__context-menu-divider:has(.stv__context-menu-divider-label) {
 	gap: 8px;
 	padding: 0 12px;
 }
 
-.ltree-context-menu-divider:has(.ltree-context-menu-divider-label)::before,
-.ltree-context-menu-divider:has(.ltree-context-menu-divider-label)::after {
+.stv__context-menu-divider:has(.stv__context-menu-divider-label)::before,
+.stv__context-menu-divider:has(.stv__context-menu-divider-label)::after {
 	content: '';
 	flex: 1;
 	height: 1px;
-	background-color: var(--ltree-context-menu-divider-color);
+	background-color: var(--stv-context-menu-divider-color);
 }
 
-.ltree-context-menu-divider-label {
+.stv__context-menu-divider-label {
 	font-size: 11px;
-	color: var(--ltree-context-menu-divider-label-color);
+	color: var(--stv-context-menu-divider-label-color);
 	white-space: nowrap;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
 
-/* Submenu: position handled by Floating UI; inherits .ltree-context-menu chrome */
-.ltree-context-submenu {
+/* Submenu: position handled by Floating UI; inherits .stv__context-menu chrome */
+.stv__context-submenu {
 	z-index: 1001;
 }
