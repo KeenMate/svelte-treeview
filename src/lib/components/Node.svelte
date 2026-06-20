@@ -14,7 +14,7 @@
 		children?: Snippet<[LTreeNode<T>]>; // Keep the general children slot for backward compatibility
 
 		// Progressive rendering
-		progressiveRender?: boolean;
+		isProgressiveRender?: boolean;
 		renderBatchSize?: number;
 
 		// Drag state (passed as props for efficient Svelte diffing)
@@ -35,7 +35,7 @@
 		children = undefined,
 
 		// Progressive rendering
-		progressiveRender = false,
+		isProgressiveRender = false,
 		renderBatchSize = 50,
 
 		// Drag state
@@ -64,21 +64,21 @@
 	const focusedNodeClass = $derived(config.focusedNodeClass);
 	// dragOverNodeClass is applied to the DOM directly by the controller
 	// (see hoveredNodeForDrop $effect in TreeController) — no per-Node binding.
-	const allowCopy = $derived(config.allowCopy);
+	const isCopyAllowed = $derived(config.isCopyAllowed);
 	const clickBehavior = $derived(config.clickBehavior);
-	const showCheckboxes = $derived(config.showCheckboxes);
+	const shouldShowCheckboxes = $derived(config.shouldShowCheckboxes);
 	const checkboxMode = $derived(config.checkboxMode);
-	const clickTogglesCheckbox = $derived(config.clickTogglesCheckbox);
+	const shouldClickToggleCheckbox = $derived(config.shouldClickToggleCheckbox);
 
 	// Indeterminate state: driven by controller's _updateAncestorVisualStates
 	const isIndeterminate = $derived(checkboxMode === 'cascade' && node.visualState === 'indeterminate');
 
-	// Read dropZoneMode, dropZoneStart, and accordionExpand through the proxy
+	// Read dropZoneMode, dropZoneStart, and isAccordionExpand through the proxy
 	// each time (not destructured) so they stay reactive in flat mode where
 	// nodes are NOT recreated on config change.
 	const dropZoneMode = $derived(config.dropZoneMode);
 	const dropZoneStart = $derived(config.dropZoneStart);
-	const accordionExpand = $derived(config.accordionExpand);
+	const isAccordionExpand = $derived(config.isAccordionExpand);
 	const toggleIconMode = $derived(config.toggleIconMode);
 
 	// Compute if THIS node is the one being hovered for drop.
@@ -189,12 +189,12 @@
 
 	// Get the children to render (all or progressive slice) - only used in recursive mode
 	const childrenToRender = $derived(
-		!flatMode && progressiveRender && renderCoordinator
+		!flatMode && isProgressiveRender && renderCoordinator
 			? childrenArray.slice(0, renderedCount)
 			: childrenArray
 	);
 	const hasMoreToRender = $derived(
-		!flatMode && progressiveRender && renderCoordinator && renderedCount < childrenArray.length
+		!flatMode && isProgressiveRender && renderCoordinator && renderedCount < childrenArray.length
 	);
 
 	// Handle expansion state changes - use coordinator for progressive rendering
@@ -204,7 +204,7 @@
 
 		const isExpanded = node?.isExpanded ?? false;
 		const childCount = childrenArray.length;
-		const shouldRenderProgressively = progressiveRender && renderCoordinator && childCount > 0;
+		const shouldRenderProgressively = isProgressiveRender && renderCoordinator && childCount > 0;
 
 		// Only act on actual state changes
 		if (isExpanded !== lastExpandedState || childCount !== lastChildrenLength) {
@@ -263,9 +263,9 @@
 			const newState = !node.isExpanded
 
 			// Accordion: collapse siblings when expanding
-			if (newState && accordionExpand) {
+			if (newState && isAccordionExpand) {
 				const siblings = tree.getSiblings(node.path)
-				console.log(`[accordion] expanding ${node.path}, checking ${siblings.length} siblings, accordionExpand=${accordionExpand}`)
+				console.log(`[accordion] expanding ${node.path}, checking ${siblings.length} siblings, isAccordionExpand=${isAccordionExpand}`)
 				for (const sibling of siblings) {
 					if (sibling.path !== node.path && sibling.isExpanded && tree.getNodeIsCollapsible(sibling)) {
 						console.log(`[accordion] collapsing sibling: ${sibling.path}`)
@@ -301,7 +301,7 @@
 		// Plain click on a selectable node with checkboxes shown → toggle the checkbox
 		// instead of focusing/highlighting. Expand still happens if clickBehavior asks for it.
 		// Modified clicks (Ctrl/Shift) fall through to the normal multi-highlight path.
-		if (clickTogglesCheckbox && showCheckboxes && node.isSelectable && !hasModifiers) {
+		if (shouldClickToggleCheckbox && shouldShowCheckboxes && node.isSelectable && !hasModifiers) {
 			callbacks.onCheckboxToggle(node, { skipFocus: true });
 			if (clickBehavior !== 'select') toggleExpanded();
 			return;
@@ -353,7 +353,7 @@
 			<span class="stv__toggle-icon {leafIconClass}"></span>
 		{/if}
 
-		{#if showCheckboxes && node.isSelectable}
+		{#if shouldShowCheckboxes && node.isSelectable}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<label
@@ -398,8 +398,15 @@
 				callbacks.onNodeRightClicked(node, e);
 			}}
 			ondragstart={(e) => {
+				console.log(`[dragstart] gate on ${node?.path}`, {
+					path: node?.path,
+					nodeIsDraggable: node?.isDraggable,
+					hasDataTransfer: !!e.dataTransfer,
+					willStartDrag: !!(node?.isDraggable && e.dataTransfer),
+					nodeDataIsDraggable: (node?.data as any)?.isDraggable
+				});
 				if (node?.isDraggable && e.dataTransfer) {
-					e.dataTransfer.effectAllowed = allowCopy ? "copyMove" : "move";
+					e.dataTransfer.effectAllowed = isCopyAllowed ? "copyMove" : "move";
 					e.dataTransfer.setData(
 						"application/svelte-treeview",
 						JSON.stringify(node),
@@ -412,7 +419,7 @@
 					e.preventDefault();
 					// Set dropEffect directly from event to avoid timing issues with prop updates
 					if (e.dataTransfer) {
-						e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
+						e.dataTransfer.dropEffect = (isCopyAllowed && e.ctrlKey) ? 'copy' : 'move';
 					}
 					// In glow mode, calculate and update the glow position
 					if (dropZoneMode === 'glow') {
@@ -435,7 +442,7 @@
 				e.stopPropagation();
 				// Confirm dropEffect for spec compliance
 				if (e.dataTransfer) {
-					e.dataTransfer.dropEffect = (allowCopy && e.ctrlKey) ? 'copy' : 'move';
+					e.dataTransfer.dropEffect = (isCopyAllowed && e.ctrlKey) ? 'copy' : 'move';
 				}
 				// In glow mode, use the calculated glowPosition for the drop
 				if (dropZoneMode === 'glow' && glowPosition) {
@@ -465,7 +472,7 @@
 				<Node
 					node={item}
 					{children}
-					{progressiveRender}
+					{isProgressiveRender}
 					{renderBatchSize}
 					{isDraggedNode}
 					{isDragInProgress}

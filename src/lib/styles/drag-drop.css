@@ -18,7 +18,7 @@
 		transform 0.2s;
 }
 
-/* Copy operation cursor (Ctrl+drag with allowCopy enabled) */
+/* Copy operation cursor (Ctrl+drag with isCopyAllowed enabled) */
 .stv__node-content--drop-copy {
 	cursor: copy !important;
 }

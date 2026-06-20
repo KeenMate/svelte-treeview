@@ -106,7 +106,7 @@ Three independent state tracks:
   bind:highlightedPaths
   bind:selectedPaths
   highlightedNodeClass="ltree-selected-highlight"
-  showCheckboxes={true}
+  shouldShowCheckboxes={true}
   checkboxMode="cascade"
   rangeSelectionMode="visual"
   onHighlightChange={(paths, nodes) => console.log(`${paths.size} highlighted`)}

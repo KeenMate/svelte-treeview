@@ -103,8 +103,8 @@
 			expandLevel={1}
 			shouldUseInternalSearchIndex={true}
 			searchValueMember="name"
-			useFlatRendering={true}
-			progressiveRender={true}
+			isFlatRenderingEnabled={true}
+			isProgressiveRender={true}
 			initialBatchSize={5}
 			maxBatchSize={500}
 		>

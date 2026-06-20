@@ -383,7 +383,7 @@ treeRef.getClipboardOperation();        // 'copy' | 'cut' | null
 Cut nodes are tracked via treeRef.cutPaths (Set<string>) and rendered at reduced opacity.
 
 Manual paste mode (server-driven):
-treeRef.pasteNodes('2.1', 'child', { autoHandlePaste: false });
+treeRef.pasteNodes('2.1', 'child', { shouldAutoHandlePaste: false });
 // Returns clipboard data for you to send to server, doesn't modify tree
 
 BATCH OPERATIONS

@@ -45,7 +45,7 @@ export interface PasteResult<T> {
 	success: boolean;
 	count: number;
 	error?: string;
-	/** Included when autoHandlePaste=false — clipboard data for consumer to handle */
+	/** Included when shouldAutoHandlePaste=false — clipboard data for consumer to handle */
 	entries?: ClipboardEntry<T>[];
 	operation?: 'copy' | 'cut';
 	targetPath?: string;
@@ -75,9 +75,9 @@ export interface NodeCallbacks<T> {
 
 export interface NodeConfig {
 	clickBehavior: ClickBehavior;
-	showCheckboxes: boolean;
+	shouldShowCheckboxes: boolean;
 	checkboxMode: CheckboxMode;
-	clickTogglesCheckbox: boolean;
+	shouldClickToggleCheckbox: boolean;
 	expandIconClass: string;
 	collapseIconClass: string;
 	leafIconClass: string;
@@ -89,8 +89,8 @@ export interface NodeConfig {
 	dropZoneLayout: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 	dropZoneStart: number | string;
 	dropZoneMaxWidth: number;
-	allowCopy: boolean;
-	accordionExpand: boolean;
+	isCopyAllowed: boolean;
+	isAccordionExpand: boolean;
 }
 
 // ─── Controller props ─────────────────────────────────────────────────────
@@ -145,16 +145,16 @@ export interface TreeControllerProps<T> {
 	 * toggles highlight on the focused node.
 	 */
 	selectionMode?: SelectionMode | null | undefined;
-	showCheckboxes?: boolean | null | undefined;
+	shouldShowCheckboxes?: boolean | null | undefined;
 	checkboxMode?: CheckboxMode | null | undefined;
 	/**
-	 * When true AND `showCheckboxes` is on, a plain click on a selectable node's label
+	 * When true AND `shouldShowCheckboxes` is on, a plain click on a selectable node's label
 	 * toggles the checkbox instead of running the normal click flow — `focusedNode` and
 	 * `highlightedPaths` are NOT updated. Expand-on-click still happens if `clickBehavior`
 	 * is `'expand'` or `'expand-and-focus'`. Modified clicks (Ctrl/Shift) fall through to
 	 * the normal multi-highlight path.
 	 */
-	clickTogglesCheckbox?: boolean | null | undefined;
+	shouldClickToggleCheckbox?: boolean | null | undefined;
 	/**
 	 * Interceptor called before a checkbox toggle is applied.
 	 * @param node - The node whose checkbox was clicked
@@ -179,7 +179,7 @@ export interface TreeControllerProps<T> {
 	isLoading?: boolean;
 
 	// Progressive rendering
-	progressiveRender?: boolean;
+	isProgressiveRender?: boolean;
 	initialBatchSize?: number;
 	maxBatchSize?: number;
 	onRenderStart?: () => void;
@@ -187,11 +187,11 @@ export interface TreeControllerProps<T> {
 	onRenderComplete?: (stats: RenderStats) => void;
 
 	// Flat rendering
-	useFlatRendering?: boolean;
+	isFlatRenderingEnabled?: boolean;
 
 	// Virtual scrolling (flat mode only)
 	/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
-	virtualScroll?: boolean;
+	isVirtualScrollEnabled?: boolean;
 	/** Explicit row height in px. Auto-measured from first row if not set. */
 	virtualRowHeight?: number;
 	/** Extra rows above/below viewport (default: 5) */
@@ -205,11 +205,11 @@ export interface TreeControllerProps<T> {
 	dropZoneLayout?: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 	dropZoneStart?: number | string;
 	dropZoneMaxWidth?: number;
-	allowCopy?: boolean;
-	autoHandleCopy?: boolean;
-	autoHandleMove?: boolean;
-	autoHandlePaste?: boolean;
-	accordionExpand?: boolean;
+	isCopyAllowed?: boolean;
+	shouldAutoHandleCopy?: boolean;
+	shouldAutoHandleMove?: boolean;
+	shouldAutoHandlePaste?: boolean;
+	isAccordionExpand?: boolean;
 
 	// EVENTS (on* = fire-and-forget notifications)
 	onNodeClick?: (node: LTreeNode<T>) => void;
@@ -288,9 +288,9 @@ export class TreeController<T> {
 	nodeCallbacks!: NodeCallbacks<T>;
 	nodeConfig = $state<NodeConfig>({
 		clickBehavior: 'expand-and-focus',
-		showCheckboxes: false,
+		shouldShowCheckboxes: false,
 		checkboxMode: 'independent',
-		clickTogglesCheckbox: false,
+		shouldClickToggleCheckbox: false,
 		expandIconClass: 'stv__toggle-icon--expand',
 		collapseIconClass: 'stv__toggle-icon--collapse',
 		leafIconClass: 'stv__toggle-icon--leaf',
@@ -302,8 +302,8 @@ export class TreeController<T> {
 		dropZoneStart: 33,
 		toggleIconMode: 'rotate',
 		dropZoneMaxWidth: 120,
-		allowCopy: false,
-		accordionExpand: false
+		isCopyAllowed: false,
+		isAccordionExpand: false
 	});
 
 	// ── Props stored as reactive state ──────────────────────────────────
@@ -336,19 +336,19 @@ export class TreeController<T> {
 	shouldDisplayContextMenuInDebugMode = $state(false);
 	rangeSelectionMode = $state<'visual' | 'logical'>('visual');
 	isLoading = $state(false);
-	useFlatRendering = $state(true);
-	progressiveRender = $state(true);
+	isFlatRenderingEnabled = $state(true);
+	isProgressiveRender = $state(true);
 	initialBatchSize = $state(20);
 	maxBatchSize = $state(500);
 	bodyClass = $state<string | null | undefined>(undefined);
 
 	// DRAG AND DROP
 	dragDropMode = $state<DragDropMode>('none');
-	allowCopy = $state(false);
-	accordionExpand = $state(false);
-	autoHandleCopy = $state(true);
-	autoHandleMove = $state(true);
-	autoHandlePaste = $state(true);
+	isCopyAllowed = $state(false);
+	isAccordionExpand = $state(false);
+	shouldAutoHandleCopy = $state(true);
+	shouldAutoHandleMove = $state(true);
+	shouldAutoHandlePaste = $state(true);
 
 	// Event handlers (on* = fire-and-forget)
 	onNodeClickHandler: ((node: LTreeNode<T>) => void) | undefined;
@@ -375,9 +375,9 @@ export class TreeController<T> {
 	// Visual config (for nodeConfig updates)
 	clickBehavior = $state<ClickBehavior>('expand-and-focus');
 	selectionMode = $state<SelectionMode>('single');
-	showCheckboxes = $state(false);
+	shouldShowCheckboxes = $state(false);
 	checkboxMode = $state<CheckboxMode>('independent');
-	clickTogglesCheckbox = $state(false);
+	shouldClickToggleCheckbox = $state(false);
 	expandIconClass = $state('stv__toggle-icon--expand');
 	collapseIconClass = $state('stv__toggle-icon--collapse');
 	leafIconClass = $state('stv__toggle-icon--leaf');
@@ -397,7 +397,7 @@ export class TreeController<T> {
 	hasContextMenuSnippet = $state(false);
 
 	// Virtual scrolling
-	virtualScroll = $state(false);
+	isVirtualScrollEnabled = $state(false);
 	virtualRowHeight = $state<number | undefined>(undefined);
 	virtualOverscan = $state(5);
 	virtualContainerHeight = $state<string | undefined>(undefined);
@@ -487,7 +487,7 @@ export class TreeController<T> {
 
 	// Virtual scroll derived computations
 	vsRowHeight = $derived(this.virtualRowHeight ?? this.vsMeasuredRowHeight ?? 32);
-	vsActive = $derived(this.virtualScroll && this.useFlatRendering);
+	vsActive = $derived(this.isVirtualScrollEnabled && this.isFlatRenderingEnabled);
 	vsContainerStyle = $derived(this.virtualContainerHeight ?? this.vsDetectedHeight ?? '400px');
 	allFlatNodes = $derived(this.tree?.visibleFlatNodes ?? []);
 	vsTotalCount = $derived(this.allFlatNodes.length);
@@ -512,7 +512,7 @@ export class TreeController<T> {
 	flatNodesToRender = $derived(
 		this.vsActive
 			? this.allFlatNodes.slice(this.vsStartIndex, this.vsEndIndex)
-			: this.useFlatRendering && this.progressiveRender
+			: this.isFlatRenderingEnabled && this.isProgressiveRender
 				? (this.tree?.visibleFlatNodes?.filter((n) => this.flatRenderedIds.has(String(n.id))) ?? [])
 				: (this.tree?.visibleFlatNodes ?? [])
 	);
@@ -539,24 +539,24 @@ export class TreeController<T> {
 		this.rangeSelectionMode = props.rangeSelectionMode ?? 'visual';
 		this.isLoading = props.isLoading ?? false;
 
-		this.useFlatRendering = props.useFlatRendering ?? true;
-		this.progressiveRender = props.progressiveRender ?? true;
+		this.isFlatRenderingEnabled = props.isFlatRenderingEnabled ?? true;
+		this.isProgressiveRender = props.isProgressiveRender ?? true;
 		this.initialBatchSize = props.initialBatchSize ?? 20;
 		this.maxBatchSize = props.maxBatchSize ?? 500;
 		this.bodyClass = props.bodyClass;
 
 		this.dragDropMode = props.dragDropMode ?? 'none';
-		this.allowCopy = props.allowCopy ?? false;
-		this.autoHandleCopy = props.autoHandleCopy ?? true;
-		this.autoHandleMove = props.autoHandleMove ?? true;
-		this.autoHandlePaste = props.autoHandlePaste ?? true;
-		this.accordionExpand = props.accordionExpand ?? false;
+		this.isCopyAllowed = props.isCopyAllowed ?? false;
+		this.shouldAutoHandleCopy = props.shouldAutoHandleCopy ?? true;
+		this.shouldAutoHandleMove = props.shouldAutoHandleMove ?? true;
+		this.shouldAutoHandlePaste = props.shouldAutoHandlePaste ?? true;
+		this.isAccordionExpand = props.isAccordionExpand ?? false;
 
 		this.clickBehavior = props.clickBehavior ?? 'expand-and-focus';
 		this.selectionMode = props.selectionMode ?? 'single';
-		this.showCheckboxes = props.showCheckboxes ?? false;
+		this.shouldShowCheckboxes = props.shouldShowCheckboxes ?? false;
 		this.checkboxMode = props.checkboxMode ?? 'independent';
-		this.clickTogglesCheckbox = props.clickTogglesCheckbox ?? false;
+		this.shouldClickToggleCheckbox = props.shouldClickToggleCheckbox ?? false;
 		this.beforeCheckboxToggleHandler = props.beforeCheckboxToggleCallback;
 		this.expandIconClass = props.expandIconClass ?? 'stv__toggle-icon--expand';
 		this.collapseIconClass = props.collapseIconClass ?? 'stv__toggle-icon--collapse';
@@ -576,7 +576,7 @@ export class TreeController<T> {
 		this.hasContextMenuSnippet = props.hasContextMenuSnippet ?? false;
 
 		// Virtual scrolling
-		this.virtualScroll = props.virtualScroll ?? false;
+		this.isVirtualScrollEnabled = props.isVirtualScrollEnabled ?? false;
 		this.virtualRowHeight = props.virtualRowHeight;
 		this.virtualOverscan = props.virtualOverscan ?? 5;
 		this.virtualContainerHeight = props.virtualContainerHeight;
@@ -640,7 +640,7 @@ export class TreeController<T> {
 		);
 
 		// ── Create render coordinator ───────────────────────────────────
-		this.renderCoordinator = this.progressiveRender
+		this.renderCoordinator = this.isProgressiveRender
 			? createRenderCoordinator(2, {
 					onStart: () => {
 						this.isRendering = true;
@@ -674,9 +674,9 @@ export class TreeController<T> {
 		// ── Initial nodeConfig ──────────────────────────────────────────
 		this.nodeConfig = {
 			clickBehavior: this.clickBehavior,
-			showCheckboxes: this.showCheckboxes,
+			shouldShowCheckboxes: this.shouldShowCheckboxes,
 			checkboxMode: this.checkboxMode,
-			clickTogglesCheckbox: this.clickTogglesCheckbox,
+			shouldClickToggleCheckbox: this.shouldClickToggleCheckbox,
 			expandIconClass: this.expandIconClass,
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
@@ -688,8 +688,8 @@ export class TreeController<T> {
 			dropZoneLayout: this.dropZoneLayout,
 			dropZoneStart: this.dropZoneStart,
 			dropZoneMaxWidth: this.dropZoneMaxWidth,
-			allowCopy: this.allowCopy,
-			accordionExpand: this.accordionExpand
+			isCopyAllowed: this.isCopyAllowed,
+			isAccordionExpand: this.isAccordionExpand
 		};
 
 		// ── Initialize default navigation strategy ─────────────────────
@@ -709,8 +709,8 @@ export class TreeController<T> {
 		$effect(() => {
 			Object.assign(this.nodeConfig, {
 				clickBehavior: this.clickBehavior,
-				showCheckboxes: this.showCheckboxes,
-				clickTogglesCheckbox: this.clickTogglesCheckbox,
+				shouldShowCheckboxes: this.shouldShowCheckboxes,
+				shouldClickToggleCheckbox: this.shouldClickToggleCheckbox,
 				expandIconClass: this.expandIconClass,
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
@@ -722,8 +722,8 @@ export class TreeController<T> {
 				dropZoneLayout: this.dropZoneLayout,
 				dropZoneStart: this.dropZoneStart,
 				dropZoneMaxWidth: this.dropZoneMaxWidth,
-				allowCopy: this.allowCopy,
-				accordionExpand: this.accordionExpand
+				isCopyAllowed: this.isCopyAllowed,
+				isAccordionExpand: this.isAccordionExpand
 			});
 		});
 
@@ -763,7 +763,7 @@ export class TreeController<T> {
 
 		// Progressive rendering for flat mode
 		$effect(() => {
-			if (!this.useFlatRendering || !this.progressiveRender || !this.tree?.visibleFlatNodes)
+			if (!this.isFlatRenderingEnabled || !this.isProgressiveRender || !this.tree?.visibleFlatNodes)
 				return;
 
 			const tracker = this.tree.changeTracker;
@@ -1360,8 +1360,8 @@ export class TreeController<T> {
 			}
 		}
 
-		// When autoHandlePaste=false, don't modify tree — just provide clipboard data
-		if (!this.autoHandlePaste) {
+		// When shouldAutoHandlePaste=false, don't modify tree — just provide clipboard data
+		if (!this.shouldAutoHandlePaste) {
 			const result: PasteResult<T> = {
 				success: true,
 				count: clip.entries.length,
@@ -1375,7 +1375,7 @@ export class TreeController<T> {
 			this.cutPaths = new Set();
 			clearClipboard();
 
-			uiLogger.debug(`[clipboard] autoHandlePaste=false — forwarding ${clip.entries.length} entries to consumer`);
+			uiLogger.debug(`[clipboard] shouldAutoHandlePaste=false — forwarding ${clip.entries.length} entries to consumer`);
 			this.onPasteHandler?.(result);
 			return result;
 		}
@@ -1490,7 +1490,7 @@ export class TreeController<T> {
 	startDrag(node: LTreeNode<T>, event: DragEvent): void {
 		dragLogger.debug('startDrag', { path: node.path, isDraggable: this.getNodeIsDraggable(node), hasDataTransfer: !!event.dataTransfer });
 		if (!this.getNodeIsDraggable(node) || !event.dataTransfer) return;
-		event.dataTransfer.effectAllowed = this.allowCopy ? 'copyMove' : 'move';
+		event.dataTransfer.effectAllowed = this.isCopyAllowed ? 'copyMove' : 'move';
 		event.dataTransfer.setData('application/svelte-treeview', JSON.stringify(node));
 		const displayValue = this.tree.getNodeDisplayValue(node);
 		if (displayValue) event.dataTransfer.setData('text/plain', displayValue);
@@ -1530,6 +1530,15 @@ export class TreeController<T> {
 			return;
 		}
 
+		// Per-node opt-out gate. Without preventDefault below, the browser
+		// won't fire drop, so this suppresses the entire drop on this target.
+		// Mirrors the touch path's gate at _updateTouchDragTarget / _onTouchEnd.
+		if (!node.isDropAllowed) {
+			dragLogger.debug('dragOver REJECTED - node.isDropAllowed=false', { path: node.path });
+			this.hoveredNodeForDrop = null;
+			return;
+		}
+
 		const isValidDrop = effectiveDraggedNode
 			? isCrossTreeDrag || effectiveDraggedNode.path !== node.path
 			: this.isDragInProgress;
@@ -1541,7 +1550,7 @@ export class TreeController<T> {
 
 		event.preventDefault();
 		this.hoveredNodeForDrop = node;
-		this.currentDropOperation = (this.allowCopy && event.ctrlKey) ? 'copy' : 'move';
+		this.currentDropOperation = (this.isCopyAllowed && event.ctrlKey) ? 'copy' : 'move';
 
 		if (event.dataTransfer) {
 			event.dataTransfer.dropEffect = this.currentDropOperation;
@@ -1585,7 +1594,7 @@ export class TreeController<T> {
 		event.stopPropagation();
 
 		if (event.dataTransfer) {
-			event.dataTransfer.dropEffect = (this.allowCopy && event.ctrlKey) ? 'copy' : 'move';
+			event.dataTransfer.dropEffect = (this.isCopyAllowed && event.ctrlKey) ? 'copy' : 'move';
 		}
 
 		// Extract dragged node from dataTransfer if not set (cross-tree)
@@ -1605,7 +1614,14 @@ export class TreeController<T> {
 				: this.isDropAllowedByMode(this.draggedNode.treeId);
 
 			const sameNode = !isCrossTreeDrag && this.draggedNode.path === node.path;
-			dragLogger.debug('drop check', { dropAllowed, isCrossTreeDrag, sameNode, draggedPath: this.draggedNode.path, targetPath: node.path, dragDropMode: this.dragDropMode });
+			dragLogger.debug('drop check', { dropAllowed, isCrossTreeDrag, sameNode, draggedPath: this.draggedNode.path, targetPath: node.path, dragDropMode: this.dragDropMode, nodeIsDropAllowed: node.isDropAllowed });
+
+			// Per-node opt-out gate.
+			if (!node.isDropAllowed) {
+				dragLogger.debug('drop REJECTED - node.isDropAllowed=false', { path: node.path });
+				this._resetDragState();
+				return;
+			}
 
 			if (dropAllowed && (isCrossTreeDrag || this.draggedNode.path !== node.path)) {
 				const position = this.activeDropPosition || 'child';
@@ -1916,7 +1932,7 @@ export class TreeController<T> {
 		if (updates.isLoading !== undefined) this.isLoading = updates.isLoading ?? false;
 		if (updates.bodyClass !== undefined) this.bodyClass = updates.bodyClass;
 
-		if (updates.virtualScroll !== undefined) this.virtualScroll = updates.virtualScroll ?? false;
+		if (updates.isVirtualScrollEnabled !== undefined) this.isVirtualScrollEnabled = updates.isVirtualScrollEnabled ?? false;
 		if (updates.virtualRowHeight !== undefined) this.virtualRowHeight = updates.virtualRowHeight;
 		if (updates.virtualOverscan !== undefined) this.virtualOverscan = updates.virtualOverscan ?? 5;
 		if (updates.virtualContainerHeight !== undefined) this.virtualContainerHeight = updates.virtualContainerHeight;
@@ -1925,12 +1941,12 @@ export class TreeController<T> {
 			this.clickBehavior = updates.clickBehavior ?? 'expand-and-focus';
 		if (updates.selectionMode !== undefined)
 			this.selectionMode = updates.selectionMode ?? 'single';
-		if (updates.showCheckboxes !== undefined)
-			this.showCheckboxes = updates.showCheckboxes ?? false;
+		if (updates.shouldShowCheckboxes !== undefined)
+			this.shouldShowCheckboxes = updates.shouldShowCheckboxes ?? false;
 		if (updates.checkboxMode !== undefined)
 			this.checkboxMode = updates.checkboxMode ?? 'independent';
-		if (updates.clickTogglesCheckbox !== undefined)
-			this.clickTogglesCheckbox = updates.clickTogglesCheckbox ?? false;
+		if (updates.shouldClickToggleCheckbox !== undefined)
+			this.shouldClickToggleCheckbox = updates.shouldClickToggleCheckbox ?? false;
 		if (updates.beforeCheckboxToggleCallback !== undefined)
 			this.beforeCheckboxToggleHandler = updates.beforeCheckboxToggleCallback;
 		if (updates.expandIconClass !== undefined)
@@ -1953,13 +1969,13 @@ export class TreeController<T> {
 			this.dropZoneStart = updates.dropZoneStart ?? 33;
 		if (updates.dropZoneMaxWidth !== undefined)
 			this.dropZoneMaxWidth = updates.dropZoneMaxWidth ?? 120;
-		if (updates.allowCopy !== undefined) this.allowCopy = updates.allowCopy ?? false;
-		if (updates.autoHandleCopy !== undefined)
-			this.autoHandleCopy = updates.autoHandleCopy ?? true;
-		if (updates.autoHandleMove !== undefined)
-			this.autoHandleMove = updates.autoHandleMove ?? true;
-		if (updates.autoHandlePaste !== undefined)
-			this.autoHandlePaste = updates.autoHandlePaste ?? true;
+		if (updates.isCopyAllowed !== undefined) this.isCopyAllowed = updates.isCopyAllowed ?? false;
+		if (updates.shouldAutoHandleCopy !== undefined)
+			this.shouldAutoHandleCopy = updates.shouldAutoHandleCopy ?? true;
+		if (updates.shouldAutoHandleMove !== undefined)
+			this.shouldAutoHandleMove = updates.shouldAutoHandleMove ?? true;
+		if (updates.shouldAutoHandlePaste !== undefined)
+			this.shouldAutoHandlePaste = updates.shouldAutoHandlePaste ?? true;
 		if (updates.dragDropMode !== undefined)
 			this.dragDropMode = updates.dragDropMode ?? 'none';
 		if (updates.scrollHighlightTimeout !== undefined)
@@ -2308,7 +2324,7 @@ export class TreeController<T> {
 	 * to selectedPaths and fire onSelectionChange alongside onHighlightChange.
 	 */
 	private _mirrorHighlightToSelected() {
-		if (this.showCheckboxes) return;
+		if (this.shouldShowCheckboxes) return;
 		// Take a snapshot to avoid identity-loop on parent rebinding
 		const next = new Set(this.highlightedPaths);
 		// Sync the per-node isSelected flag with the mirrored set.
@@ -2592,7 +2608,7 @@ export class TreeController<T> {
 	private _onNodeDragStart(node: LTreeNode<T>, event: DragEvent) {
 		dragLogger.debug(`Drag started: ${node.path}`, {
 			ctrlKey: event.ctrlKey,
-			allowCopy: this.allowCopy,
+			isCopyAllowed: this.isCopyAllowed,
 			treeId: this.treeId
 		});
 		dragLogger.debug('[drag-esc] _onNodeDragStart', {
@@ -2726,7 +2742,7 @@ export class TreeController<T> {
 		const isDragEvent = event instanceof DragEvent;
 		const ctrlKey = isDragEvent ? event.ctrlKey : false;
 
-		if (this.allowCopy && isDragEvent && ctrlKey) {
+		if (this.isCopyAllowed && isDragEvent && ctrlKey) {
 			operation = 'copy';
 		}
 
@@ -2761,7 +2777,7 @@ export class TreeController<T> {
 			isSameTreeDrag &&
 			operation === 'move' &&
 			dropNode &&
-			this.autoHandleMove &&
+			this.shouldAutoHandleMove &&
 			this.highlightedPaths.has(draggedNodeRef.path) &&
 			this.highlightedPaths.size > 1;
 
@@ -2800,17 +2816,17 @@ export class TreeController<T> {
 		}
 
 		if (isSameTreeDrag && operation === 'move' && dropNode) {
-			if (this.autoHandleMove) {
+			if (this.shouldAutoHandleMove) {
 				const result = this.moveNode(draggedNodeRef.path, dropNode.path, position);
 				this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
 				return result.success;
 			}
-			// autoHandleMove=false: don't modify tree, just notify consumer
+			// shouldAutoHandleMove=false: don't modify tree, just notify consumer
 			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
 			return true;
 		}
 
-		if (isSameTreeDrag && operation === 'copy' && dropNode && this.autoHandleCopy) {
+		if (isSameTreeDrag && operation === 'copy' && dropNode && this.shouldAutoHandleCopy) {
 			const targetParentPath =
 				position === 'child' ? dropNode.path : dropNode.parentPath || '';
 			const siblingPath = position !== 'child' ? dropNode.path : undefined;
@@ -2862,6 +2878,14 @@ export class TreeController<T> {
 			return;
 		}
 
+		// Per-node opt-out gate. Mirrors the touch path so isDropAllowed:false
+		// rejects drops on desktop too (without this the desktop drop fires
+		// unconditionally and the prop only affected touch).
+		if (!node.isDropAllowed) {
+			this.hoveredNodeForDrop = null;
+			return;
+		}
+
 		const isValidDrop = effectiveDraggedNode
 			? isCrossTreeDrag || effectiveDraggedNode.path !== node.path
 			: this.isDragInProgress;
@@ -2873,7 +2897,7 @@ export class TreeController<T> {
 			if (nodeElement) {
 				this.activeDropPosition = this.calculateDropPosition(event, nodeElement);
 			}
-			this.currentDropOperation = this.allowCopy && event.ctrlKey ? 'copy' : 'move';
+			this.currentDropOperation = this.isCopyAllowed && event.ctrlKey ? 'copy' : 'move';
 			this.onNodeDragOverHandler?.(node, event);
 
 			if (event.dataTransfer) {
@@ -2916,6 +2940,16 @@ export class TreeController<T> {
 			return;
 		}
 
+		// Per-node opt-out gate. The dragover gate also enforces this for
+		// custom renderers using the public dragOver() API, but the Node.svelte
+		// component calls event.preventDefault() itself before forwarding to
+		// the controller — so the drop event fires anyway and must be filtered
+		// here. Mirrors the touch path at line ~3110.
+		if (!node.isDropAllowed) {
+			this._onNodeDragEnd(event);
+			return;
+		}
+
 		if (this.draggedNode && (isCrossTreeDrag || this.draggedNode !== node)) {
 			const position = this.activeDropPosition || 'child';
 			this._handleDrop(node, this.draggedNode, position, event);
@@ -2950,6 +2984,12 @@ export class TreeController<T> {
 			return;
 		}
 
+		// Per-node opt-out gate (glow mode equivalent of the _onNodeDrop gate).
+		if (!node.isDropAllowed) {
+			this._onNodeDragEnd(event);
+			return;
+		}
+
 		if (isCrossTreeDrag || this.draggedNode !== node) {
 			this._handleDrop(node, this.draggedNode, position, event);
 		}
@@ -2969,7 +3009,7 @@ export class TreeController<T> {
 	handleFloatingZoneDragOver(position: 'before' | 'after' | 'child', event: DragEvent) {
 		event.preventDefault();
 		if (event.dataTransfer) {
-			event.dataTransfer.dropEffect = (this.allowCopy && event.ctrlKey) ? 'copy' : 'move';
+			event.dataTransfer.dropEffect = (this.isCopyAllowed && event.ctrlKey) ? 'copy' : 'move';
 		}
 		this.floatingHoveredZone = position;
 		// Refresh rect from node row

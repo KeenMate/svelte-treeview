@@ -25,7 +25,7 @@
 
 	// State for demos
 	let expandLevel = $state(2);
-	let accordionExpand = $state(false);
+	let isAccordionExpand = $state(false);
 	let selectedNode = $state<LTreeNode<typeof sampleData[0]> | null>(null);
 	let scrollPath = $state('1.2.1');
 	let scrollTreeRef: Tree<typeof sampleData[0]>;
@@ -98,7 +98,7 @@
 	<!-- Expand Controls -->
 	<div class="card">
 		<h2>Expand Controls</h2>
-		<p class="description">Control how many levels are expanded by default using the <code>expandLevel</code> prop. Enable <code>accordionExpand</code> to auto-collapse siblings when a node is expanded.</p>
+		<p class="description">Control how many levels are expanded by default using the <code>expandLevel</code> prop. Enable <code>isAccordionExpand</code> to auto-collapse siblings when a node is expanded.</p>
 
 		<div class="controls">
 			<label>
@@ -106,7 +106,7 @@
 				<input type="number" bind:value={expandLevel} min="0" max="5" style="width: 60px" />
 			</label>
 			<label>
-				<input type="checkbox" bind:checked={accordionExpand} />
+				<input type="checkbox" bind:checked={isAccordionExpand} />
 				Accordion Expand
 			</label>
 		</div>
@@ -120,7 +120,7 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					{expandLevel}
-					{accordionExpand}
+					{isAccordionExpand}
 					{...getTreeProps()}
 				>
 					{#snippet nodeTemplate(node: any)}
@@ -137,7 +137,7 @@
   pathMember="path"
   sortCallback={sortByName}
   expandLevel={${expandLevel}}
-  accordionExpand={${accordionExpand}}
+  isAccordionExpand={${isAccordionExpand}}
 />`}</pre>
 		</div>
 	</div>

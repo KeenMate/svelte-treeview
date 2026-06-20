@@ -289,6 +289,10 @@ export function createLTree<T>(
 				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
+				// Assign data BEFORE the get*Callback evaluations so consumer
+				// callbacks reading node.data?.X see the real row, not undefined.
+				node.data = row;
+
 				// isExpanded: callback > member > expandLevel
 				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
 				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
@@ -311,7 +315,19 @@ export function createLTree<T>(
 
 				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
 
-				node.data = row;
+				if (_getIsDraggableCallback || !shouldCalculateIsDraggable) {
+					console.log(`[insertArray] isDraggable resolved for ${node.path}`, {
+						path: node.path,
+						isDraggable: node.isDraggable,
+						hadCallback: !!_getIsDraggableCallback,
+						hadMember: !shouldCalculateIsDraggable,
+						rowIsDraggable: _isDraggableMember
+							? (row as any)?.[_isDraggableMember]
+							: '(no member)',
+						nodeDataIsDraggable: (row as any)?.isDraggable
+					});
+				}
+
 				return node;
 			}).filter((node): node is LTreeNode<T> => node !== null);
 			const conversionTime = perfEnd(`[${_treeId}] insertArray:conversion`, data.length);
@@ -602,7 +618,10 @@ export function createLTree<T>(
 			const noEmit = options?.noEmit ?? false;
 
 			function setExpandedRecursive(node: LTreeNode<T>, value: boolean) {
-				node.isExpanded = value;
+				if (node.isExpanded !== value) {
+					node.isExpanded = value;
+					node._rev = (node._rev || 0) + 1;
+				}
 				for (const key in node.children) {
 					setExpandedRecursive(node.children[key], value);
 				}
@@ -644,6 +663,7 @@ export function createLTree<T>(
 								trim(child);
 							} else if (self.getNodeIsCollapsible(child)) {
 								child.isExpanded = false;
+								child._rev = (child._rev || 0) + 1;
 								trim(child);
 							}
 						}
@@ -659,7 +679,10 @@ export function createLTree<T>(
 						const segment = segmentPrefix + segments[i];
 						if (node && node.children.hasOwnProperty(segment)) {
 							node = node.children[segment];
-							node.isExpanded = true;
+							if (!node.isExpanded) {
+								node.isExpanded = true;
+								node._rev = (node._rev || 0) + 1;
+							}
 						} else {
 							node = undefined;
 							break;
@@ -684,6 +707,7 @@ export function createLTree<T>(
 			function collapseRecursive(node: LTreeNode<T>) {
 				if (node.isExpanded && self.getNodeIsCollapsible(node)) {
 					node.isExpanded = false;
+					node._rev = (node._rev || 0) + 1;
 				}
 				for (const key in node.children) {
 					collapseRecursive(node.children[key]);
@@ -819,6 +843,9 @@ export function createLTree<T>(
 				}
 				if (node && node.isExpanded) {
 					node.isExpanded = false;
+					// Bump _rev for the same reason as expandNodes — without it the
+					// keyed {#each} reuses the row and class:expanded stays stale.
+					node._rev = (node._rev || 0) + 1;
 					hasChanges = true;
 				}
 			}
@@ -1574,6 +1601,10 @@ export function createLTree<T>(
 				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
 				else node.level = getLevel(node.path, this.treePathSeparator);
 
+				// Assign data BEFORE the get*Callback evaluations so consumer
+				// callbacks reading node.data?.X see the real row, not undefined.
+				node.data = row;
+
 				// isExpanded: callback > member > expandLevel
 				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
 				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
@@ -1596,7 +1627,6 @@ export function createLTree<T>(
 
 				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
 
-				node.data = row;
 				return node;
 			}).filter((node): node is LTreeNode<T> => node !== null);
 

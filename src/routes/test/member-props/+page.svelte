@@ -59,7 +59,7 @@
 			isSelectableMember="selectable"
 			isSelectedMember="selected"
 			sortCallback={sortByPath}
-			showCheckboxes={true}
+			shouldShowCheckboxes={true}
 			expandLevel={10}
 			bind:selectedPaths
 		>

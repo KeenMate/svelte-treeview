@@ -319,7 +319,7 @@
 
 		<div class="editor-layout">
 			<div class="tree-section">
-				<div class="tree-container" class:tree-container-tall={!getTreeProps().virtualScroll}>
+				<div class="tree-container" class:tree-container-tall={!getTreeProps().isVirtualScrollEnabled}>
 					<Tree
 						bind:this={treeRef}
 						data={treeData}

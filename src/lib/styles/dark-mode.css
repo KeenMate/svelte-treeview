@@ -1,139 +1,44 @@
 /* =============================================================================
-   DARK MODE / LIGHT MODE SUPPORT
+   DARK MODE / LIGHT MODE SUPPORT — Strategy B (color-scheme flipping)
    =============================================================================
-   Belt-and-suspenders coverage: catches OS preference, page-level color-scheme,
-   framework theme classes, and per-instance data-theme overrides.
+   Belt-and-suspenders coverage of the canonical signals matrix:
+     - OS preference: handled by light-dark() in variables.css when the
+       consumer declares `html { color-scheme: light dark }`.
+     - Page-level `color-scheme: dark`: handled by light-dark() inheritance.
+     - Framework theme class on an ancestor: signal selectors below.
+     - Per-instance `data-theme` on .stv__container: signal selectors below.
 
-   See guidelines/web-components/color-scheme.md for the full signals matrix.
-   Note: this component ships as Svelte (light DOM), so we use ancestor /
-   attribute selectors instead of the shadow-DOM :host-context() and :host()
-   forms in the canonical guideline.
+   Strategy B: every visible color in variables.css uses
+   light-dark(<light>, <dark>) for its fallback. We flip color-scheme on the
+   conditional selectors and let light-dark() resolve the dark branch.
+   Consumer's --base-* themed values flow through untouched (Strategy A's
+   hardcoded dark literals silently replaced them).
 
    Resolution precedence (highest specificity wins):
      per-instance .stv__container[data-theme]
        → framework ancestor class
          → page color-scheme via light-dark() in variables.css
-           → OS preference via @media (this file)
-             → hardcoded light defaults
-
-   Override surface: every block re-declares the same set of --stv-* tokens.
-   Keep these blocks in sync — if a new themeable var is added in variables.css,
-   add it everywhere here too.
+           → OS preference via @media
    ============================================================================= */
 
-/* ----------------------------------------------------------------------------
-   SHARED DARK VALUES
-   ----------------------------------------------------------------------------
-   Defined as a custom-property bundle on a private selector so the other dark
-   blocks can pull from one source of truth. Edits land in one place.
-   --------------------------------------------------------------------------- */
-
-/* =============================================================================
-   SIGNAL #1 — OS preference (forced even when no color-scheme is declared)
-   ============================================================================= */
-@media (prefers-color-scheme: dark) {
-	.stv__container {
-		/* Every override chains through --base-* so themes that set a dark
-		   variant of the canonical tokens (e.g. brand-forest's dark --base-main-bg)
-		   win over the hardcoded dark fallbacks below. */
-		--stv-bg: var(--base-main-bg, #1a1a1a);
-		--stv-light: var(--base-main-bg, #1a1a1a);
-		--stv-elevated-bg: var(--base-elevated-bg, #2b2b2b);
-		--stv-border: var(--base-border-color, #3d3d3d);
-		--stv-body-color: var(--base-text-color-1, #f5f5f5);
-		--stv-node-path-color: var(--base-text-color-3, #a3a3a3);
-		--stv-toggle-icon-color: var(--base-text-color-3, #a3a3a3);
-		--stv-checkbox-border-color: var(--base-border-color, #5a5a5a);
-		--stv-checkbox-bg: var(--base-input-bg, #1f1f1f);
-		--stv-context-menu-bg: var(--base-dropdown-bg, var(--base-elevated-bg, var(--base-main-bg, #2b2b2b)));
-		--stv-context-menu-shortcut-color: var(--base-text-color-4, #6b7280);
-		--stv-context-menu-arrow-color: var(--base-text-color-4, #6b7280);
-		--stv-context-menu-divider-label-color: var(--base-text-color-4, #6b7280);
-		--stv-loading-bg: color-mix(in srgb, var(--base-main-bg, #1a1a1a) 80%, transparent);
-		--stv-loading-color: var(--base-text-color-3, #a3a3a3);
-		--stv-spinner-track: var(--base-border-color, #3d3d3d);
-	}
-}
-
-/* =============================================================================
-   SIGNAL #4 — Framework theme classes (Bootstrap 5.3+, Tailwind, generic)
-   =============================================================================
-   Safety net for frameworks that flip a theme class but don't set color-scheme
-   (Tailwind's `.dark`, hand-rolled toggles, older framework versions).
-   ============================================================================= */
+/* SIGNAL — Framework theme classes (Bootstrap 5.3+, Tailwind, generic) */
 [data-theme="dark"] .stv__container,
 [data-bs-theme="dark"] .stv__container,
 .dark .stv__container {
-	--stv-bg: var(--base-main-bg, #1a1a1a);
-	--stv-light: var(--base-main-bg, #1a1a1a);
-	--stv-elevated-bg: var(--base-elevated-bg, #2b2b2b);
-	--stv-border: var(--base-border-color, #3d3d3d);
-	--stv-body-color: var(--base-text-color-1, #f5f5f5);
-	--stv-node-path-color: var(--base-text-color-3, #a3a3a3);
-	--stv-toggle-icon-color: var(--base-text-color-3, #a3a3a3);
-	--stv-checkbox-border-color: var(--base-border-color, #5a5a5a);
-	--stv-checkbox-bg: var(--base-input-bg, #1f1f1f);
-	--stv-context-menu-bg: var(--base-dropdown-bg, var(--base-elevated-bg, var(--base-main-bg, #2b2b2b)));
-	--stv-context-menu-shortcut-color: var(--base-text-color-4, #6b7280);
-	--stv-context-menu-arrow-color: var(--base-text-color-4, #6b7280);
-	--stv-context-menu-divider-label-color: var(--base-text-color-4, #6b7280);
-	--stv-loading-bg: color-mix(in srgb, var(--base-main-bg, #1a1a1a) 80%, transparent);
-	--stv-loading-color: var(--base-text-color-3, #a3a3a3);
-	--stv-spinner-track: var(--base-border-color, #3d3d3d);
+	color-scheme: dark;
 }
 
-/* =============================================================================
-   SIGNAL #5 — Per-instance override on a single tree
-   =============================================================================
-   Highest specificity: lets one tree theme differently from the surrounding
-   page. Wires through the `theme` prop forwarded by Tree.svelte.
-   ============================================================================= */
-.stv__container[data-theme="dark"] {
-	--stv-bg: var(--base-main-bg, #1a1a1a);
-	--stv-light: var(--base-main-bg, #1a1a1a);
-	--stv-elevated-bg: var(--base-elevated-bg, #2b2b2b);
-	--stv-border: var(--base-border-color, #3d3d3d);
-	--stv-body-color: var(--base-text-color-1, #f5f5f5);
-	--stv-node-path-color: var(--base-text-color-3, #a3a3a3);
-	--stv-toggle-icon-color: var(--base-text-color-3, #a3a3a3);
-	--stv-checkbox-border-color: var(--base-border-color, #5a5a5a);
-	--stv-checkbox-bg: var(--base-input-bg, #1f1f1f);
-	--stv-context-menu-bg: var(--base-dropdown-bg, var(--base-elevated-bg, var(--base-main-bg, #2b2b2b)));
-	--stv-context-menu-shortcut-color: var(--base-text-color-4, #6b7280);
-	--stv-context-menu-arrow-color: var(--base-text-color-4, #6b7280);
-	--stv-context-menu-divider-label-color: var(--base-text-color-4, #6b7280);
-	--stv-loading-bg: color-mix(in srgb, var(--base-main-bg, #1a1a1a) 80%, transparent);
-	--stv-loading-color: var(--base-text-color-3, #a3a3a3);
-	--stv-spinner-track: var(--base-border-color, #3d3d3d);
-}
-
-/* =============================================================================
-   SYMMETRIC LIGHT OVERRIDES — force light on a dark page
-   =============================================================================
-   When a consumer wants one tree to render light on an otherwise-dark page,
-   `data-theme="light"` (or the framework equivalent) restores the variables to
-   the original light defaults from variables.css.
-   ============================================================================= */
 [data-theme="light"] .stv__container,
 [data-bs-theme="light"] .stv__container,
-.light .stv__container,
+.light .stv__container {
+	color-scheme: light;
+}
+
+/* SIGNAL — Per-instance override via the `theme` prop on <Tree> */
+.stv__container[data-theme="dark"] {
+	color-scheme: dark;
+}
+
 .stv__container[data-theme="light"] {
-	--stv-bg: var(--base-main-bg, #ffffff);
-	--stv-light: var(--base-main-bg, #f8f9fa);
-	--stv-elevated-bg: var(--base-elevated-bg, #ffffff);
-	--stv-border: var(--base-border-color, #dee2e6);
-	--stv-body-color: var(--base-text-color-1, #212529);
-	--stv-node-path-color: var(--base-text-color-3, #6c757d);
-	--stv-toggle-icon-color: var(--base-text-color-3, #6c757d);
-	--stv-checkbox-border-color: var(--base-border-color, #adb5bd);
-	--stv-checkbox-bg: var(--base-input-bg, #ffffff);
-	--stv-context-menu-bg: var(--base-dropdown-bg,
-		var(--base-elevated-bg,
-			var(--base-main-bg, #ffffff)));
-	--stv-context-menu-shortcut-color: var(--base-text-color-4, #9ca3af);
-	--stv-context-menu-arrow-color: var(--base-text-color-4, #9ca3af);
-	--stv-context-menu-divider-label-color: var(--base-text-color-4, #9ca3af);
-	--stv-loading-bg: color-mix(in srgb, var(--base-main-bg, #ffffff) 80%, transparent);
-	--stv-loading-color: var(--base-text-color-3, #718096);
-	--stv-spinner-track: var(--base-border-color, #e2e8f0);
+	color-scheme: light;
 }

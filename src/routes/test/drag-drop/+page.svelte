@@ -486,7 +486,7 @@
 	</section>
 
 	<section data-testid="section-copy">
-		<h2>Ctrl-Drag Copy (allowCopy=true)</h2>
+		<h2>Ctrl-Drag Copy (isCopyAllowed=true)</h2>
 		<div class="drop-state">
 			<span>count: <b data-testid="copy-drop-count">{copyDrop.count}</b></span>
 			<span>dragged: <b data-testid="copy-drop-dragged">{copyDrop.dragged}</b></span>
@@ -506,7 +506,7 @@
 				dragDropMode="self"
 				getIsDraggableCallback={() => true}
 				getIsDropAllowedCallback={() => true}
-				allowCopy={true}
+				isCopyAllowed={true}
 				onNodeDrop={onCopyDrop}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}

@@ -17,9 +17,9 @@ function loadMode(): RenderMode {
 let _renderMode = $state<RenderMode>(loadMode());
 
 const _treeProps = $derived({
-	useFlatRendering: _renderMode === 'progressive' || _renderMode === 'virtual',
-	progressiveRender: _renderMode === 'progressive',
-	virtualScroll: _renderMode === 'virtual',
+	isFlatRenderingEnabled: _renderMode === 'progressive' || _renderMode === 'virtual',
+	isProgressiveRender: _renderMode === 'progressive',
+	isVirtualScrollEnabled: _renderMode === 'virtual',
 });
 
 // Getters - reactive when called inside reactive contexts (templates, $derived, $effect)

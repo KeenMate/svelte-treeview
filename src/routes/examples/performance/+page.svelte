@@ -19,13 +19,13 @@
   let renderMode = $state<RenderMode>(savedConfig.renderMode ?? 'flat');
 
   // Derived props from renderMode
-  const useFlatRendering = $derived(renderMode === 'flat' || renderMode === 'virtual');
-  const virtualScroll = $derived(renderMode === 'virtual');
+  const isFlatRenderingEnabled = $derived(renderMode === 'flat' || renderMode === 'virtual');
+  const isVirtualScrollEnabled = $derived(renderMode === 'virtual');
 
   // Test configuration with localStorage defaults
   let expandLevel = $state(savedConfig.expandLevel ?? 1);
   let isSorted = $state(savedConfig.isSorted ?? true);
-  let progressiveRender = $state(savedConfig.progressiveRender ?? false);
+  let isProgressiveRender = $state(savedConfig.isProgressiveRender ?? false);
   let initialBatchSize = $state(savedConfig.initialBatchSize ?? 20);
   let maxBatchSize = $state(savedConfig.maxBatchSize ?? 500);
   let indexerBatchSize = $state(savedConfig.indexerBatchSize ?? 25);
@@ -43,7 +43,7 @@
       renderMode,
       expandLevel,
       isSorted,
-      progressiveRender,
+      isProgressiveRender,
       initialBatchSize,
       maxBatchSize,
       indexerBatchSize,
@@ -60,7 +60,7 @@
     renderMode = 'flat';
     expandLevel = 1;
     isSorted = true;
-    progressiveRender = false;
+    isProgressiveRender = false;
     initialBatchSize = 20;
     maxBatchSize = 500;
     indexerBatchSize = 25;
@@ -594,10 +594,10 @@
     {#if renderMode !== 'virtual'}
       <div class="mode-options">
         <label>
-          <input type="checkbox" bind:checked={progressiveRender} />
+          <input type="checkbox" bind:checked={isProgressiveRender} />
           Progressive Render
         </label>
-        {#if progressiveRender}
+        {#if isProgressiveRender}
           <label>
             Initial Batch:
             <input type="number" bind:value={initialBatchSize} min="5" max="200" step="5" />
@@ -694,7 +694,7 @@
           <span class="label">Search/Filter</span>
         </div>
       {/if}
-      {#if progressiveRender}
+      {#if isProgressiveRender}
         <div class="metric" class:rendering={isRendering}>
           <span class="value">
             {#if isRendering}
@@ -776,7 +776,7 @@
           <span class="update-time">{lastSearchTime.toFixed(2)} ms</span>
         {/if}
       </div>
-      <div class="tree-container" class:tree-container-tall={!virtualScroll}>
+      <div class="tree-container" class:tree-container-tall={!isVirtualScrollEnabled}>
         {#key treeKey}
           <Tree
             bind:this={treeRef}
@@ -790,15 +790,15 @@
             {sortCallback}
             {isSorted}
             {expandLevel}
-            {progressiveRender}
+            {isProgressiveRender}
             {initialBatchSize}
             {maxBatchSize}
             {indexerBatchSize}
             {shouldUseInternalSearchIndex}
             searchValueMember="name"
             bind:searchText
-            {useFlatRendering}
-            {virtualScroll}
+            {isFlatRenderingEnabled}
+            {isVirtualScrollEnabled}
             {virtualContainerHeight}
             {virtualOverscan}
             bind:insertResult

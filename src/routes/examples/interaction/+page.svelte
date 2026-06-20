@@ -67,9 +67,9 @@
 		selectionMode: SelectionMode;
 		highlightedNodeClass: string;
 		focusedNodeClass: string;
-		showCheckboxes: boolean;
+		shouldShowCheckboxes: boolean;
 		checkboxMode: CheckboxMode;
-		clickTogglesCheckbox: boolean;
+		shouldClickToggleCheckbox: boolean;
 		rangeSelectionMode: 'visual' | 'logical';
 	}
 
@@ -80,9 +80,9 @@
 		selectionMode: 'multi',
 		highlightedNodeClass: 'stv__node-content--highlight-bold',
 		focusedNodeClass: 'demo-focused-outline',
-		showCheckboxes: false,
+		shouldShowCheckboxes: false,
 		checkboxMode: 'independent',
-		clickTogglesCheckbox: false,
+		shouldClickToggleCheckbox: false,
 		rangeSelectionMode: 'visual'
 	};
 
@@ -103,9 +103,9 @@
 				selectionMode,
 				highlightedNodeClass,
 				focusedNodeClass,
-				showCheckboxes,
+				shouldShowCheckboxes,
 				checkboxMode,
-				clickTogglesCheckbox,
+				shouldClickToggleCheckbox,
 				rangeSelectionMode
 			}));
 		} catch {}
@@ -133,16 +133,16 @@
 	let selectionMode = $state<SelectionMode>(saved.selectionMode);
 	let highlightedNodeClass = $state(saved.highlightedNodeClass);
 	let focusedNodeClass = $state(saved.focusedNodeClass);
-	let showCheckboxes = $state(saved.showCheckboxes);
+	let shouldShowCheckboxes = $state(saved.shouldShowCheckboxes);
 	let checkboxMode = $state<CheckboxMode>(saved.checkboxMode);
-	let clickTogglesCheckbox = $state(saved.clickTogglesCheckbox);
+	let shouldClickToggleCheckbox = $state(saved.shouldClickToggleCheckbox);
 
 	// Three-level state
 	let focusedNode1 = $state<LTreeNode<Item> | null>(null);
 	let highlightedPaths1 = $state(new Set<string>());
 	let selectedPaths1 = $state(new Set<string>());
 
-	$effect(() => { clickBehavior; selectionMode; highlightedNodeClass; focusedNodeClass; showCheckboxes; checkboxMode; clickTogglesCheckbox; rangeSelectionMode; saveSettings(); });
+	$effect(() => { clickBehavior; selectionMode; highlightedNodeClass; focusedNodeClass; shouldShowCheckboxes; checkboxMode; shouldClickToggleCheckbox; rangeSelectionMode; saveSettings(); });
 
 	function onClickDemoNodeClick(node: LTreeNode<Item>) {
 	}
@@ -215,10 +215,10 @@
 				</select>
 			</label>
 			<label>
-				<input type="checkbox" bind:checked={showCheckboxes} />
+				<input type="checkbox" bind:checked={shouldShowCheckboxes} />
 				Show Checkboxes
 			</label>
-			{#if showCheckboxes}
+			{#if shouldShowCheckboxes}
 				<label>
 					Checkbox Mode:
 					<select bind:value={checkboxMode}>
@@ -227,7 +227,7 @@
 					</select>
 				</label>
 				<label>
-					<input type="checkbox" bind:checked={clickTogglesCheckbox} />
+					<input type="checkbox" bind:checked={shouldClickToggleCheckbox} />
 					Click row toggles checkbox
 				</label>
 			{/if}
@@ -260,9 +260,9 @@
 					{focusedNodeClass}
 					{clickBehavior}
 					{selectionMode}
-					{showCheckboxes}
+					{shouldShowCheckboxes}
 					{checkboxMode}
-					{clickTogglesCheckbox}
+					{shouldClickToggleCheckbox}
 					bind:focusedNode={focusedNode1}
 					bind:highlightedPaths={highlightedPaths1}
 					bind:selectedPaths={selectedPaths1}
@@ -295,7 +295,7 @@
   clickBehavior="${clickBehavior}"
   selectionMode="${selectionMode}"
   highlightedNodeClass="${highlightedNodeClass}"${focusedNodeClass ? `\n  focusedNodeClass="${focusedNodeClass}"` : ''}
-  showCheckboxes={${showCheckboxes}}${showCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}${showCheckboxes && clickTogglesCheckbox ? `\n  clickTogglesCheckbox` : ''}
+  shouldShowCheckboxes={${shouldShowCheckboxes}}${shouldShowCheckboxes ? `\n  checkboxMode="${checkboxMode}"` : ''}${shouldShowCheckboxes && shouldClickToggleCheckbox ? `\n  shouldClickToggleCheckbox` : ''}
   ...
 />
 
@@ -350,7 +350,7 @@
 					{highlightedNodeClass}
 					{focusedNodeClass}
 					{selectionMode}
-					{showCheckboxes}
+					{shouldShowCheckboxes}
 					{checkboxMode}
 					{rangeSelectionMode}
 					bind:focusedNode={focusedNode2}
@@ -389,7 +389,7 @@
 
 		<div class="code-block">
 			<pre>{`<Tree
-  showCheckboxes={true}
+  shouldShowCheckboxes={true}
   rangeSelectionMode="${rangeSelectionMode}"
   bind:highlightedPaths={selectedPaths}
   onSelectionChange={(paths, nodes) => { ... }}

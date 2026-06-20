@@ -30,6 +30,7 @@
 }
 
 .stv__container {
+	display: block;
 	position: relative;
 	outline: none;
 	background: var(--stv-bg);

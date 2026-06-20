@@ -252,7 +252,7 @@ test.describe('restricted drop positions — getAllowedDropPositionsCallback', (
 
 // ── Section 5: Ctrl-drag copy ──────────────────────────────────────────────
 
-test.describe('Ctrl-drag copy (allowCopy=true)', () => {
+test.describe('Ctrl-drag copy (isCopyAllowed=true)', () => {
 	test('plain drag reports operation=move', async ({ page }) => {
 		await gotoFixture(page);
 		const section = page.getByTestId('section-copy');

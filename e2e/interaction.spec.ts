@@ -4,7 +4,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  * E2E coverage for /test/interaction (minimal fixture page; /examples/interaction
  * is the tutorial demo with the same logic plus persistence and styling controls).
  *
- * Three trees live on this page, sharing the showCheckboxes/checkboxMode
+ * Three trees live on this page, sharing the shouldShowCheckboxes/checkboxMode
  * settings but each binding its own focusedNode / highlightedPaths /
  * selectedPaths Set. Locators are scoped by the card heading so the trees
  * don't collide.
@@ -204,7 +204,7 @@ test.describe('Click Behavior tree', () => {
 		await expect(selected).not.toHaveText(/(^|, )1(,|$)/);
 	});
 
-	test('clickTogglesCheckbox: plain click toggles checkbox and skips focus/highlight', async ({ page }) => {
+	test('shouldClickToggleCheckbox: plain click toggles checkbox and skips focus/highlight', async ({ page }) => {
 		await gotoInteraction(page);
 		const card = clickBehaviorCard(page);
 
@@ -227,7 +227,7 @@ test.describe('Click Behavior tree', () => {
 		await expect(checkboxInputOf(nodeInCard(card, '1.1'))).not.toBeChecked();
 	});
 
-	test('clickTogglesCheckbox: Ctrl+click still builds multi-highlight (modifier falls through)', async ({ page }) => {
+	test('shouldClickToggleCheckbox: Ctrl+click still builds multi-highlight (modifier falls through)', async ({ page }) => {
 		await gotoInteraction(page);
 		const card = clickBehaviorCard(page);
 

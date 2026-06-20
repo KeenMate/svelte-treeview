@@ -200,8 +200,8 @@ COPY OPERATION (Ctrl+Drag)
 Enable copying with Ctrl+drag:
 
 <Tree
-  allowCopy={true}
-  autoHandleCopy={true}  <!-- Default: auto-creates copy -->
+  isCopyAllowed={true}
+  shouldAutoHandleCopy={true}  <!-- Default: auto-creates copy -->
   onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
     if (operation === 'copy') {
       console.log('Copied node');
@@ -211,7 +211,7 @@ Enable copying with Ctrl+drag:
   }}
 />
 
-autoHandleCopy options:
+shouldAutoHandleCopy options:
 - true: Tree creates copy with generated ID (good for batch/offline)
 - false: Your callback handles copy (good for DB/API integration)
 

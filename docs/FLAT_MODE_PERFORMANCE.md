@@ -2,7 +2,7 @@
 
 ## Overview
 
-Flat mode (`useFlatRendering=true`) renders all visible nodes in a single `{#each}` loop instead of recursively nesting Node components. This document explains the performance concepts and optimizations implemented.
+Flat mode (`isFlatRenderingEnabled=true`) renders all visible nodes in a single `{#each}` loop instead of recursively nesting Node components. This document explains the performance concepts and optimizations implemented.
 
 ## The Core Problem
 

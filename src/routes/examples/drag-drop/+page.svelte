@@ -48,7 +48,7 @@
 	let dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('around');
 	let dropZoneStart = $state<number | string>('33%');
 	let dropZoneMaxWidth = $state(120);
-	let allowCopy = $state(false); // Enable Ctrl+drag to copy
+	let isCopyAllowed = $state(false); // Enable Ctrl+drag to copy
 
 	// Selection mode for the source tree. Defaulting to 'multi' so the new
 	// multi-drag feature (drag the whole highlighted set with top-level
@@ -72,7 +72,7 @@
 				if (config.layout) dropZoneLayout = config.layout;
 				if (config.start !== undefined) dropZoneStart = config.start;
 				if (config.maxWidth !== undefined) dropZoneMaxWidth = config.maxWidth;
-				if (config.allowCopy !== undefined) allowCopy = config.allowCopy;
+				if (config.isCopyAllowed !== undefined) isCopyAllowed = config.isCopyAllowed;
 			} catch (e) {
 				// Ignore invalid JSON
 			}
@@ -81,7 +81,7 @@
 
 	// Save settings to localStorage when they change
 	$effect(() => {
-		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, allowCopy };
+		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, isCopyAllowed };
 		localStorage.setItem('dropZoneConfig', JSON.stringify(config));
 	});
 
@@ -395,7 +395,7 @@
 				</label>
 			{/if}
 			<label style="display: flex; align-items: center; gap: 0.5rem; margin-left: 1rem;">
-				<input type="checkbox" bind:checked={allowCopy} />
+				<input type="checkbox" bind:checked={isCopyAllowed} />
 				Allow Ctrl+drag to copy
 			</label>
 			<label style="display: flex; align-items: center; gap: 0.5rem;">
@@ -429,7 +429,7 @@
 						bind:highlightedPaths={sourceHighlightedPaths}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
-						{allowCopy}
+						{isCopyAllowed}
 						{dropZoneMode}
 						{dropZoneLayout}
 						{dropZoneStart}
@@ -464,7 +464,7 @@
 						bind:highlightedPaths={targetHighlightedPaths}
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
-						{allowCopy}
+						{isCopyAllowed}
 						{dropZoneMode}
 						{dropZoneLayout}
 						{dropZoneStart}
@@ -693,7 +693,7 @@ const data = [
     // position: 'after' - insert as sibling after dropNode
     // position: 'child' - insert as child of dropNode
   }
-  // operation: 'move' (default) or 'copy' (Ctrl+drag with allowCopy)
+  // operation: 'move' (default) or 'copy' (Ctrl+drag with isCopyAllowed)
 }}`}</pre>
 		</div>
 	</div>

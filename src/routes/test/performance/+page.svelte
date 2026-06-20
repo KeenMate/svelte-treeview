@@ -20,8 +20,8 @@
 	};
 
 	let renderMode = $state<RenderMode>('flat');
-	const useFlatRendering = $derived(renderMode === 'flat' || renderMode === 'virtual');
-	const virtualScroll = $derived(renderMode === 'virtual');
+	const isFlatRenderingEnabled = $derived(renderMode === 'flat' || renderMode === 'virtual');
+	const isVirtualScrollEnabled = $derived(renderMode === 'virtual');
 
 	let nodeCountTarget = $state(300);
 	let expandLevel = $state(1);
@@ -248,8 +248,8 @@
 						shouldUseInternalSearchIndex={true}
 						searchValueMember="name"
 						bind:searchText
-						{useFlatRendering}
-						{virtualScroll}
+						{isFlatRenderingEnabled}
+						{isVirtualScrollEnabled}
 						virtualContainerHeight="400px"
 						virtualOverscan={5}
 					>

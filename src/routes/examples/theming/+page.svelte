@@ -92,6 +92,17 @@
 		if (pageScheme === 'light dark') return 'Page color-scheme: light dark (follows OS preference via light-dark())';
 		return 'No signal active — hardcoded light defaults';
 	});
+
+	// ---- Dynamic Theme Switching (bottom-of-page picker) --------------------
+	// Mirrors web-daterangepicker's examples-theming.html "Dynamic Theme Switching"
+	// section: one demo tree, a row of color-coded buttons that hot-swap the
+	// brand theme class, plus a dark/light toggle for the per-instance theme prop.
+	let dynamicBrand = $state<BrandTheme>('default');
+	let dynamicMode = $state<'inherit' | 'dark' | 'light'>('inherit');
+	const dynamicTreeTheme = $derived<'dark' | 'light' | undefined>(
+		dynamicMode === 'dark' ? 'dark' : dynamicMode === 'light' ? 'light' : undefined
+	);
+	let dynamicHighlight = $state<Set<string>>(new Set(['1.1']));
 </script>
 
 <svelte:head>
@@ -734,6 +745,114 @@
 		</p>
 	</div>
 
+	<!-- Dynamic Theme Switching — ported from web-daterangepicker -->
+	<div class="card">
+		<h2>Dynamic Theme Switching</h2>
+		<p class="description">
+			Change themes at runtime with JavaScript. The brand buttons swap a class
+			on the wrapper (which re-tints the tree via <code>--base-*</code>); the
+			light / dark / inherit buttons drive the per-instance <code>theme</code>
+			prop on <code>&lt;Tree&gt;</code>.
+		</p>
+
+		<div
+			class={['playground-wrapper', `brand-${dynamicBrand}`]}
+		>
+			<div class="tree-container playground-tree">
+				<Tree
+					data={sampleData}
+					idMember="id"
+					pathMember="path"
+					sortCallback={sortByName}
+					isSorted={true}
+					expandLevel={3}
+					theme={dynamicTreeTheme}
+					selectionMode="multi"
+					bind:highlightedPaths={dynamicHighlight}
+					{...getTreeProps()}
+				>
+					{#snippet nodeTemplate(node: any)}
+						<span>{node.data?.icon} {node.data?.name}</span>
+					{/snippet}
+				</Tree>
+			</div>
+		</div>
+
+		<div class="theme-switcher-row" aria-label="Brand theme">
+			<button
+				type="button"
+				class="theme-btn theme-btn--default"
+				class:is-active={dynamicBrand === 'default'}
+				onclick={() => (dynamicBrand = 'default')}
+			>Default</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--material"
+				class:is-active={dynamicBrand === 'material'}
+				onclick={() => (dynamicBrand = 'material')}
+			>Material</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--neon"
+				class:is-active={dynamicBrand === 'neon'}
+				onclick={() => (dynamicBrand = 'neon')}
+			>Neon</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--sharp"
+				class:is-active={dynamicBrand === 'sharp'}
+				onclick={() => (dynamicBrand = 'sharp')}
+			>Sharp</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--soft"
+				class:is-active={dynamicBrand === 'soft'}
+				onclick={() => (dynamicBrand = 'soft')}
+			>Soft</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--forest"
+				class:is-active={dynamicBrand === 'forest'}
+				onclick={() => (dynamicBrand = 'forest')}
+			>Forest</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--glass"
+				class:is-active={dynamicBrand === 'glass'}
+				onclick={() => (dynamicBrand = 'glass')}
+			>Glass</button>
+		</div>
+
+		<div class="theme-switcher-row theme-switcher-row--mode" aria-label="Color scheme">
+			<button
+				type="button"
+				class="theme-btn theme-btn--inherit"
+				class:is-active={dynamicMode === 'inherit'}
+				onclick={() => (dynamicMode = 'inherit')}
+			>Inherit</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--light"
+				class:is-active={dynamicMode === 'light'}
+				onclick={() => (dynamicMode = 'light')}
+			>Light</button>
+			<button
+				type="button"
+				class="theme-btn theme-btn--dark"
+				class:is-active={dynamicMode === 'dark'}
+				onclick={() => (dynamicMode = 'dark')}
+			>Dark</button>
+		</div>
+
+		<div class="code-block">
+			<pre>{`// Brand theme: a class on the wrapper that sets --base-* tokens
+wrapper.className = 'brand-${dynamicBrand}';
+
+// Color scheme: forwarded to the inner Tree as data-theme
+<Tree theme={${dynamicMode === 'inherit' ? 'undefined' : `'${dynamicMode}'`}} ... />`}</pre>
+		</div>
+	</div>
+
 	<footer>
 		<p><a href="/">&larr; Back to Examples</a></p>
 	</footer>
@@ -1297,4 +1416,53 @@
 		font-size: 14px;
 		color: #6b7280;
 	}
+
+	/* === Dynamic Theme Switching — button row ===
+	   Each .theme-btn renders in the accent color of the theme it switches to,
+	   so the row reads visually as a color palette. .is-active gets a ring. */
+	.theme-switcher-row {
+		display: flex;
+		gap: 0.5rem;
+		flex-wrap: wrap;
+		margin-top: 1rem;
+	}
+	.theme-switcher-row--mode {
+		margin-top: 0.5rem;
+	}
+	.theme-btn {
+		padding: 0.5rem 1rem;
+		border: 1px solid rgba(255, 255, 255, 0.15);
+		border-radius: 0.375rem;
+		cursor: pointer;
+		font-weight: 600;
+		color: #ffffff;
+		transition: transform 0.12s, box-shadow 0.12s, outline 0.12s;
+	}
+	.theme-btn:hover {
+		transform: translateY(-1px);
+		box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+	}
+	.theme-btn.is-active {
+		outline: 2px solid #1f2937;
+		outline-offset: 2px;
+	}
+	.theme-btn--default  { background: #0d6efd; }
+	.theme-btn--material { background: #1976d2; }
+	.theme-btn--neon     { background: linear-gradient(135deg, #ff00ff 0%, #00ffff 100%); }
+	.theme-btn--sharp    { background: #000000; }
+	.theme-btn--soft     { background: #ff6b9d; }
+	.theme-btn--forest   { background: #2d6a4f; }
+	.theme-btn--glass    {
+		background: rgba(255, 255, 255, 0.55);
+		color: #1f2937;
+		backdrop-filter: blur(6px);
+		border: 1px solid rgba(31, 41, 55, 0.2);
+	}
+	.theme-btn--inherit  { background: #6b7280; }
+	.theme-btn--light    {
+		background: #ffffff;
+		color: #1f2937;
+		border: 1px solid #d1d5db;
+	}
+	.theme-btn--dark     { background: #1f2937; }
 </style>

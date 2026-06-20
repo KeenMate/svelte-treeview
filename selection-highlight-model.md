@@ -19,11 +19,11 @@ up. Size: 0..N (capped at 1 in `selectionMode = 'single'`).
 
 **`selectedPaths`** — `Set<string>`. The "real picks". Bound via
 `bind:selectedPaths`. What a form / persistence layer reads. The
-*mechanism* that puts paths into this set depends on `showCheckboxes`:
+*mechanism* that puts paths into this set depends on `shouldShowCheckboxes`:
 
-- `showCheckboxes = false` → `selectedPaths` is auto-mirrored from
+- `shouldShowCheckboxes = false` → `selectedPaths` is auto-mirrored from
   `highlightedPaths`. Highlighting commits.
-- `showCheckboxes = true` → `selectedPaths` is driven *only* by checkbox
+- `shouldShowCheckboxes = true` → `selectedPaths` is driven *only* by checkbox
   interaction. Highlighting is just gathering; the click on the checkbox
   commits.
 
@@ -51,7 +51,7 @@ not the real selection). The rename is deferred — see Decision 7.
 
 **The semantics of "highlighted" depend on whether checkboxes are visible.**
 
-| | `showCheckboxes = false` | `showCheckboxes = true` |
+| | `shouldShowCheckboxes = false` | `shouldShowCheckboxes = true` |
 |---|---|---|
 | Click / Ctrl-click / Shift-click | Highlights AND selects (mirrored) | Highlights only (transient cursor) |
 | Click on checkbox | n/a | Toggles selection on that node |
@@ -64,11 +64,11 @@ highlighting is just gathering, and the click on the checkbox commits.
 
 ## Decisions
 
-### 1. Mirroring mechanism — implicit, derived from `showCheckboxes`
+### 1. Mirroring mechanism — implicit, derived from `shouldShowCheckboxes`
 
-No new toggle prop. When `!showCheckboxes`, every change to
+No new toggle prop. When `!shouldShowCheckboxes`, every change to
 `highlightedPaths` writes the same set into `selectedPaths`. When
-`showCheckboxes`, the two are decoupled.
+`shouldShowCheckboxes`, the two are decoupled.
 
 ### 2. New prop: `selectionMode: 'single' | 'multi'`, default `'single'`
 
@@ -85,7 +85,7 @@ Controls highlight cardinality and modifier-key behaviour.
 | `Enter` | **no-op** | toggles focused node in highlight |
 | `Space` (with checkboxes) | toggles focused node's checkbox | toggles focused node's checkbox |
 
-Open detail: in `'single'` mode + `showCheckboxes = true`, should checking
+Open detail: in `'single'` mode + `shouldShowCheckboxes = true`, should checking
 a second box clear the first (radio-group style) or allow multi-check? The
 literal reading of "single selection mode" suggests radio-group — confirm
 during implementation.
@@ -150,7 +150,7 @@ after the model lands.
 
 ### 8. Mode transition
 
-If a consumer toggles `showCheckboxes` at runtime: leave both sets as-is.
+If a consumer toggles `shouldShowCheckboxes` at runtime: leave both sets as-is.
 No reconciliation. The checkboxes that appear/disappear reflect the
 current `selectedPaths`. Documented as consumer's responsibility to
 reconcile if they want different behaviour.
@@ -169,7 +169,7 @@ tick. Listeners pick whichever they care about; no coalescing.
 
 `highlightNode`, `highlightNodes`, `clearHighlight` (and the deprecated
 `selectNode`/`selectNodes`) mirror into `selectedPaths` when
-`!showCheckboxes`, emitting `onSelectionChange` alongside
+`!shouldShowCheckboxes`, emitting `onSelectionChange` alongside
 `onHighlightChange`. The existing `{ silent: true }` option still
 suppresses both.
 
@@ -201,7 +201,7 @@ Files / areas that change:
 - `src/lib/core/TreeController.svelte.ts`:
   - Add `selectionMode` state and prop wiring.
   - Add internal `_shiftCursor`.
-  - Add mirror logic: after every highlight change, if `!showCheckboxes`
+  - Add mirror logic: after every highlight change, if `!shouldShowCheckboxes`
     write the same set into `selectedPaths` and emit `onSelectionChange`.
   - Gate click/arrow handlers on `selectionMode === 'multi'` for
     Ctrl/Shift behaviour.
@@ -235,7 +235,7 @@ Files / areas that change:
 
 ## Open implementation questions
 
-- `selectionMode='single'` + `showCheckboxes=true`: radio-group behaviour
+- `selectionMode='single'` + `shouldShowCheckboxes=true`: radio-group behaviour
   (checking unchecks the previous) or allow multi-check? Confirm during
   implementation.
 - Should arrow nav stop at `!isSelectable` nodes (skip) or land on them

@@ -48,7 +48,10 @@
 	--stv-primary: var(--base-accent-color, #0d6efd);
 	--stv-success: var(--base-success-color, light-dark(#198754, #2ea561));
 	--stv-danger: var(--base-danger-color, light-dark(#dc3545, #f87c86));
-	--stv-light: var(--base-main-bg, light-dark(#f8f9fa, #1a1a1a));
+	/* Note: --stv-light doubles as context-menu hover surface + elevated chip bg.
+	   Dark value is #2b2b2b (not #1a1a1a) so the elevated surface remains
+	   distinguishable against the main bg in dark mode. */
+	--stv-light: var(--base-main-bg, light-dark(#f8f9fa, #2b2b2b));
 	--stv-elevated-bg: var(--base-elevated-bg, light-dark(#ffffff, #2b2b2b));
 	--stv-border: var(--base-border-color, light-dark(#dee2e6, #3d3d3d));
 	--stv-body-color: var(--base-text-color-1, light-dark(#212529, #f5f5f5));

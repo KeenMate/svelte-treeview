@@ -90,9 +90,9 @@
 		 * highlight on the focused node.
 		 */
 		selectionMode?: SelectionMode | null | undefined;
-		showCheckboxes?: boolean | null | undefined;
+		shouldShowCheckboxes?: boolean | null | undefined;
 		checkboxMode?: CheckboxMode | null | undefined;
-		clickTogglesCheckbox?: boolean | null | undefined;
+		shouldClickToggleCheckbox?: boolean | null | undefined;
 		beforeCheckboxToggleCallback?: (node: LTreeNode<T>, checked: boolean, affectedPaths: string[]) => boolean | string[] | void;
 		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
@@ -105,7 +105,7 @@
 		isLoading?: boolean;
 
 		// Progressive rendering (exponential batching: 20 → 40 → 80 → 160...)
-		progressiveRender?: boolean;
+		isProgressiveRender?: boolean;
 		initialBatchSize?: number;
 		maxBatchSize?: number;
 		isRendering?: boolean; // Bindable: true while progressive rendering is active
@@ -120,11 +120,11 @@
 		 * - Using a single flat loop instead of recursive component instantiation
 		 * - Allowing Svelte's keyed {#each} to efficiently diff only changed nodes
 		 */
-		useFlatRendering?: boolean;
+		isFlatRenderingEnabled?: boolean;
 
 		// VIRTUAL SCROLLING (flat mode only)
 		/** Enable virtual scrolling in flat mode. Only visible nodes + overscan are rendered. */
-		virtualScroll?: boolean;
+		isVirtualScrollEnabled?: boolean;
 		/** Explicit row height in px. Auto-measured from first row if not set. */
 		virtualRowHeight?: number;
 		/** Extra rows above/below viewport (default: 5) */
@@ -138,11 +138,11 @@
 		dropZoneLayout?: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
-		allowCopy?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
-		autoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
-		autoHandleMove?: boolean; // Auto-handle same-tree move operations (default: true). Set to false for database-first workflow.
-		autoHandlePaste?: boolean; // Auto-handle paste operations (default: true). Set to false for database-first workflow.
-		accordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
+		isCopyAllowed?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
+		shouldAutoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
+		shouldAutoHandleMove?: boolean; // Auto-handle same-tree move operations (default: true). Set to false for database-first workflow.
+		shouldAutoHandlePaste?: boolean; // Auto-handle paste operations (default: true). Set to false for database-first workflow.
+		isAccordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
 
 		// EVENTS (on* = fire-and-forget notifications)
 		onNodeClick?: (node: LTreeNode<T>) => void;
@@ -248,9 +248,9 @@
 
 		clickBehavior = 'expand-and-focus',
 		selectionMode = 'single',
-		showCheckboxes = false,
+		shouldShowCheckboxes = false,
 		checkboxMode = 'independent',
-		clickTogglesCheckbox = false,
+		shouldClickToggleCheckbox = false,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode = 'visual',
 		shouldUseInternalSearchIndex = true,
@@ -263,7 +263,7 @@
 		isLoading = false,
 
 		// Progressive rendering (exponential batching: 20 → 40 → 80 → 160...)
-		progressiveRender = true,
+		isProgressiveRender = true,
 		initialBatchSize = 20,
 		maxBatchSize = 500,
 		isRendering = $bindable(false),
@@ -272,10 +272,10 @@
 		onRenderComplete,
 
 		// Flat rendering mode
-		useFlatRendering = true,
+		isFlatRenderingEnabled = true,
 
 		// Virtual scrolling (flat mode only)
-		virtualScroll = false,
+		isVirtualScrollEnabled = false,
 		virtualRowHeight = undefined,
 		virtualOverscan = 5,
 		virtualContainerHeight = undefined,
@@ -286,11 +286,11 @@
 		dropZoneLayout = 'around',
 		dropZoneStart = 33,
 		dropZoneMaxWidth = 120,
-		allowCopy = false,
-		autoHandleCopy = true,
-		autoHandleMove = true,
-		autoHandlePaste = true,
-		accordionExpand = false,
+		isCopyAllowed = false,
+		shouldAutoHandleCopy = true,
+		shouldAutoHandleMove = true,
+		shouldAutoHandlePaste = true,
+		isAccordionExpand = false,
 
 		// EVENTS
 		onNodeClick,
@@ -368,9 +368,9 @@
 		expandLevel,
 		clickBehavior,
 		selectionMode,
-		showCheckboxes,
+		shouldShowCheckboxes,
 		checkboxMode,
-		clickTogglesCheckbox,
+		shouldClickToggleCheckbox,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode,
 		shouldUseInternalSearchIndex,
@@ -381,14 +381,14 @@
 		shouldDisplayDebugInformation,
 		shouldDisplayContextMenuInDebugMode,
 		isLoading,
-		progressiveRender,
+		isProgressiveRender,
 		initialBatchSize,
 		maxBatchSize,
 		onRenderStart,
 		onRenderProgress,
 		onRenderComplete,
-		useFlatRendering,
-		virtualScroll,
+		isFlatRenderingEnabled,
+		isVirtualScrollEnabled,
 		virtualRowHeight,
 		virtualOverscan,
 		virtualContainerHeight,
@@ -397,11 +397,11 @@
 		dropZoneLayout,
 		dropZoneStart,
 		dropZoneMaxWidth,
-		allowCopy,
-		autoHandleCopy,
-		autoHandleMove,
-		autoHandlePaste,
-		accordionExpand,
+		isCopyAllowed,
+		shouldAutoHandleCopy,
+		shouldAutoHandleMove,
+		shouldAutoHandlePaste,
+		isAccordionExpand,
 		onNodeClick,
 		onHighlightChange,
 		onSelectionChange,
@@ -492,28 +492,28 @@
 	$effect(() => { controller.shouldDisplayContextMenuInDebugMode = shouldDisplayContextMenuInDebugMode ?? false; });
 	$effect(() => { controller.isLoading = isLoading ?? false; });
 	$effect(() => { controller.bodyClass = bodyClass; });
-	$effect(() => { controller.useFlatRendering = useFlatRendering ?? true; });
-	$effect(() => { controller.virtualScroll = virtualScroll ?? false; });
+	$effect(() => { controller.isFlatRenderingEnabled = isFlatRenderingEnabled ?? true; });
+	$effect(() => { controller.isVirtualScrollEnabled = isVirtualScrollEnabled ?? false; });
 	$effect(() => { controller.virtualRowHeight = virtualRowHeight; });
 	$effect(() => { controller.virtualOverscan = virtualOverscan ?? 5; });
 	$effect(() => { controller.virtualContainerHeight = virtualContainerHeight; });
-	$effect(() => { controller.progressiveRender = progressiveRender ?? true; });
+	$effect(() => { controller.isProgressiveRender = isProgressiveRender ?? true; });
 	$effect(() => { controller.initialBatchSize = initialBatchSize ?? 20; });
 	$effect(() => { controller.maxBatchSize = maxBatchSize ?? 500; });
 	$effect(() => { controller.dragDropMode = dragDropMode ?? 'none'; });
-	$effect(() => { controller.allowCopy = allowCopy ?? false; });
-	$effect(() => { controller.autoHandleCopy = autoHandleCopy ?? true; });
-	$effect(() => { controller.autoHandleMove = autoHandleMove ?? true; });
-	$effect(() => { controller.autoHandlePaste = autoHandlePaste ?? true; });
-	$effect(() => { controller.accordionExpand = accordionExpand ?? false; });
+	$effect(() => { controller.isCopyAllowed = isCopyAllowed ?? false; });
+	$effect(() => { controller.shouldAutoHandleCopy = shouldAutoHandleCopy ?? true; });
+	$effect(() => { controller.shouldAutoHandleMove = shouldAutoHandleMove ?? true; });
+	$effect(() => { controller.shouldAutoHandlePaste = shouldAutoHandlePaste ?? true; });
+	$effect(() => { controller.isAccordionExpand = isAccordionExpand ?? false; });
 	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
 	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
 	$effect(() => { controller.selectionMode = selectionMode ?? 'single'; });
-	$effect(() => { controller.showCheckboxes = showCheckboxes ?? false; });
+	$effect(() => { controller.shouldShowCheckboxes = shouldShowCheckboxes ?? false; });
 	$effect(() => { controller.checkboxMode = checkboxMode ?? 'independent'; });
-	$effect(() => { controller.clickTogglesCheckbox = clickTogglesCheckbox ?? false; });
+	$effect(() => { controller.shouldClickToggleCheckbox = shouldClickToggleCheckbox ?? false; });
 	$effect(() => { controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback; });
 	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
 	$effect(() => { controller.expandIconClass = expandIconClass ?? 'stv__toggle-icon--expand'; });
@@ -780,9 +780,9 @@
 				| "expandLevel"
 				| "clickBehavior"
 				| "selectionMode"
-				| "showCheckboxes"
+				| "shouldShowCheckboxes"
 				| "checkboxMode"
-				| "clickTogglesCheckbox"
+				| "shouldClickToggleCheckbox"
 				| "beforeCheckboxToggleCallback"
 				| "rangeSelectionMode"
 				| "shouldUseInternalSearchIndex"
@@ -803,7 +803,7 @@
 				| "beforeCutCallback"
 				| "beforePasteCallback"
 				| "getContextMenuItemsCallback"
-				| "virtualScroll"
+				| "isVirtualScrollEnabled"
 				| "virtualRowHeight"
 				| "virtualOverscan"
 				| "virtualContainerHeight"
@@ -821,7 +821,7 @@
 				| "scrollHighlightClass"
 				| "contextMenuXOffset"
 				| "contextMenuYOffset"
-				| "accordionExpand"
+				| "isAccordionExpand"
 			>
 		>
 	) {
@@ -859,9 +859,9 @@
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
 		if (updates.selectionMode !== undefined) selectionMode = updates.selectionMode;
-		if (updates.showCheckboxes !== undefined) showCheckboxes = updates.showCheckboxes;
+		if (updates.shouldShowCheckboxes !== undefined) shouldShowCheckboxes = updates.shouldShowCheckboxes;
 		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
-		if (updates.clickTogglesCheckbox !== undefined) clickTogglesCheckbox = updates.clickTogglesCheckbox;
+		if (updates.shouldClickToggleCheckbox !== undefined) shouldClickToggleCheckbox = updates.shouldClickToggleCheckbox;
 		if (updates.beforeCheckboxToggleCallback !== undefined) beforeCheckboxToggleCallback = updates.beforeCheckboxToggleCallback;
 		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
 		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
@@ -882,7 +882,7 @@
 		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;
 		if (updates.beforePasteCallback !== undefined) beforePasteCallback = updates.beforePasteCallback;
 		if (updates.getContextMenuItemsCallback !== undefined) getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
-		if (updates.virtualScroll !== undefined) virtualScroll = updates.virtualScroll;
+		if (updates.isVirtualScrollEnabled !== undefined) isVirtualScrollEnabled = updates.isVirtualScrollEnabled;
 		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;
 		if (updates.virtualOverscan !== undefined) virtualOverscan = updates.virtualOverscan;
 		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
@@ -900,7 +900,7 @@
 		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
 		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
 		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
-		if (updates.accordionExpand !== undefined) accordionExpand = updates.accordionExpand;
+		if (updates.isAccordionExpand !== undefined) isAccordionExpand = updates.isAccordionExpand;
 	}
 
 	// ── Arrow key navigation ─────────────────────────────────────────────
@@ -941,7 +941,7 @@
 			case ' ':
 				// With checkboxes: toggle the focused node's checkbox.
 				// Without: keep the legacy expand/collapse behaviour as a useful fallback.
-				if (controller.showCheckboxes && controller.focusedNode?.isSelectable) {
+				if (controller.shouldShowCheckboxes && controller.focusedNode?.isSelectable) {
 					controller.nodeCallbacks.onCheckboxToggle(controller.focusedNode);
 				} else {
 					controller.navToggle();
@@ -1074,7 +1074,7 @@
 								<Node
 									{node}
 									children={nodeTemplate}
-									progressiveRender={false}
+									isProgressiveRender={false}
 									isDraggedNode={controller.draggedNode?.path === node.path}
 									isDragInProgress={controller.isDragInProgress}
 									hoveredNodeForDropPath={controller.hoveredNodeForDrop?.path}
@@ -1111,7 +1111,7 @@
 						</div>
 					</div>
 				</div>
-			{:else if controller.useFlatRendering}
+			{:else if controller.isFlatRenderingEnabled}
 				<!-- Flat rendering mode: no {#key} block, uses visibleFlatNodes for efficient updates -->
 				<div class="stv__tree stv__tree--flat">
 					{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
@@ -1119,7 +1119,7 @@
 						<Node
 							{node}
 							children={nodeTemplate}
-							progressiveRender={false}
+							isProgressiveRender={false}
 							isDraggedNode={controller.draggedNode?.path === node.path}
 							isDragInProgress={controller.isDragInProgress}
 							hoveredNodeForDropPath={controller.hoveredNodeForDrop?.path}
@@ -1162,7 +1162,7 @@
 							<Node
 								{node}
 								children={nodeTemplate}
-								progressiveRender={controller.progressiveRender}
+								isProgressiveRender={controller.isProgressiveRender}
 								renderBatchSize={controller.initialBatchSize}
 								isDraggedNode={controller.draggedNode?.path === node.path}
 								isDragInProgress={controller.isDragInProgress}

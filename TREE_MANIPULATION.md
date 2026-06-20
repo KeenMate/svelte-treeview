@@ -702,7 +702,7 @@ console.log(`${batchResult.successful} succeeded, ${batchResult.failed.length} f
   idMember="id"
   pathMember="path"
   orderMember="sortOrder"
-  allowCopy={true}
+  isCopyAllowed={true}
   beforeDropCallback={(dropNode, draggedNode, position, event, operation) => {
     // Prevent dropping folders into files
     if (dropNode?.data?.type === 'file' && position === 'child') {

@@ -2,31 +2,39 @@
 
 A high-performance, feature-rich hierarchical tree view component for Svelte 5 with drag & drop support, search functionality, and flexible data structures using LTree.
 
+## What is it
+
+`@keenmate/svelte-treeview` is a hierarchical tree-view component for Svelte 5 apps. It renders flat, path-keyed data (`"1"`, `"1.2"`, `"1.2.3"`) into an expandable tree with built-in drag & drop, three-level selection (focus / multi-highlight / checkboxes), context menus, integrated FlexSearch filtering, and virtual scrolling for 50,000+ nodes.
+
+It's aimed at Svelte 5 developers building file browsers, org charts, navigation trees, settings dialogs, or any UI that displays hierarchical data. The core (data structure, expand/collapse, search, drag-and-drop logic) is decoupled from the renderer via `TreeProvider` + `TreeController`, so you can plug in custom HTML, Canvas, or SVG renderers on the same engine.
+
+The component ships standalone with sensible light/dark defaults and integrates cleanly with [Pure Admin](https://pureadmin.io/) and the wider `@keenmate/*` design-token suite via the `--base-*` CSS variable contract.
+
 ## Live Demo
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**
 
 ## What's New in v5.0.0-rc10
 
-- **Built-in dark mode covering all four signals**: A new `dark-mode.css` partial flips the tree's surface, text, border, and accent palette when any of the canonical signals is active — OS preference (`prefers-color-scheme: dark`), page `<html style="color-scheme: dark">` resolved via `light-dark()`, framework theme classes (`[data-theme="dark"]`, `[data-bs-theme="dark"]`, `.dark`), and the new per-instance `theme` prop. Symmetric `light` selectors let a single tree force light on an otherwise-dark page. Zero JavaScript — pure CSS resolution.
-- **`theme` prop on `<Tree>`**: `'dark' | 'light' | null | undefined`. Forwarded to the root `.ltree-container` as `data-theme`, where per-instance CSS selectors take over and beat ambient signals. Leave `undefined` to inherit from the page.
-- **CSS variables rescoped from `:root` to `.ltree-container`**: Mirrors the `:host`-scoped pattern from sibling `@keenmate/*` components and is the only way `--base-*` theming actually works at subtree scope. A wrapper around the tree that sets `--base-accent-color: red` now re-tints the tree (it previously had no effect because the substitution was frozen at `:root`). Multiple trees on the same page can be themed differently via wrapper-scoped `--base-*` overrides. Consumer note: setting `--ltree-*` directly on a wrapper no longer cascades — use `--base-*` on the wrapper or target `.ltree-container` explicitly.
-- **`--ltree-bg` — the tree paints its own surface**: `.ltree-container` gets a `background: var(--ltree-bg)` so consumers don't need to wrap the tree in a colored container for a visible surface. Override to `transparent` to restore the pre-rc10 layered behavior. Companion `--ltree-elevated-bg` reads through the `--base-elevated-bg` chain for floating chrome (context menu).
-- **CSS file layout aligned with the Bliss web-component guidelines**: All `_xxx.css` partials renamed to `xxx.css`, `main.css` now declares `@layer variables, component, overrides;` and imports each partial into the matching layer. Consumers' unlayered overrides automatically beat every rule in the library — no `!important` needed. Note: if your app ships an unlayered universal CSS reset (`* { padding: 0 }` from normalize / Bootstrap / Tailwind preflight / etc.), wrap it in a low-priority `@layer reset` or the tree's defaults won't apply.
-- **`getIsDropAllowedCallback` prop + `getIsDraggableCallback` seeded at insert-time**: Callback variant for `isDropAllowedMember`, matching the pattern rc09 introduced for `getIsExpandedCallback` / `getIsSelectableCallback` / `getIsSelectedCallback`. Also, the existing `getIsDraggableCallback` prop is now actually applied during the seed walk — previously it was only consumed lazily in some paths.
-- **Bug fixes**: Virtual scroll no longer gets stuck at bottom after a filter shrinks the tree. Double-click to expand in `clickBehavior='select'` mode finally works (the browser's native `dblclick` event couldn't fire because the first click destroyed the row via the focus re-render; the controller now detects the double manually).
+- **Built-in dark mode — all four canonical signals covered** — a `dark-mode.css` partial flips the tree's surface, text, border, and accent palette when any of the canonical signals is active: OS preference (`prefers-color-scheme: dark`), page `<html style="color-scheme: dark">` resolved via `light-dark()`, framework theme classes (`[data-theme="dark"]`, `[data-bs-theme="dark"]`, `.dark`), and the new per-instance `theme` prop. Symmetric `light` selectors let a single tree force light on an otherwise-dark page. Zero JavaScript — pure CSS resolution.
+- **`theme` prop on `<Tree>` — per-instance dark/light override** — `'dark' | 'light' | null | undefined`. Forwarded to the root `.stv__container` as `data-theme`, where per-instance CSS selectors take over and beat ambient signals. Leave `undefined` to inherit from the page. (rc10 originally landed this on `.ltree-container`; the BEM rename to `.stv__container` shipped in rc12.)
+- **CSS variables rescoped from `:root` to `.stv__container` — subtree theming actually works** — mirrors the `:host`-scoped pattern from sibling `@keenmate/*` components and is the only way `--base-*` theming flows at subtree scope. A wrapper around the tree that sets `--base-accent-color: red` now re-tints the tree (it previously had no effect because the substitution was frozen at `:root`). Multiple trees on the same page can be themed differently via wrapper-scoped `--base-*` overrides. Consumer note: setting `--stv-*` directly on a wrapper no longer cascades — use `--base-*` on the wrapper or target `.stv__container` explicitly.
+- **`--stv-bg` — the tree paints its own surface** — `.stv__container` gets a `background: var(--stv-bg)` so consumers don't need to wrap the tree in a colored container for a visible surface. Override to `transparent` to restore the pre-rc10 layered behavior. Companion `--stv-elevated-bg` reads through the `--base-elevated-bg` chain for floating chrome (context menu).
+- **CSS file layout aligned with the Bliss web-component guidelines** — all `_xxx.css` partials renamed to `xxx.css`, `main.css` now declares `@layer variables, component, overrides;` and imports each partial into the matching layer. Consumers' unlayered overrides automatically beat every rule in the library — no `!important` needed. Note: if your app ships an unlayered universal CSS reset (`* { padding: 0 }` from normalize / Bootstrap / Tailwind preflight / etc.), wrap it in a low-priority `@layer reset` or the tree's defaults won't apply.
+- **`getIsDropAllowedCallback` prop + `getIsDraggableCallback` seeded at insert-time** — callback variant for `isDropAllowedMember`, matching the pattern rc09 introduced for `getIsExpandedCallback` / `getIsSelectableCallback` / `getIsSelectedCallback`. Also, the existing `getIsDraggableCallback` prop is now actually applied during the seed walk — previously it was only consumed lazily in some paths.
+- **Bug fixes — virtual scroll + `clickBehavior='select'` double-click** — virtual scroll no longer gets stuck at bottom after a filter shrinks the tree. Double-click to expand in `clickBehavior='select'` mode finally works (the browser's native `dblclick` event couldn't fire because the first click destroyed the row via the focus re-render; the controller now detects the double manually).
 
 ## What's New in v5.0.0-rc09
 
-- **Three-level selection model**: New `selectionMode: 'single' | 'multi'` prop (default `'single'`) cleanly separates the **focused** node (cursor), the **highlighted** set (Ctrl/Shift+click range), and **selected** checkboxes. When `showCheckboxes` is off, highlight mirrors into `selectedPaths` automatically — so consumers always have a single "what's selected" set to read regardless of UI style. Programmatic `highlightNode` / `highlightNodes` / `clearHighlight` respect `{ silent: true }`.
-- **Multi-drag the whole highlight set**: With `selectionMode='multi'`, Ctrl/Shift+click several rows and drag any one of them — the entire top-level-selected subset moves together. Descendants of highlighted ancestors ride along inside their subtree (not extracted). The set lands as siblings after/before/under `dropNode` in source order.
-- **OS-explorer drag-start sync**: Grabbing a non-highlighted node now replaces the highlight with just that node before the drag begins, matching Windows Explorer / macOS Finder. Previously the prior highlight stayed visually stuck while the drag silently carried only the grabbed node.
-- **Keyboard convention reshuffle**: **Enter** now toggles highlight on the focused node (in `multi` mode); **Space** is the universal expand/collapse toggle (when no checkbox). Ctrl/Shift+click no longer auto-toggles expand/collapse — modifier clicks are reserved for highlight management so multi-selecting folders doesn't open them.
-- **`clickTogglesCheckbox` prop**: Opt-in flag that makes a plain row click toggle the checkbox instead of focusing/highlighting, for checkbox-first UIs. Modified clicks still build the multi-highlight.
-- **Full CSS-variable theming surface**: ~50 new `--ltree-*` variables (typography, layout, toggle/checkbox/selection/drag-zone/context-menu state) on a `--base-*` token chain shared with other `@keenmate/*` web components. Set `--ltree-primary` once and the hover tint, drag-zone background, focus ring, and danger menu hover all derive from it via `color-mix()`. New `--ltree-rem` scales the whole component proportionally. Lucide SVG toggle icons replace the UTF-8 glyphs.
-- **SCSS → pure CSS**: `main.scss` (1095 lines) split into eleven `_*.css` partials bundled by `lightningcss-cli` into `dist/styles.css`. `sass` removed from devDependencies. `./styles.scss` package export removed — switch to `./styles.css`.
+- **Three-level selection model — focus / highlight / select** — new `selectionMode: 'single' | 'multi'` prop (default `'single'`) cleanly separates the **focused** node (cursor), the **highlighted** set (Ctrl/Shift+click range), and **selected** checkboxes. When `shouldShowCheckboxes` is off, highlight mirrors into `selectedPaths` automatically — so consumers always have a single "what's selected" set to read regardless of UI style. Programmatic `highlightNode` / `highlightNodes` / `clearHighlight` respect `{ silent: true }`.
+- **Multi-drag — the whole highlight set moves together** — with `selectionMode='multi'`, Ctrl/Shift+click several rows and drag any one of them: the entire top-level-selected subset moves together. Descendants of highlighted ancestors ride along inside their subtree (not extracted). The set lands as siblings after/before/under `dropNode` in source order.
+- **OS-explorer drag-start sync** — grabbing a non-highlighted node now replaces the highlight with just that node before the drag begins, matching Windows Explorer / macOS Finder. Previously the prior highlight stayed visually stuck while the drag silently carried only the grabbed node.
+- **Keyboard convention reshuffle — Enter / Space / modifier clicks** — **Enter** now toggles highlight on the focused node (in `multi` mode); **Space** is the universal expand/collapse toggle (when no checkbox). Ctrl/Shift+click no longer auto-toggles expand/collapse — modifier clicks are reserved for highlight management so multi-selecting folders doesn't open them.
+- **`shouldClickToggleCheckbox` prop — checkbox-first row click** — opt-in flag that makes a plain row click toggle the checkbox instead of focusing/highlighting, for checkbox-first UIs. Modified clicks still build the multi-highlight.
+- **Full CSS-variable theming surface — `--stv-*` token chain on `--base-*`** — ~50 new `--stv-*` variables (typography, layout, toggle/checkbox/selection/drag-zone/context-menu state) on a `--base-*` token chain shared with other `@keenmate/*` web components. Set `--stv-primary` once and the hover tint, drag-zone background, focus ring, and danger menu hover all derive from it via `color-mix()`. New `--stv-rem` scales the whole component proportionally. Lucide SVG toggle icons replace the UTF-8 glyphs. (Originally shipped as `--ltree-*`; renamed to `--stv-*` in rc12.)
+- **SCSS → pure CSS** — `main.scss` (1095 lines) split into eleven `_*.css` partials bundled by `lightningcss-cli` into `dist/styles.css`. `sass` removed from devDependencies. `./styles.scss` package export removed — switch to `./styles.css`.
 
-> **Breaking changes** in this release include the `selectionMode='single'` default (Ctrl/Shift+click no longer auto-multi-selects without opt-in), `selectedPaths` becoming populated in no-checkbox trees (mirrored from highlight), removal of `lastHighlightedPath` / `isHighlightAnchor` / `--ltree-*-rgb` / SCSS variable overrides, and `--ltree-node-indent-per-level` now scaling with `--ltree-rem` instead of document `rem`. See CHANGELOG for migration notes.
+> **Breaking changes** in this release include the `selectionMode='single'` default (Ctrl/Shift+click no longer auto-multi-selects without opt-in), `selectedPaths` becoming populated in no-checkbox trees (mirrored from highlight), removal of `lastHighlightedPath` / `isHighlightAnchor` / `--stv-*-rgb` (originally shipped as `--ltree-*-rgb`) / SCSS variable overrides, and `--stv-node-indent-per-level` now scaling with `--stv-rem` instead of document `rem`. See CHANGELOG for migration notes.
 
 ## v5.0: Core/Renderer Split + Virtual Scroll
 
@@ -35,7 +43,7 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 
 **Key changes in v5:**
 - **Core/Renderer split**: Use the built-in HTML `Tree` renderer, or create custom visualizations (Canvas, WebGL, SVG) via `TreeProvider` + `TreeController`
-- **Virtual scroll**: Render 50,000+ node trees smoothly with `virtualScroll={true}` — only ~50 DOM nodes at any time
+- **Virtual scroll**: Render 50,000+ node trees smoothly with `isVirtualScrollEnabled={true}` — only ~50 DOM nodes at any time
 - **Canvas companion**: For canvas rendering, install [`@keenmate/svelte-treeview-canvas`](https://github.com/keenmate/svelte-treeview-canvas)
 - **Drop position naming**: `'above'`/`'below'` renamed to `'before'`/`'after'` (CSS classes and events updated accordingly)
 
@@ -43,16 +51,16 @@ Browse interactive code examples and the full API reference at **[svelte-treevie
 
 | Mode | Props | DOM Nodes | Best For |
 |------|-------|-----------|----------|
-| Recursive | `useFlatRendering={false}` | All | Small trees (<100 nodes) |
-| Flat (default) | `useFlatRendering={true}` | All | Medium trees (100–10K) |
-| Virtual | `virtualScroll={true}` | ~50 | Large trees (10K+) |
+| Recursive | `isFlatRenderingEnabled={false}` | All | Small trees (<100 nodes) |
+| Flat (default) | `isFlatRenderingEnabled={true}` | All | Medium trees (100–10K) |
+| Virtual | `isVirtualScrollEnabled={true}` | ~50 | Large trees (10K+) |
 
 ```svelte
 <!-- Virtual scroll for large trees -->
-<Tree {data} virtualScroll={true} virtualContainerHeight="500px" />
+<Tree {data} isVirtualScrollEnabled={true} virtualContainerHeight="500px" />
 
 <!-- Flat mode (default) with progressive batching -->
-<Tree {data} progressiveRender={true} initialBatchSize={20} maxBatchSize={500} />
+<Tree {data} isProgressiveRender={true} initialBatchSize={20} maxBatchSize={500} />
 ```
 
 ## Features
@@ -125,794 +133,14 @@ import '@keenmate/svelte-treeview/styles.css';
 > let treeData = $state.raw<TreeNode[]>([])
 > ```
 
-## Advanced Usage
-
-### With Custom Node Templates
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-
-  const fileData = [
-    { path: '1', name: 'Documents', type: 'folder', icon: '📁' },
-    { path: '1.1', name: 'report.pdf', type: 'file', icon: '📄', size: '2.3 MB' },
-    { path: '2', name: 'Images', type: 'folder', icon: '🖼️' },
-    { path: '2.1', name: 'photo.jpg', type: 'file', icon: '🖼️', size: '1.8 MB' }
-  ];
-</script>
-
-<Tree
-  data={fileData}
-  idMember="path"
-  pathMember="path"
-  selectedNodeClass="ltree-selected-bold"
-  onNodeClicked={(node) => console.log('Clicked:', node.data?.name)}
->
-  {#snippet nodeTemplate(node)}
-    <div class="d-flex align-items-center">
-      <span class="me-2">{node.data?.icon}</span>
-      <strong>{node.data?.name}</strong>
-      {#if node.data?.size}
-        <small class="text-muted ms-2">({node.data?.size})</small>
-      {/if}
-    </div>
-  {/snippet}
-</Tree>
-```
-
-### With Search and Filtering
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-
-  let searchText = $state('');
-  const data = [/* your data */];
-</script>
-
-<input
-  type="text"
-  placeholder="Search..."
-  bind:value={searchText}
-/>
-
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  shouldUseInternalSearchIndex={true}
-  searchValueMember="name"
-  bind:searchText
-/>
-```
-
-### With Advanced Search Options
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-  import type { SearchOptions } from 'flexsearch';
-
-  let treeRef;
-  const data = [/* your data */];
-
-  // Programmatic search with FlexSearch options
-  function performAdvancedSearch(searchTerm: string) {
-    const searchOptions: SearchOptions = {
-      suggest: true,        // Enable suggestions for typos
-      limit: 10,            // Limit results to 10 items
-      bool: "and"           // Use AND logic for multiple terms
-    };
-
-    const results = treeRef.searchNodes(searchTerm, searchOptions);
-    console.log('Advanced search results:', results);
-  }
-
-  // Programmatic filtering with options
-  function filterWithOptions(searchTerm: string) {
-    const searchOptions: SearchOptions = {
-      threshold: 0.8,       // Similarity threshold
-      depth: 2              // Search depth
-    };
-
-    treeRef.filterNodes(searchTerm, searchOptions);
-  }
-</script>
-
-<Tree
-  bind:this={treeRef}
-  {data}
-  idMember="path"
-  pathMember="path"
-  shouldUseInternalSearchIndex={true}
-  searchValueMember="name"
-/>
-
-<button onclick={() => performAdvancedSearch('document')}>
-  Advanced Search
-</button>
-<button onclick={() => filterWithOptions('project')}>
-  Filter with Options
-</button>
-```
-
-#### FlexSearch Options Reference
-
-The `searchOptions` parameter accepts any options supported by FlexSearch. Common options include:
-
-| Option | Type | Description | Example |
-|--------|------|-------------|---------|
-| `suggest` | `boolean` | Enable suggestions for typos | `{ suggest: true }` |
-| `limit` | `number` | Maximum number of results | `{ limit: 10 }` |
-| `threshold` | `number` | Similarity threshold (0-1) | `{ threshold: 0.8 }` |
-| `depth` | `number` | Search depth for nested content | `{ depth: 2 }` |
-| `bool` | `string` | Boolean logic: "and", "or" | `{ bool: "and" }` |
-| `where` | `object` | Filter by field values | `{ where: { type: "folder" } }` |
-
-For complete FlexSearch documentation, visit: [FlexSearch Options](https://github.com/nextapps-de/flexsearch#options)
-
-### With Drag & Drop
-
-**Note:** Drag and drop is disabled by default. Set `dragDropMode` to enable it.
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-
-  let treeRef: Tree<MyNode>;
-
-  const data = [
-    { path: '1', name: 'Folder 1' },
-    { path: '1.1', name: 'Item 1' },
-    { path: '2', name: 'Folder 2' }
-  ];
-
-  function onDragStart(node, event) {
-    console.log('Dragging:', node.data?.name);
-  }
-
-  // Same-tree moves are auto-handled - this callback is for notification/custom logic
-  function onDrop(dropNode, draggedNode, position, event, operation) {
-    console.log(`Dropped ${draggedNode.data?.name} ${position} ${dropNode?.data?.name}`);
-    // position is 'before', 'after', or 'child'
-    // operation is 'move' or 'copy' (Ctrl+drag)
-  }
-</script>
-
-<Tree
-  bind:this={treeRef}
-  {data}
-  idMember="path"
-  pathMember="path"
-  dragDropMode="both"
-  orderMember="sortOrder"
-  dragOverNodeClass="ltree-dragover-highlight"
-  onNodeDragStart={onDragStart}
-  onNodeDrop={onDrop}
-/>
-```
-
-#### Drop Position Control
-
-When using `dropZoneMode="floating"`, users can choose where to drop:
-- **Before**: Insert as sibling before the target node
-- **After**: Insert as sibling after the target node
-- **Child**: Insert as child of the target node
-
-#### Per-Node Drop Position Restrictions
-
-You can restrict which drop positions are allowed per node. This is useful for:
-- **Trash/Recycle Bin**: Only allow dropping INTO (child), not before/after
-- **Files**: Only allow before/after (can't drop INTO a file)
-- **Folders**: Allow all positions (default)
-
-```svelte
-<script lang="ts">
-  import { Tree, type DropPosition, type LTreeNode } from '@keenmate/svelte-treeview';
-
-  // Dynamic callback approach
-  function getAllowedDropPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
-    if (node.data?.type === 'file') return ['before', 'after'];
-    if (node.data?.type === 'trash') return ['child'];
-    return undefined; // all positions allowed
-  }
-</script>
-
-<Tree
-  {data}
-  getAllowedDropPositionsCallback={getAllowedDropPositions}
-/>
-```
-
-Or use the member approach for server-side data:
-```svelte
-<Tree
-  {data}
-  allowedDropPositionsMember="allowedDropPositions"
-/>
-
-<!-- Where data items have: { allowedDropPositions: ['child'] } -->
-```
-
-When restrictions are applied:
-- **Glow mode**: Snaps to the nearest allowed position
-- **Floating mode**: Only renders buttons for allowed positions
-
-#### Async Drop Validation
-
-Use `beforeDropCallback` to validate or modify drops, including async operations like confirmation dialogs:
-
-```svelte
-<script lang="ts">
-  async function beforeDrop(dropNode, draggedNode, position, event, operation) {
-    // Cancel specific drops
-    if (draggedNode.data.locked) {
-      return false; // Cancel the drop
-    }
-
-    // Show confirmation dialog (async)
-    if (position === 'child' && !dropNode.data.isFolder) {
-      const confirmed = await showConfirmDialog('Drop as sibling instead?');
-      if (!confirmed) return false;
-      return { position: 'after' }; // Override position
-    }
-
-    // Proceed normally
-    return true;
-  }
-</script>
-
-<Tree
-  {data}
-  beforeDropCallback={beforeDrop}
-  onNodeDrop={onDrop}
-/>
-```
-
-### Tree Editing
-
-The tree provides built-in methods for programmatic editing:
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-
-  let treeRef: Tree<MyNode>;
-
-  // Add a new node
-  function addChild() {
-    const result = treeRef.addNode(
-      selectedNode?.path || '', // parent path (empty = root)
-      { id: Date.now(), path: '', name: 'New Item', sortOrder: 100 }
-    );
-    if (result.success) {
-      console.log('Added:', result.node);
-    }
-  }
-
-  // Move a node
-  function moveUp() {
-    const siblings = treeRef.getSiblings(selectedNode.path);
-    const index = siblings.findIndex(s => s.path === selectedNode.path);
-    if (index > 0) {
-      treeRef.moveNode(selectedNode.path, siblings[index - 1].path, 'before');
-    }
-  }
-
-  // Remove a node
-  function remove() {
-    treeRef.removeNode(selectedNode.path);
-  }
-</script>
-
-<Tree
-  bind:this={treeRef}
-  {data}
-  idMember="id"
-  pathMember="path"
-  orderMember="sortOrder"
-/>
-```
-
-**Note**: When using `orderMember`, the tree automatically calculates sort order values when moving nodes with 'before' or 'after' positions.
-
-### With Context Menus
-
-The tree supports context menus with two approaches: **callback-based** (imperative, shared with web components) and **snippet + component** (declarative, Svelte-only).
-
-#### Callback-Based Context Menus
-
-```svelte
-<script lang="ts">
-  import { Tree } from '@keenmate/svelte-treeview';
-  import type { ContextMenuEntry } from '@keenmate/svelte-treeview';
-
-  const data = [
-    { path: '1', name: 'Documents', type: 'folder', canEdit: true, canDelete: true },
-    { path: '1.1', name: 'report.pdf', type: 'file', canEdit: true, canDelete: false },
-    { path: '2', name: 'Images', type: 'folder', canEdit: false, canDelete: true }
-  ];
-
-  function createContextMenu(node, close: () => void): ContextMenuEntry[] {
-    return [
-      { label: 'Open', icon: '📂', shortcut: 'O',
-        onclick: () => { alert(`Opening ${node.data?.name}`); close(); } },
-      { label: 'Edit', icon: '✏️', shortcut: 'E', isVisible: node.data?.canEdit,
-        onclick: () => { alert(`Editing ${node.data?.name}`); close(); } },
-      { label: 'Export As...', icon: '📤', children: [
-          { label: 'JSON', shortcut: 'J', onclick: () => { exportAs(node, 'json'); close(); } },
-          { label: 'XML', shortcut: 'X', onclick: () => { exportAs(node, 'xml'); close(); } },
-      ]},
-      { divider: true, label: 'Danger zone' },
-      { label: 'Delete', icon: '🗑️', className: 'danger',
-        isDisabled: !node.data?.canDelete,
-        onclick: () => { confirm(`Delete?`) && alert('Deleted!'); close(); } },
-    ];
-  }
-</script>
-
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  contextMenuCallback={createContextMenu}
-/>
-```
-
-#### Snippet + Component Context Menus
-
-```svelte
-<script lang="ts">
-  import { Tree, ContextMenuItemC, ContextMenuDividerC } from '@keenmate/svelte-treeview';
-</script>
-
-<Tree {data} idMember="path" pathMember="path">
-  {#snippet contextMenu(node, close)}
-    <ContextMenuItemC label="Copy" icon="📋" shortcut="C"
-      onclick={() => { copy(node); close(); }} />
-    {#if node.data?.type === 'folder'}
-      <ContextMenuItemC label="Export As..." icon="📤">
-        <ContextMenuItemC label="JSON" shortcut="J"
-          onclick={() => { exportAs(node, 'json'); close(); }} />
-        <ContextMenuItemC label="XML" shortcut="X"
-          onclick={() => { exportAs(node, 'xml'); close(); }} />
-      </ContextMenuItemC>
-    {/if}
-    <ContextMenuDividerC label="Danger zone" />
-    <ContextMenuItemC label="Delete" icon="🗑️" className="danger"
-      isDisabled={!!node.data?.readonly}
-      onclick={() => { del(node); close(); }} />
-  {/snippet}
-</Tree>
-```
-
-#### Context Menu Features
-
-- **Unified types**: `ContextMenuItem`, `ContextMenuDivider`, `ContextMenuEntry` shared across svelte-treeview and canvas-tree
-- **Keyboard shortcuts**: `shortcut` field renders a hint and activates on keypress when menu is open (supports `Ctrl+`, `Shift+`, `Alt+` modifiers)
-- **Submenus**: `children` array opens nested menus on hover
-- **Named dividers**: `{ divider: true, label: 'Section' }` renders as `---- Section ----`
-- **Visibility control**: `isVisible: false` hides items (callback approach); snippet approach uses `{#if}`
-- **Flexible styling**: `className="danger"` or any custom CSS class
-- **Dynamic menus**: Generate items based on node properties
-- **Icons and disabled states**: Visual organization and context-sensitive availability
-- **Position offset**: `contextMenuXOffset`/`contextMenuYOffset` for cursor clearance
-- **Auto-close**: Closes on scroll, click outside, Escape key, or programmatically
-
-## Styling and Customization
-
-The component comes with default styles that provide a clean, modern look. You can customize it extensively:
-
-### CSS Variables
-
-The component uses CSS custom properties for easy theming:
-
-```css
-:root {
-  --ltree-rem: 10px;                              /* Base sizing unit — scale all dimensions */
-  --ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));  /* Indent per nesting level */
-  --ltree-primary: #0d6efd;                       /* Tints (multi-select, dragover) derived
-                                                       automatically via color-mix() */
-  --ltree-success: #198754;
-  --ltree-danger: #dc3545;
-  --ltree-light: #f8f9fa;
-  --ltree-border: #dee2e6;
-  --ltree-body-color: #212529;
-}
-```
-
-**Note**: All dimensions are `calc(N × var(--ltree-rem))`. Set `--ltree-rem` once (default `10px`) to scale every size proportionally, or set it to `1rem` to make the component follow document font-size.
-
-### Scaling and Theme Integration
-
-```css
-/* Scale everything 20% larger */
-.my-bigger-tree {
-  --ltree-rem: 12px;
-}
-
-/* Shared theme tokens — picked up by every @keenmate/* component */
-:root {
-  --base-accent-color: #6366f1;
-  --base-font-family: 'Inter', system-ui, sans-serif;
-  --base-border-radius-sm: 0.4;  /* unitless multiplier (× rem) */
-}
-```
-
-See `/examples/theming` for the full CSS variable reference and a live demo.
-
-### CSS Classes
-
-- `.ltree-tree` - Main tree container
-- `.ltree-node` - Individual node container
-- `.ltree-node-content` - Node content area
-- `.ltree-toggle-icon` - Expand/collapse icons
-- `.ltree-selected-*` - Selected node styles
-- `.ltree-dragover-*` - Drag-over node styles
-- `.ltree-draggable` - Draggable nodes
-- `.ltree-context-menu` - Context menu styling
-- `.ltree-drag-over` - Applied during drag operations
-- `.ltree-drop-valid` / `.ltree-drop-invalid` - Drop target validation
-
-### Pre-built Selected Node Styles
-
-The component includes several pre-built classes for styling selected nodes:
-
-```svelte
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  selectedNodeClass="ltree-selected-bold"
-/>
-```
-
-**Available Selected Node Classes:**
-
-| Class | Description | Visual Effect |
-|-------|-------------|---------------|
-| `ltree-selected-bold` | Bold text with primary color | **Bold text** in theme primary color |
-| `ltree-selected-border` | Border and background highlight | Solid border with light background |
-| `ltree-selected-brackets` | Decorative brackets around text | > **Node Text** < |
-
-**Available Drag-over Node Classes:**
-
-| Class | Description | Visual Effect |
-|-------|-------------|---------------|
-| `ltree-dragover-highlight` | Dashed border with success color background | Green dashed border with subtle background |
-| `ltree-dragover-glow` | Blue glow effect | Glowing shadow effect with primary color theme |
-
-### Custom Icon Classes
-
-```svelte
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  expandIconClass="custom-expand-icon"
-  collapseIconClass="custom-collapse-icon"
-  leafIconClass="custom-leaf-icon"
-/>
-```
-
-## API Reference
-
-### Tree Component Props
-
-#### Core Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `data` | `T[]` | **required** | Array of data objects |
-| `idMember` | `string` | **required** | Property name for unique identifiers |
-| `pathMember` | `string` | **required** | Property name for hierarchical paths |
-| `sortCallback` | `(items: LTreeNode<T>[]) => LTreeNode<T>[]` | `undefined` | Function to sort tree nodes |
-
-#### Data Mapping Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `parentPathMember` | `string \| null` | `null` | Property name for parent path references |
-| `levelMember` | `string \| null` | `null` | Property name for node level |
-| `isExpandedMember` | `string \| null` | `null` | Property name for expanded state |
-| `isSelectedMember` | `string \| null` | `null` | Property name for selected state |
-| `isDraggableMember` | `string \| null` | `null` | Property name for draggable state |
-| `isDropAllowedMember` | `string \| null` | `null` | Property name for drop allowed state |
-| `allowedDropPositionsMember` | `string \| null` | `null` | Property name for allowed drop positions array |
-| `isCollapsibleMember` | `string \| null` | `null` | Property name for collapsible state |
-| `getIsCollapsibleCallback` | `(node) => boolean` | `undefined` | Callback to determine if a node is collapsible |
-| `getIsDraggableCallback` | `(node) => boolean` | `undefined` | Callback to determine if a node is draggable |
-| `hasChildrenMember` | `string \| null` | `null` | Property name for children existence |
-| `isSorted` | `boolean \| null` | `null` | Whether items should be sorted |
-
-#### Display & Search Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `displayValueMember` | `string \| null` | `null` | Property name for display text |
-| `getDisplayValueCallback` | `(node) => string` | `undefined` | Function to get display value |
-| `searchValueMember` | `string \| null` | `null` | Property name for search indexing |
-| `getSearchValueCallback` | `(node) => string` | `undefined` | Function to get search value |
-| `shouldUseInternalSearchIndex` | `boolean` | `true` | Enable built-in search functionality |
-| `initializeIndexCallback` | `() => Index` | `undefined` | Function to initialize search index |
-| `searchText` | `string` (bindable) | `undefined` | Current search text |
-
-**Note**: When `shouldUseInternalSearchIndex` is enabled, node indexing is performed asynchronously using `requestIdleCallback` (with fallback to `setTimeout`). This ensures the tree renders immediately while search indexing happens during browser idle time, providing better performance for large datasets.
-
-**Important**: For internal search indexing to work, you must:
-1. Set `shouldUseInternalSearchIndex={true}`
-2. Provide either `searchValueMember` (property name) or `getSearchValueCallback` (function)
-
-Without both requirements, no search indexing will occur.
-
-**Performance Tuning**:
-- `indexerBatchSize` controls how many nodes are processed per idle callback. Lower values (10-25) provide smoother UI performance but slower indexing, while higher values (50-100) index faster but may cause brief UI pauses. Default: 25.
-- `indexerTimeout` sets the maximum wait time before forcing indexing when the browser is busy. Lower values (25-50ms) ensure more responsive indexing, while higher values (100-200ms) give more time for genuine idle periods. Default: 50ms.
-
-#### Tree Configuration
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
-| `treePathSeparator` | `string \| null` | `"."` | Separator character for hierarchical paths (e.g., "." for "1.2.3" or "/" for "1/2/3") |
-| `selectedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently selected node |
-| `insertResult` | `InsertArrayResult<T>` (bindable) | `undefined` | Result of the last data insertion including failed nodes |
-
-#### Behavior Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `expandLevel` | `number \| null` | `2` | Automatically expand nodes up to this level |
-| `clickBehavior` | `ClickBehavior` | `'expand-and-focus'` | Node click behavior: `'select'` (click selects, dblclick expands), `'expand'` (click expands only), `'expand-and-focus'` (click selects + expands) |
-| `showCheckboxes` | `boolean` | `false` | Show selection checkboxes before each node. Clicking a checkbox toggles the node's selection (same as Ctrl+click). |
-| `orderMember` | `string \| null` | `null` | Property name for sort order (enables before/after positioning in drag-drop) |
-| `indexerBatchSize` | `number \| null` | `25` | Number of nodes to process per batch during search indexing |
-| `indexerTimeout` | `number \| null` | `50` | Maximum time (ms) to wait for idle callback before forcing indexing |
-| `isLoading` | `boolean` | `false` | Show loading placeholder instead of tree content |
-| `shouldDisplayDebugInformation` | `boolean` | `false` | Show debug information panel with tree statistics and enable console debug logging |
-| `shouldDisplayContextMenuInDebugMode` | `boolean` | `false` | Display persistent context menu at fixed position for styling development |
-
-#### Rendering Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `useFlatRendering` | `boolean` | `true` | Use flat rendering mode (faster for large trees) |
-| `progressiveRender` | `boolean` | `true` | Progressively render nodes in batches |
-| `initialBatchSize` | `number` | `20` | First batch size for progressive rendering |
-| `maxBatchSize` | `number` | `500` | Maximum batch size cap |
-| `virtualScroll` | `boolean` | `false` | Enable virtual scrolling (flat mode only, renders visible + overscan rows) |
-| `virtualRowHeight` | `number` | auto | Explicit row height in px (auto-measured from first row if not set) |
-| `virtualOverscan` | `number` | `5` | Extra rows rendered above/below viewport |
-| `virtualContainerHeight` | `string` | auto/`'400px'` | CSS height for scroll container (auto-detected from parent if not set) |
-| `isRendering` | `boolean` (bindable) | `false` | Whether the tree is currently rendering (useful for progress indicators) |
-| `onRenderStart` | `() => void` | `undefined` | Called when progressive rendering begins |
-| `onRenderProgress` | `(rendered: number, total: number) => void` | `undefined` | Called after each batch with progress info |
-| `onRenderComplete` | `() => void` | `undefined` | Called when progressive rendering finishes |
-
-#### Drag & Drop Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `dragDropMode` | `DragDropMode` | `'none'` | Controls allowed drag operations: `'none'`, `'self'`, `'cross'`, `'both'` |
-| `dropZoneMode` | `string` | `'glow'` | Drop indicator style: `'floating'` or `'glow'` |
-| `dropZoneLayout` | `string` | `'around'` | Zone arrangement: `'around'`, `'above'`, `'below'`, `'wave'`, `'wave2'` |
-| `dropZoneStart` | `number \| string` | `33` | Where zones start horizontally (number=%, string=CSS value) |
-| `dropZoneMaxWidth` | `number` | `120` | Max width in pixels for wave layouts |
-| `allowCopy` | `boolean` | `false` | Enable Ctrl+drag to copy instead of move |
-| `autoHandleCopy` | `boolean` | `true` | Auto-handle same-tree copies (false for external DB/API) |
-| `allowedDropPositionsMember` | `string \| null` | `null` | Property name for allowed drop positions array |
-| `getAllowedDropPositionsCallback` | `(node) => DropPosition[] \| null` | `undefined` | Callback returning allowed drop positions per node |
-| `beforeDropCallback` | `(dropNode, draggedNode, position, event, operation) => ...` | `undefined` | Async-capable callback to validate/modify drops |
-
-#### Event Handler Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
-| `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
-| `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. `dropNode` can be `null` (e.g., drop on empty tree). Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
-
-#### Visual Styling Properties
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `bodyClass` | `string \| null` | `undefined` | CSS class for tree body |
-| `selectedNodeClass` | `string \| null` | `undefined` | CSS class for selected nodes |
-| `dragOverNodeClass` | `string \| null` | `undefined` | CSS class for nodes being dragged over |
-| `expandIconClass` | `string \| null` | `"ltree-icon-expand"` | CSS class for expand icons |
-| `collapseIconClass` | `string \| null` | `"ltree-icon-collapse"` | CSS class for collapse icons |
-| `leafIconClass` | `string \| null` | `"ltree-icon-leaf"` | CSS class for leaf node icons |
-| `scrollHighlightTimeout` | `number \| null` | `4000` | Duration (ms) for scroll highlight animation |
-| `scrollHighlightClass` | `string \| null` | `'ltree-scroll-highlight'` | CSS class to apply for scroll highlight effect |
-
-#### Snippets
-| Snippet | Parameters | Description |
-|---------|------------|-------------|
-| `nodeTemplate` | `(node)` | Custom node template |
-| `treeHeader` | | Tree header content |
-| `treeFooter` | | Tree footer content |
-| `noDataFound` | | Content shown when tree has no data |
-| `dropPlaceholder` | | Content shown in empty drop target tree |
-| `loadingPlaceholder` | | Content shown while `isLoading` is true |
-| `contextMenu` | `(node, closeMenu)` | Context menu template |
-
-#### Public Methods
-| Method | Parameters | Description |
-|--------|------------|-------------|
-| `expandNodes` | `nodePath: string` | Expand nodes at specified path |
-| `collapseNodes` | `nodePath: string` | Collapse nodes at specified path |
-| `expandAll` | `nodePath?: string` | Expand all nodes or nodes under path |
-| `collapseAll` | `nodePath?: string` | Collapse all nodes or nodes under path |
-| `filterNodes` | `searchText: string, searchOptions?: SearchOptions` | Filter the tree display using internal search index with optional FlexSearch options |
-| `searchNodes` | `searchText: string \| null \| undefined, searchOptions?: SearchOptions` | Search nodes using internal search index and return matching nodes with optional FlexSearch options |
-| `scrollToPath` | `path: string, options?: ScrollToPathOptions` | Scroll to and highlight a specific node |
-| `update` | `updates: Partial<Props>` | Programmatically update component props from external JavaScript |
-| `addNode` | `parentPath: string, data: T, pathSegment?: string` | Add a new node under the specified parent |
-| `moveNode` | `sourcePath: string, targetPath: string, position: 'before' \| 'after' \| 'child'` | Move a node to a new location |
-| `removeNode` | `path: string, includeDescendants?: boolean` | Remove a node (and optionally its descendants) |
-| `getNodeByPath` | `path: string` | Get a node by its path |
-| `getChildren` | `parentPath: string` | Get direct children of a node |
-| `getSiblings` | `path: string` | Get siblings of a node (including itself) |
-| `updateNode` | `path: string, data: Partial<T>` | Update a node's data properties |
-| `copyNodeWithDescendants` | `sourcePath: string, targetPath: string, position: DropPosition` | Copy a node and its subtree to a new location |
-| `refreshNode` | `path: string` | Force re-render of a specific node |
-| `refreshSiblings` | `path: string` | Force re-render of a node's siblings |
-| `getExpandedPaths` | | Get array of all currently expanded node paths |
-| `setExpandedPaths` | `paths: string[]` | Restore expanded state from saved paths |
-| `getAllData` | | Get all tree data as a flat array |
-| `applyChanges` | | Apply pending changes and refresh the tree |
-| `closeContextMenu` | | Programmatically close the context menu |
-
-#### ScrollToPath Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `expand` | `boolean` | `true` | Automatically expand parent nodes to make target visible |
-| `expandTarget` | `boolean` | `false` | Also expand the target node itself (not just its ancestors) |
-| `highlight` | `boolean` | `true` | Apply temporary highlight animation to the target node |
-| `scrollOptions` | `ScrollIntoViewOptions` | `{ behavior: 'smooth', block: 'center' }` | Native browser scroll options |
-| `containerScroll` | `boolean` | `false` | Scroll only within nearest scrollable ancestor (prevents page scroll) |
-| `containerElement` | `HTMLElement` | `undefined` | Explicit scrollable container element to use for scrolling |
-
-**Usage Example:**
-```typescript
-// Basic usage - scroll to path with default options
-await tree.scrollToPath('1.2.3');
-
-// Advanced usage - custom options
-await tree.scrollToPath('1.2.3', {
-  expand: false,           // Don't auto-expand parent nodes
-  highlight: false,        // Skip highlight animation
-  scrollOptions: {         // Custom scroll behavior
-    behavior: 'instant',
-    block: 'start'
-  }
-});
-
-// Scroll within a scrollable container (prevents page scroll)
-await tree.scrollToPath('1.2.3', { containerScroll: true });
-```
-
-**Highlight Classes Example:**
-```svelte
-<!-- Default background highlight -->
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  scrollHighlightClass="ltree-scroll-highlight"
-  scrollHighlightTimeout={5000}
-/>
-
-<!-- Red arrow highlight -->
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  scrollHighlightClass="ltree-scroll-highlight-arrow"
-  scrollHighlightTimeout={3000}
-/>
-
-<!-- Custom highlight class -->
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  scrollHighlightClass="my-custom-highlight"
-  scrollHighlightTimeout={2000}
-/>
-```
-
-**Available Built-in Highlight Classes:**
-- `ltree-scroll-highlight` - Background glow with blue color (default)
-- `ltree-scroll-highlight-arrow` - Red left arrow indicator
-
-#### Statistics
-The tree provides real-time statistics about the loaded data:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `statistics` | `{ nodeCount: number; maxLevel: number; filteredNodeCount: number; isIndexing: boolean; pendingIndexCount: number }` | Returns current node count, maximum depth level, filtered nodes count, indexing status, and pending index count |
-
-```typescript
-const { nodeCount, maxLevel, filteredNodeCount, isIndexing, pendingIndexCount } = tree.statistics;
-console.log(`Tree has ${nodeCount} nodes with maximum depth of ${maxLevel} levels`);
-if (filteredNodeCount > 0) {
-  console.log(`Currently showing ${filteredNodeCount} filtered nodes`);
-}
-if (isIndexing) {
-  console.log(`Search indexing in progress: ${pendingIndexCount} nodes pending`);
-}
-```
-
-#### External Updates (Vanilla JavaScript)
-
-The `update()` method allows you to programmatically update component props from external JavaScript code (outside of Svelte's reactivity system). This is particularly useful for HTML/JavaScript integration or dynamic configuration from non-Svelte code.
-
-```javascript
-// Get reference to the tree component
-const treeElement = document.querySelector('#my-tree');
-
-// Update multiple props at once
-treeElement.update({
-  searchText: 'Production',
-  expandLevel: 3,
-  shouldDisplayDebugInformation: true,
-  data: newDataArray,
-  contextMenuXOffset: 10
-});
-
-// Update single prop
-treeElement.update({ searchText: 'new search' });
-
-// Update data and configuration
-treeElement.update({
-  data: fetchedData,
-  expandLevel: 5,
-  selectedNodeClass: 'custom-selected'
-});
-```
-
-**Updatable Properties:**
-All Tree props can be updated except snippets/templates, including:
-- Data and state: `data`, `searchText`, `selectedNode`, `expandLevel`
-- Members: `idMember`, `pathMember`, `displayValueMember`, `searchValueMember`
-- Callbacks: `sortCallback`, `getDisplayValueCallback`, `onNodeClicked`, etc.
-- Visual: `bodyClass`, `selectedNodeClass`, `expandIconClass`, etc.
-- Context menu: `contextMenuCallback`, `contextMenuXOffset`, `contextMenuYOffset`
-- Behavior: `clickBehavior`, `shouldUseInternalSearchIndex`, etc.
-
-### Debug Information
-
-Enable debug information to see real-time tree statistics and console logging:
-
-```svelte
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  shouldDisplayDebugInformation={true}
-/>
-```
-
-#### Debug Panel
-The visual debug panel shows:
-- Tree ID
-- Data array length
-- Expand level setting
-- Node count
-- Maximum depth levels
-- Filtered node count (when filtering is active)
-- Search indexing progress (when indexing is active)
-- Currently dragged node
-
-#### Console Debug Logging
-When enabled, the component will log detailed information to the browser console including:
-
-**Tree Operations:**
-- Data mapping and sorting performance metrics
-- Node filtering and search operations
-- Tree structure changes
-
-**Async Search Indexing:**
-- Indexer initialization with batch size
-- Queue management (items added, queue size)
-- Batch processing details (timeout status, items processed, timing)
-- Indexing completion and progress updates
-
-This provides valuable insights for performance optimization and troubleshooting, especially when working with large datasets or complex search operations.
+## Demos & docs
+
+- 🚀 [Live demo](https://svelte-treeview.keenmate.dev) — interactive examples and the full feature gallery
+- 📘 [Usage / API reference](./docs/usage.md) — every Prop, Method, Event, and Snippet
+- 🎨 [Theming contract](./docs/theming.md) — `--base-*` tokens, `--stv-*` variables, dark mode, cascade layers
+- 📚 [Examples / cookbook](./docs/examples.md) — node templates, search, drag & drop, tree editing, context menus
+- ♿ [Accessibility](./docs/accessibility.md) — keyboard navigation, focus management, selection model
+- 📒 [Release history](./CHANGELOG.md)
 
 ## Data Structure
 
@@ -1040,7 +268,7 @@ For trees with 10,000+ nodes, enable virtual scroll to keep DOM size constant:
 ```svelte
 <Tree
   {data}
-  virtualScroll={true}
+  isVirtualScrollEnabled={true}
   virtualContainerHeight="500px"
   virtualOverscan={5}
 />
@@ -1088,6 +316,22 @@ npm run dev
 We welcome contributions! Please see our contributing guidelines for details.
 
 > **For AI Agents / LLMs**: Comprehensive documentation is available in the `ai/` folder with topic-specific files (basic-setup.txt, drag-drop.txt, performance.txt, etc.). Start with `ai/INDEX.txt` for navigation.
+
+## About
+
+Authored and maintained by [KeenMate](https://keenmate.com/).
+The component ships standalone with sensible light/dark defaults;
+when mounted inside [Pure Admin](https://pureadmin.io/) — or any
+host that publishes the `--base-*` taxonomy via
+[`@keenmate/theme-designer`](https://www.npmjs.com/package/@keenmate/theme-designer) — it adopts the host's colors,
+typography, and sizing automatically. There is no runtime
+dependency on Pure Admin; the integration is opt-in via CSS
+variables.
+
+## Built with BlissFramework
+
+Follows the [BlissFramework component guidelines](https://blissframework.dev/)
+for structure, theming, color-scheme, and accessibility.
 
 ## License
 

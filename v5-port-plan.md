@@ -5,7 +5,7 @@
 ### Features
 | Feature | Status on v5 branch | Action needed |
 |---------|---------------------|---------------|
-| **Virtual Scroll mode** (`virtualScroll`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`) | ✅ Ported | None |
+| **Virtual Scroll mode** (`isVirtualScrollEnabled`, `virtualRowHeight`, `virtualOverscan`, `virtualContainerHeight`) | ✅ Ported | None |
 | **Search result navigation** (dual-mode filter/search, result counter, prev/next Enter/Shift+Enter, round-robin) | ✅ Ported | None |
 | **`searchNodes()` public method** | ✅ Present | None |
 | **`scrollToPath` retry logic for virtual scroll** | ✅ Ported | None |

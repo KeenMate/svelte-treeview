@@ -24,7 +24,7 @@ KEYWORD INDEX
 A
 -
 addNode → tree-editing.txt
-allowCopy → drag-drop.txt
+isCopyAllowed → drag-drop.txt
 applyChanges → tree-editing.txt
 allowedDropPositions → drag-drop.txt
 allowedDropPositionsMember → drag-drop.txt
@@ -173,7 +173,7 @@ pathMember → data-handling.txt, basic-setup.txt
 Performance → performance.txt
 Position restrictions → drag-drop.txt
 Progressive rendering → performance.txt
-progressiveRender → performance.txt
+isProgressiveRender → performance.txt
 
 R
 -
@@ -200,7 +200,7 @@ highlightedNodeClass → styling-theming.txt
 highlightedPaths → advanced-patterns.txt
 highlightNode → advanced-patterns.txt
 selectedPaths → advanced-patterns.txt (checkbox data state)
-showCheckboxes → basic-setup.txt
+shouldShowCheckboxes → basic-setup.txt
 checkboxMode → basic-setup.txt
 shouldDisplayDebugInformation → basic-setup.txt, performance.txt
 clickBehavior → basic-setup.txt, events-callbacks.txt
@@ -228,11 +228,11 @@ U
 -
 update() → basic-setup.txt, advanced-patterns.txt
 updateNode → tree-editing.txt
-useFlatRendering → performance.txt
+isFlatRenderingEnabled → performance.txt
 
 V
 -
-virtualScroll → performance.txt
+isVirtualScrollEnabled → performance.txt
 virtualRowHeight → performance.txt
 virtualOverscan → performance.txt
 virtualContainerHeight → performance.txt

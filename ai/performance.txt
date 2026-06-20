@@ -34,7 +34,7 @@ FLAT RENDERING MODE
 -------------------
 Default mode (v4.6+) - significantly faster:
 
-<Tree useFlatRendering={true} />  <!-- Default -->
+<Tree isFlatRenderingEnabled={true} />  <!-- Default -->
 
 Flat mode benefits:
 - Single {#each} loop instead of recursive components
@@ -42,7 +42,7 @@ Flat mode benefits:
 - Better memory usage
 
 Legacy recursive mode:
-<Tree useFlatRendering={false} />
+<Tree isFlatRenderingEnabled={false} />
 
 Use recursive mode only if:
 - Very small trees (<100 nodes)
@@ -53,7 +53,7 @@ PROGRESSIVE RENDERING
 Renders nodes in batches to prevent UI freeze:
 
 <Tree
-  progressiveRender={true}    <!-- Default -->
+  isProgressiveRender={true}    <!-- Default -->
   initialBatchSize={20}       <!-- First batch (instant) -->
   maxBatchSize={500}          <!-- Maximum batch size -->
 />
@@ -92,7 +92,7 @@ For very large trees (10,000+ nodes), virtual scroll only renders
 visible rows + overscan, keeping DOM size at ~50 nodes:
 
 <Tree
-  virtualScroll={true}
+  isVirtualScrollEnabled={true}
   virtualContainerHeight="500px"   <!-- CSS height (auto-detected if not set) -->
   virtualOverscan={5}              <!-- Extra rows above/below viewport -->
 />
@@ -104,7 +104,7 @@ How it works:
 - rAF-throttled scroll handler prevents excessive updates
 - Auto-measures row height from first rendered node
 
-Virtual scroll requires flat rendering (useFlatRendering=true, the default).
+Virtual scroll requires flat rendering (isFlatRenderingEnabled=true, the default).
 
 scrollToPath in virtual mode:
 - Uses index-based scrolling (finds node in flat array)
@@ -126,7 +126,7 @@ Monitor progressive rendering:
 
 <Tree
   {data}
-  progressiveRender={true}
+  isProgressiveRender={true}
   bind:isRendering
   onRenderStart={() => console.log('Render started')}
   onRenderProgress={(rendered, total) =>
@@ -215,13 +215,13 @@ For very large datasets (10,000+ nodes):
 let data = $state.raw<Item[]>([]);
 
 2. Enable progressive render:
-<Tree progressiveRender={true} />
+<Tree isProgressiveRender={true} />
 
 3. Limit initial expand:
 <Tree expandLevel={1} />
 
 4. Use virtual scrolling for 10K+ nodes:
-<Tree virtualScroll={true} virtualContainerHeight="500px" />
+<Tree isVirtualScrollEnabled={true} virtualContainerHeight="500px" />
 
 AVOID O(n²) PATTERNS
 --------------------
@@ -307,7 +307,7 @@ Issue: Tree takes forever to render
 Fix: Use $state.raw() instead of $state()
 
 Issue: UI freezes during load
-Fix: Enable progressiveRender={true}
+Fix: Enable isProgressiveRender={true}
 
 Issue: Slow search
 Fix: Simplify getSearchValueCallback, use debouncing
@@ -316,7 +316,7 @@ Issue: Slow sorting
 Fix: Avoid O(n²) patterns, use isSorted={true} for pre-sorted data
 
 Issue: Memory issues with huge datasets
-Fix: Limit expandLevel, use virtualScroll={true}
+Fix: Limit expandLevel, use isVirtualScrollEnabled={true}
 
 PROFILING
 ---------
@@ -334,12 +334,12 @@ Common bottlenecks:
 BEST PRACTICES
 --------------
 ✅ Use $state.raw() for 1000+ items
-✅ Keep progressiveRender={true}
-✅ Keep useFlatRendering={true}
+✅ Keep isProgressiveRender={true}
+✅ Keep isFlatRenderingEnabled={true}
 ✅ Limit expandLevel for large trees
 ✅ Debounce search input
 ✅ Use isSorted={true} for pre-sorted data
-✅ Use virtualScroll={true} for 10K+ nodes
+✅ Use isVirtualScrollEnabled={true} for 10K+ nodes
 ✅ Profile before optimizing
 
 ❌ Don't use $state() for large datasets

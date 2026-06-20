@@ -27,7 +27,7 @@
 	];
 
 	let expandLevel = $state(2);
-	let accordionExpand = $state(false);
+	let isAccordionExpand = $state(false);
 	let selectedNode = $state<LTreeNode<Item> | null>(null);
 	let scrollPath = $state('1.2.1');
 	let scrollTreeRef: Tree<Item>;
@@ -96,7 +96,7 @@
 				<input type="number" bind:value={expandLevel} min="0" max="5" />
 			</label>
 			<label>
-				<input type="checkbox" bind:checked={accordionExpand} />
+				<input type="checkbox" bind:checked={isAccordionExpand} />
 				Accordion Expand
 			</label>
 		</div>
@@ -110,7 +110,7 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					{expandLevel}
-					{accordionExpand}
+					{isAccordionExpand}
 				>
 					{#snippet nodeTemplate(node: LTreeNode<Item>)}
 						<span>{node.data?.icon} {node.data?.name}</span>
