@@ -45,9 +45,12 @@
 	font-size: var(--stv-node-icon-font-size);
 }
 
+/* Wrapper hook for label-only styling (truncation, ellipsis, font weight, etc.).
+   Emitted by the default render path; bypassed when a `nodeTemplate` snippet is supplied.
+   Matches the `<span class="wtv__node-label">` wrapper in @keenmate/web-treeview so
+   structures stay parallel between packages. No default styles — purely a CSS hook. */
 .stv__node-label {
-	font-weight: var(--stv-node-label-font-weight);
-	margin-right: var(--stv-node-label-margin-right);
+	/* intentionally empty */
 }
 
 .stv__node-path {

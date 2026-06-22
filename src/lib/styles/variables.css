@@ -67,8 +67,6 @@
 	--stv-node-font-size: calc(var(--base-font-size-sm, 1.4) * var(--stv-rem));
 	--stv-node-icon-font-size: calc(var(--base-font-size-sm, 1.4) * var(--stv-rem));
 	--stv-node-icon-margin-right: calc(0.6 * var(--stv-rem));
-	--stv-node-label-font-weight: var(--base-font-weight-medium, 500);
-	--stv-node-label-margin-right: calc(0.8 * var(--stv-rem));
 	--stv-node-path-font-size: calc(var(--base-font-size-xs, 1.2) * var(--stv-rem));
 	--stv-node-path-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
 

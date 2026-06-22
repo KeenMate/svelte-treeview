@@ -38,8 +38,6 @@
 		{ "name": "stv-node-font-size", "category": "typography", "usage": "Node row text size" },
 		{ "name": "stv-node-icon-font-size", "category": "typography", "usage": "Per-node icon font size (emoji, etc.)" },
 		{ "name": "stv-node-icon-margin-right", "category": "spacing", "usage": "Gap between node icon and label" },
-		{ "name": "stv-node-label-font-weight", "category": "typography", "usage": "Node label weight" },
-		{ "name": "stv-node-label-margin-right", "category": "spacing", "usage": "Gap after node label" },
 		{ "name": "stv-node-path-font-size", "category": "typography", "usage": "Path / debug muted text size" },
 		{ "name": "stv-node-path-color", "category": "color", "usage": "Path / debug muted text color" },
 

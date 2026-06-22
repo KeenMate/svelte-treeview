@@ -459,7 +459,7 @@
 			{#if children}
 				{@render children(node)}
 			{:else}
-				{tree.getNodeDisplayValue(node)}
+				<span class="stv__node-label">{tree.getNodeDisplayValue(node)}</span>
 			{/if}
 		</div>
 

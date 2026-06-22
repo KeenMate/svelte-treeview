@@ -584,8 +584,6 @@
 				<tr><td><code>--stv-node-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Node text size</td></tr>
 				<tr><td><code>--stv-node-icon-font-size</code></td><td><code>(--base-font-size-sm, 1.4) × rem</code> (= 14px)</td><td>Per-node icon font size</td></tr>
 				<tr><td><code>--stv-node-icon-margin-right</code></td><td><code>0.6 × rem</code> (= 6px)</td><td>Gap between node icon and label</td></tr>
-				<tr><td><code>--stv-node-label-font-weight</code></td><td><code>var(--base-font-weight-medium, 500)</code></td><td>Label weight</td></tr>
-				<tr><td><code>--stv-node-label-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap after node label</td></tr>
 				<tr><td><code>--stv-node-path-font-size</code></td><td><code>(--base-font-size-xs, 1.2) × rem</code> (= 12px)</td><td>Path / debug text size</td></tr>
 				<tr><td><code>--stv-node-path-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Path / muted text color</td></tr>
 

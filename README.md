@@ -10,6 +10,23 @@ It's aimed at Svelte 5 developers building file browsers, org charts, navigation
 
 The component ships standalone with sensible light/dark defaults and integrates cleanly with [Pure Admin](https://pureadmin.io/) and the wider `@keenmate/*` design-token suite via the `--base-*` CSS variable contract.
 
+### How it differs from `@keenmate/web-treeview`
+
+There's a vanilla-TypeScript sibling — [`@keenmate/web-treeview`](https://github.com/KeenMate/web-treeview) — built on the same LTree path-based engine. Same logical tree, different DOM strategy. Neither is "more mature"; they target different priorities.
+
+| | svelte-treeview | web-treeview |
+|---|---|---|
+| Framework | Svelte 5 | Vanilla TS web component |
+| Rendering modes | Recursive (default) + flat | Flat only |
+| Children DOM | `.stv__children` wrapper (recursive mode) | None — siblings under `.wtv__tree` |
+| Indent math | `level × indent` | `(level − 1) × indent` (root at zero offset) |
+| Virtual scroll | Flat mode only | Built-in (three-div spacer / `translateY`) |
+| Label markup | `<span class="stv__node-label">` by default — replace via `nodeTemplate` snippet | `<span class="wtv__node-label">` by default — replace via `renderNodeCallback` |
+| Checkbox | `<label>` + custom `.stv__checkbox-box` span | Bare native `<input type="checkbox">` |
+| Update mechanism | Svelte 5 runes + per-node `_rev` keyed `{#each}` | Imperative reconciler diffing `data-rev` / `data-expanded` attributes |
+
+svelte-treeview is broader (two rendering modes, easier vertical guide lines via `.stv__children`); web-treeview is purpose-built for virtual scrolling over large datasets with a flatter DOM.
+
 ## Live Demo
 
 Browse interactive code examples and the full API reference at **[svelte-treeview.keenmate.dev](https://svelte-treeview.keenmate.dev)**

@@ -175,4 +175,18 @@ CANVAS_PACKAGE:
 - Peer-depends on this package (@keenmate/svelte-treeview ^5.0.0)
 - Canvas examples (org-chart, nhl-playoffs, canvas-dendrogram, layout-modes, json-loader) are in that package
 
+COMPARISON_WITH_WEB_TREEVIEW (sibling package @keenmate/web-treeview at ../web-treeview):
+- Same logical tree, different DOM strategy. Reference when porting features or debugging visual diffs.
+- Rendering modes: svelte-treeview = recursive (default) + flat; web-treeview = flat only.
+- Children DOM: svelte-treeview wraps in `.stv__children` (recursive mode); web-treeview has no wrapper — siblings under `.wtv__tree`.
+- Indent math: svelte-treeview `level × indent`; web-treeview `(level − 1) × indent` (root at zero offset).
+- Virtual scroll: svelte-treeview flat mode only; web-treeview has built-in three-div spacer/translateY structure.
+- Label markup: both wrap the default display value in a `.<prefix>__node-label` span (`.stv__node-label` / `.wtv__node-label`). Replace via `nodeTemplate` snippet (svelte) or `renderNodeCallback` (web).
+- Checkbox: svelte-treeview `<label>` + custom `.stv__checkbox-box` span; web-treeview bare native `<input>`.
+- `draggable` attr: svelte-treeview on `.stv__node-content` (inner); web-treeview on `.wtv__node` (outer).
+- Dataset attrs: svelte-treeview only `data-tree-path`; web-treeview also `data-rev` + `data-expanded` (for diff-based reconciler).
+- Update mechanism: svelte-treeview Svelte 5 runes + per-node `_rev` keyed `{#each}`; web-treeview imperative reconciler diffing `data-rev`/`data-expanded`.
+- Highlight padding: svelte-treeview symmetric ~8px; web-treeview `padding-left: 0` hardcoded → highlight hugs label.
+- Neither is "more mature" — svelte-treeview is broader (two rendering modes, easier vertical guide lines via `.stv__children`); web-treeview is purpose-built for virtual scrolling over large datasets.
+
 RECENT: v5.0.0-rc06 - Three-level selection (focusedNode/highlightedPaths/selectedPaths). shouldShowCheckboxes + checkboxMode (cascade/independent). Shift+Arrow/Home/End/PageUp/PageDown keyboard highlight. clickBehavior prop. Core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.
