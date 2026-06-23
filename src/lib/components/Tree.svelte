@@ -947,6 +947,18 @@
 					controller.navToggle();
 				}
 				break;
+			case 'Escape':
+				// Priority: pending cut → highlight set → leave alone for surrounding UI.
+				// File Explorer / Finder convention. Context-menu Escape is handled by
+				// the separate window-level listener above and never reaches this path.
+				if (controller.hasClipboardContent() && controller.getClipboardOperation() === 'cut') {
+					controller.cancelCut();
+				} else if (controller.highlightedPaths.size > 0) {
+					controller.clearHighlight();
+				} else {
+					handled = false;
+				}
+				break;
 			default:           handled = false;
 		}
 
