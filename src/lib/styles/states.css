@@ -3,7 +3,13 @@
    ============================================================================= */
 
 /* Always-on markers — applied automatically by Node.svelte when isHighlighted / isFocused.
-   Subtle by default so consumers can override or layer their own highlightedNodeClass on top. */
+   `--highlighted` ships a subtle default look so opting into selectionMode='multi'
+   produces visible feedback without configuring `highlightedNodeClass`.
+   `--focused` is a PURE HOOK (no default styles) — the demo's "Focused Style: None"
+   option promised no visual, but rc12 shipped a default outline anyway; the fix is
+   to honor the promise. Apps that want a built-in focus ring write their own rule
+   and pass the class via `focusedNodeClass` (see `/examples/interaction` source
+   for the `demo-focused-outline` recipe). */
 .stv__node-content--highlighted {
 	background-color: var(--stv-highlighted-bg, color-mix(in srgb, var(--stv-primary) 10%, transparent));
 	outline: 1px solid var(--stv-highlighted-outline, color-mix(in srgb, var(--stv-primary) 25%, transparent));
@@ -12,9 +18,7 @@
 }
 
 .stv__node-content--focused {
-	outline: 2px solid var(--stv-focused-outline, color-mix(in srgb, var(--stv-primary) 60%, transparent));
-	outline-offset: -2px;
-	border-radius: var(--stv-node-content-border-radius);
+	/* intentionally empty — pure CSS hook */
 }
 
 .stv__node-content--highlight-bold {
