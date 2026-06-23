@@ -93,6 +93,7 @@
 	   ------------------------------------------------------------------------- */
 	--stv-checkbox-size: calc(1.5 * var(--stv-rem));
 	--stv-checkbox-border-width: 1.5px; /* hairline — does not scale */
+	--stv-checkbox-checkmark-width: 2px; /* hairline — does not scale */
 	--stv-checkbox-border-color: var(--base-border-color, light-dark(#adb5bd, #5a5a5a));
 	--stv-checkbox-border-radius: calc(var(--base-border-radius-sm, 0.3) * var(--stv-rem));
 	--stv-checkbox-bg: var(--base-input-bg, light-dark(#ffffff, #1f1f1f));

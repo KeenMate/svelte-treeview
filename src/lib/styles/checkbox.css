@@ -2,13 +2,23 @@
    CHECKBOX — custom styled, indeterminate support
    ============================================================================= */
 
+/* `!important` here is not a hack — it's the documented escape hatch for
+   component-layer rules colliding with unlayered consumer resets. Bootstrap's
+   reboot.css ships an unlayered `label { display: inline-block }` which, per
+   the cascade-layers spec, BEATS every layered rule regardless of selector
+   specificity. The checkbox label MUST be flex (the visually-hidden input is
+   `position: absolute` so the visible .stv__checkbox-box would jump out of
+   line in `inline-block` mode). Same reasoning applies to `margin: 0` — some
+   reboot variants add `label { margin-bottom: 0.5rem }`. Mirror this pattern
+   for any future <label>/<button>/<input> styles that must hold against
+   unlayered resets. */
 .stv__checkbox {
-	display: inline-flex;
+	display: inline-flex !important;
 	align-items: center;
-	margin-right: 4px;
+	justify-content: center;
+	margin: 0 4px 0 0 !important;
 	cursor: pointer;
 	position: relative;
-	vertical-align: middle;
 }
 
 /* Hide native input but keep it accessible */
@@ -49,15 +59,19 @@
 	border-color: var(--stv-checkbox-checked-border-color);
 }
 
+/* Checkmark — sized as % of the box so it scales with --stv-checkbox-size.
+   The translate Y is -58% (not -50%) because rotating a tall rectangle 45°
+   shifts its visual center down a couple of % from its geometric center;
+   the offset brings the checkmark's optical center back to box center. */
 .stv__checkbox input:checked + .stv__checkbox-box::after {
 	display: block;
-	left: 4px;
-	top: 1px;
-	width: 4px;
-	height: 8px;
+	left: 50%;
+	top: 50%;
+	width: 28%;
+	height: 55%;
 	border: solid var(--stv-checkbox-checkmark-color);
-	border-width: 0 2px 2px 0;
-	transform: rotate(45deg);
+	border-width: 0 var(--stv-checkbox-checkmark-width) var(--stv-checkbox-checkmark-width) 0;
+	transform: translate(-50%, -58%) rotate(45deg);
 }
 
 /* Indeterminate state — dash */
@@ -68,13 +82,12 @@
 
 .stv__checkbox input:indeterminate + .stv__checkbox-box::after {
 	display: block;
-	left: 3px;
+	left: 50%;
 	top: 50%;
-	width: calc(var(--stv-checkbox-size) - 8px);
+	width: 60%;
 	height: 0;
-	border: solid var(--stv-checkbox-checkmark-color);
-	border-width: 0 0 2px 0;
-	transform: translateY(-50%);
+	border-bottom: var(--stv-checkbox-checkmark-width) solid var(--stv-checkbox-checkmark-color);
+	transform: translate(-50%, -50%);
 }
 
 /* Focus ring */
