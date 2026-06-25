@@ -15,6 +15,8 @@
 		type ClickBehavior,
 		type CheckboxMode,
 		type SelectionMode,
+		type HighlightMode,
+		type TreeMutationOptions,
 		type TreeChange,
 		type ApplyChangesResult
 	} from '../ltree/types.js';
@@ -696,29 +698,59 @@
 		controller.closeContextMenu();
 	}
 
-	// Multi-select methods
-	export function selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
-		controller.selectNode(path, mode, options);
-	}
-
-	export function selectNodes(paths: string[], options?: { silent?: boolean }) {
-		controller.selectNodes(paths, options);
-	}
-
-	export function highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
+	// ── Highlight set (UI multi-select — highlightedPaths) ──────────────
+	export function highlightNode(path: string, mode: HighlightMode = 'replace', options?: TreeMutationOptions) {
 		controller.highlightNode(path, mode, options);
 	}
 
-	export function highlightNodes(paths: string[], options?: { silent?: boolean }) {
+	export function highlightNodes(paths: string[], options?: TreeMutationOptions) {
 		controller.highlightNodes(paths, options);
 	}
 
-	export function clearHighlight(options?: { silent?: boolean }) {
-		controller.clearHighlight(options);
+	export function setHighlightedPaths(paths: string[], options?: TreeMutationOptions) {
+		controller.setHighlightedPaths(paths, options);
 	}
 
-	export function deselectAll(options?: { silent?: boolean }) {
-		controller.deselectAll(options);
+	export function highlightAll(options?: TreeMutationOptions) {
+		controller.highlightAll(options);
+	}
+
+	export function clearHighlight(paths?: string[], options?: TreeMutationOptions) {
+		controller.clearHighlight(paths, options);
+	}
+
+	// ── Selection set (checkbox / data state — selectedPaths) ───────────
+	export function selectNode(path: string, options?: TreeMutationOptions) {
+		controller.selectNode(path, options);
+	}
+
+	export function selectNodes(paths: string[], options?: TreeMutationOptions) {
+		controller.selectNodes(paths, options);
+	}
+
+	export function setSelectedPaths(paths: string[], options?: TreeMutationOptions) {
+		controller.setSelectedPaths(paths, options);
+	}
+
+	export function selectAll(options?: TreeMutationOptions) {
+		controller.selectAll(options);
+	}
+
+	export function deselectNode(path: string, options?: TreeMutationOptions) {
+		controller.deselectNode(path, options);
+	}
+
+	export function clearSelection(paths?: string[], options?: TreeMutationOptions) {
+		controller.clearSelection(paths, options);
+	}
+
+	// ── Focus (single cursor — focusedNode) ─────────────────────────────
+	export function focusNode(path: string, options?: TreeMutationOptions) {
+		controller.focusNode(path, options);
+	}
+
+	export function clearFocus(options?: TreeMutationOptions) {
+		controller.clearFocus(options);
 	}
 
 	export function getSelectedNodes(): LTreeNode<T>[] {

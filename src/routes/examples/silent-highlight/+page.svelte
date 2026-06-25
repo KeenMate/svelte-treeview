@@ -105,7 +105,7 @@
 
 		<p class="description">
 			Pass <code>{`{ silent: true }`}</code> to <code>highlightNode()</code> /
-			<code>highlightNodes()</code> / <code>clearHighlight()</code> / <code>deselectAll()</code>.
+			<code>highlightNodes()</code> / <code>clearHighlight()</code> / <code>clearSelection()</code>.
 			State (<code>highlightedPaths</code>, <code>isHighlighted</code> CSS class, focused node) still
 			updates — only <code>onNodeClick</code> / <code>onHighlightChange</code> / <code>onSelectionChange</code>
 			are suppressed.
@@ -179,8 +179,8 @@ function restoreFromUrl(nodePath: string) {
 				All four methods accept <code>{`{ silent: true }`}</code>:
 				<code>highlightNode(path, mode, opts)</code>,
 				<code>highlightNodes(paths, opts)</code>,
-				<code>clearHighlight(opts)</code>,
-				<code>deselectAll(opts)</code>.
+				<code>clearHighlight(paths?, opts)</code>,
+				<code>clearSelection(paths?, opts)</code>.
 				The bindable props (<code>highlightedPaths</code>, <code>selectedPaths</code>, <code>focusedNode</code>)
 				still sync back to the parent — silent only skips the explicit callbacks.
 			</p>

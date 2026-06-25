@@ -2,7 +2,7 @@ import { test, expect, Page } from '@playwright/test';
 
 /**
  * E2E coverage for the silent: true option on highlightNode / highlightNodes /
- * clearHighlight / deselectAll. Targets /test/silent-highlight.
+ * clearHighlight / clearSelection. Targets /test/silent-highlight.
  *
  * The fixture page wires every Tree event callback (onNodeClick,
  * onHighlightChange, onSelectionChange) to a counter rendered into the DOM.
@@ -148,9 +148,9 @@ test.describe('clearHighlight', () => {
 	});
 });
 
-// ── deselectAll ─────────────────────────────────────────────────────────────
+// ── clearSelection ───────────────────────────────────────────────────────────
 
-test.describe('deselectAll', () => {
+test.describe('clearSelection', () => {
 	test('loud after checkbox check: fires onSelectionChange, clears state', async ({ page }) => {
 		await goto(page);
 
@@ -160,7 +160,7 @@ test.describe('deselectAll', () => {
 		expect(await selectionSize(page)).toBeGreaterThan(0);
 
 		await page.getByTestId('reset-counters').click();
-		await page.getByTestId('deselect-loud').click();
+		await page.getByTestId('clear-selection-loud').click();
 
 		expect(await counter(page, 'selection')).toBe(1);
 		expect(await selectionSize(page)).toBe(0);
@@ -174,7 +174,7 @@ test.describe('deselectAll', () => {
 		expect(await selectionSize(page)).toBeGreaterThan(0);
 
 		await page.getByTestId('reset-counters').click();
-		await page.getByTestId('deselect-silent').click();
+		await page.getByTestId('clear-selection-silent').click();
 
 		expect(await counter(page, 'selection')).toBe(0);
 		expect(await selectionSize(page)).toBe(0);

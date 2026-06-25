@@ -3,7 +3,7 @@
 	import type { LTreeNode } from '$lib/ltree/types.js';
 
 	// Deterministic e2e fixture for the silent: true option on
-	// highlightNode / highlightNodes / clearHighlight / deselectAll.
+	// highlightNode / highlightNodes / clearHighlight / clearSelection.
 	// Targeted by e2e/silent-highlight.spec.ts.
 
 	type Item = { id: number; path: string; name: string };
@@ -87,14 +87,14 @@
 		<button data-testid="clear-loud" onclick={() => treeRef?.clearHighlight()}>
 			clearHighlight() — loud
 		</button>
-		<button data-testid="clear-silent" onclick={() => treeRef?.clearHighlight({ silent: true })}>
+		<button data-testid="clear-silent" onclick={() => treeRef?.clearHighlight(undefined, { silent: true })}>
 			clearHighlight(silent)
 		</button>
-		<button data-testid="deselect-loud" onclick={() => treeRef?.deselectAll()}>
-			deselectAll() — loud
+		<button data-testid="clear-selection-loud" onclick={() => treeRef?.clearSelection()}>
+			clearSelection() — loud
 		</button>
-		<button data-testid="deselect-silent" onclick={() => treeRef?.deselectAll({ silent: true })}>
-			deselectAll(silent)
+		<button data-testid="clear-selection-silent" onclick={() => treeRef?.clearSelection(undefined, { silent: true })}>
+			clearSelection(silent)
 		</button>
 		<button data-testid="reset-counters" onclick={resetCounters}>Reset counters</button>
 	</div>

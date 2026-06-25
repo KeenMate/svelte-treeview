@@ -91,6 +91,12 @@ PUBLIC_METHODS:
   - containerScroll: true scrolls only within nearest scrollable ancestor (prevents page scroll)
 - update(updates: Partial<Props>) - programmatically update props from vanilla JavaScript
 
+SELECTION_API (three symmetric families; opts = TreeMutationOptions { silent? }):
+- HIGHLIGHT (UI multi — highlightedPaths): highlightNode(path, mode?, opts?), highlightNodes(paths, opts?) [additive], setHighlightedPaths(paths, opts?) [replace], highlightAll(opts?), clearHighlight(paths?, opts?)
+- SELECTION (checkbox — selectedPaths): selectNode(path, opts?), selectNodes(paths, opts?) [additive], setSelectedPaths(paths, opts?) [replace], selectAll(opts?), deselectNode(path, opts?), clearSelection(paths?, opts?)
+- FOCUS (single — focusedNode): focusNode(path, opts?), clearFocus(opts?)
+- mode = HighlightMode 'replace'|'toggle'|'range' (plain/Ctrl/Shift click). NOTE: select* = checkbox set; highlight* = UI set. clearSelection replaces the old deselectAll.
+
 EVENTS:
 - onNodeClicked(node)
 - onNodeDragStart(node, event)

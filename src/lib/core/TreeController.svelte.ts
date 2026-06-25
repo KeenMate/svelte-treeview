@@ -15,7 +15,9 @@ import {
 	type ToggleIconMode,
 	type ClickBehavior,
 	type CheckboxMode,
-	type SelectionMode
+	type SelectionMode,
+	type HighlightMode,
+	type TreeMutationOptions
 } from '../ltree/types.js';
 import { tick } from 'svelte';
 import {
@@ -2456,10 +2458,11 @@ export class TreeController<T> {
 
 	// ── Public highlight methods (UI selection) ────────────────────────
 
-	/** Highlight a node with the given mode.
-	 *  Pass `{ silent: true }` to update state without firing `onNodeClick` / `onHighlightChange`
-	 *  (useful when restoring state from URL params or other external sources). */
-	highlightNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
+	/** Highlight a single node. `mode` mirrors the click gestures:
+	 *  'replace' (plain click) replaces the set, 'toggle' (Ctrl+click) adds/removes
+	 *  just this node, 'range' (Shift+click) highlights from the shift-cursor to here.
+	 *  Pass `{ silent: true }` to update state without firing `onNodeClick` / `onHighlightChange`. */
+	highlightNode(path: string, mode: HighlightMode = 'replace', options?: TreeMutationOptions) {
 		const node = this.tree.getNodeByPath(path);
 		if (!node) return;
 
@@ -2472,11 +2475,11 @@ export class TreeController<T> {
 		}
 	}
 
-	/** Highlight multiple nodes by paths (replaces current highlights).
+	/** Add nodes to the highlight set (additive — existing highlights are kept).
+	 *  Use setHighlightedPaths() to replace the whole set instead.
 	 *  Pass `{ silent: true }` to skip `onHighlightChange`. */
-	highlightNodes(paths: string[], options?: { silent?: boolean }) {
-		this._clearAllHighlightFlags();
-		const newPaths = new Set<string>();
+	highlightNodes(paths: string[], options?: TreeMutationOptions) {
+		const newPaths = new Set(this.highlightedPaths);
 		let lastNode: LTreeNode<T> | null = null;
 		for (const path of paths) {
 			const node = this.tree.getNodeByPath(path);
@@ -2499,11 +2502,65 @@ export class TreeController<T> {
 		this.tree.refresh();
 	}
 
-	/** Clear all highlights. Pass `{ silent: true }` to skip `onHighlightChange`. */
-	clearHighlight(options?: { silent?: boolean }) {
+	/** Replace the entire highlight set with the given paths.
+	 *  Equivalent to clearHighlight() + highlightNodes(paths).
+	 *  Pass `{ silent: true }` to skip `onHighlightChange`. */
+	setHighlightedPaths(paths: string[], options?: TreeMutationOptions) {
 		this._clearAllHighlightFlags();
 		this.highlightedPaths = new Set();
 		this._shiftCursor = null;
+		this.highlightNodes(paths, { silent: true });
+		if (!options?.silent) {
+			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
+		}
+		this.tree.refresh();
+	}
+
+	/** Highlight every visible node. Pass `{ silent: true }` to skip `onHighlightChange`. */
+	highlightAll(options?: TreeMutationOptions) {
+		this._clearAllHighlightFlags();
+		const newPaths = new Set<string>();
+		let lastNode: LTreeNode<T> | null = null;
+		for (const node of this.tree.visibleFlatNodes) {
+			if (!node.isSelectable) continue;
+			node.isHighlighted = true;
+			node._rev = (node._rev || 0) + 1;
+			newPaths.add(node.path);
+			lastNode = node;
+		}
+		this.highlightedPaths = newPaths;
+		if (lastNode) {
+			this._setFocusedNode(lastNode);
+			this._shiftCursor = lastNode.path;
+		}
+		if (!options?.silent) {
+			this._notifyHighlightChanged();
+			this._mirrorHighlightToSelected();
+		}
+		this.tree.refresh();
+	}
+
+	/** Clear highlights. Pass `paths` to clear only those nodes, or omit to clear all.
+	 *  Pass `{ silent: true }` to skip `onHighlightChange`. */
+	clearHighlight(paths?: string[], options?: TreeMutationOptions) {
+		if (paths && paths.length > 0) {
+			const newPaths = new Set(this.highlightedPaths);
+			for (const path of paths) {
+				const n = this.tree.getNodeByPath(path);
+				if (n) {
+					n.isHighlighted = false;
+					n._rev = (n._rev || 0) + 1;
+				}
+				newPaths.delete(path);
+			}
+			this.highlightedPaths = newPaths;
+			if (this._shiftCursor && !newPaths.has(this._shiftCursor)) this._shiftCursor = null;
+		} else {
+			this._clearAllHighlightFlags();
+			this.highlightedPaths = new Set();
+			this._shiftCursor = null;
+		}
 		if (!options?.silent) {
 			this._notifyHighlightChanged();
 			this._mirrorHighlightToSelected();
@@ -2551,22 +2608,130 @@ export class TreeController<T> {
 		return this.selectedPaths.has(path);
 	}
 
-	/** Clear all checkbox selections. Pass `{ silent: true }` to skip `onSelectionChange`. */
-	deselectAll(options?: { silent?: boolean }) {
+	/** Apply a checked/unchecked state to the given paths, expanding to descendants
+	 *  in cascade mode and recomputing ancestor visual states. Returns whether the
+	 *  selected set actually changed. Does not notify or refresh — callers do that. */
+	private _applyCheckboxState(paths: string[], checked: boolean): boolean {
+		let affected = paths;
+		if (this.checkboxMode === 'cascade') {
+			const expanded = new Set(paths);
+			for (const path of paths) {
+				const n = this.tree.getNodeByPath(path);
+				if (n) for (const dp of this._getDescendantPaths(n)) expanded.add(dp);
+			}
+			affected = [...expanded];
+		}
+		const newPaths = new Set(this.selectedPaths);
+		let changed = false;
+		for (const path of affected) {
+			const n = this.tree.getNodeByPath(path);
+			if (!n) continue;
+			if (checked) {
+				if (!newPaths.has(path)) { newPaths.add(path); changed = true; }
+				n.isSelected = true;
+			} else {
+				if (newPaths.has(path)) { newPaths.delete(path); changed = true; }
+				n.isSelected = false;
+			}
+			n._rev = (n._rev || 0) + 1;
+		}
+		this.selectedPaths = newPaths;
+		if (this.checkboxMode === 'cascade') {
+			for (const rp of paths) {
+				const rn = this.tree.getNodeByPath(rp);
+				if (!rn) continue;
+				const vs = this._computeVisualState(rn);
+				if (rn.visualState !== vs) { rn.visualState = vs; rn._rev = (rn._rev || 0) + 1; }
+				this._updateAncestorVisualStates(rp);
+			}
+		}
+		return changed;
+	}
+
+	/** Check a single node (cascades to descendants in cascade mode).
+	 *  Pass `{ silent: true }` to skip `onSelectionChange`. */
+	selectNode(path: string, options?: TreeMutationOptions) {
+		const changed = this._applyCheckboxState([path], true);
+		if (changed && !options?.silent) this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Check multiple nodes (additive — existing checks are kept).
+	 *  Use setSelectedPaths() to replace the whole set instead.
+	 *  Pass `{ silent: true }` to skip `onSelectionChange`. */
+	selectNodes(paths: string[], options?: TreeMutationOptions) {
+		const changed = this._applyCheckboxState(paths, true);
+		if (changed && !options?.silent) this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Replace the entire checkbox set with the given paths.
+	 *  Equivalent to clearSelection() + selectNodes(paths).
+	 *  Pass `{ silent: true }` to skip `onSelectionChange`. */
+	setSelectedPaths(paths: string[], options?: TreeMutationOptions) {
+		this._clearAllSelectionFlags();
+		this.selectedPaths = new Set();
+		this._applyCheckboxState(paths, true);
+		if (!options?.silent) this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Check every selectable node. Pass `{ silent: true }` to skip `onSelectionChange`. */
+	selectAll(options?: TreeMutationOptions) {
+		const newPaths = new Set<string>();
+		const traverse = (node: LTreeNode<T>) => {
+			if (node.path && node.isSelectable) {
+				node.isSelected = true;
+				if (node.visualState !== VisualState.selected) node.visualState = VisualState.selected;
+				node._rev = (node._rev || 0) + 1;
+				newPaths.add(node.path);
+			}
+			for (const child of Object.values(node.children)) traverse(child);
+		};
+		for (const root of this.tree.tree) traverse(root);
+		this.selectedPaths = newPaths;
+		if (!options?.silent) this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Uncheck a single node (cascades to descendants in cascade mode).
+	 *  Pass `{ silent: true }` to skip `onSelectionChange`. */
+	deselectNode(path: string, options?: TreeMutationOptions) {
+		const changed = this._applyCheckboxState([path], false);
+		if (changed && !options?.silent) this._notifySelectionChanged();
+		this.tree.refresh();
+	}
+
+	/** Clear checkbox selection. Pass `paths` to uncheck only those nodes, or omit to clear all.
+	 *  Pass `{ silent: true }` to skip `onSelectionChange`. */
+	clearSelection(paths?: string[], options?: TreeMutationOptions) {
+		if (paths && paths.length > 0) {
+			const changed = this._applyCheckboxState(paths, false);
+			if (changed && !options?.silent) this._notifySelectionChanged();
+			this.tree.refresh();
+			return;
+		}
 		this._clearAllSelectionFlags();
 		this.selectedPaths = new Set();
 		if (!options?.silent) this._notifySelectionChanged();
 		this.tree.refresh();
 	}
 
-	/** @deprecated Use highlightNode() instead */
-	selectNode(path: string, mode: 'replace' | 'toggle' | 'range' = 'replace', options?: { silent?: boolean }) {
-		this.highlightNode(path, mode, options);
+	// ── Public focus methods (single cursor) ─────────────────────────
+
+	/** Move focus to a node. `_options` is accepted for signature parity;
+	 *  focus changes have no dedicated change callback. */
+	focusNode(path: string, _options?: TreeMutationOptions) {
+		const node = this.tree.getNodeByPath(path);
+		if (!node) return;
+		this._setFocusedNode(node);
+		this.tree.refresh();
 	}
 
-	/** @deprecated Use highlightNodes() instead */
-	selectNodes(paths: string[], options?: { silent?: boolean }) {
-		this.highlightNodes(paths, options);
+	/** Clear the focused node. */
+	clearFocus(_options?: TreeMutationOptions) {
+		this._setFocusedNode(null);
+		this.tree.refresh();
 	}
 
 	private _onNodeRightClicked(node: LTreeNode<T>, event: MouseEvent) {
@@ -3392,7 +3557,7 @@ export class TreeController<T> {
 			navTo: (path: string) => {
 				const node = this.getNodeByPath(path);
 				if (!node) return;
-				this.selectNode(path, 'replace');
+				this.highlightNode(path, 'replace');
 				this.scrollToPath(path, { expand: false, highlight: false, containerScroll: true });
 			},
 

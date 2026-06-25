@@ -9,6 +9,14 @@ export type ToggleIconMode = 'rotate' | 'swap';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type CheckboxMode = 'independent' | 'cascade';
 export type SelectionMode = 'single' | 'multi';
+/** Gesture mode for highlightNode(): replace = plain click, toggle = Ctrl+click, range = Shift+click. */
+export type HighlightMode = 'replace' | 'toggle' | 'range';
+/** Options shared by every imperative selection/highlight/focus mutator. */
+export interface TreeMutationOptions {
+	/** Update state without firing onNodeClick / onHighlightChange / onSelectionChange
+	 *  (e.g. when restoring state from URL params or other external sources). */
+	silent?: boolean;
+}
 export type DropZoneLayout = 'around' | 'above' | 'below' | 'wave' | 'wave2';
 export type DropOperation = 'move' | 'copy';
 

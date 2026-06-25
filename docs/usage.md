@@ -171,6 +171,28 @@ Without both requirements, no search indexing will occur.
 | `applyChanges` | | Apply pending changes and refresh the tree |
 | `closeContextMenu` | | Programmatically close the context menu |
 
+### Selection / highlight / focus methods
+
+Three independent concerns, each with the same method shape. `opts` is always `TreeMutationOptions = { silent?: boolean }` — pass `{ silent: true }` to mutate state without firing the change callbacks (e.g. restoring state from a URL). Keep the verbs straight: **`highlight*`** drives the UI multi-select set (`highlightedPaths`), **`select*`** drives the checkbox/data set (`selectedPaths`), **`focus*`** drives the single cursor (`focusedNode`).
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `highlightNode` | `path: string, mode?: HighlightMode, opts?` | Highlight one node. `mode`: `'replace'` (plain click, default), `'toggle'` (Ctrl+click), `'range'` (Shift+click from cursor) |
+| `highlightNodes` | `paths: string[], opts?` | Add nodes to the highlight set (**additive**) |
+| `setHighlightedPaths` | `paths: string[], opts?` | Replace the entire highlight set |
+| `highlightAll` | `opts?` | Highlight every visible node (Ctrl+A) |
+| `clearHighlight` | `paths?: string[], opts?` | Clear the given paths, or all when omitted |
+| `selectNode` | `path: string, opts?` | Check one node (cascades to descendants in cascade mode) |
+| `selectNodes` | `paths: string[], opts?` | Check nodes (**additive**) |
+| `setSelectedPaths` | `paths: string[], opts?` | Replace the entire checkbox set |
+| `selectAll` | `opts?` | Check every selectable node |
+| `deselectNode` | `path: string, opts?` | Uncheck one node (cascades in cascade mode) |
+| `clearSelection` | `paths?: string[], opts?` | Uncheck the given paths, or all when omitted (was `deselectAll`) |
+| `focusNode` | `path: string, opts?` | Move focus to a node |
+| `clearFocus` | `opts?` | Clear the focused node |
+
+Read-side helpers: `getHighlightedNodes()` / `isNodeHighlighted(path)` / `getSelectedNodes()` / `isNodeSelected(path)`.
+
 ### ScrollToPath options
 
 | Option | Type | Default | Description |
