@@ -115,7 +115,8 @@
 		{ value: 'stv__node-content--highlight-bold', label: 'Bold' },
 		{ value: 'stv__node-content--highlight-border', label: 'Border' },
 		{ value: 'stv__node-content--highlight-brackets', label: 'Brackets' },
-		{ value: 'stv__node-content--highlight-fill', label: 'Highlight (Explorer-style)' }
+		{ value: 'stv__node-content--highlight-fill', label: 'Highlight (Explorer-style)' },
+		{ value: 'stv__node-content--highlight-glow', label: 'Glow (soft ring)' }
 	];
 
 	// Focused-style options are page-scoped demo classes (see the style block below).
@@ -125,7 +126,8 @@
 		{ value: '', label: 'None (invisible focus)' },
 		{ value: 'demo-focused-outline', label: 'Outline (left-border)' },
 		{ value: 'demo-focused-underline', label: 'Underline' },
-		{ value: 'demo-focused-bg', label: 'Background tint' }
+		{ value: 'demo-focused-bg', label: 'Background tint' },
+		{ value: 'demo-focused-ring', label: 'Ring (full outline)' }
 	];
 
 	// ── Click Behavior demo ──────────────────────────────────────────
@@ -313,6 +315,44 @@
   'cascade'     — parent toggles all descendants
 -->`}</pre>
 		</div>
+
+		<div class="note">
+			<p class="note-title">Adding your own highlight &amp; focus styles</p>
+			<p>
+				Both props take <em>any</em> class name. <strong>Glow</strong> (highlight) and
+				<strong>Ring</strong> (focus) above are two recent additions: Glow is a built-in class
+				shipped in <code>states.css</code>, while Ring is a page-scoped class this demo defines
+				itself. The component ships no default focus styling, so a focus class is always your own —
+				highlight classes can be either built-in or custom. Both work the same way: name a CSS class,
+				make sure the rule is in scope (built-in, global, or a <code>:global()</code> rule), and pass it.
+			</p>
+		</div>
+
+		<div class="code-block">
+			<pre>{`<!-- 1. Built-in highlight (just reference it) -->
+<Tree highlightedNodeClass="stv__node-content--highlight-glow" ... />
+
+/* stv__node-content--highlight-glow (from states.css) */
+.stv__node-content--highlight-glow {
+  background-color: color-mix(in srgb, var(--stv-primary) 12%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--stv-primary) 40%, transparent),
+    0 0 8px 1px color-mix(in srgb, var(--stv-primary) 35%, transparent);
+  border-radius: 6px;
+}
+
+<!-- 2. Custom focus style (define your own class, then pass it) -->
+<Tree focusedNodeClass="my-focus-ring" ... />
+
+/* Must be global so it reaches nodes rendered inside <Tree> */
+:global(.my-focus-ring) {
+  box-shadow: 0 0 0 2px var(--stv-primary, #0d6efd);
+  border-radius: 4px;
+}
+
+<!-- Highlight applies to every row in highlightedPaths.
+     Focus is additive — it stacks on top, only on the focusedNode row. -->`}</pre>
+		</div>
 	</div>
 
 	<!-- Multi-Select -->
@@ -494,5 +534,9 @@ End    Go to last visible node
 	}
 	:global(.demo-focused-bg) {
 		background-color: color-mix(in srgb, var(--stv-primary, #0d6efd) 12%, transparent);
+	}
+	:global(.demo-focused-ring) {
+		box-shadow: 0 0 0 2px var(--stv-primary, #0d6efd);
+		border-radius: 4px;
 	}
 </style>

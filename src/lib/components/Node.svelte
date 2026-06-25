@@ -379,7 +379,7 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="stv__node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
-			class:stv__node-content--highlighted={node.isHighlighted}
+			class:stv__node-content--highlighted={node.isHighlighted && !highlightedNodeClass}
 			class:stv__node-content--focused={node.isFocused}
 			class:stv__clickable={node.isSelectable}
 			class:stv__node-content--dragged={isDraggedNode}

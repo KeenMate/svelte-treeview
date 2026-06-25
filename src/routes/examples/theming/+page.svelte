@@ -317,6 +317,14 @@
 					<td><code>stv__node-content--highlight-brackets</code></td>
 					<td>Chevron brackets around content</td>
 				</tr>
+				<tr>
+					<td><code>stv__node-content--highlight-fill</code></td>
+					<td>Explorer-style solid fill background</td>
+				</tr>
+				<tr>
+					<td><code>stv__node-content--highlight-glow</code></td>
+					<td>Tinted background with a soft primary-colored glow ring</td>
+				</tr>
 			</tbody>
 		</table>
 

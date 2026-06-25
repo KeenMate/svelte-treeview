@@ -290,6 +290,50 @@
 		multiDrop = emptyDropState();
 	}
 
+	// ── Section 6b: multi-drag with a LOCKED node (isDraggable=false) ───────
+	// Mirrors the /examples/drag-drop "File C (pinned)" scenario: a non-draggable
+	// node that happens to be in the multi-highlight set must NOT ride along.
+
+	type LockableItem = Item & { draggable?: boolean };
+
+	function initialLockedData(): LockableItem[] {
+		return [
+			{ id: 71, path: '1', name: 'Lock-A', sortOrder: 10 },
+			{ id: 72, path: '2', name: 'Lock-B', sortOrder: 20 },
+			{ id: 73, path: '3', name: 'Lock-C', sortOrder: 30, draggable: false }, // pinned
+			{ id: 74, path: '4', name: 'Lock-D', sortOrder: 40 } // drop target
+		];
+	}
+
+	let lockedData: LockableItem[] = $state(initialLockedData());
+	let lockedHighlighted = $state(new Set<string>());
+	let lockedFocused = $state<LTreeNode<LockableItem> | null>(null);
+	let lockedDrop: DropState = $state(emptyDropState());
+
+	function onLockedDrop(
+		dropNode: LTreeNode<LockableItem> | null,
+		draggedNode: LTreeNode<LockableItem>,
+		position: string,
+		_event: DragEvent | TouchEvent,
+		operation: DropOperation
+	) {
+		lockedDrop = {
+			count: lockedDrop.count + 1,
+			dragged: draggedNode.data?.name ?? '',
+			target: dropNode?.data?.name ?? '(root)',
+			position,
+			operation,
+			tree: 'locked'
+		};
+	}
+
+	function resetLocked() {
+		lockedData = initialLockedData();
+		lockedHighlighted = new Set();
+		lockedFocused = null;
+		lockedDrop = emptyDropState();
+	}
+
 	// ── Section 7: touch drag ──────────────────────────────────────────────
 
 	let touchData: Item[] = $state([
@@ -550,6 +594,41 @@
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
 					<span data-testid="multi-node-{node.path}">{node.data?.name}</span>
+				{/snippet}
+			</Tree>
+		</div>
+	</section>
+
+	<section data-testid="section-multi-locked">
+		<h2>Multi-Drag with a locked node (isDraggable=false)</h2>
+		<button data-testid="locked-reset" onclick={resetLocked}>Reset</button>
+		<div class="drop-state">
+			<span>count: <b data-testid="locked-drop-count">{lockedDrop.count}</b></span>
+			<span>dragged: <b data-testid="locked-drop-dragged">{lockedDrop.dragged}</b></span>
+			<span>hi.size: <b data-testid="locked-highlighted-size">{lockedHighlighted.size}</b></span>
+		</div>
+		<div class="tree-box">
+			<Tree
+				treeId="locked"
+				data={lockedData}
+				idMember="id"
+				pathMember="path"
+				orderMember="sortOrder"
+				sortCallback={sortByOrder}
+				isSorted={true}
+				expandLevel={10}
+				dragDropMode="self"
+				getIsDraggableCallback={(node) => node.data?.draggable !== false}
+				getIsDropAllowedCallback={() => true}
+				clickBehavior="select"
+				selectionMode="multi"
+				highlightedNodeClass="stv__node-content--highlight-bold"
+				bind:focusedNode={lockedFocused}
+				bind:highlightedPaths={lockedHighlighted}
+				onNodeDrop={onLockedDrop}
+			>
+				{#snippet nodeTemplate(node: LTreeNode<LockableItem>)}
+					<span data-testid="locked-node-{node.path}">{node.data?.name}</span>
 				{/snippet}
 			</Tree>
 		</div>

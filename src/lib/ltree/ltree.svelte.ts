@@ -1271,6 +1271,37 @@ export function createLTree<T>(
 			newNode.isExpanded = _expandLevel ? newNode.level! <= _expandLevel : false;
 			newNode.hasChildren = false;
 
+			// Seed the resolved per-node flags exactly as insertArray does. Nodes
+			// added here (addNode, and therefore copyNodeWithDescendants and
+			// applyChanges 'create') otherwise keep createLTreeNode's defaults —
+			// notably isDraggable=false and isDropAllowed=false — which the DOM
+			// `draggable` attribute and the drag-over / drop gates read directly
+			// (not via the dynamic getNodeIs* resolvers). Without this, a copied or
+			// programmatically-added node renders non-draggable and rejects drops
+			// even when the tree has a getIsDraggableCallback / getIsDropAllowedCallback
+			// (or the equivalent *Member). `data` is already assigned above, so the
+			// callbacks see a populated node.
+			if (data) {
+				if (_getIsSelectableCallback) newNode.isSelectable = _getIsSelectableCallback(newNode);
+				else if (!shouldCalculateIsSelectable) newNode.isSelectable = getField(data, _isSelectableMember!);
+
+				if (_getIsSelectedCallback) newNode.isSelected = _getIsSelectedCallback(newNode);
+				else if (!shouldCalculateIsSelected) newNode.isSelected = getField(data, _isSelectedMember!);
+
+				if (_getIsExpandedCallback) newNode.isExpanded = _getIsExpandedCallback(newNode);
+				else if (!shouldCalculateIsExpanded) newNode.isExpanded = getField(data, _isExpandedMember!);
+
+				if (_getIsDraggableCallback) newNode.isDraggable = _getIsDraggableCallback(newNode);
+				else if (!shouldCalculateIsDraggable) newNode.isDraggable = getField(data, _isDraggableMember!);
+
+				if (!shouldCalculateIsCollapsible) newNode.isCollapsible = getField(data, _isCollapsibleMember!);
+
+				if (_getIsDropAllowedCallback) newNode.isDropAllowed = _getIsDropAllowedCallback(newNode);
+				else if (!shouldCalculateIsDropAllowed) newNode.isDropAllowed = getField(data, _isDropAllowedMember!);
+
+				if (!shouldCalculateAllowedDropPositions) newNode.allowedDropPositions = getField(data, _allowedDropPositionsMember!);
+			}
+
 			// Sync data object fields to match new tree position
 			if (data) {
 				if (_pathMember) (data as any)[_pathMember] = newPath;

@@ -154,10 +154,16 @@
 		// library (the drop handler only receives one node ref). When the source
 		// tree has a multi-highlight that includes the dragged node, copy each
 		// top-level highlighted subtree in turn so the whole set rides along.
-		const sourcePaths =
+		// Filter out pinned nodes (isDraggable=false) — same predicate as the
+		// tree's getIsDraggableCallback — so a locked node like "File C" that
+		// happens to be in the highlight set doesn't ride along. (Same-tree
+		// multi-drag enforces this inside the library; cross-tree is the
+		// consumer's responsibility because only the lead node ref crosses.)
+		const sourcePaths = (
 			sourceHighlightedPaths.size > 1 && sourceHighlightedPaths.has(draggedNode.path)
 				? topLevelPaths([...sourceHighlightedPaths])
-				: [draggedNode.path];
+				: [draggedNode.path]
+		).filter((p) => sourceTreeRef.getNodeByPath(p)?.data?.isDraggable !== false);
 
 		let copied = 0;
 		let failed = 0;

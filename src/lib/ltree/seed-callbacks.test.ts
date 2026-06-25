@@ -143,3 +143,53 @@ describe('insertBranch seed-time get*Callback', () => {
 		expect(branchPinned?.data?.name).toBe('BranchPinned');
 	});
 });
+
+// Regression for the cross-tree drop bug: addNode (and therefore
+// copyNodeWithDescendants / applyChanges 'create') created nodes via
+// createLTreeNode WITHOUT running the seed callbacks, so the new node kept the
+// defaults isDraggable=false / isDropAllowed=false. The DOM `draggable` attr and
+// the drop gates read those raw properties, so a node dropped into a target tree
+// was non-draggable and rejected further drops — even with a getIsDraggableCallback
+// / getIsDropAllowedCallback on the tree.
+describe('addNode seed-time get*Callback', () => {
+	const ltree = buildTree({ withCallbacks: true });
+	ltree.insertArray([{ id: 'root', path: '1', name: 'Root' }]);
+	ltree.addNode('1', { id: 'n', path: '', name: 'AddedNormal' });
+	ltree.addNode('1', { id: 'p', path: '', name: 'AddedPinned', isDraggable: false, isDropAllowed: false });
+
+	it('seeds isDraggable from the callback (normal=true, pinned=false)', () => {
+		expect(ltree.getNodeByPath('1.n')?.isDraggable).toBe(true);
+		expect(ltree.getNodeByPath('1.p')?.isDraggable).toBe(false);
+	});
+
+	it('seeds isDropAllowed from the callback (normal=true, pinned=false)', () => {
+		expect(ltree.getNodeByPath('1.n')?.isDropAllowed).toBe(true);
+		expect(ltree.getNodeByPath('1.p')?.isDropAllowed).toBe(false);
+	});
+});
+
+describe('copyNodeWithDescendants seeds flags on the copies', () => {
+	const ltree = buildTree({ withCallbacks: true });
+	ltree.insertArray([
+		{ id: 'src', path: '1', name: 'Source' },
+		{ id: 'child', path: '1.1', name: 'SrcChild', isDraggable: false }
+	]);
+
+	// Copy the '1' subtree to root, re-id'ing each node (mirrors the demo's
+	// cross-tree copy). Root copy id = copy100, its child = copy101.
+	let nid = 100;
+	const src = ltree.getNodeByPath('1')!;
+	ltree.copyNodeWithDescendants(src, '', (d) => ({ ...d, id: `copy${nid++}`, path: '' }));
+
+	it('the copied root is draggable + drop-allowed (was false pre-fix)', () => {
+		const rootCopy = ltree.getNodeByPath('copy100');
+		expect(rootCopy?.isDraggable).toBe(true);
+		expect(rootCopy?.isDropAllowed).toBe(true);
+	});
+
+	it('the copied child preserves its pinned flag from data', () => {
+		const childCopy = ltree.getNodeByPath('copy100.copy101');
+		expect(childCopy?.data?.name).toBe('SrcChild');
+		expect(childCopy?.isDraggable).toBe(false);
+	});
+});

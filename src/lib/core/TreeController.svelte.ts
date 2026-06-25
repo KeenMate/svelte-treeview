@@ -2949,7 +2949,15 @@ export class TreeController<T> {
 		if (isMultiDrag) {
 			const topLevelPaths = this._getTopLevelHighlightedPaths()
 				// drop target can't be moved onto itself
-				.filter((p) => p !== dropNode!.path);
+				.filter((p) => p !== dropNode!.path)
+				// Respect per-node draggability: a locked node (isDraggable=false) that
+				// merely happens to be in the highlight set must NOT ride along. The
+				// single-drag path is already gated at drag *start*, but multi-drag
+				// pulls straight from highlightedPaths, so it has to re-check here.
+				.filter((p) => {
+					const n = this.tree.getNodeByPath(p);
+					return n ? this.getNodeIsDraggable(n) : false;
+				});
 			dragLogger.info(`Multi-drag: moving ${topLevelPaths.length} top-level subtree(s)`, {
 				topLevelPaths,
 				totalHighlighted: this.highlightedPaths.size,
