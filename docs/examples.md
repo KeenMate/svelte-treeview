@@ -344,4 +344,4 @@ The tree supports two context-menu styles: **callback-based** (imperative, share
 - **Dynamic menus** — generate items based on node properties
 - **Icons and disabled states** — visual organization and context-sensitive availability
 - **Position offset** — `contextMenuXOffset` / `contextMenuYOffset` for cursor clearance
-- **Auto-close** — closes on scroll, click outside, Escape key, or programmatically
+- **Auto-close** — closes after activating an item, and on scroll, click outside, Escape key, or programmatically. Calling the `close` callback in your handler is optional (the menu closes itself); set `shouldCloseOnClick: false` on an item to keep the menu open for incremental actions (a toggle, a counter) and dismiss it yourself via `close` when done

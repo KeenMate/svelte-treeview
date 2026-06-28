@@ -16,7 +16,9 @@
 
 	let openIdx = $state<number | null>(null);
 	let hideTimeout: ReturnType<typeof setTimeout> | null = null;
-	const itemEls: HTMLElement[] = [];
+	// $state so `bind:this={itemEls[i]}` writes are reactive and the submenu
+	// positioning $effect re-runs once the parent item element is attached.
+	let itemEls = $state<HTMLElement[]>([]);
 	let submenuEl = $state<HTMLElement | null>(null);
 
 	function cancelHide() {
@@ -82,6 +84,13 @@
 					await item.onclick?.();
 				} catch (error) {
 					console.error('Context menu callback error:', error);
+				} finally {
+					// Auto-close after activating a leaf item — selecting an entry dismisses
+					// the menu, like every native/desktop menu. Consumers no longer need to
+					// call the close callback themselves (doing so anyway is harmless).
+					// Opt out with shouldCloseOnClick: false to keep the menu open for incremental
+					// actions; the handler then dismisses it via its captured close callback.
+					if (item.shouldCloseOnClick !== false) closeContextMenu();
 				}
 			}}
 			onkeydown={async (e) => {
@@ -91,6 +100,8 @@
 						await item.onclick?.();
 					} catch (error) {
 						console.error('Context menu callback error:', error);
+					} finally {
+						if (item.shouldCloseOnClick !== false) closeContextMenu();
 					}
 				}
 			}}

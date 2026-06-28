@@ -33,6 +33,7 @@
 	let activityLog = $state<string[]>([]);
 	let snippetLog = $state<string[]>([]);
 	let debugMode = $state(false);
+	let pinClicks = $state(0);
 
 	function sortByName(items: LTreeNode<FileItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
@@ -131,6 +132,17 @@
 			label: 'Read-only file',
 			isDisabled: true,
 			isVisible: !!isReadonly
+		});
+
+		// shouldCloseOnClick: false — the menu stays open so the item can be clicked
+		// repeatedly (e.g. an incremental toggle). The handler would call close()
+		// itself when finished; here it deliberately never does.
+		entries.push({ divider: true });
+		entries.push({
+			icon: '📌',
+			label: 'Bump (stays open)',
+			shouldCloseOnClick: false,
+			onclick: () => { pinClicks += 1; addLog(`Bump ×${pinClicks} on "${node.data?.name}"`); }
 		});
 
 		return entries;

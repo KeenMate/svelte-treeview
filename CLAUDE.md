@@ -54,6 +54,7 @@ interface ContextMenuItem {
   isVisible?: boolean;
   className?: string;
   onclick?: () => void | Promise<void>;
+  shouldCloseOnClick?: boolean;  // default true; false = menu stays open, handler closes via close()
   children?: ContextMenuEntry[];
 }
 
@@ -78,6 +79,8 @@ TREE_PROPS_KEY:
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
+- nodeClass: (node) => string|null|undefined - data-driven class applied to .stv__node (recomputes on node._rev change)
+- nodeContentClass: (node) => string|null|undefined - same, applied to .stv__node-content
 - treePathSeparator: string (default ".")
 - contextMenuCallback: (node: LTreeNode<T>, close: () => void) => ContextMenuEntry[]
 - contextMenuXOffset: number (default 8px)
@@ -134,7 +137,7 @@ CONTEXT_MENU:
 - Two approaches: snippet-based (ContextMenuItemC/ContextMenuDividerC components) and callback-based
 - Callback: contextMenuCallback(node, close) returns ContextMenuEntry[]
 - Divider type: { divider: true, label?: string } — named dividers render as ──── [label] ────
-- Item features: label, icon, shortcut, isDisabled, isVisible, className (e.g. "danger"), onclick, children (submenus)
+- Item features: label, icon, shortcut, isDisabled, isVisible, className (e.g. "danger"), onclick, shouldCloseOnClick (default true; false keeps menu open), children (submenus)
 - Submenus: children[] opens nested menu on hover (CSS position: absolute; left: 100%)
 - Position offset: contextMenuXOffset/YOffset for cursor clearance
 - Debug mode: shouldDisplayContextMenuInDebugMode shows menu at tree-relative position (200px right, 100px down)

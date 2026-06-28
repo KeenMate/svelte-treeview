@@ -184,6 +184,10 @@
 		bodyClass?: string | null | undefined;
 		highlightedNodeClass?: string | null | undefined;
 		focusedNodeClass?: string | null | undefined;
+		/** Data-driven per-row class hook. Return extra class(es) for `.stv__node`. */
+		nodeClass?: (node: LTreeNode<T>) => string | null | undefined;
+		/** Data-driven per-row class hook. Return extra class(es) for `.stv__node-content`. */
+		nodeContentClass?: (node: LTreeNode<T>) => string | null | undefined;
 		dragOverNodeClass?: string | null | undefined;
 		expandIconClass?: string | null | undefined;
 		collapseIconClass?: string | null | undefined;
@@ -328,6 +332,8 @@
 		toggleIconMode = 'rotate',
 		highlightedNodeClass,
 		focusedNodeClass,
+		nodeClass,
+		nodeContentClass,
 		dragOverNodeClass,
 		scrollHighlightTimeout = 4000,
 		scrollHighlightClass = 'stv__node-content--scroll-highlight',
@@ -433,6 +439,8 @@
 		bodyClass,
 		highlightedNodeClass,
 		focusedNodeClass,
+		nodeClass,
+		nodeContentClass,
 		dragOverNodeClass,
 		expandIconClass,
 		collapseIconClass,
@@ -477,6 +485,13 @@
 	let contextMenuEl = $state<HTMLDivElement | null>(null);
 	$effect(() => {
 		if (!controller.contextMenuVisible || !contextMenuEl) return;
+		// Track position + target so the effect re-runs (tears down the old autoUpdate
+		// and re-anchors) when a right-click moves the menu to a DIFFERENT node while
+		// it's already open — otherwise autoUpdate only recomputes on scroll/resize and
+		// the menu stays stuck at the first node's position.
+		void controller.contextMenuX;
+		void controller.contextMenuY;
+		void controller.contextMenuNode;
 		const xOff = controller.contextMenuXOffset ?? 0;
 		const yOff = controller.contextMenuYOffset ?? 0;
 		const virtualRef = {
@@ -537,6 +552,8 @@
 	$effect(() => { controller.leafIconClass = leafIconClass ?? 'stv__toggle-icon--leaf'; });
 	$effect(() => { controller.toggleIconMode = toggleIconMode ?? 'rotate'; });
 	$effect(() => { controller.highlightedNodeClass = highlightedNodeClass; });
+	$effect(() => { controller.nodeClass = nodeClass; });
+	$effect(() => { controller.nodeContentClass = nodeContentClass; });
 	$effect(() => { controller.focusedNodeClass = focusedNodeClass; });
 	$effect(() => { controller.dragOverNodeClass = dragOverNodeClass; });
 	$effect(() => { controller.dropZoneMode = dropZoneMode ?? 'glow'; });
@@ -869,6 +886,8 @@
 				| "leafIconClass"
 				| "toggleIconMode"
 				| "highlightedNodeClass"
+				| "nodeClass"
+				| "nodeContentClass"
 				| "focusedNodeClass"
 				| "dragOverNodeClass"
 				| "scrollHighlightTimeout"
@@ -952,6 +971,8 @@
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
 		if (updates.toggleIconMode !== undefined) toggleIconMode = updates.toggleIconMode;
 		if (updates.highlightedNodeClass !== undefined) highlightedNodeClass = updates.highlightedNodeClass;
+		if (updates.nodeClass !== undefined) nodeClass = updates.nodeClass;
+		if (updates.nodeContentClass !== undefined) nodeContentClass = updates.nodeContentClass;
 		if (updates.focusedNodeClass !== undefined) focusedNodeClass = updates.focusedNodeClass;
 		if (updates.dragOverNodeClass !== undefined) dragOverNodeClass = updates.dragOverNodeClass;
 		if (updates.scrollHighlightTimeout !== undefined) scrollHighlightTimeout = updates.scrollHighlightTimeout;

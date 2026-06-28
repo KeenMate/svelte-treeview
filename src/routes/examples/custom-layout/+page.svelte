@@ -393,16 +393,19 @@
 	<div class="card">
 		<h2>🪟 Windows File Explorer</h2>
 		<p class="description">
-			A near-complete Windows File Explorer built on <code>&lt;Tree&gt;</code>: the left
-			nav pane is the tree (folders only), the right pane is a custom sortable details
-			list of the selected folder's contents. Click a folder (left or right) to browse,
-			double-click a folder on the right to open it, use the breadcrumb / Back / Forward /
-			Up to navigate, sort by any column, search the current folder and its subfolders
-			(results show where each hit lives), and create / rename /
-			delete folders. Navigation stays in sync via the tree's
-			<code>expandNodes()</code> / <code>focusNode()</code> API. It opens on a real
-			<code>C:\Windows</code> tree — 32 folders with multi-level subfolders and files
-			(some folders left empty), so there's plenty to drill into.
+			A near-complete Windows File Explorer where <strong>both panes are
+			<code>&lt;Tree&gt;</code></strong> with custom <code>nodeTemplate</code> renderers: the
+			left is the folder nav tree, the right is a flat <code>&lt;Tree&gt;</code> rendering the
+			details list as a 4-column grid (the columns line up because each row's content is a CSS
+			grid sharing the header's track template). Selection, keyboard navigation, the
+			right-click context menu (<code>getContextMenuItemsCallback</code>) and
+			double-click-to-open (<code>onNodeDoubleClick</code>) all come from the library; rows are
+			tagged folder/file via the <code>nodeClass</code> hook. Click a folder (either pane) to
+			browse, double-click to open, use the breadcrumb / Back / Forward / Up to navigate, sort
+			by any column, search the current folder and its subfolders (results show where each hit
+			lives, with <code>*.dll</code>-style wildcards), and create / rename / delete folders.
+			Panes stay in sync via <code>expandNodes()</code> / <code>focusNode()</code>. It opens on
+			a real <code>C:\Windows</code> tree — 32 folders with multi-level subfolders and files.
 		</p>
 		<WindowsExplorer />
 	</div>

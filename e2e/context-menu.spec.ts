@@ -176,6 +176,28 @@ test.describe('Callback approach', () => {
 		await expect(activityLog(card)).toContainText('Copied "Documents"');
 	});
 
+	test('shouldCloseOnClick:false keeps the menu open so the item can be clicked repeatedly', async ({ page }) => {
+		await gotoContextMenu(page);
+		const card = callbackCard(page);
+
+		await rightClick(card, '1'); // Documents
+
+		// "Bump (stays open)" opts out of auto-close — the menu must persist and
+		// the same item must remain clickable across activations.
+		const bump = menuItem(card, 'Bump (stays open)');
+		await bump.click();
+		await expect(menuIn(card)).toBeVisible();
+		await expect(activityLog(card)).toContainText('Bump ×1 on "Documents"');
+
+		await bump.click();
+		await expect(menuIn(card)).toBeVisible();
+		await expect(activityLog(card)).toContainText('Bump ×2 on "Documents"');
+
+		// A normal (auto-closing) item still dismisses the menu.
+		await menuItem(card, 'Copy').click();
+		await expect(menuIn(card)).toHaveCount(0);
+	});
+
 	test('clicking a disabled item does not fire the callback', async ({ page }) => {
 		await gotoContextMenu(page);
 		const card = callbackCard(page);
@@ -236,6 +258,24 @@ test.describe('Callback approach', () => {
 		// Click the card heading — well outside the menu.
 		await card.locator('h2').click();
 		await expect(menuIn(card)).toHaveCount(0);
+	});
+
+	test('right-clicking a different node moves the menu without an intervening left-click', async ({ page }) => {
+		await gotoContextMenu(page);
+		const card = callbackCard(page);
+
+		// Open on the bottom node, then right-click the top node directly. Regression:
+		// the positioning effect only re-ran on the visible flag flipping, so a 2nd
+		// right-click left the menu stuck at the first node's position until you
+		// left-clicked to close it first.
+		await rightClick(card, '2.2'); // Logo.png (bottom)
+		const y1 = (await menuIn(card).boundingBox())?.y ?? 0;
+
+		await rightClick(card, '1'); // Documents (top) — no left-click in between
+		await expect(menuIn(card)).toBeVisible();
+		await expect.poll(async () => (await menuIn(card).boundingBox())?.y ?? 0).not.toBe(y1);
+		// The menu now reflects the newly clicked folder (folder-only entry present).
+		await expect(menuItem(card, 'New Folder')).toBeVisible();
 	});
 
 	test('Clear Log empties the activity log output', async ({ page }) => {

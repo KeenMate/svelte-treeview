@@ -114,6 +114,8 @@ Without both requirements, no search indexing will occur.
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
+| `nodeClass` | `(node) => string \| null \| undefined` | `undefined` | Data-driven per-row class hook. Returned class(es) are applied to `.stv__node`. Recomputes when the node's `_rev` changes. |
+| `nodeContentClass` | `(node) => string \| null \| undefined` | `undefined` | Like `nodeClass`, but applied to `.stv__node-content`. |
 | `onNodeDoubleClick` | `(node) => void` | `undefined` | Node double-click event handler. Fires for every `clickBehavior` (detection is manual on the controller, so it's reliable in flat mode where the native `dblclick` is not — see [FLAT_MODE_PERFORMANCE.md](./FLAT_MODE_PERFORMANCE.md#double-click-detection-and-why-not-native-dblclick)). In `clickBehavior="select"` a double-click also toggles expand/collapse. |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |

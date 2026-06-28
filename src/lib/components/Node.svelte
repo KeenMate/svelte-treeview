@@ -62,6 +62,10 @@
 	const leafIconClass = $derived(config.leafIconClass);
 	const highlightedNodeClass = $derived(config.highlightedNodeClass);
 	const focusedNodeClass = $derived(config.focusedNodeClass);
+	// Data-driven per-row classes. The callbacks read node data; recompute when the
+	// node's _rev bumps (same trigger the rest of the render uses).
+	const customNodeClass = $derived(config.nodeClass ? (config.nodeClass(node) ?? '') : '');
+	const customNodeContentClass = $derived(config.nodeContentClass ? (config.nodeContentClass(node) ?? '') : '');
 	// dragOverNodeClass is applied to the DOM directly by the controller
 	// (see hoveredNodeForDrop $effect in TreeController) — no per-Node binding.
 	const isCopyAllowed = $derived(config.isCopyAllowed);
@@ -333,7 +337,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	class="stv__node"
+	class="stv__node {customNodeClass}"
 	id="{node.treeId}-{node.id}"
 	data-tree-path="{node.path}"
 	style={indentStyle}
@@ -378,7 +382,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="stv__node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''}"
+			class="stv__node-content {node.isHighlighted ? highlightedNodeClass : ''} {node.isFocused && focusedNodeClass ? focusedNodeClass : ''} {customNodeContentClass}"
 			class:stv__node-content--highlighted={node.isHighlighted && !highlightedNodeClass}
 			class:stv__node-content--focused={node.isFocused}
 			class:stv__clickable={node.isSelectable}

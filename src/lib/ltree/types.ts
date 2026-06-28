@@ -47,6 +47,15 @@ export interface ContextMenuItem {
 	isVisible?: boolean; // false = skip rendering (callback approach)
 	className?: string; // e.g. "danger" for red styling
 	onclick?: () => void | Promise<void>;
+	/**
+	 * Whether activating this item auto-closes the menu. Default `true` —
+	 * selecting an entry dismisses the menu like every native/desktop menu.
+	 * Set `false` for items that act incrementally (toggle a flag, run a
+	 * multi-step action) and want the menu to stay open; the handler is then
+	 * responsible for dismissing it via the `close` callback passed to
+	 * getContextMenuItemsCallback (or the snippet's close prop).
+	 */
+	shouldCloseOnClick?: boolean;
 	children?: ContextMenuEntry[]; // nested submenus
 }
 

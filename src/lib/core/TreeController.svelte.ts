@@ -87,6 +87,11 @@ export interface NodeConfig {
 	highlightedNodeClass: string | null | undefined;
 	focusedNodeClass: string | null | undefined;
 	dragOverNodeClass: string | null | undefined;
+	// Data-driven per-row class hooks. Applied to .stv__node (nodeClass) and
+	// .stv__node-content (nodeContentClass). Typed LTreeNode<any> here because
+	// NodeConfig is non-generic plumbing; the public Tree props are LTreeNode<T>.
+	nodeClass: ((node: LTreeNode<any>) => string | null | undefined) | undefined;
+	nodeContentClass: ((node: LTreeNode<any>) => string | null | undefined) | undefined;
 	dropZoneMode: 'floating' | 'glow';
 	dropZoneLayout: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 	dropZoneStart: number | string;
@@ -272,6 +277,8 @@ export interface TreeControllerProps<T> {
 	bodyClass?: string | null | undefined;
 	highlightedNodeClass?: string | null | undefined;
 	focusedNodeClass?: string | null | undefined;
+	nodeClass?: (node: LTreeNode<T>) => string | null | undefined;
+	nodeContentClass?: (node: LTreeNode<T>) => string | null | undefined;
 	dragOverNodeClass?: string | null | undefined;
 	expandIconClass?: string | null | undefined;
 	collapseIconClass?: string | null | undefined;
@@ -304,6 +311,8 @@ export class TreeController<T> {
 		leafIconClass: 'stv__toggle-icon--leaf',
 		highlightedNodeClass: undefined,
 		focusedNodeClass: undefined,
+		nodeClass: undefined,
+		nodeContentClass: undefined,
 		dragOverNodeClass: undefined,
 		dropZoneMode: 'glow',
 		dropZoneLayout: 'around',
@@ -396,6 +405,8 @@ export class TreeController<T> {
 	toggleIconMode = $state<ToggleIconMode>('rotate');
 	highlightedNodeClass = $state<string | null | undefined>(undefined);
 	focusedNodeClass = $state<string | null | undefined>(undefined);
+	nodeClass = $state<((node: LTreeNode<any>) => string | null | undefined) | undefined>(undefined);
+	nodeContentClass = $state<((node: LTreeNode<any>) => string | null | undefined) | undefined>(undefined);
 	dragOverNodeClass = $state<string | null | undefined>(undefined);
 	dropZoneMode = $state<'floating' | 'glow'>('glow');
 	dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('around');
@@ -576,6 +587,8 @@ export class TreeController<T> {
 		this.toggleIconMode = props.toggleIconMode ?? 'rotate';
 		this.highlightedNodeClass = props.highlightedNodeClass;
 		this.focusedNodeClass = props.focusedNodeClass;
+		this.nodeClass = props.nodeClass;
+		this.nodeContentClass = props.nodeContentClass;
 		this.dragOverNodeClass = props.dragOverNodeClass;
 		this.dropZoneMode = props.dropZoneMode ?? 'glow';
 		this.dropZoneLayout = props.dropZoneLayout ?? 'around';
@@ -698,6 +711,8 @@ export class TreeController<T> {
 			toggleIconMode: this.toggleIconMode,
 			highlightedNodeClass: this.highlightedNodeClass,
 			focusedNodeClass: this.focusedNodeClass,
+			nodeClass: this.nodeClass,
+			nodeContentClass: this.nodeContentClass,
 			dragOverNodeClass: this.dragOverNodeClass,
 			dropZoneMode: this.dropZoneMode,
 			dropZoneLayout: this.dropZoneLayout,
@@ -732,6 +747,8 @@ export class TreeController<T> {
 				toggleIconMode: this.toggleIconMode,
 				highlightedNodeClass: this.highlightedNodeClass,
 				focusedNodeClass: this.focusedNodeClass,
+				nodeClass: this.nodeClass,
+				nodeContentClass: this.nodeContentClass,
 				dragOverNodeClass: this.dragOverNodeClass,
 				dropZoneMode: this.dropZoneMode,
 				dropZoneLayout: this.dropZoneLayout,
@@ -1985,6 +2002,8 @@ export class TreeController<T> {
 			this.highlightedNodeClass = updates.highlightedNodeClass;
 		if (updates.focusedNodeClass !== undefined)
 			this.focusedNodeClass = updates.focusedNodeClass;
+		if (updates.nodeClass !== undefined) this.nodeClass = updates.nodeClass;
+		if (updates.nodeContentClass !== undefined) this.nodeContentClass = updates.nodeContentClass;
 		if (updates.dragOverNodeClass !== undefined)
 			this.dragOverNodeClass = updates.dragOverNodeClass;
 		if (updates.dropZoneMode !== undefined)

@@ -1,11 +1,15 @@
 <script lang="ts">
 	// Windows File Explorer clone built on @keenmate/svelte-treeview.
-	// The LEFT nav pane is a <Tree> (folders only); the RIGHT contents pane is a
-	// custom sortable details list showing the selected folder's children (folders
-	// + files). They stay in sync via the tree's expandNodes()/focusNode() API.
+	// BOTH panes are <Tree> instances with custom nodeTemplate renderers:
+	//   • LEFT  — the folder navigation tree (hierarchical, folders only).
+	//   • RIGHT — the details list (flat: the current folder's children rendered as
+	//             a 4-column grid). Selection, keyboard nav, the context menu, and
+	//             double-click-to-open all come from the library; the columns line up
+	//             because each row's .stv__node-content is a CSS grid and the header
+	//             shares the same track template inside one sticky-header scroll area.
 	import { tick, onMount } from 'svelte';
 	import { Tree } from '$lib/index.js';
-	import type { LTreeNode } from '$lib/ltree/types.js';
+	import type { LTreeNode, ContextMenuEntry } from '$lib/ltree/types.js';
 	import { explorerData, DEFAULT_PATH, type FsNode } from './explorer-data.js';
 
 	const SEP = '.';
@@ -16,15 +20,18 @@
 	// The folder-only slice drives the nav tree.
 	const folderData = $derived(fs.filter((n) => n.kind === 'folder'));
 
-	let treeRef: Tree<FsNode>;
+	let navTreeRef: Tree<FsNode>;
 	let focusedFolder = $state<LTreeNode<FsNode> | null>(null);
 
 	let currentPath = $state(DEFAULT_PATH); // C:\Windows
-	let rightSelection = $state<Set<string>>(new Set());
-	let lastClickedPath = $state<string | null>(null);
 	let filter = $state('');
 	let sortKey = $state<'name' | 'modified' | 'type' | 'size'>('name');
 	let sortDir = $state<'asc' | 'desc'>('asc');
+	let statusInfo = $state<string | null>(null); // transient status-bar message
+
+	// Right-pane selection lives in the right <Tree>'s highlight set. Its paths are
+	// the synthetic per-row paths (see rightTreeData), not the real fs paths.
+	let rightSel = $state<Set<string>>(new Set());
 
 	let history = $state<string[]>([DEFAULT_PATH]);
 	let histIndex = $state(0);
@@ -107,6 +114,9 @@
 		if (['ini', 'inf', 'admx', 'adml', 'theme', 'msstyles'].includes(n.ext)) return '🛠️';
 		return '📄';
 	}
+	function previewText(n: FsNode): string {
+		return `${n.name} — ${typeLabel(n)}${n.size != null ? ' · ' + formatSize(n.size) : ''}`;
+	}
 
 	// ── sorting ──────────────────────────────────────────────────────────────
 	const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
@@ -151,13 +161,29 @@
 		}
 		return sortItems(directChildren(currentPath, fs));
 	});
+
+	// The right <Tree> wants a path-keyed dataset. We feed it the already-sorted
+	// list re-keyed to flat synthetic paths ("1", "2", …) so it renders a flat list
+	// (real fs paths would imply a hierarchy). Each row keeps its real FsNode fields,
+	// plus `treePath` for the tree and selection mapping.
+	type RightItem = FsNode & { treePath: string };
+	const rightTreeData = $derived<RightItem[]>(rightItems.map((n, i) => ({ ...n, treePath: String(i + 1) })));
+	// Preserve our sort order in the tree (its sortCallback would otherwise reorder).
+	const keepRightOrder = (items: LTreeNode<RightItem>[]) =>
+		[...items].sort((a, b) => Number(a.data?.treePath ?? 0) - Number(b.data?.treePath ?? 0));
+	// Per-row class from data — dogfoods the nodeClass hook.
+	const rightNodeClass = (node: LTreeNode<RightItem>) =>
+		node.data?.kind === 'folder' ? 'winx-folder' : 'winx-file';
+
+	const selectedNodes = $derived(rightTreeData.filter((n) => rightSel.has(n.treePath)));
+	const selectedCount = $derived(selectedNodes.length);
+
 	const breadcrumb = $derived(
 		[...ancestorPaths(currentPath), currentPath].map((p) => ({ path: p, name: byPath(p)?.name ?? p }))
 	);
 	const canBack = $derived(histIndex > 0);
 	const canFwd = $derived(histIndex < history.length - 1);
 	const canUp = $derived(currentPath !== '1' && !!parentOf(currentPath));
-	const selectedCount = $derived(rightSelection.size);
 
 	function sortBy(key: typeof sortKey) {
 		if (sortKey === key) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -166,19 +192,17 @@
 
 	// ── navigation ─────────────────────────────────────────────────────────────
 	async function revealInTree(path: string) {
-		for (const a of ancestorPaths(path)) await treeRef?.expandNodes(a);
-		if (byPath(path)?.kind === 'folder') await treeRef?.expandNodes(path);
-		treeRef?.focusNode(path);
+		for (const a of ancestorPaths(path)) await navTreeRef?.expandNodes(a);
+		if (byPath(path)?.kind === 'folder') await navTreeRef?.expandNodes(path);
+		navTreeRef?.focusNode(path);
 	}
 	function navigateTo(path: string, opts: { pushHistory?: boolean; syncTree?: boolean } = {}) {
 		const { pushHistory = true, syncTree = true } = opts;
 		if (!byPath(path)) return;
-		closeMenu();
 		statusInfo = null;
 		currentPath = path;
 		filter = ''; // opening/navigating clears the active search (Explorer behaviour)
-		rightSelection = new Set();
-		lastClickedPath = null;
+		rightSel = new Set();
 		if (pushHistory) {
 			history = [...history.slice(0, histIndex + 1), path];
 			histIndex = history.length - 1;
@@ -189,89 +213,13 @@
 	const goForward = () => { if (canFwd) { histIndex++; navigateTo(history[histIndex], { pushHistory: false }); } };
 	const goUp = () => { if (canUp) navigateTo(parentOf(currentPath)); };
 
-	// ── right-pane interactions ──────────────────────────────────────────────
-	let statusInfo = $state<string | null>(null); // transient status-bar message
-	// `click` always precedes `dblclick`, so a lone single-click action must be
-	// deferred (~220ms) and cancelled when a double-click lands. Selection itself
-	// is safe to run immediately — it's the same whether or not a 2nd click comes.
-	let clickTimer: ReturnType<typeof setTimeout> | null = null;
-	const DBLCLICK_MS = 220;
-
-	function applySelection(n: FsNode, e: MouseEvent) {
-		if (e.ctrlKey || e.metaKey) {
-			const next = new Set(rightSelection);
-			next.has(n.path) ? next.delete(n.path) : next.add(n.path);
-			rightSelection = next;
-		} else if (e.shiftKey && lastClickedPath) {
-			const paths = rightItems.map((i) => i.path);
-			const a = paths.indexOf(lastClickedPath), b = paths.indexOf(n.path);
-			if (a !== -1 && b !== -1) {
-				const [lo, hi] = a < b ? [a, b] : [b, a];
-				rightSelection = new Set(paths.slice(lo, hi + 1));
-			}
-		} else {
-			rightSelection = new Set([n.path]);
-		}
-		lastClickedPath = n.path;
-	}
-	function rowClick(n: FsNode, e: MouseEvent) {
-		applySelection(n, e); // immediate — never waits on the double-click window
-		if (clickTimer) clearTimeout(clickTimer);
-		// Single-click-only action: preview the item. Cancelled by rowOpen() below.
-		clickTimer = setTimeout(() => {
-			clickTimer = null;
-			statusInfo = `${n.name} — ${typeLabel(n)}${n.size != null ? ' · ' + formatSize(n.size) : ''}`;
-		}, DBLCLICK_MS);
-	}
-	function rowOpen(n: FsNode) {
-		if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; } // beat the single-click action
-		closeMenu();
+	// ── opening (double-click / Enter via the right tree) ────────────────────────
+	function open(n: FsNode) {
 		if (n.kind === 'folder') navigateTo(n.path);
 		else statusInfo = `Opening “${n.name}”…`;
 	}
-	function rowKey(e: KeyboardEvent, n: FsNode) {
-		if (e.key === 'Enter') { e.preventDefault(); rowOpen(n); }
-		else if (e.key === ' ') { e.preventDefault(); rightSelection = new Set([n.path]); lastClickedPath = n.path; }
-	}
 
-	// ── context menu ───────────────────────────────────────────────────────────
-	let menu = $state<{ x: number; y: number; target: FsNode | null } | null>(null);
-	function openMenu(e: MouseEvent, target: FsNode | null) {
-		e.preventDefault();
-		e.stopPropagation(); // keep a row's menu from also firing the background menu
-		// Right-clicking an unselected item selects just it first (Explorer behaviour).
-		if (target && !rightSelection.has(target.path)) {
-			rightSelection = new Set([target.path]);
-			lastClickedPath = target.path;
-		}
-		let x = e.clientX, y = e.clientY;
-		const W = 210, H = 300;
-		if (typeof window !== 'undefined') {
-			if (x + W > window.innerWidth) x = window.innerWidth - W - 6;
-			if (y + H > window.innerHeight) y = window.innerHeight - H - 6;
-		}
-		menu = { x, y, target };
-	}
-	function closeMenu() { menu = null; }
-	function selectAll() { rightSelection = new Set(rightItems.map((i) => i.path)); }
-
-	// Full Windows-style path, e.g. C:\Windows\System32\drivers\etc\hosts.
-	function fullPathOf(p: string): string {
-		return [...ancestorPaths(p), p]
-			.map((q) => byPath(q)?.name ?? q)
-			.filter((name) => name !== 'This PC')
-			.map((name) => (name.startsWith('Local Disk') ? 'C:' : name))
-			.join('\\');
-	}
-	async function copyPath(node: FsNode | null) {
-		if (!node) return;
-		const text = fullPathOf(node.path);
-		try { await navigator.clipboard?.writeText(text); } catch { /* clipboard may be blocked */ }
-		statusInfo = `Path copied: ${text}`;
-		closeMenu();
-	}
-
-	// ── mutations (toolbar) ────────────────────────────────────────────────────
+	// ── mutations ────────────────────────────────────────────────────────────────
 	const nextId = () => Math.max(0, ...fs.map((n) => n.id)) + 1;
 	function nextChildPath(parentPath: string): string {
 		const prefix = parentPath ? parentPath + SEP : '';
@@ -291,44 +239,79 @@
 	}
 	// Reassigning `fs` re-inits the nav tree, so snapshot + restore its expansion.
 	async function withTreeState(mutate: () => void) {
-		const expanded = treeRef?.getExpandedPaths() ?? [];
+		const expanded = navTreeRef?.getExpandedPaths() ?? [];
 		mutate();
 		await tick();
-		treeRef?.setExpandedPaths(expanded);
-		for (const a of ancestorPaths(currentPath)) await treeRef?.expandNodes(a);
-		treeRef?.focusNode(currentPath);
+		navTreeRef?.setExpandedPaths(expanded);
+		for (const a of ancestorPaths(currentPath)) await navTreeRef?.expandNodes(a);
+		navTreeRef?.focusNode(currentPath);
 	}
-	function newFolder() {
+	async function newFolder() {
 		const path = nextChildPath(currentPath);
 		const name = uniqueName('New folder', currentPath);
-		withTreeState(() => {
+		await withTreeState(() => {
 			fs = [...fs, { id: nextId(), path, name, kind: 'folder', ext: '', modified: '28.06.2026 10:00', size: null }];
 		});
-		rightSelection = new Set([path]);
+		// Select the freshly created folder in the right pane (find its synthetic path).
+		const created = rightTreeData.find((n) => n.path === path);
+		rightSel = created ? new Set([created.treePath]) : new Set();
 	}
-	function deleteSelected() {
-		if (rightSelection.size === 0) return;
+	function deleteNodes(targets: FsNode[]) {
+		if (!targets.length) return;
 		const doomed = new Set<string>();
-		for (const p of rightSelection) {
-			doomed.add(p);
-			for (const n of fs) if (n.path.startsWith(p + SEP)) doomed.add(n.path);
+		for (const t of targets) {
+			doomed.add(t.path);
+			for (const n of fs) if (n.path.startsWith(t.path + SEP)) doomed.add(n.path);
 		}
 		withTreeState(() => { fs = fs.filter((n) => !doomed.has(n.path)); });
-		rightSelection = new Set();
+		rightSel = new Set();
 	}
-	function renameSelected() {
-		if (rightSelection.size !== 1) return;
-		const p = [...rightSelection][0];
-		const node = byPath(p);
-		if (!node) return;
-		const next = typeof prompt === 'function' ? prompt('Rename', node.name) : null;
-		if (!next || next === node.name) return;
+	function renameNode(target: FsNode) {
+		const next = typeof prompt === 'function' ? prompt('Rename', target.name) : null;
+		if (!next || next === target.name) return;
 		withTreeState(() => {
-			fs = fs.map((n) => (n.path === p ? { ...n, name: uniqueName(next, parentOf(p)) } : n));
+			fs = fs.map((n) => (n.path === target.path ? { ...n, name: uniqueName(next, parentOf(target.path)) } : n));
 		});
 	}
+	function selectAll() { rightSel = new Set(rightTreeData.map((n) => n.treePath)); }
 
-	function sortByName(items: LTreeNode<FsNode>[]) {
+	// Full Windows-style path, e.g. C:\Windows\System32\drivers\etc\hosts.
+	function fullPathOf(p: string): string {
+		return [...ancestorPaths(p), p]
+			.map((q) => byPath(q)?.name ?? q)
+			.filter((name) => name !== 'This PC')
+			.map((name) => (name.startsWith('Local Disk') ? 'C:' : name))
+			.join('\\');
+	}
+	async function copyPath(node: FsNode) {
+		const text = fullPathOf(node.path);
+		try { await navigator.clipboard?.writeText(text); } catch { /* clipboard may be blocked */ }
+		statusInfo = `Path copied: ${text}`;
+	}
+
+	// Library context menu for the right pane. Acts on the current selection when the
+	// right-clicked row is part of it, otherwise on just that row (Explorer behaviour).
+	function rightMenu(
+		node: LTreeNode<RightItem>,
+		_close: () => void,
+		selected?: LTreeNode<RightItem>[]
+	): ContextMenuEntry[] {
+		const data = node.data!;
+		const inSel = rightSel.has(data.treePath);
+		const targets: FsNode[] = inSel && selected?.length ? selected.map((s) => s.data!) : [data];
+		return [
+			{ label: 'Open', icon: data.kind === 'folder' ? '📂' : '📄', onclick: () => open(data) },
+			{ divider: true },
+			{ label: 'Copy path', icon: '📋', onclick: () => copyPath(data) },
+			{ label: 'Rename', icon: '✎', isDisabled: targets.length !== 1, onclick: () => renameNode(targets[0]) },
+			{ label: `Delete${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: '🗑', className: 'danger', onclick: () => deleteNodes(targets) },
+			{ divider: true },
+			{ label: 'New folder', icon: '🗀', onclick: () => newFolder() },
+			{ label: 'Select all', onclick: () => selectAll() }
+		];
+	}
+
+	function navSort(items: LTreeNode<FsNode>[]) {
 		return [...items].sort((a, b) => collator.compare(a.data?.name ?? '', b.data?.name ?? ''));
 	}
 
@@ -378,19 +361,19 @@
 	<div class="winx__actionbar">
 		<button class="winx__action" onclick={newFolder}>🗀 New folder</button>
 		<span class="winx__sep"></span>
-		<button class="winx__action" disabled={selectedCount !== 1} onclick={renameSelected}>✎ Rename</button>
-		<button class="winx__action winx__action--danger" disabled={selectedCount === 0} onclick={deleteSelected}>🗑 Delete</button>
+		<button class="winx__action" disabled={selectedCount !== 1} onclick={() => renameNode(selectedNodes[0])}>✎ Rename</button>
+		<button class="winx__action winx__action--danger" disabled={selectedCount === 0} onclick={() => deleteNodes(selectedNodes)}>🗑 Delete</button>
 	</div>
 
 	<!-- Body: nav pane + contents pane -->
 	<div class="winx__body">
 		<div class="winx__nav">
 			<Tree
-				bind:this={treeRef}
+				bind:this={navTreeRef}
 				data={folderData}
 				idMember="id"
 				pathMember="path"
-				sortCallback={sortByName}
+				sortCallback={navSort}
 				isSorted={true}
 				expandLevel={2}
 				clickBehavior="select"
@@ -407,8 +390,9 @@
 			</Tree>
 		</div>
 
+		<!-- Right pane: a second <Tree> rendering the details list -->
 		<div class="winx__contents">
-			<!-- column header -->
+			<!-- column header (sticky; shares the row grid template) -->
 			<div class="winx__cols">
 				<button class="winx__col winx__col--name" onclick={() => sortBy('name')}>
 					Name {sortKey === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
@@ -424,26 +408,25 @@
 				</button>
 			</div>
 
-			<!-- rows -->
-			<div
-				class="winx__rows"
-				role="listbox"
-				aria-label="Folder contents"
-				tabindex="-1"
-				oncontextmenu={(e) => openMenu(e, null)}
-			>
-				{#each rightItems as item (item.path)}
-					<div
-						class="winx__row"
-						class:winx__row--selected={rightSelection.has(item.path)}
-						role="option"
-						aria-selected={rightSelection.has(item.path)}
-						tabindex="-1"
-						onclick={(e) => rowClick(item, e)}
-						ondblclick={() => rowOpen(item)}
-						oncontextmenu={(e) => openMenu(e, item)}
-						onkeydown={(e) => rowKey(e, item)}
-					>
+			<div class="winx-right" aria-label="Folder contents">
+				<Tree
+					data={rightTreeData}
+					idMember="id"
+					pathMember="treePath"
+					sortCallback={keepRightOrder}
+					isSorted={true}
+					expandLevel={1}
+					clickBehavior="select"
+					selectionMode="multi"
+					leafIconClass=""
+					nodeClass={rightNodeClass}
+					bind:highlightedPaths={rightSel}
+					onNodeClick={(node) => { if (node.data) statusInfo = previewText(node.data); }}
+					onNodeDoubleClick={(node) => { if (node.data) open(node.data); }}
+					getContextMenuItemsCallback={rightMenu}
+				>
+					{#snippet nodeTemplate(node: LTreeNode<RightItem>)}
+						{@const item = node.data!}
 						<span class="winx__cell winx__cell--name">
 							<span class="winx__rowicon">{iconFor(item)}</span>
 							<span class="winx__namebox">
@@ -456,9 +439,10 @@
 						<span class="winx__cell winx__cell--date">{item.modified}</span>
 						<span class="winx__cell winx__cell--type">{typeLabel(item)}</span>
 						<span class="winx__cell winx__cell--size">{formatSize(item.size)}</span>
-					</div>
-				{/each}
-				{#if rightItems.length === 0}
+					{/snippet}
+				</Tree>
+
+				{#if rightTreeData.length === 0}
 					<div class="winx__empty">
 						{filter ? `No items match "${filter}".` : 'This folder is empty.'}
 					</div>
@@ -469,49 +453,11 @@
 
 	<!-- Status bar -->
 	<div class="winx__status">
-		<span>{rightItems.length} item{rightItems.length === 1 ? '' : 's'}</span>
+		<span>{rightTreeData.length} item{rightTreeData.length === 1 ? '' : 's'}</span>
 		{#if selectedCount > 0}<span class="winx__status-sel">{selectedCount} item{selectedCount === 1 ? '' : 's'} selected</span>{/if}
 		{#if statusInfo}<span class="winx__status-info">{statusInfo}</span>{/if}
 	</div>
-
-	<!-- Right-click context menu -->
-	{#if menu}
-		<button
-			type="button"
-			class="winx__menu-backdrop"
-			aria-label="Close menu"
-			onclick={closeMenu}
-			oncontextmenu={(e) => { e.preventDefault(); closeMenu(); }}
-		></button>
-		<div class="winx__menu" style="left: {menu.x}px; top: {menu.y}px;" role="menu">
-			{#if menu.target}
-				{@const t = menu.target}
-				<button class="winx__menu-item" role="menuitem" onclick={() => { closeMenu(); rowOpen(t); }}>
-					<span class="winx__menu-ico">{t.kind === 'folder' ? '📂' : '📄'}</span> Open
-				</button>
-				<div class="winx__menu-sep"></div>
-				<button class="winx__menu-item" role="menuitem" onclick={() => copyPath(t)}>
-					<span class="winx__menu-ico">📋</span> Copy path
-				</button>
-				<button class="winx__menu-item" role="menuitem" disabled={selectedCount !== 1} onclick={() => { closeMenu(); renameSelected(); }}>
-					<span class="winx__menu-ico">✎</span> Rename
-				</button>
-				<button class="winx__menu-item winx__menu-item--danger" role="menuitem" onclick={() => { closeMenu(); deleteSelected(); }}>
-					<span class="winx__menu-ico">🗑</span> Delete{selectedCount > 1 ? ` (${selectedCount})` : ''}
-				</button>
-				<div class="winx__menu-sep"></div>
-			{/if}
-			<button class="winx__menu-item" role="menuitem" onclick={() => { closeMenu(); newFolder(); }}>
-				<span class="winx__menu-ico">🗀</span> New folder
-			</button>
-			<button class="winx__menu-item" role="menuitem" onclick={() => { closeMenu(); selectAll(); }}>
-				<span class="winx__menu-ico">▦</span> Select all
-			</button>
-		</div>
-	{/if}
 </div>
-
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape') closeMenu(); }} />
 
 <style>
 	.winx {
@@ -610,10 +556,13 @@
 	.winx__navrow { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 	.winx__navicon { font-size: 13px; }
 
-	.winx__contents { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #fff; }
+	/* Right pane: header + the details <Tree> share ONE sticky-header scroll area,
+	   so the column tracks line up regardless of the scrollbar. */
+	.winx__contents { flex: 1; min-width: 0; overflow: auto; background: #fff; }
 
-	/* Column header */
+	/* Column header (sticky, same 4-track template as each row) */
 	.winx__cols {
+		position: sticky; top: 0; z-index: 2;
 		display: grid; grid-template-columns: minmax(180px, 2fr) 1.2fr 1.2fr 0.8fr;
 		border-bottom: 1px solid var(--winx-border); background: #fff;
 	}
@@ -625,16 +574,29 @@
 	.winx__col:hover { background: #f5f5f5; }
 	.winx__col--size { text-align: right; }
 
-	/* Rows */
-	.winx__rows { flex: 1; overflow: auto; }
-	.winx__row {
-		display: grid; grid-template-columns: minmax(180px, 2fr) 1.2fr 1.2fr 0.8fr;
-		align-items: center; cursor: default; border: 1px solid transparent;
+	/* The right <Tree>: flatten the row chrome and turn each row's content into the
+	   same 4-track grid as the header so columns align. */
+	.winx-right {
+		--stv-node-indent-per-level: 0; /* flat list — no indentation */
 	}
-	.winx__row:hover { background: #f2f7fd; }
-	.winx__row--selected { background: #cfe5fb; border-color: #a8cef0; }
-	.winx__row--selected:hover { background: #c3ddf8; }
-	.winx__cell { padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1b1b1b; }
+	.winx-right :global(.stv__toggle-icon) { display: none; }       /* no chevrons in a flat list */
+	.winx-right :global(.stv__node) { margin-left: 0 !important; }
+	.winx-right :global(.stv__node-row) { display: block; }
+	.winx-right :global(.stv__node-content) {
+		display: grid;
+		grid-template-columns: minmax(180px, 2fr) 1.2fr 1.2fr 0.8fr;
+		align-items: center;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		border-radius: 0;
+	}
+	.winx-right :global(.stv__node-content:hover) { background: #f2f7fd; }
+	/* library highlight = our selection look (background-only so the grid never shifts) */
+	.winx-right :global(.stv__node-content--highlighted) { background: #cfe5fb; box-shadow: inset 0 0 0 1px #a8cef0; }
+	.winx-right :global(.stv__node-content--highlighted:hover) { background: #c3ddf8; }
+
+	.winx__cell { padding: 3px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1b1b1b; min-width: 0; }
 	.winx__cell--name { display: flex; align-items: center; gap: 8px; }
 	.winx__cell--date, .winx__cell--type { color: #444; }
 	.winx__cell--size { text-align: right; color: #444; }
@@ -652,26 +614,4 @@
 	}
 	.winx__status-sel { color: #1b1b1b; }
 	.winx__status-info { color: var(--winx-accent); margin-left: auto; }
-
-	/* Context menu */
-	.winx__menu-backdrop {
-		position: fixed; inset: 0; z-index: 40;
-		border: none; background: transparent; padding: 0; margin: 0; cursor: default;
-	}
-	.winx__menu {
-		position: fixed; z-index: 41; min-width: 200px;
-		background: #fff; border: 1px solid #e2e2e2; border-radius: 8px;
-		box-shadow: 0 10px 32px rgba(0, 0, 0, 0.20); padding: 5px;
-	}
-	.winx__menu-item {
-		display: flex; align-items: center; gap: 10px; width: 100%;
-		border: none; background: transparent; border-radius: 5px;
-		padding: 7px 12px; font: inherit; font-size: 13px; color: #1b1b1b;
-		text-align: left; cursor: pointer; white-space: nowrap;
-	}
-	.winx__menu-item:hover:not(:disabled) { background: #eaf2fb; }
-	.winx__menu-item:disabled { color: #b3b3b3; cursor: default; }
-	.winx__menu-item--danger:hover:not(:disabled) { background: #fdeaea; color: #b42318; }
-	.winx__menu-ico { width: 16px; text-align: center; }
-	.winx__menu-sep { height: 1px; background: #ececec; margin: 5px 6px; }
 </style>
