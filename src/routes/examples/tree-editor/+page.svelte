@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
+	import type { TreeController } from '$lib/core/TreeController.svelte.js';
 	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
@@ -40,9 +41,121 @@
 
 	let treeRef: Tree<EditorNode>;
 	let selectedNode = $state<LTreeNode<EditorNode> | null>(null);
+	// Multi-select highlight set (Ctrl/Cmd+click, Shift+click, Shift+Arrow).
+	let highlightedPaths = $state<Set<string>>(new Set());
+	// Paths currently dimmed because they were cut and await paste. The library
+	// tracks an equivalent set on the controller (controller.cutPaths) but doesn't
+	// render it, so we mirror it here and dim via the nodeTemplate.
+	let cutPaths = $state<Set<string>>(new Set());
 	let activityLog = $state<string[]>([]);
 	let dropWarning = $state<string | null>(null);
 	let nextId = 200;
+
+	// ── Clipboard wiring (Ctrl/Cmd + C / X / V) ──────────────────────────────
+	// The controller implements the clipboard operations (copyNodes / cutNodes /
+	// pasteNodes / cancelCut) and a shared cross-tree clipboard; the key bindings
+	// are left to the consumer because paste needs an app-specific transform
+	// (fresh ids) and a target. We wire them through onTreeKeydown.
+
+	// Copy/cut operate on the highlight set when present, else the focused node.
+	function clipboardPaths(controller: TreeController<EditorNode>): string[] {
+		if (controller.highlightedPaths.size > 0) return [...controller.highlightedPaths];
+		return selectedNode ? [selectedNode.path] : [];
+	}
+
+	// Every pasted node (root + descendants) gets a fresh id; path is assigned by
+	// addNode. Reusing ids would collide with existing nodes.
+	function transformPasted(data: EditorNode): EditorNode {
+		return { ...data, id: nextId++, path: '' };
+	}
+
+	// "Node1" → "Node1 Copy 1" → "Node1 Copy 2" … until the name is free among the
+	// target's existing children. The leading `replace` strips any prior " Copy N"
+	// so repeated pastes stay "Copy 1 / 2 / 3" instead of compounding into
+	// "Copy 1 Copy 1 …" (a copy persists on the clipboard, and beforePaste mutates
+	// its name, so the same entry is re-renamed on every paste).
+	function uniqueCopyName(name: string, taken: Set<string>): string {
+		const stem = name.replace(/ Copy \d+$/, '');
+		if (!taken.has(stem)) return stem;
+		let n = 1;
+		while (taken.has(`${stem} Copy ${n}`)) n++;
+		return `${stem} Copy ${n}`;
+	}
+
+	// beforePasteCallback: a pre-paste interceptor with the target path + clipboard
+	// entries. Runs BEFORE the paste-into-self guard, so it can both redirect the
+	// target and rename entries. Two behaviours for COPY:
+	//   1. "Duplicate in the same folder" — Ctrl+C then Ctrl+V without moving focus
+	//      pastes onto the copied node itself; redirect into its parent so the copy
+	//      lands as a sibling (like duplicating a file in its own directory).
+	//   2. "Copy N" suffix when the name already exists under the (final) target.
+	// Only the root entry is renamed; descendants keep their names. Cut (move) is
+	// left untouched. Mutating entry.data here is seen by the transformPasted/addNode pass.
+	function beforePaste(
+		targetPath: string,
+		operation: 'copy' | 'cut',
+		entries: { data: EditorNode; sourcePath: string }[]
+	): { targetPath?: string } | void {
+		if (operation !== 'copy') return;
+
+		// 1. Pasting onto the copied node itself → redirect to its parent.
+		let redirect: { targetPath?: string } | undefined;
+		if (targetPath && entries.some((e) => e.sourcePath === targetPath)) {
+			targetPath = treeRef.getNodeByPath(targetPath)?.parentPath ?? '';
+			redirect = { targetPath };
+		}
+
+		// 2. "Copy N" naming against the (possibly redirected) target's children.
+		const taken = new Set(treeRef.getChildren(targetPath).map((c) => c.data?.name ?? ''));
+		for (const entry of entries) {
+			const name = uniqueCopyName(entry.data.name, taken);
+			entry.data = { ...entry.data, name };
+			taken.add(name);
+		}
+
+		return redirect;
+	}
+
+	function handleTreeKeydown(event: KeyboardEvent, controller: TreeController<EditorNode>): boolean {
+		// Ctrl on Windows/Linux, Cmd (metaKey) on macOS.
+		const mod = event.ctrlKey || event.metaKey;
+		const key = event.key.toLowerCase();
+
+		// Success logging lives in the onCopy / onCut / onPaste callbacks below;
+		// here we only map keys → operations (and report the can't-act cases).
+		if (mod && key === 'c') {
+			const paths = clipboardPaths(controller);
+			if (!paths.length) { addLog('Nothing selected to copy'); return true; }
+			controller.copyNodes(paths);
+			cutPaths = new Set(); // copying supersedes any pending cut
+			return true;
+		}
+
+		if (mod && key === 'x') {
+			const paths = clipboardPaths(controller);
+			if (!paths.length) { addLog('Nothing selected to cut'); return true; }
+			controller.cutNodes(paths);
+			cutPaths = new Set(controller.cutPaths); // mirror dim set for the template
+			return true;
+		}
+
+		if (mod && key === 'v') {
+			if (!controller.hasClipboardContent()) { addLog('Clipboard is empty'); return true; }
+			controller.pasteNodes(selectedNode?.path ?? '', transformPasted, 'child');
+			cutPaths = new Set();
+			return true;
+		}
+
+		// Clear our cut-dimming alongside the library's Escape→cancel-cut.
+		if (event.key === 'Escape' && cutPaths.size > 0) {
+			controller.cancelCut();
+			cutPaths = new Set();
+			addLog('Cut cancelled');
+			return true;
+		}
+
+		return false; // let the tree handle everything else
+	}
 
 	// Form state for adding nodes
 	let newNodeName = $state('');
@@ -313,8 +426,14 @@
 	<div class="card">
 		<h2>Interactive Tree Editor</h2>
 		<p class="description">
-			Select a node, then use the controls to add children, remove, or reorder.
-			Drag and drop also works for moving nodes!
+			Click to select a node (double-click to expand), then use the controls to add
+			children, remove, or reorder. <strong>Ctrl/Cmd+click</strong> or
+			<strong>Shift+click</strong> to multi-select, then <strong>Ctrl/Cmd+C / X / V</strong>
+			to copy, cut, and paste — paste lands under the focused node (or at root), and a
+			pasted copy whose name already exists there becomes <em>"Name Copy 1"</em>, <em>"Name Copy 2"</em>, …. Copying a
+			node and pasting it without moving (<strong>Ctrl/Cmd+C</strong> then
+			<strong>Ctrl/Cmd+V</strong>) drops the copy next to it in the same folder. Cut nodes
+			dim until pasted; <strong>Esc</strong> cancels a pending cut. Drag and drop also moves nodes.
 		</p>
 
 		<div class="editor-layout">
@@ -329,10 +448,18 @@
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
+						clickBehavior="select"
+						selectionMode="multi"
 						dragDropMode="both"
 						getIsDraggableCallback={() => true}
 						getIsDropAllowedCallback={() => true}
 						bind:focusedNode={selectedNode}
+						bind:highlightedPaths={highlightedPaths}
+						onTreeKeydown={handleTreeKeydown}
+						onCopy={(paths) => addLog(`Copied ${paths.length} node(s) to clipboard`)}
+						onCut={(paths) => addLog(`Cut ${paths.length} node(s) — paste to move`)}
+						onPaste={(result) => addLog(result.success ? `Pasted ${result.count} node(s)` : `Paste failed: ${result.error}`)}
+						beforePasteCallback={beforePaste}
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
 						onNodeDragStart={handleDragStart}
@@ -343,7 +470,10 @@
 						{...getTreeProps()}
 					>
 						{#snippet nodeTemplate(node: any)}
-							<span class:selected-node={selectedNode?.path === node.path}>
+							<span
+								class:selected-node={selectedNode?.path === node.path}
+								class:cut-dimmed={cutPaths.has(node.path)}
+							>
 								{node.data?.icon} {node.data?.name}
 								<span class="node-type">{node.data?.type}</span>
 							</span>
@@ -546,7 +676,7 @@
 
 		<div class="code-block">
 			<pre>{`<script lang="ts">
-  import Tree from '@keenmate/svelte-treeview';
+  import { Tree } from '@keenmate/svelte-treeview';
   import type { LTreeNode, DropPosition, DropOperation } from '@keenmate/svelte-treeview';
 
   interface MyNode {
@@ -618,6 +748,135 @@
     <span>{node.data?.name}</span>
   {/snippet}
 </Tree>`}</pre>
+		</div>
+	</div>
+
+	<!-- Multi-select + Clipboard -->
+	<div class="card">
+		<h2>Multi-select &amp; Clipboard (Ctrl/Cmd + C / X / V)</h2>
+		<p class="description">
+			The controller implements the clipboard operations and a shared cross-tree
+			clipboard; the key bindings are left to you via <code>onTreeKeydown</code>
+			because paste needs an app-specific transform (fresh ids) and a target path.
+			Enable multi-select with <code>selectionMode="multi"</code>, then wire the
+			shortcuts to <code>controller.copyNodes / cutNodes / pasteNodes</code>.
+		</p>
+
+		<div class="code-block">
+			<pre>{`import type { TreeController } from '@keenmate/svelte-treeview';
+
+let focusedNode = $state<LTreeNode<MyNode> | null>(null);
+let highlightedPaths = $state<Set<string>>(new Set());
+let cutPaths = $state<Set<string>>(new Set());
+let nextId = 1000;
+
+// Copy/cut act on the highlight set when present, else the focused node.
+function clipboardPaths(controller: TreeController<MyNode>) {
+  if (controller.highlightedPaths.size > 0) return [...controller.highlightedPaths];
+  return focusedNode ? [focusedNode.path] : [];
+}
+
+// Every pasted node (root + descendants) needs a fresh id; path is set by addNode.
+function transformPasted(data: MyNode): MyNode {
+  return { ...data, id: nextId++, path: '' };
+}
+
+// beforePasteCallback runs BEFORE the paste-into-self guard, so it can redirect
+// the target AND rename entries. For a COPY:
+//   1. pasting onto the copied node itself (Ctrl+C then Ctrl+V, no move) →
+//      redirect into its parent so the copy lands as a sibling (same-folder dup);
+//   2. give the copy a "Copy N" suffix when its name already exists there.
+function beforePaste(targetPath, operation, entries) {
+  if (operation !== 'copy') return;               // a move (cut) keeps its name + target
+  let redirect;
+  if (targetPath && entries.some(e => e.sourcePath === targetPath)) {
+    targetPath = treeRef.getNodeByPath(targetPath)?.parentPath ?? '';
+    redirect = { targetPath };
+  }
+  const taken = new Set(treeRef.getChildren(targetPath).map(c => c.data?.name));
+  for (const entry of entries) {
+    // strip a prior " Copy N" so repeats stay Copy 1 / 2 / 3 (the copy persists on
+    // the clipboard and this mutates its name, so the same entry is re-renamed).
+    const stem = entry.data.name.replace(/ Copy \\d+$/, '');
+    let name = stem, n = 1;
+    while (taken.has(name)) name = \`\${stem} Copy \${n++}\`;
+    entry.data = { ...entry.data, name };
+    taken.add(name);
+  }
+  return redirect;                                // change the paste target, or undefined
+}
+
+function handleKeydown(event: KeyboardEvent, controller: TreeController<MyNode>) {
+  const mod = event.ctrlKey || event.metaKey;  // Ctrl on Win/Linux, Cmd on macOS
+  const key = event.key.toLowerCase();
+
+  if (mod && key === 'c') {
+    controller.copyNodes(clipboardPaths(controller));
+    cutPaths = new Set();                         // copy supersedes a pending cut
+    return true;
+  }
+  if (mod && key === 'x') {
+    controller.cutNodes(clipboardPaths(controller));
+    cutPaths = new Set(controller.cutPaths);      // mirror dim set for the template
+    return true;
+  }
+  if (mod && key === 'v') {
+    if (!controller.hasClipboardContent()) return true;
+    controller.pasteNodes(focusedNode?.path ?? '', transformPasted, 'child');
+    cutPaths = new Set();
+    return true;
+  }
+  if (event.key === 'Escape' && cutPaths.size > 0) {
+    controller.cancelCut();
+    cutPaths = new Set();
+    return true;
+  }
+  return false;  // let the tree handle everything else
+}`}</pre>
+		</div>
+
+		<div class="code-block" style="margin-top: 1rem;">
+			<pre>{`<Tree
+  bind:this={treeRef}
+  data={data}
+  clickBehavior="select"            // click selects, double-click expands
+  selectionMode="multi"             // Ctrl/Cmd+click & Shift+click extend the set
+  bind:focusedNode={focusedNode}
+  bind:highlightedPaths={highlightedPaths}
+  onTreeKeydown={handleKeydown}
+  onCopy={(paths) => log(\`copied \${paths.length}\`)}
+  onCut={(paths) => log(\`cut \${paths.length}\`)}
+  onPaste={(result) => log(result.success ? \`pasted \${result.count}\` : result.error)}
+  beforePasteCallback={beforePaste}
+>
+  {#snippet nodeTemplate(node)}
+    <span class:cut-dimmed={cutPaths.has(node.path)}>{node.data?.name}</span>
+  {/snippet}
+</Tree>`}</pre>
+		</div>
+
+		<div class="note">
+			<p class="note-title">Events, interceptors &amp; "Copy N" naming</p>
+			<p>
+				The clipboard ops have symmetric hooks in two families:
+				<code>beforeCopy</code> / <code>beforeCut</code> / <code>beforePaste</code>
+				<strong>interceptors</strong> (the <code>*Callback</code> family — rewrite or block)
+				and <code>onCopy</code> / <code>onCut</code> / <code>onPaste</code>
+				<strong>events</strong> (the <code>on*</code> family — post-op notifications). The
+				<code>"Copy N"</code> suffix is applied in <code>beforePasteCallback</code> by
+				mutating the clipboard entries' data before they're inserted.
+			</p>
+		</div>
+
+		<div class="note">
+			<p class="note-title">Cut dimming</p>
+			<p>
+				The controller tracks cut paths on <code>controller.cutPaths</code> but doesn't
+				paint dimming itself — render it yourself by checking the path in your
+				<code>nodeTemplate</code> (the <code>.cut-dimmed</code> class above). The
+				library wires <code>Escape</code>→cancel-cut into its own keydown handler; mirror
+				it here only to clear your local dim set.
+			</p>
 		</div>
 	</div>
 
@@ -726,6 +985,11 @@
 	.selected-node {
 		font-weight: 600;
 		color: #667eea;
+	}
+
+	.cut-dimmed {
+		opacity: 0.45;
+		font-style: italic;
 	}
 
 	.node-type {

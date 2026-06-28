@@ -150,6 +150,44 @@ $effect(() => {
 });
 ```
 
+## Double-Click Detection (and why not native `dblclick`)
+
+The `onNodeDoubleClick` event and the built-in expand-on-double (in `clickBehavior="select"`) both use **manual detection on the controller**, not the browser's native `dblclick` event. This is a direct consequence of the granular re-render described above — not an oversight.
+
+### Why native `dblclick` doesn't work here
+
+The browser only fires `dblclick` when **both** clicks land on the **same DOM element**. But in this tree, the first click mutates node state (focus, and usually highlight/selection), which bumps `node._rev`. The `_rev`-keyed render then **destroys and recreates the node's content element**. So the second click of a physical double-click lands on a *freshly created* element, the browser can't pair the two clicks, and no `dblclick` is ever synthesized.
+
+This is fundamental, not fixable by one tweak:
+
+- It's not only focus — highlight and selection changes bump `_rev` too, so *any* normal click re-renders the row.
+- "Click mutates the node → node re-renders" **is** the granular-update model (the same one that turns 15–90s renders into milliseconds). Making first-click state changes update without recreating the element would mean rebuilding that performance-critical path.
+- So native `dblclick` is inherently fragile in a granular-rerender tree, regardless of how the listener is attached.
+
+### Why manual detection is the right call
+
+```typescript
+// TreeController._onNodeClicked — runs on every (UI) single click
+if (options?.uiClick && !modifiers?.ctrl && !modifiers?.shift) {
+  const now = Date.now();
+  const isDouble = this._lastClickPath === node.path && now - this._lastClickTime < 400;
+  if (isDouble) {
+    this.onNodeDoubleClickHandler?.(node);
+    if (this.clickBehavior === 'select') { /* toggle expand/collapse */ }
+    return; // consume the 2nd click → the gesture is one "open", not a re-toggle
+  }
+  this._lastClickPath = node.path;
+  this._lastClickTime = now;
+}
+```
+
+- **Survives any re-render strategy** — it tracks `(path, timestamp)` on the controller, which outlives the recreated DOM element. It ignores DOM identity entirely, so future rendering optimizations can't silently break it.
+- **Identical in flat and recursive modes** — both route clicks through the same controller method.
+- **Gated to genuine UI clicks** (`uiClick`), so programmatic `highlightNode` / `selectNode` calls are never mistaken for a double-click.
+- **Threshold is a hardcoded 400ms** — slightly tighter than Windows' 500ms default to avoid coupling unrelated clicks. (It does *not* read the OS double-click interval; switching to a configurable threshold would be the realistic path if native-like timing is ever needed.)
+
+A double-click therefore fires `onNodeClick` once (the first click) plus `onNodeDoubleClick` once; the second click is consumed.
+
 ## Performance Summary
 
 | Scenario | Before | After | Improvement |

@@ -215,6 +215,7 @@ export interface TreeControllerProps<T> {
 
 	// EVENTS (on* = fire-and-forget notifications)
 	onNodeClick?: (node: LTreeNode<T>) => void;
+	onNodeDoubleClick?: (node: LTreeNode<T>) => void;
 	onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 	onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
 	onNodeDrop?: (
@@ -226,6 +227,11 @@ export interface TreeControllerProps<T> {
 	) => void;
 	onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 	onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
+	// Post-operation clipboard notifications (fired AFTER the op succeeds). Symmetric
+	// with the before*Callback interceptors. onCopy/onCut receive the final paths
+	// (after beforeCopy/beforeCut); onPaste receives the PasteResult.
+	onCopy?: (paths: string[]) => void;
+	onCut?: (paths: string[]) => void;
 	onPaste?: (result: PasteResult<T>) => void;
 
 	// INTERCEPTORS (before*Callback = can modify/block)
@@ -320,14 +326,15 @@ export class TreeController<T> {
 	 *  from the focused node. Set on first Shift action, advances on subsequent
 	 *  Shift actions, cleared on any plain navigation. Not exposed via props. */
 	private _shiftCursor: string | null = null;
-	/** Manual double-click detection state for clickBehavior='select'. We can't
-	 *  rely on the browser's native dblclick event in this mode because the first
-	 *  click triggers focus → _setFocusedNode bumps node._rev → flat-mode {#each}
-	 *  destroys and recreates the row, so the second click lands on a different
-	 *  DOM element and the browser refuses to synthesize a dblclick. Tracking
-	 *  the click on the controller (which survives the re-render) sidesteps that. */
-	private _lastSelectClickPath: string | null = null;
-	private _lastSelectClickTime: number = 0;
+	/** Manual double-click detection state. We can't rely on the browser's native
+	 *  dblclick event because the first click triggers focus → _setFocusedNode bumps
+	 *  node._rev → flat-mode {#each} destroys and recreates the row, so the second
+	 *  click lands on a different DOM element and the browser refuses to synthesize a
+	 *  dblclick. Tracking the click on the controller (which survives the re-render)
+	 *  sidesteps that. Drives both the public onNodeDoubleClick event (all
+	 *  clickBehaviors) and the built-in expand/collapse-on-double for 'select' mode. */
+	private _lastClickPath: string | null = null;
+	private _lastClickTime: number = 0;
 	selectedPaths = $state.raw<Set<string>>(new Set());
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
@@ -354,11 +361,14 @@ export class TreeController<T> {
 
 	// Event handlers (on* = fire-and-forget)
 	onNodeClickHandler: ((node: LTreeNode<T>) => void) | undefined;
+	onNodeDoubleClickHandler: ((node: LTreeNode<T>) => void) | undefined;
 	onHighlightChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
 	onSelectionChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
 	onNodeDragStartHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
 	onNodeDragOverHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
 	onNodeDropHandler: TreeControllerProps<T>['onNodeDrop'];
+	onCopyHandler: ((paths: string[]) => void) | undefined;
+	onCutHandler: ((paths: string[]) => void) | undefined;
 	onPasteHandler: ((result: PasteResult<T>) => void) | undefined;
 	onRenderStartHandler: (() => void) | undefined;
 	onRenderProgressHandler: ((stats: RenderStats) => void) | undefined;
@@ -585,11 +595,14 @@ export class TreeController<T> {
 
 		// Store callbacks
 		this.onNodeClickHandler = props.onNodeClick;
+		this.onNodeDoubleClickHandler = props.onNodeDoubleClick;
 		this.onHighlightChangeHandler = props.onHighlightChange;
 		this.onSelectionChangeHandler = props.onSelectionChange;
 		this.onNodeDragStartHandler = props.onNodeDragStart;
 		this.onNodeDragOverHandler = props.onNodeDragOver;
 		this.onNodeDropHandler = props.onNodeDrop;
+		this.onCopyHandler = props.onCopy;
+		this.onCutHandler = props.onCut;
 		this.onPasteHandler = props.onPaste;
 		this.beforeDropHandler = props.beforeDropCallback;
 		this.beforeCopyHandler = props.beforeCopyCallback;
@@ -660,7 +673,7 @@ export class TreeController<T> {
 
 		// ── Create stable nodeCallbacks ─────────────────────────────────
 		this.nodeCallbacks = {
-			onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => this._onNodeClicked(node, modifiers),
+			onNodeClicked: (node: LTreeNode<T>, modifiers?: SelectionModifiers) => this._onNodeClicked(node, modifiers, { uiClick: true }),
 			onCheckboxToggle: (node: LTreeNode<T>, options?: { skipFocus?: boolean }) => this._onCheckboxToggle(node, options),
 			onNodeRightClicked: this._onNodeRightClicked.bind(this),
 			onNodeDragStart: this._onNodeDragStart.bind(this),
@@ -1220,13 +1233,18 @@ export class TreeController<T> {
 		const descendants: ClipboardEntry<T>['descendants'] = [];
 		const sep = this.treePathSeparator;
 
+		// $state.snapshot deproxies Svelte reactive state into a plain deep clone.
+		// structuredClone alone throws ("could not be cloned") when node.data is a
+		// $state proxy — which it is for any consumer passing default $state data.
+		const snapshot = (data: T | null | undefined): T => $state.snapshot(data) as T;
+
 		const walk = (n: LTreeNode<T>) => {
 			for (const child of Object.values(n.children)) {
 				// relativePath = everything after sourcePath + separator
 				const rel = child.path.substring(node.path.length);
 				descendants.push({
 					relativePath: rel,
-					data: structuredClone(child.data as T)
+					data: snapshot(child.data)
 				});
 				walk(child);
 			}
@@ -1236,7 +1254,7 @@ export class TreeController<T> {
 		return {
 			sourceTreeId: this.treeId,
 			sourcePath: node.path,
-			data: structuredClone(node.data as T),
+			data: snapshot(node.data),
 			descendants
 		};
 	}
@@ -1272,6 +1290,7 @@ export class TreeController<T> {
 			sourceTreeId: this.treeId
 		});
 		uiLogger.debug(`[clipboard] Copied ${entries.length} node(s)`);
+		this.onCopyHandler?.(pathsToUse);
 	}
 
 	/**
@@ -1315,6 +1334,7 @@ export class TreeController<T> {
 		});
 		this.cutPaths = cutSet;
 		uiLogger.debug(`[clipboard] Cut ${entries.length} node(s), dimming ${cutSet.size} paths`);
+		this.onCutHandler?.(pathsToUse);
 	}
 
 	/**
@@ -1373,9 +1393,11 @@ export class TreeController<T> {
 				position
 			};
 
-			// Clear clipboard and cut state
+			// Clear cut-dimming. A CUT is a one-shot move, so clear the clipboard;
+			// a COPY stays on the clipboard so it can be pasted again (Finder /
+			// Explorer / VS Code convention).
 			this.cutPaths = new Set();
-			clearClipboard();
+			if (clip.operation === 'cut') clearClipboard();
 
 			uiLogger.debug(`[clipboard] shouldAutoHandlePaste=false — forwarding ${clip.entries.length} entries to consumer`);
 			this.onPasteHandler?.(result);
@@ -1425,9 +1447,11 @@ export class TreeController<T> {
 			this._skipInsertArray = false;
 		});
 
-		// Clear clipboard and cut state
+		// Clear cut-dimming. A CUT is a one-shot move (sources were just removed), so
+		// clear the clipboard; a COPY stays on the clipboard so it can be pasted again
+		// (Finder / Explorer / VS Code convention).
 		this.cutPaths = new Set();
-		clearClipboard();
+		if (clip.operation === 'cut') clearClipboard();
 
 		const result: PasteResult<T> = {
 			success: totalCount > 0,
@@ -1991,6 +2015,7 @@ export class TreeController<T> {
 
 		// Callbacks
 		if (updates.onNodeClick !== undefined) this.onNodeClickHandler = updates.onNodeClick;
+		if (updates.onNodeDoubleClick !== undefined) this.onNodeDoubleClickHandler = updates.onNodeDoubleClick;
 		if (updates.onNodeDragStart !== undefined) this.onNodeDragStartHandler = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) this.onNodeDragOverHandler = updates.onNodeDragOver;
 		if (updates.beforeDropCallback !== undefined)
@@ -2002,6 +2027,8 @@ export class TreeController<T> {
 		if (updates.beforePasteCallback !== undefined)
 			this.beforePasteHandler = updates.beforePasteCallback;
 		if (updates.onNodeDrop !== undefined) this.onNodeDropHandler = updates.onNodeDrop;
+		if (updates.onCopy !== undefined) this.onCopyHandler = updates.onCopy;
+		if (updates.onCut !== undefined) this.onCutHandler = updates.onCut;
 		if (updates.onPaste !== undefined) this.onPasteHandler = updates.onPaste;
 		if (updates.getContextMenuItemsCallback !== undefined)
 			this.getContextMenuItemsHandler = updates.getContextMenuItemsCallback;
@@ -2013,36 +2040,44 @@ export class TreeController<T> {
 
 	// ── Internal event handlers ─────────────────────────────────────────
 
-	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean; forceMultiSemantics?: boolean }) {
+	private async _onNodeClicked(node: LTreeNode<T>, modifiers?: SelectionModifiers, options?: { silent?: boolean; forceMultiSemantics?: boolean; uiClick?: boolean }) {
 		if (this.contextMenuVisible) {
 			this.closeContextMenu();
 		}
 
-		// Manual dblclick detection for clickBehavior='select' — see the comment
-		// on _lastSelectClickPath for why the browser's native dblclick can't be
-		// trusted in this mode. Threshold matches Windows' default double-click
-		// interval (500ms is the system default; we use a slightly tighter 400ms
-		// to avoid coupling unrelated clicks).
-		if (this.clickBehavior === 'select' && !modifiers?.ctrl && !modifiers?.shift) {
+		// Manual double-click detection — see the comment on _lastClickPath for why the
+		// browser's native dblclick can't be trusted (focus bumps node._rev → flat-mode
+		// row is recreated → the 2nd click lands on a fresh element). Runs for every
+		// clickBehavior so onNodeDoubleClick fires consistently; the built-in
+		// expand/collapse-on-double-click only applies to clickBehavior='select' (the
+		// other modes already toggle on single click). On a detected double we consume
+		// the 2nd click (return early) so the gesture is a single open, not a re-toggle.
+		// Threshold = 400ms, a touch tighter than Windows' 500ms default to avoid
+		// coupling unrelated clicks. Gated on uiClick so programmatic highlight/select
+		// API calls never get mistaken for a double-click.
+		if (options?.uiClick && !modifiers?.ctrl && !modifiers?.shift) {
 			const now = Date.now();
 			const isDouble =
-				this._lastSelectClickPath === node.path &&
-				now - this._lastSelectClickTime < 400;
+				this._lastClickPath === node.path &&
+				now - this._lastClickTime < 400;
 			if (isDouble) {
-				this._lastSelectClickPath = null;
-				this._lastSelectClickTime = 0;
-				const canonical = this.tree.getNodeByPath(node.path) ?? node;
-				if (canonical.hasChildren && canonical.isCollapsible !== false) {
-					if (canonical.isExpanded) {
-						this.collapseNodes(canonical.path);
-					} else {
-						this.expandNodes(canonical.path);
+				this._lastClickPath = null;
+				this._lastClickTime = 0;
+				this.onNodeDoubleClickHandler?.(node);
+				if (this.clickBehavior === 'select') {
+					const canonical = this.tree.getNodeByPath(node.path) ?? node;
+					if (canonical.hasChildren && canonical.isCollapsible !== false) {
+						if (canonical.isExpanded) {
+							this.collapseNodes(canonical.path);
+						} else {
+							this.expandNodes(canonical.path);
+						}
 					}
 				}
 				return;
 			}
-			this._lastSelectClickPath = node.path;
-			this._lastSelectClickTime = now;
+			this._lastClickPath = node.path;
+			this._lastClickTime = now;
 		}
 
 		// In single mode, mouse Ctrl/Shift+click degrade to plain click. Programmatic

@@ -8,6 +8,7 @@
 	import type { LTreeNode } from '$lib/ltree/types.js';
 	import type { DropPosition } from '$lib/ltree/types.js';
 	import { notepadppData, type FileItem } from './notepadpp-data.js';
+	import WindowsExplorer from './WindowsExplorer.svelte';
 
 	// ── Sample data ────────────────────────────────────────────────────────
 	const sampleData = [
@@ -385,6 +386,26 @@
 		</p>
 		<RenderModeSwitch />
 	</header>
+
+	<!-- ================================================================== -->
+	<!-- 0. Windows File Explorer clone                                     -->
+	<!-- ================================================================== -->
+	<div class="card">
+		<h2>🪟 Windows File Explorer</h2>
+		<p class="description">
+			A near-complete Windows File Explorer built on <code>&lt;Tree&gt;</code>: the left
+			nav pane is the tree (folders only), the right pane is a custom sortable details
+			list of the selected folder's contents. Click a folder (left or right) to browse,
+			double-click a folder on the right to open it, use the breadcrumb / Back / Forward /
+			Up to navigate, sort by any column, search the current folder and its subfolders
+			(results show where each hit lives), and create / rename /
+			delete folders. Navigation stays in sync via the tree's
+			<code>expandNodes()</code> / <code>focusNode()</code> API. It opens on a real
+			<code>C:\Windows</code> tree — 32 folders with multi-level subfolders and files
+			(some folders left empty), so there's plenty to drill into.
+		</p>
+		<WindowsExplorer />
+	</div>
 
 	<!-- ================================================================== -->
 	<!-- 1. Standard <Tree> for comparison                                  -->

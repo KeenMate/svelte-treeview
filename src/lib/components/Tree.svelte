@@ -148,11 +148,17 @@
 
 		// EVENTS (on* = fire-and-forget notifications)
 		onNodeClick?: (node: LTreeNode<T>) => void;
+		onNodeDoubleClick?: (node: LTreeNode<T>) => void;
 		onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
 		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
 		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
+		// Post-operation clipboard notifications (fired AFTER the op). onCopy/onCut
+		// receive the final paths; onPaste receives the PasteResult.
+		onCopy?: (paths: string[]) => void;
+		onCut?: (paths: string[]) => void;
+		onPaste?: (result: import('../core/TreeController.svelte.js').PasteResult<T>) => void;
 
 		// INTERCEPTORS (before*Callback = can modify/block)
 		/**
@@ -296,11 +302,15 @@
 
 		// EVENTS
 		onNodeClick,
+		onNodeDoubleClick,
 		onHighlightChange,
 		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
 		onNodeDrop,
+		onCopy,
+		onCut,
+		onPaste,
 		// INTERCEPTORS
 		beforeDropCallback,
 		beforeCopyCallback,
@@ -405,11 +415,15 @@
 		shouldAutoHandlePaste,
 		isAccordionExpand,
 		onNodeClick,
+		onNodeDoubleClick,
 		onHighlightChange,
 		onSelectionChange,
 		onNodeDragStart,
 		onNodeDragOver,
 		onNodeDrop,
+		onCopy,
+		onCut,
+		onPaste,
 		beforeDropCallback,
 		beforeCopyCallback,
 		beforeCutCallback,
@@ -536,11 +550,15 @@
 
 	// Callback sync
 	$effect(() => { controller.onNodeClickHandler = onNodeClick; });
+	$effect(() => { controller.onNodeDoubleClickHandler = onNodeDoubleClick; });
 	$effect(() => { controller.onHighlightChangeHandler = onHighlightChange; });
 	$effect(() => { controller.onSelectionChangeHandler = onSelectionChange; });
 	$effect(() => { controller.onNodeDragStartHandler = onNodeDragStart; });
 	$effect(() => { controller.onNodeDragOverHandler = onNodeDragOver; });
 	$effect(() => { controller.onNodeDropHandler = onNodeDrop; });
+	$effect(() => { controller.onCopyHandler = onCopy; });
+	$effect(() => { controller.onCutHandler = onCut; });
+	$effect(() => { controller.onPasteHandler = onPaste; });
 	$effect(() => { controller.beforeDropHandler = beforeDropCallback; });
 	$effect(() => { controller.beforeCopyHandler = beforeCopyCallback; });
 	$effect(() => { controller.beforeCutHandler = beforeCutCallback; });
@@ -825,11 +843,15 @@
 				| "shouldDisplayDebugInformation"
 				| "shouldDisplayContextMenuInDebugMode"
 				| "onNodeClick"
+				| "onNodeDoubleClick"
 				| "onHighlightChange"
 				| "onSelectionChange"
 				| "onNodeDragStart"
 				| "onNodeDragOver"
 				| "onNodeDrop"
+				| "onCopy"
+				| "onCut"
+				| "onPaste"
 				| "beforeDropCallback"
 				| "beforeCopyCallback"
 				| "beforeCutCallback"
@@ -904,11 +926,15 @@
 		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
 		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
 		if (updates.onNodeClick !== undefined) onNodeClick = updates.onNodeClick;
+		if (updates.onNodeDoubleClick !== undefined) onNodeDoubleClick = updates.onNodeDoubleClick;
 		if (updates.onHighlightChange !== undefined) onHighlightChange = updates.onHighlightChange;
 		if (updates.onSelectionChange !== undefined) onSelectionChange = updates.onSelectionChange;
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
 		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
+		if (updates.onCopy !== undefined) onCopy = updates.onCopy;
+		if (updates.onCut !== undefined) onCut = updates.onCut;
+		if (updates.onPaste !== undefined) onPaste = updates.onPaste;
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.beforeCopyCallback !== undefined) beforeCopyCallback = updates.beforeCopyCallback;
 		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;

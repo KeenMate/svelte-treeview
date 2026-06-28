@@ -973,11 +973,20 @@ wrapper.className = 'brand-${dynamicBrand}';
 	/* Signal #3 — per-instance theme on the inner tree. The Tree component
 	   forwards `theme` as `data-theme` on its internal .stv__container. :has()
 	   lets the wrapper react to that without JS. :global() so Svelte's CSS
-	   scoper doesn't drop the selector as unused. */
-	:global(.playground-wrapper:has(.stv__container[data-theme='dark'])) {
+	   scoper doesn't drop the selector as unused.
+
+	   Scoped to .brand-default ONLY. These :has() rules carry specificity (0,3,0)
+	   — higher than a brand theme's base rule :global(.playground-wrapper.brand-X)
+	   at (0,2,0). Left unscoped, the light variant (#f9fafb) out-specified every
+	   brand's base surface, so picking theme="light" reverted the wrapper to plain
+	   gray and clobbered the brand background (Glass went white-on-white). Every
+	   real brand theme owns its surface in all three modes via its base rule (light)
+	   and its .brand-X:has(...dark) variant (dark), so the generic flip is only
+	   needed for the unstyled default theme. */
+	:global(.playground-wrapper.brand-default:has(.stv__container[data-theme='dark'])) {
 		background: #1f2937;
 	}
-	:global(.playground-wrapper:has(.stv__container[data-theme='light'])) {
+	:global(.playground-wrapper.brand-default:has(.stv__container[data-theme='light'])) {
 		background: #f9fafb;
 	}
 
@@ -1012,11 +1021,13 @@ wrapper.className = 'brand-${dynamicBrand}';
 		background: #ffffff;
 	}
 	/* Per-instance wins via :has() on the tree-container's own data-theme.
-	   :global() so Svelte's scoper doesn't drop the selector as unused. */
-	:global(.playground-tree:has(.stv__container[data-theme='dark'])) {
+	   :global() so Svelte's scoper doesn't drop the selector as unused. Scoped to
+	   .brand-default for the same reason as the wrapper rules above — branded trees
+	   own their panel surface (e.g. Glass's translucent rgba panel) in every mode. */
+	:global(.brand-default .playground-tree:has(.stv__container[data-theme='dark'])) {
 		background: #1a1a1a;
 	}
-	:global(.playground-tree:has(.stv__container[data-theme='light'])) {
+	:global(.brand-default .playground-tree:has(.stv__container[data-theme='light'])) {
 		background: #ffffff;
 	}
 

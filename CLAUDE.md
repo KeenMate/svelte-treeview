@@ -98,7 +98,8 @@ SELECTION_API (three symmetric families; opts = TreeMutationOptions { silent? })
 - mode = HighlightMode 'replace'|'toggle'|'range' (plain/Ctrl/Shift click). NOTE: select* = checkbox set; highlight* = UI set. clearSelection replaces the old deselectAll.
 
 EVENTS:
-- onNodeClicked(node)
+- onNodeClick(node)
+- onNodeDoubleClick(node) - fires for every clickBehavior; detection is manual on the controller (native dblclick is unreliable in flat mode where focus bumps _rev → row recreated); select mode also toggles expand/collapse on double
 - onNodeDragStart(node, event)
 - onNodeDrop(dropNode, draggedNode, position, event, operation)
 

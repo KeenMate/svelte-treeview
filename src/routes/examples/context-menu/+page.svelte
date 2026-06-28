@@ -151,6 +151,11 @@
 		<RenderModeSwitch />
 	</header>
 
+	<div class="note">
+		<p class="note-title">Positioning is handled by Floating UI</p>
+		<p>The menu and its submenus are placed by <a href="https://floating-ui.com/" target="_blank" rel="noopener"><code>@floating-ui/dom</code></a> (a runtime dependency). It uses <code>computePosition</code> with <code>offset</code>, <code>flip</code>, and <code>shift</code> middleware so the menu stays inside the viewport — submenus automatically flip to the left edge when there's no room on the right, and <code>autoUpdate</code> keeps everything anchored on scroll/resize. The <code>contextMenuXOffset</code>/<code>contextMenuYOffset</code> props feed into the root menu's offset from the cursor.</p>
+	</div>
+
 	<!-- Dynamic Context Menu (Callback approach) -->
 	<div class="card">
 		<h2>Callback Approach</h2>
@@ -417,6 +422,7 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
 			<p class="note-title">Debug Mode</p>
 			<p>Enable <code>shouldDisplayContextMenuInDebugMode</code> to display the context menu at a fixed position (200px right, 100px down from tree container). Useful for development and testing.</p>
 		</div>
+
 	</div>
 
 	<!-- CSS Customization -->

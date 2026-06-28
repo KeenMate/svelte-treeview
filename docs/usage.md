@@ -114,9 +114,23 @@ Without both requirements, no search indexing will occur.
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
+| `onNodeDoubleClick` | `(node) => void` | `undefined` | Node double-click event handler. Fires for every `clickBehavior` (detection is manual on the controller, so it's reliable in flat mode where the native `dblclick` is not — see [FLAT_MODE_PERFORMANCE.md](./FLAT_MODE_PERFORMANCE.md#double-click-detection-and-why-not-native-dblclick)). In `clickBehavior="select"` a double-click also toggles expand/collapse. |
 | `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
 | `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
 | `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. `dropNode` can be `null` (e.g., drop on empty tree). Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
+| `onCopy` | `(paths: string[]) => void` | `undefined` | Fired after `controller.copyNodes()` succeeds, with the final copied paths |
+| `onCut` | `(paths: string[]) => void` | `undefined` | Fired after `controller.cutNodes()` succeeds, with the final cut paths |
+| `onPaste` | `(result: PasteResult) => void` | `undefined` | Fired after `controller.pasteNodes()` runs, with the paste result (`success`, `count`, `error`) |
+
+### Clipboard interceptor properties
+
+The clipboard operations live on the `TreeController` (`copyNodes` / `cutNodes` / `pasteNodes` / `cancelCut`), reachable via `onTreeKeydown(event, controller)`. The key bindings are not wired automatically — paste needs an app-specific `transformData` (e.g. fresh ids) and a target path. The `before*` interceptors can rewrite or block an operation; `onCopy` / `onCut` / `onPaste` above are the post-operation notifications.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `beforeCopyCallback` | `(paths: string[]) => string[] \| false \| void` | `undefined` | Runs before copy. Return a new path list to change the set, `false` to block |
+| `beforeCutCallback` | `(paths: string[]) => string[] \| false \| void` | `undefined` | Runs before cut. Return a new path list to change the set, `false` to block |
+| `beforePasteCallback` | `(targetPath, operation, entries) => { targetPath?, position? } \| false \| void` | `undefined` | Runs before paste. Redirect the target/position, mutate `entries[i].data` (e.g. append `"Copy 1"`), or return `false` to block |
 
 ### Visual styling properties
 
