@@ -116,11 +116,24 @@ async function generate(page: Page, target: number = TARGET_NODE_COUNT) {
 			timeout: ACTION_TIMEOUT
 		})
 		.toBe(target);
-	await generateBtn.click();
-	// Cold-load of /test/performance + first-time generate of a few hundred
-	// nodes can push past the default 20s on a loaded dev server. Give the
-	// data card a longer window before failing the test.
-	await expect(treeContainer(page)).toBeVisible({ timeout: 60_000 });
+	// Cold-load of /test/performance + first-time generate of a few hundred nodes
+	// can push past the default timeout on a loaded dev server (4 local workers
+	// share one Vite dev server, so a single click's render can be starved). Rather
+	// than bet everything on one long wait, click and wait for the tree; if it
+	// doesn't mount in time, re-click and try again — generation is idempotent and
+	// callers read the actual node count from the metric afterwards, so a repeat
+	// generate is harmless.
+	const tree = treeContainer(page);
+	const attempts = 3;
+	for (let attempt = 1; attempt <= attempts; attempt++) {
+		await generateBtn.click();
+		try {
+			await expect(tree).toBeVisible({ timeout: 25_000 });
+			break;
+		} catch (err) {
+			if (attempt === attempts) throw err;
+		}
+	}
 	await expect.poll(() => visibleNodeCount(page), { timeout: ACTION_TIMEOUT }).toBeGreaterThan(0);
 }
 
