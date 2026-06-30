@@ -469,6 +469,30 @@ test.describe('multi-drag (selectionMode=multi)', () => {
 		await expect(nodeSpans.filter({ hasText: /^A-1$/ })).toHaveCount(1);
 	});
 
+	test('the focused node follows a multi-drag (focus is remapped, not stranded)', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-multi');
+		await section.scrollIntoViewIfNeeded();
+
+		// Highlight A, B, C — focus lands on the last-clicked, Multi-C (path '3').
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('multi-focused-path')).toHaveText('3');
+
+		// Drag the set onto Multi-D as child. Multi-C moves to a new path under D.
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '4')), 'child');
+
+		// Focus must follow Multi-C to its new home — not stay stranded at the old path
+		// '3' (which no longer has a node). Regression guard for the moveNode focus remap.
+		await expect(page.getByTestId('multi-focused-path')).not.toHaveText('3');
+		const focusedPath = await page.getByTestId('multi-focused-path').innerText();
+		expect(focusedPath).not.toBe('');
+		await expect(section.getByTestId(`multi-node-${focusedPath}`)).toHaveText('Multi-C');
+	});
+
 	test('locked node (isDraggable=false) in the highlight set does NOT ride along on multi-drag', async ({
 		page
 	}) => {

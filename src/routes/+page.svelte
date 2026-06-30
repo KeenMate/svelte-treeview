@@ -1,7 +1,8 @@
 <script>
 	import { onMount } from 'svelte';
+	import { VERSION } from '$lib/constants.generated.js';
 
-	const version = 'v5.0.0-rc06';
+	const version = `v${VERSION}`;
 
 	const examples = [
 		{

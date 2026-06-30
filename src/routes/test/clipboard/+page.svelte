@@ -6,7 +6,7 @@
 	//
 	// Targeted by e2e/clipboard.spec.ts.
 	import { Tree } from '$lib/index.js';
-	import type { TreeController } from '$lib/core/TreeController.svelte.js';
+	import type { TreeController, BeforePasteContext } from '$lib/core/TreeController.svelte.js';
 	import type { LTreeNode } from '$lib/ltree/types.js';
 
 	type Item = { id: number; path: string; name: string };
@@ -49,19 +49,20 @@
 
 	// Redirect a paste onto the copied node itself into its parent (duplicate in the
 	// same folder), then append "(copy)" on name collision under the final target.
-	function beforePaste(
-		targetPath: string,
-		operation: 'copy' | 'cut',
-		entries: { data: Item; sourcePath: string }[]
-	): { targetPath?: string } | void {
-		if (operation !== 'copy') return;
+	// NOTE: this fixture intentionally keeps the older "mutate entries in beforePaste"
+	// style to guard that it still works — the mutation now lands on the per-paste
+	// working copy (the clipboard singleton is never touched). New code should rename in
+	// pasteNodeTransformationCallback instead (see /examples/tree-editor).
+	function beforePaste(ctx: BeforePasteContext<Item>): { targetPath?: string } | void {
+		if (ctx.operation !== 'copy') return;
+		let targetPath = ctx.targetPath;
 		let redirect: { targetPath?: string } | undefined;
-		if (targetPath && entries.some((e) => e.sourcePath === targetPath)) {
-			targetPath = treeRef.getNodeByPath(targetPath)?.parentPath ?? '';
+		if (targetPath && ctx.entries.some((e) => e.sourcePath === targetPath)) {
+			targetPath = ctx.targetNode?.parentPath ?? '';
 			redirect = { targetPath };
 		}
 		const taken = new Set(treeRef.getChildren(targetPath).map((c) => c.data?.name ?? ''));
-		for (const entry of entries) {
+		for (const entry of ctx.entries) {
 			const name = uniqueCopyName(entry.data.name, taken);
 			entry.data = { ...entry.data, name };
 			taken.add(name);

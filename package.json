@@ -1,109 +1,109 @@
 {
-	"name": "@keenmate/svelte-treeview",
-	"version": "5.0.0-rc12",
-	"scripts": {
-		"dev": "vite dev --port 17777",
-		"build": "vite build && npm run prepack",
-		"build:showcase": "vite build",
-		"preview": "vite preview",
-		"prepare": "svelte-kit sync || echo ''",
-		"generate-constants": "node scripts/generate-constants.js",
-		"prepack": "npm run generate-constants && svelte-kit sync && svelte-package && lightningcss --bundle src/lib/styles/main.css -o dist/styles.css && publint",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "vitest",
-		"test:run": "vitest run",
-		"test:e2e": "playwright test",
-		"test:e2e:ui": "playwright test --ui",
-		"test:e2e:headed": "playwright test --headed",
-		"test:e2e:install": "playwright install chromium",
-		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint ."
-	},
-	"files": [
-		"dist",
-		"!dist/**/*.test.*",
-		"!dist/**/*.spec.*",
-		"!dist/demo",
-		"ai",
-		"CHANGELOG.md",
-		"component-variables.manifest.json"
-	],
-	"sideEffects": [
-		"**/*.css"
-	],
-	"svelte": "./dist/index.js",
-	"types": "./dist/index.d.ts",
-	"type": "module",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"svelte": "./dist/index.js"
-		},
-		"./styles.css": "./dist/styles.css",
-		"./styles/*": "./dist/styles/*",
-		"./component-variables.manifest.json": "./component-variables.manifest.json"
-	},
-	"peerDependencies": {
-		"svelte": "^5.0.0"
-	},
-	"devDependencies": {
-		"@eslint/compat": "^1.2.5",
-		"@eslint/js": "^9.18.0",
-		"@playwright/test": "^1.59.1",
-		"@sveltejs/adapter-auto": "^6.0.0",
-		"@sveltejs/adapter-static": "^3.0.0",
-		"@sveltejs/kit": "^2.22.0",
-		"@sveltejs/package": "^2.0.0",
-		"@sveltejs/vite-plugin-svelte": "^6.0.0",
-		"@types/flexsearch": "^0.7.42",
-		"eslint": "^9.18.0",
-		"eslint-config-prettier": "^10.0.1",
-		"eslint-plugin-svelte": "^3.0.0",
-		"globals": "^16.0.0",
-		"lightningcss-cli": "^1.30.0",
-		"prettier": "^3.4.2",
-		"prettier-plugin-svelte": "^3.3.3",
-		"publint": "^0.3.2",
-		"svelte": "^5.0.0",
-		"svelte-check": "^4.0.0",
-		"svelte-preprocess": "^6.0.3",
-		"typescript": "^5.0.0",
-		"typescript-eslint": "^8.20.0",
-		"vite": "^7.0.4",
-		"vitest": "^4.1.8"
-	},
-	"optionalDependencies": {
-		"flexsearch": "^0.8.212"
-	},
-	"overrides": {
-		"cookie": "^0.7.0"
-	},
-	"keywords": [
-		"svelte",
-		"svelte5",
-		"tree",
-		"treeview",
-		"hierarchical",
-		"ltree",
-		"drag-drop",
-		"search",
-		"flexsearch",
-		"context-menu",
-		"component",
-		"ui"
-	],
-	"author": "KeenMate",
-	"license": "MIT",
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/keenmate/svelte-treeview.git"
-	},
-	"homepage": "https://github.com/keenmate/svelte-treeview#readme",
-	"bugs": {
-		"url": "https://github.com/keenmate/svelte-treeview/issues"
-	},
-	"dependencies": {
-		"@floating-ui/dom": "^1.7.6"
-	}
+  "name": "@keenmate/svelte-treeview",
+  "version": "5.0.0-rc13",
+  "scripts": {
+    "dev": "vite dev --port 17777",
+    "build": "vite build && npm run prepack",
+    "build:showcase": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "generate-constants": "node scripts/generate-constants.js",
+    "prepack": "npm run generate-constants && svelte-kit sync && svelte-package && lightningcss --bundle src/lib/styles/main.css -o dist/styles.css && publint",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:install": "playwright install chromium",
+    "format": "prettier --write .",
+    "lint": "prettier --check . && eslint ."
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*",
+    "!dist/demo",
+    "ai",
+    "CHANGELOG.md",
+    "component-variables.manifest.json"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "svelte": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./styles/*": "./dist/styles/*",
+    "./component-variables.manifest.json": "./component-variables.manifest.json"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^1.2.5",
+    "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.59.1",
+    "@sveltejs/adapter-auto": "^6.0.0",
+    "@sveltejs/adapter-static": "^3.0.0",
+    "@sveltejs/kit": "^2.22.0",
+    "@sveltejs/package": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^6.0.0",
+    "@types/flexsearch": "^0.7.42",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-svelte": "^3.0.0",
+    "globals": "^16.0.0",
+    "lightningcss-cli": "^1.30.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-svelte": "^3.3.3",
+    "publint": "^0.3.2",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "svelte-preprocess": "^6.0.3",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.20.0",
+    "vite": "^7.0.4",
+    "vitest": "^4.1.8"
+  },
+  "optionalDependencies": {
+    "flexsearch": "^0.8.212"
+  },
+  "overrides": {
+    "cookie": "^0.7.0"
+  },
+  "keywords": [
+    "svelte",
+    "svelte5",
+    "tree",
+    "treeview",
+    "hierarchical",
+    "ltree",
+    "drag-drop",
+    "search",
+    "flexsearch",
+    "context-menu",
+    "component",
+    "ui"
+  ],
+  "author": "KeenMate",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/keenmate/svelte-treeview.git"
+  },
+  "homepage": "https://github.com/keenmate/svelte-treeview#readme",
+  "bugs": {
+    "url": "https://github.com/keenmate/svelte-treeview/issues"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "^1.7.6"
+  }
 }

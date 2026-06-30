@@ -1,6 +1,6 @@
 # svelte-treeview context
 
-PACKAGE: @keenmate/svelte-treeview v5.0.0-rc03 | Svelte 5 hierarchical tree component | MIT | KeenMate
+PACKAGE: @keenmate/svelte-treeview v5.0.0-rc12 | Svelte 5 hierarchical tree component | MIT | KeenMate
 
 CORE_FILES:
 - src/lib/components/Tree.svelte - main component
@@ -178,6 +178,22 @@ DRAG_DROP_POSITIONS:
 - Glow mode: snaps to nearest allowed position
 - Floating mode: only shows allowed position buttons
 - undefined/empty = all positions allowed (default)
+- pasteNodes honors the same resolver: a 'child' paste onto a node that disallows 'child' (e.g. a leaf/file) is redirected to paste beside it (in its parent). One allowed-positions config governs both drag-drop and clipboard paste; default (no restriction) still nests as a child.
+
+CLIPBOARD (copyNodes/cutNodes/pasteNodes + module-level shared singleton):
+- The clipboard snapshot is IMMUTABLE to consumers. pasteNodes works on a per-paste deep copy; the persistent singleton (a copy can be pasted repeatedly) is never mutated.
+- Interceptor family (all take a context object w/ node refs, mirroring beforeDrop which already took dropNode/draggedNode):
+  - beforeCopyCallback / beforeCutCallback(ctx: BeforeCopyContext<T>) → return new path[] to rewrite the set, false to block. ctx = { operation, paths, nodes (resolved) }.
+- Two roles, two hooks (don't mutate data in beforePaste — it only sees a readonly copy):
+  - beforePasteCallback(ctx: BeforePasteContext<T>) → BATCH POLICY only: redirect target/position, or return false to block. ctx = { targetPath, targetNode (resolved node, null at root), operation, entries (readonly snapshots) }. Use ctx.targetNode.parentPath etc. — no getNodeByPath needed.
+  - copyNodeTransformationCallback(data, ctx: CopyNodeTransformContext) → per-node at snapshot time (copy/cut): clean/redact fields before they hit the shared clipboard.
+  - pasteNodeTransformationCallback(data, ctx: PasteNodeTransformContext) => T | null → per-node at insert: derive ids/values/names; return null to SKIP a node (skipping a root skips its subtree). Pure (reads pristine snapshot).
+- pasteNodes(targetPath, transform?, position?): transform arg is optional and overrides the prop; falls back to pasteNodeTransformationCallback. Old (data,index,op) signature replaced by (data, ctx).
+- PasteNodeTransformContext<T>: { operation, isRoot, index, sourcePath, sourceNode, targetParent, siblings }. Passes LIVE node references (no display-name assumption): sourceNode = original node (same-tree) or null; targetParent = destination parent node (null at root); siblings = destination's existing children (LTreeNode[], batch-aware — includes nodes added earlier this paste). Consumer derives collisions, e.g. uniqueName(data.name, siblings.map(s => s.data?.name)). No displayValueMember needed.
+- uniqueName(base, taken, suffix?) exported helper: collision-free name (default `${base} Copy ${n}`); no strip-regex needed since base is always pristine. Use inside pasteNodeTransformationCallback: name: uniqueName(data.name, ctx.siblings.map(s => s.data?.name)).
+- Per-entry skip: self-paste guard (paste into self/descendant) and transform-null now skip just that entry and paste the rest — no silent all-or-nothing. PasteResult gains `skipped: number`.
+- Demo /examples/tree-editor: renaming lives in pasteTransform (not beforePaste); beforePaste only redirects duplicate-in-place; cross-folder multi-paste fans out per-parent in the keydown handler. Test fixture /test/clipboard intentionally keeps the legacy beforePaste-mutation style (now safe on the working copy).
+- E2E: e2e/clipboard.spec.ts (legacy fixture /test/clipboard) + e2e/clipboard-transform.spec.ts (new fixture /test/clipboard-transform — copy redaction, paste-transform null-skip + skipped count, leaf-aware paste, parent+child no-silent-fail, Delete + subnode guard). Multi-drag focus-follows guard lives in e2e/drag-drop.spec.ts ("focused node follows a multi-drag").
 
 CANVAS_PACKAGE:
 - Canvas rendering (CanvasTree, layouts, themes) is in a separate package: @keenmate/svelte-treeview-canvas
@@ -199,4 +215,4 @@ COMPARISON_WITH_WEB_TREEVIEW (sibling package @keenmate/web-treeview at ../web-t
 - Highlight padding: svelte-treeview symmetric ~8px; web-treeview `padding-left: 0` hardcoded → highlight hugs label.
 - Neither is "more mature" — svelte-treeview is broader (two rendering modes, easier vertical guide lines via `.stv__children`); web-treeview is purpose-built for virtual scrolling over large datasets.
 
-RECENT: v5.0.0-rc06 - Three-level selection (focusedNode/highlightedPaths/selectedPaths). shouldShowCheckboxes + checkboxMode (cascade/independent). Shift+Arrow/Home/End/PageUp/PageDown keyboard highlight. clickBehavior prop. Core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.
+RECENT: v5.0.0-rc12 - context-menu auto-close, per-node class hooks (nodeClass/nodeContentClass), onNodeDoubleClick event, clipboard + theming fixes, Windows Explorer demo. (rc11: selection API normalization into three symmetric families, ltree→stv BEM rename, drag-drop & highlight-marker fixes. rc06: three-level selection focusedNode/highlightedPaths/selectedPaths, shouldShowCheckboxes + checkboxMode cascade/independent, Shift+Arrow/Home/End/PageUp/PageDown keyboard highlight, clickBehavior prop, core/renderer split. Canvas rendering in @keenmate/svelte-treeview-canvas.)

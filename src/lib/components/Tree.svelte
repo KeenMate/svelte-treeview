@@ -168,9 +168,13 @@
 		 * Can be async - return a Promise to show dialogs or perform async validation.
 		 */
 		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
-		beforeCopyCallback?: (paths: string[]) => string[] | false | void;
-		beforeCutCallback?: (paths: string[]) => string[] | false | void;
-		beforePasteCallback?: (targetPath: string, operation: 'copy' | 'cut', entries: import('../core/clipboard.js').ClipboardEntry<T>[]) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+		beforeCopyCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
+		beforeCutCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
+		beforePasteCallback?: (ctx: import('../core/TreeController.svelte').BeforePasteContext<T>) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+		/** Per-node transform applied as data is snapshotted onto the clipboard (copy/cut). */
+		copyNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').CopyNodeTransformContext) => T;
+		/** Per-node transform applied as data is inserted on paste; return null to skip the node. */
+		pasteNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').PasteNodeTransformContext<T>) => T | null;
 
 		// DATA PROVIDERS (get*Callback = returns data the system uses)
 		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
@@ -320,6 +324,8 @@
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
+		copyNodeTransformationCallback,
+		pasteNodeTransformationCallback,
 		// DATA PROVIDERS
 		getContextMenuItemsCallback,
 
@@ -434,6 +440,8 @@
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
+		copyNodeTransformationCallback,
+		pasteNodeTransformationCallback,
 		getContextMenuItemsCallback,
 		hasContextMenuSnippet: !!contextMenu,
 		bodyClass,
@@ -580,6 +588,8 @@
 	$effect(() => { controller.beforeCopyHandler = beforeCopyCallback; });
 	$effect(() => { controller.beforeCutHandler = beforeCutCallback; });
 	$effect(() => { controller.beforePasteHandler = beforePasteCallback; });
+	$effect(() => { controller.copyTransformHandler = copyNodeTransformationCallback; });
+	$effect(() => { controller.pasteTransformHandler = pasteNodeTransformationCallback; });
 	$effect(() => { controller.getContextMenuItemsHandler = getContextMenuItemsCallback; });
 	$effect(() => { controller.onRenderStartHandler = onRenderStart; });
 	$effect(() => { controller.onRenderProgressHandler = onRenderProgress; });
@@ -873,6 +883,8 @@
 				| "beforeCopyCallback"
 				| "beforeCutCallback"
 				| "beforePasteCallback"
+				| "copyNodeTransformationCallback"
+				| "pasteNodeTransformationCallback"
 				| "getContextMenuItemsCallback"
 				| "isVirtualScrollEnabled"
 				| "virtualRowHeight"
@@ -958,6 +970,8 @@
 		if (updates.beforeCopyCallback !== undefined) beforeCopyCallback = updates.beforeCopyCallback;
 		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;
 		if (updates.beforePasteCallback !== undefined) beforePasteCallback = updates.beforePasteCallback;
+		if (updates.copyNodeTransformationCallback !== undefined) copyNodeTransformationCallback = updates.copyNodeTransformationCallback;
+		if (updates.pasteNodeTransformationCallback !== undefined) pasteNodeTransformationCallback = updates.pasteNodeTransformationCallback;
 		if (updates.getContextMenuItemsCallback !== undefined) getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
 		if (updates.isVirtualScrollEnabled !== undefined) isVirtualScrollEnabled = updates.isVirtualScrollEnabled;
 		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;

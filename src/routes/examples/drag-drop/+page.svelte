@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
+	import type { TreeController, PasteNodeTransformContext, BeforePasteContext } from '$lib/core/TreeController.svelte.js';
+	import { uniqueName } from '$lib/core/clipboard.js';
 	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
@@ -107,6 +109,94 @@
 	function handleSourceDragStart(node: LTreeNode<FileItem>, event: DragEvent) {
 		addLog(`Started dragging: ${node.data?.name}`);
 	}
+
+	// ── Cross-tree clipboard (Ctrl/Cmd + C / X / V) ──────────────────────────
+	// The clipboard is a shared module-level singleton, so copy in one tree + paste
+	// in the other "just works". A cross-tree CUT needs us to delete the originals
+	// from the source tree ourselves (the library only auto-removes a SAME-tree cut).
+	let sourceFocused = $state<LTreeNode<FileItem> | null>(null);
+	let targetFocused = $state<LTreeNode<FileItem> | null>(null);
+	let pendingCut: { treeId: string; paths: string[]; remove: (p: string) => void } | null = null;
+
+	// Each pasted node gets a fresh id; path is assigned by the paste insert. A root
+	// node whose name already exists in the destination becomes "Name Copy 1/2/3…" —
+	// we read names off ctx.siblings (the destination's existing child nodes), which is
+	// batch-aware. Descendants keep their names.
+	function transformPasted(data: FileItem, ctx: PasteNodeTransformContext<FileItem>): FileItem {
+		const taken = ctx.siblings.map((s) => s.data?.name ?? '');
+		return {
+			...data,
+			id: nextId++,
+			path: '',
+			name: ctx.isRoot ? uniqueName(data.name, taken) : data.name
+		};
+	}
+
+	// Pasting onto one of the copied nodes itself (Ctrl+C then Ctrl+V without moving)
+	// would hit the paste-into-self guard and skip everything. Redirect into the node's
+	// parent so the copy lands beside it — ctx.targetNode.parentPath, no string surgery.
+	function selfPasteRedirect(ctx: BeforePasteContext<FileItem>): { targetPath?: string } | void {
+		if (ctx.targetPath && ctx.entries.some((e) => e.sourcePath === ctx.targetPath)) {
+			return { targetPath: ctx.targetNode?.parentPath ?? '' };
+		}
+	}
+
+	function makeClipboardKeydown(
+		treeId: string,
+		getFocused: () => LTreeNode<FileItem> | null,
+		getRef: () => Tree<FileItem>
+	) {
+		return (event: KeyboardEvent, controller: TreeController<FileItem>): boolean => {
+			const mod = event.ctrlKey || event.metaKey;
+			const key = event.key.toLowerCase();
+			const paths = () =>
+				controller.highlightedPaths.size > 0
+					? [...controller.highlightedPaths]
+					: getFocused()
+						? [getFocused()!.path]
+						: [];
+
+			if (mod && key === 'c') {
+				const p = paths();
+				if (!p.length) { addLog('Nothing selected to copy'); return true; }
+				controller.copyNodes(p);
+				pendingCut = null;
+				addLog(`Copied ${p.length} from ${treeId}`);
+				return true;
+			}
+			if (mod && key === 'x') {
+				const p = paths();
+				if (!p.length) { addLog('Nothing selected to cut'); return true; }
+				controller.cutNodes(p);
+				pendingCut = { treeId, paths: p, remove: (path) => getRef().removeNode(path) };
+				addLog(`Cut ${p.length} from ${treeId}`);
+				return true;
+			}
+			if (mod && key === 'v') {
+				if (!controller.hasClipboardContent()) { addLog('Clipboard is empty'); return true; }
+				const wasCut = controller.getClipboardOperation() === 'cut';
+				const result = controller.pasteNodes(getFocused()?.path ?? '', transformPasted, 'child');
+				if (!result.success) { addLog(`Paste failed: ${result.error}`); return true; }
+				// Cross-tree cut = move: remove the originals from the source tree.
+				if (wasCut && pendingCut && pendingCut.treeId !== treeId) {
+					for (const path of topLevelPaths(pendingCut.paths)) pendingCut.remove(path);
+				}
+				pendingCut = null;
+				addLog(`Pasted ${result.count} into ${treeId}${result.skipped ? ` (skipped ${result.skipped})` : ''}`);
+				return true;
+			}
+			if (event.key === 'Escape' && controller.getClipboardOperation() === 'cut') {
+				controller.cancelCut();
+				pendingCut = null;
+				addLog('Cut cancelled');
+				return true;
+			}
+			return false;
+		};
+	}
+
+	const sourceKeydown = makeClipboardKeydown('source-tree', () => sourceFocused, () => sourceTreeRef);
+	const targetKeydown = makeClipboardKeydown('target-tree', () => targetFocused, () => targetTreeRef);
 
 	// Given a set of paths under a "." separator, return only the ones whose
 	// nearest highlighted ancestor is NOT in the set — i.e. the top-level
@@ -365,6 +455,12 @@
 			<strong>Target tree (right):</strong> Drag from source to add nodes. Starts empty to demo drop placeholder.
 			Once it has nodes, multi-drag works inside the target tree the same way.
 		</p>
+		<p class="description">
+			<strong>Clipboard (cross-tree):</strong> select nodes in either tree and press
+			<strong>Ctrl/Cmd+C</strong> (copy) or <strong>X</strong> (cut), then click the other tree
+			and <strong>Ctrl/Cmd+V</strong> to paste. The clipboard is a shared singleton, so it works
+			across both trees — copy duplicates, cut moves (the source nodes are removed on paste).
+		</p>
 
 		<div class="controls">
 			<button class="btn btn-secondary" onclick={clearTarget}>Clear Target Tree</button>
@@ -433,6 +529,9 @@
 						{selectionMode}
 						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={sourceHighlightedPaths}
+						bind:focusedNode={sourceFocused}
+						onTreeKeydown={sourceKeydown}
+						beforePasteCallback={selfPasteRedirect}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{isCopyAllowed}
@@ -468,6 +567,9 @@
 						{selectionMode}
 						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={targetHighlightedPaths}
+						bind:focusedNode={targetFocused}
+						onTreeKeydown={targetKeydown}
+						beforePasteCallback={selfPasteRedirect}
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
 						{isCopyAllowed}
