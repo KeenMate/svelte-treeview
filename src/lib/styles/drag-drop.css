@@ -55,12 +55,19 @@
 	cursor: pointer;
 }
 
-/* Hover feedback — signals the empty drop zone is interactive (it grabs keyboard
-   focus on hover so a Ctrl/Cmd+V pastes here). Applies to both the mid-drag
-   placeholder and the permanent one (shouldShowDropPlaceholderWhenEmpty). */
-.stv__drop-placeholder:hover {
+/* Engaged feedback — signals the empty drop zone is interactive. `:hover` covers
+   plain mouse-over (it also grabs keyboard focus so a Ctrl/Cmd+V pastes here); the
+   `--active` modifier covers a DRAG hovering the zone, because an in-flight HTML5
+   drag suppresses `:hover` (only dragenter/over fire). `--active` is toggled by the
+   controller's empty-tree drag handlers via `isDropPlaceholderActive`. Both apply
+   to the mid-drag placeholder and the permanent one (shouldShowDropPlaceholderWhenEmpty). */
+.stv__drop-placeholder:hover,
+.stv__drop-placeholder--active {
 	background-color: var(--stv-drop-placeholder-hover-bg) !important;
+	border-style: solid !important;
+	border-color: var(--stv-drop-placeholder-hover-border-color) !important;
 	box-shadow: var(--stv-drop-placeholder-hover-shadow);
+	transform: scale(var(--stv-drop-placeholder-hover-scale, 1));
 }
 
 .stv__drop-placeholder-content {

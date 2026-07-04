@@ -1217,6 +1217,7 @@
 	<div
 		class="stv__empty-state"
 		class:stv__drop-placeholder={showEmptyDropPlaceholder}
+		class:stv__drop-placeholder--active={controller.isDropPlaceholderActive}
 		ondragenter={controller.handleEmptyTreeDragOver}
 		ondragover={controller.handleEmptyTreeDragOver}
 		ondragleave={controller.handleEmptyTreeDragLeave}
