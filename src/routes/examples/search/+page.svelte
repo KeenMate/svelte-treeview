@@ -214,8 +214,14 @@
 	}
 
 	function toggleSearchMode() {
-		clearSearch();
 		searchMode = searchMode === 'filter' ? 'search' : 'filter';
+		// Keep the typed query when switching modes — just re-apply it in the new
+		// mode. Search mode doesn't filter the tree, so drop any filter text first;
+		// onSearchInput() then re-runs the query (and in filter mode re-sets searchText).
+		if (searchMode === 'search') {
+			searchText = '';
+		}
+		onSearchInput();
 	}
 
 	function navigateToResult(idx: number) {
@@ -692,6 +698,7 @@ ${"<"}/script>
 
 	kbd {
 		background: #edf2f7;
+		color: #2d3748;
 		border: 1px solid #cbd5e0;
 		border-radius: 3px;
 		padding: 0.1em 0.4em;
