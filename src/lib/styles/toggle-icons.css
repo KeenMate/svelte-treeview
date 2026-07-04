@@ -22,15 +22,12 @@
 	transform: rotate(90deg);
 }
 
-/* Leaf rows have no twistie (the --leaf dot is disabled below). Shrink the empty
-   toggle slot by one indent level so a file's content aligns directly under its
-   parent folder's content instead of a hair to the right. Difference is exactly
-   --stv-node-indent-per-level; margin-right cancels since folders/leaves share it. */
-.stv__toggle-icon--leaf {
-	/* max(0px, …) guards the case where indent-per-level exceeds the toggle width
-	   (e.g. a very generous indent) — the slot can't go negative, it just collapses. */
-	width: max(0px, calc(var(--stv-toggle-icon-width) - var(--stv-node-indent-per-level)));
-}
+/* Leaf rows have no twistie (the --leaf dot is disabled below), but the empty
+   toggle slot keeps the SAME width as an expandable node's twistie column. That
+   reserves the chevron gutter for every row, so a leaf aligns with its expandable
+   SIBLINGS (a file lines up with the folders next to it), not shifted one indent
+   left under the parent. `.stv__toggle-icon--leaf` therefore inherits the shared
+   `.stv__toggle-icon` width above — no override needed. */
 
 /* Shared boilerplate: every stv__toggle-icon--* class renders its SVG via mask-image
    so it inherits currentColor. */
