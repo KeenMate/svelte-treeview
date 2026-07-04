@@ -2,7 +2,7 @@ CONTEXT MENU
 ============
 
 CRITICAL: Two approaches for context menus
-- Callback-based (recommended): contextMenuCallback prop
+- Callback-based (recommended): getContextMenuItemsCallback prop
 - Snippet-based: ContextMenuItemC / ContextMenuDividerC components inside contextMenu snippet
 - Both support dynamic items, icons, keyboard shortcuts, submenus, disabled/hidden states
 
@@ -19,6 +19,7 @@ interface ContextMenuItem {
   isVisible?: boolean;        // Hide the item (default true)
   className?: string;         // Custom CSS class (e.g. "danger")
   onclick?: () => void | Promise<void>;  // Action (was "callback" in old API)
+  shouldCloseOnClick?: boolean;   // Default true; false keeps menu open (handler closes via close())
   children?: ContextMenuEntry[];  // Submenu items
 }
 
@@ -81,7 +82,7 @@ CALLBACK-BASED CONTEXT MENU
 
 <Tree
   {data}
-  contextMenuCallback={createContextMenu}
+  getContextMenuItemsCallback={createContextMenu}
 />
 
 SNIPPET-BASED CONTEXT MENU
@@ -154,7 +155,7 @@ In snippet approach, use {#if}:
 POSITION OFFSET
 ---------------
 <Tree
-  contextMenuCallback={createMenu}
+  getContextMenuItemsCallback={createMenu}
   contextMenuXOffset={8}
   contextMenuYOffset={0}
 />
@@ -171,19 +172,20 @@ Context menu automatically closes on:
 STYLING
 -------
 CSS classes:
-- .ltree-context-menu - Menu container
-- .ltree-context-menu-item - Menu item
-- .ltree-context-menu-divider - Divider line
-- .ltree-context-menu-divider-label - Named divider text
-- .ltree-context-menu-label - Item label
-- .ltree-context-menu-shortcut - Shortcut hint
-- .ltree-context-menu-arrow - Submenu arrow indicator
-- .ltree-context-submenu - Submenu container
+- .stv__context-menu - Menu container
+- .stv__context-menu-item - Menu item (modifiers: --disabled, --has-children)
+- .stv__context-menu-divider - Divider line
+- .stv__context-menu-divider-label - Named divider text
+- .stv__context-menu-label - Item label
+- .stv__context-menu-shortcut - Shortcut hint
+- .stv__context-menu-icon - Item icon
+- .stv__context-menu-arrow - Submenu arrow indicator
+- .stv__context-submenu - Submenu container
 
 DEBUG MODE
 ----------
 <Tree
-  contextMenuCallback={createMenu}
+  getContextMenuItemsCallback={createMenu}
   shouldDisplayContextMenuInDebugMode={true}
 />
 

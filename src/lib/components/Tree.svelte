@@ -23,6 +23,13 @@
 	import { setContext, onDestroy } from 'svelte';
 	import type { RenderStats } from './RenderCoordinator.svelte.js';
 	import { TreeController } from '../core/TreeController.svelte.js';
+	import type {
+		NodeEventContext,
+		NodeDragContext,
+		NodeDropContext,
+		ClipboardEventContext,
+		SelectionChangeContext
+	} from '../core/TreeController.svelte.js';
 	import { createTreeController } from '../core/createTreeController.js';
 	import type { TreeNavigationOverrides } from '../core/navigation.js';
 
@@ -77,10 +84,13 @@
 		treeHeader?: any;
 		treeBody?: any;
 		treeFooter?: any;
-		noDataFound?: any;
+		noData?: any;
 		contextMenu?: any;
 		dropPlaceholder?: any;
 		loadingPlaceholder?: any;
+
+		/** Fallback text shown in an empty tree when no `noData` snippet is provided. Default: "No data". */
+		noDataText?: string;
 
 		// BEHAVIOUR
 		expandLevel?: number | null | undefined;
@@ -140,25 +150,43 @@
 		dropZoneLayout?: 'around' | 'above' | 'below' | 'wave' | 'wave2';
 		dropZoneStart?: number | string; // number = percentage (0-100), string = any CSS value ("33%", "50px", "3rem")
 		dropZoneMaxWidth?: number; // max width in pixels for wave layouts
+		/**
+		 * Keep the `dropPlaceholder` (or default "Drop here") visible whenever the tree
+		 * is empty — not just mid-drag. Also makes the empty drop zone grab keyboard
+		 * focus on hover, so a clipboard paste (Ctrl/Cmd+V routed through `onTreeKeydown`)
+		 * lands on this tree without needing a node to click first. Default: false.
+		 */
+		shouldShowDropPlaceholderWhenEmpty?: boolean;
 		isCopyAllowed?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
 		shouldAutoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
 		shouldAutoHandleMove?: boolean; // Auto-handle same-tree move operations (default: true). Set to false for database-first workflow.
 		shouldAutoHandlePaste?: boolean; // Auto-handle paste operations (default: true). Set to false for database-first workflow.
+		/** Opt into built-in keyboard shortcuts (default false): Ctrl/Cmd+C/X/V (copy/cut/paste),
+		 *  Delete (remove selection), Escape (cancel cut), plus classic CUA aliases Ctrl+Insert
+		 *  (copy) / Shift+Insert (paste) / Shift+Delete (cut). A consumer `onTreeKeydown` still runs
+		 *  first and can override or suppress any of these. Paste targets the focused node (root
+		 *  when none) and uses `pasteNodeTransformationCallback`. */
+		shouldHandleKeyboardShortcuts?: boolean;
 		isAccordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
 
-		// EVENTS (on* = fire-and-forget notifications)
-		onNodeClick?: (node: LTreeNode<T>) => void;
-		onNodeDoubleClick?: (node: LTreeNode<T>) => void;
-		onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
-		onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
-		onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
-		onNodeDrop?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => void;
-		// Post-operation clipboard notifications (fired AFTER the op). onCopy/onCut
-		// receive the final paths; onPaste receives the PasteResult.
-		onCopy?: (paths: string[]) => void;
-		onCut?: (paths: string[]) => void;
+		// EVENTS (on* = fire-and-forget notifications). Each carries a context object mirroring
+		// the clipboard callbacks: single-node events get a NodeRef (node + live parent/siblings),
+		// onNodeDrop gets symmetric source/target NodeRefs, the set events carry paths + nodes.
+		onNodeClick?: (ctx: NodeEventContext<T>) => void;
+		onNodeDoubleClick?: (ctx: NodeEventContext<T>) => void;
+		onHighlightChange?: (ctx: SelectionChangeContext<T>) => void;
+		onSelectionChange?: (ctx: SelectionChangeContext<T>) => void;
+		onNodeDragStart?: (ctx: NodeDragContext<T>) => void;
+		onNodeDragOver?: (ctx: NodeDragContext<T>) => void;
+		onNodeDrop?: (ctx: NodeDropContext<T>) => void;
+		// Post-operation clipboard notifications (fired AFTER the op). onCopy/onCut/onDelete
+		// carry paths + resolved nodes (pre-removal snapshots for delete); onPaste the PasteResult.
+		onCopy?: (ctx: ClipboardEventContext<T>) => void;
+		onCut?: (ctx: ClipboardEventContext<T>) => void;
 		onPaste?: (result: import('../core/TreeController.svelte.js').PasteResult<T>) => void;
+		/** Fired after the built-in Delete (or `deleteNodes`) removes nodes, with the removed
+		 *  top-level paths plus their pre-removal nodes. */
+		onDelete?: (ctx: ClipboardEventContext<T>) => void;
 
 		// INTERCEPTORS (before*Callback = can modify/block)
 		/**
@@ -171,10 +199,12 @@
 		beforeCopyCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
 		beforeCutCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
 		beforePasteCallback?: (ctx: import('../core/TreeController.svelte').BeforePasteContext<T>) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+		/** Runs before the built-in Delete removes anything. Return a narrowed path[] to restrict, or false to block. */
+		beforeDeleteCallback?: (ctx: import('../core/TreeController.svelte').BeforeDeleteContext<T>) => string[] | false | void;
 		/** Per-node transform applied as data is snapshotted onto the clipboard (copy/cut). */
-		copyNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').CopyNodeTransformContext) => T;
+		copyNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').NodeTransformContext<T>) => T;
 		/** Per-node transform applied as data is inserted on paste; return null to skip the node. */
-		pasteNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').PasteNodeTransformContext<T>) => T | null;
+		pasteNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').NodeTransformContext<T>) => T | null;
 
 		// DATA PROVIDERS (get*Callback = returns data the system uses)
 		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
@@ -202,8 +232,18 @@
 		contextMenuXOffset?: number | null | undefined;
 		contextMenuYOffset?: number | null | undefined;
 
-		/** Custom keydown handler. Return true to prevent default tree keyboard handling. */
-		onTreeKeydown?: (event: KeyboardEvent, controller: TreeController<T>) => boolean | void;
+		/** Custom keydown handler. Return true to prevent default tree keyboard handling
+		 *  (including the built-in shortcuts). Gets a context object mirroring the other
+		 *  callback families: the resolved `focusedNode` (single) and `highlightedNodes`
+		 *  (multi) so you don't reach through the controller for the common case; `controller`
+		 *  remains for imperative actions (addNode, copyNodes, …). A keydown is a tree-level
+		 *  event, so there's no single "the node" — that's why it carries both selections. */
+		onTreeKeydown?: (ctx: {
+			event: KeyboardEvent;
+			focusedNode: LTreeNode<T> | null;
+			highlightedNodes: LTreeNode<T>[];
+			controller: TreeController<T>;
+		}) => boolean | void;
 
 		/** Override individual navigation methods (e.g. for custom ArrowDown/Up behavior) */
 		navigationOverrides?: TreeNavigationOverrides<T>;
@@ -254,10 +294,11 @@
 		nodeTemplate = undefined,
 		treeHeader = undefined,
 		treeFooter = undefined,
-		noDataFound = undefined,
+		noData = undefined,
 		contextMenu = undefined,
 		dropPlaceholder = undefined,
 		loadingPlaceholder = undefined,
+		noDataText = 'No data',
 
 		// BEHAVIOUR
 		expandLevel = 2,
@@ -302,10 +343,12 @@
 		dropZoneLayout = 'around',
 		dropZoneStart = 33,
 		dropZoneMaxWidth = 120,
+		shouldShowDropPlaceholderWhenEmpty = false,
 		isCopyAllowed = false,
 		shouldAutoHandleCopy = true,
 		shouldAutoHandleMove = true,
 		shouldAutoHandlePaste = true,
+		shouldHandleKeyboardShortcuts = false,
 		isAccordionExpand = false,
 
 		// EVENTS
@@ -319,11 +362,13 @@
 		onCopy,
 		onCut,
 		onPaste,
+		onDelete,
 		// INTERCEPTORS
 		beforeDropCallback,
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
+		beforeDeleteCallback,
 		copyNodeTransformationCallback,
 		pasteNodeTransformationCallback,
 		// DATA PROVIDERS
@@ -425,6 +470,7 @@
 		shouldAutoHandleCopy,
 		shouldAutoHandleMove,
 		shouldAutoHandlePaste,
+		shouldHandleKeyboardShortcuts,
 		isAccordionExpand,
 		onNodeClick,
 		onNodeDoubleClick,
@@ -436,10 +482,12 @@
 		onCopy,
 		onCut,
 		onPaste,
+		onDelete,
 		beforeDropCallback,
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
+		beforeDeleteCallback,
 		copyNodeTransformationCallback,
 		pasteNodeTransformationCallback,
 		getContextMenuItemsCallback,
@@ -544,6 +592,7 @@
 	$effect(() => { controller.shouldAutoHandleCopy = shouldAutoHandleCopy ?? true; });
 	$effect(() => { controller.shouldAutoHandleMove = shouldAutoHandleMove ?? true; });
 	$effect(() => { controller.shouldAutoHandlePaste = shouldAutoHandlePaste ?? true; });
+	$effect(() => { controller.shouldHandleKeyboardShortcuts = shouldHandleKeyboardShortcuts ?? false; });
 	$effect(() => { controller.isAccordionExpand = isAccordionExpand ?? false; });
 	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
 
@@ -584,10 +633,12 @@
 	$effect(() => { controller.onCopyHandler = onCopy; });
 	$effect(() => { controller.onCutHandler = onCut; });
 	$effect(() => { controller.onPasteHandler = onPaste; });
+	$effect(() => { controller.onDeleteHandler = onDelete; });
 	$effect(() => { controller.beforeDropHandler = beforeDropCallback; });
 	$effect(() => { controller.beforeCopyHandler = beforeCopyCallback; });
 	$effect(() => { controller.beforeCutHandler = beforeCutCallback; });
 	$effect(() => { controller.beforePasteHandler = beforePasteCallback; });
+	$effect(() => { controller.beforeDeleteHandler = beforeDeleteCallback; });
 	$effect(() => { controller.copyTransformHandler = copyNodeTransformationCallback; });
 	$effect(() => { controller.pasteTransformHandler = pasteNodeTransformationCallback; });
 	$effect(() => { controller.getContextMenuItemsHandler = getContextMenuItemsCallback; });
@@ -624,6 +675,19 @@
 	const formattedDropZoneStart = $derived(
 		typeof controller.dropZoneStart === 'number' ? `${controller.dropZoneStart}%` : controller.dropZoneStart
 	);
+
+	// Show the drop placeholder either mid-drag (isDropPlaceholderActive) or, when
+	// shouldShowDropPlaceholderWhenEmpty is set, permanently while the tree is empty.
+	const showEmptyDropPlaceholder = $derived(
+		controller.isDropPlaceholderActive || shouldShowDropPlaceholderWhenEmpty
+	);
+
+	// Focus-on-hover for the permanent empty drop zone: gives the tabbable container
+	// keyboard focus so a Ctrl/Cmd+V (routed through onTreeKeydown) pastes into this
+	// tree without a node to click first. No-op unless the permanent placeholder is on.
+	function focusEmptyDropZone() {
+		if (shouldShowDropPlaceholderWhenEmpty) treeContainerRef?.focus();
+	}
 
 	// ── Export public methods (thin proxies) ────────────────────────────
 	export async function expandNodes(
@@ -879,10 +943,13 @@
 				| "onCopy"
 				| "onCut"
 				| "onPaste"
+				| "onDelete"
 				| "beforeDropCallback"
 				| "beforeCopyCallback"
 				| "beforeCutCallback"
 				| "beforePasteCallback"
+				| "beforeDeleteCallback"
+				| "shouldHandleKeyboardShortcuts"
 				| "copyNodeTransformationCallback"
 				| "pasteNodeTransformationCallback"
 				| "getContextMenuItemsCallback"
@@ -892,6 +959,8 @@
 				| "virtualContainerHeight"
 				| "dragDropMode"
 				| "dropZoneMode"
+				| "shouldShowDropPlaceholderWhenEmpty"
+				| "noDataText"
 				| "bodyClass"
 				| "expandIconClass"
 				| "collapseIconClass"
@@ -966,10 +1035,13 @@
 		if (updates.onCopy !== undefined) onCopy = updates.onCopy;
 		if (updates.onCut !== undefined) onCut = updates.onCut;
 		if (updates.onPaste !== undefined) onPaste = updates.onPaste;
+		if (updates.onDelete !== undefined) onDelete = updates.onDelete;
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.beforeCopyCallback !== undefined) beforeCopyCallback = updates.beforeCopyCallback;
 		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;
 		if (updates.beforePasteCallback !== undefined) beforePasteCallback = updates.beforePasteCallback;
+		if (updates.beforeDeleteCallback !== undefined) beforeDeleteCallback = updates.beforeDeleteCallback;
+		if (updates.shouldHandleKeyboardShortcuts !== undefined) shouldHandleKeyboardShortcuts = updates.shouldHandleKeyboardShortcuts;
 		if (updates.copyNodeTransformationCallback !== undefined) copyNodeTransformationCallback = updates.copyNodeTransformationCallback;
 		if (updates.pasteNodeTransformationCallback !== undefined) pasteNodeTransformationCallback = updates.pasteNodeTransformationCallback;
 		if (updates.getContextMenuItemsCallback !== undefined) getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
@@ -979,6 +1051,8 @@
 		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
 		if (updates.dragDropMode !== undefined) dragDropMode = updates.dragDropMode;
 		if (updates.dropZoneMode !== undefined) dropZoneMode = updates.dropZoneMode;
+		if (updates.shouldShowDropPlaceholderWhenEmpty !== undefined) shouldShowDropPlaceholderWhenEmpty = updates.shouldShowDropPlaceholderWhenEmpty;
+		if (updates.noDataText !== undefined) noDataText = updates.noDataText;
 		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
 		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
@@ -1004,8 +1078,29 @@
 		// Don't interfere with context menu keyboard handling
 		if (controller.contextMenuVisible) return;
 
-		// Call custom handler first — return true to suppress default handling
-		if (onTreeKeydown?.(event, controller) === true) {
+		// Call custom handler first — return true to suppress default handling. Resolve the
+		// focus + highlight selections up front so the consumer gets nodes, not raw paths.
+		if (onTreeKeydown) {
+			const highlightedNodes = [...controller.highlightedPaths]
+				.map((p) => controller.getNodeByPath(p))
+				.filter((n): n is LTreeNode<T> => n !== null);
+			if (
+				onTreeKeydown({
+					event,
+					focusedNode: controller.focusedNode ?? null,
+					highlightedNodes,
+					controller
+				}) === true
+			) {
+				event.preventDefault();
+				return;
+			}
+		}
+
+		// Built-in opt-in shortcuts (copy/cut/paste/delete/esc). Runs AFTER the consumer
+		// hook (so it can override) but BEFORE the empty-tree return (so paste works into
+		// an empty tree). No-op unless shouldHandleKeyboardShortcuts is set.
+		if (controller.handleShortcutKeydown(event)) {
 			event.preventDefault();
 			return;
 		}
@@ -1113,6 +1208,39 @@
 
 <svelte:window onkeydown={handleContextMenuKeydown} />
 
+<!-- Empty-tree drop zone. Shared by all render modes (virtual / flat / recursive)
+     and the no-container fallback. Shows the drop placeholder mid-drag, or
+     permanently when shouldShowDropPlaceholderWhenEmpty is set; focus-on-hover
+     then arms this tree for a keyboard paste. -->
+{#snippet emptyDropState()}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="stv__empty-state"
+		class:stv__drop-placeholder={showEmptyDropPlaceholder}
+		ondragenter={controller.handleEmptyTreeDragOver}
+		ondragover={controller.handleEmptyTreeDragOver}
+		ondragleave={controller.handleEmptyTreeDragLeave}
+		ondrop={controller.handleEmptyTreeDrop}
+		ontouchend={controller.handleEmptyTreeTouchEnd}
+		onmouseenter={focusEmptyDropZone}
+		onpointerdown={focusEmptyDropZone}
+	>
+		{#if showEmptyDropPlaceholder}
+			{#if dropPlaceholder}
+				{@render dropPlaceholder()}
+			{:else}
+				<div class="stv__drop-placeholder-content">
+					Drop here to add
+				</div>
+			{/if}
+		{:else if noData}
+			{@render noData()}
+		{:else}
+			<div class="stv__empty-state-content">{noDataText}</div>
+		{/if}
+	</div>
+{/snippet}
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
@@ -1189,29 +1317,7 @@
 									flatGap={prevNode != null && (node.level ?? 0) > (prevNode.level ?? 0)}
 								/>
 							{:else}
-								<!-- Empty state when tree has no items -->
-								<!-- svelte-ignore a11y_no_static_element_interactions -->
-								<div
-									class="stv__empty-state"
-									class:stv__drop-placeholder={controller.isDropPlaceholderActive}
-									ondragenter={controller.handleEmptyTreeDragOver}
-									ondragover={controller.handleEmptyTreeDragOver}
-									ondragleave={controller.handleEmptyTreeDragLeave}
-									ondrop={controller.handleEmptyTreeDrop}
-									ontouchend={controller.handleEmptyTreeTouchEnd}
-								>
-									{#if controller.isDropPlaceholderActive}
-										{#if dropPlaceholder}
-											{@render dropPlaceholder()}
-										{:else}
-											<div class="stv__drop-placeholder-content">
-												Drop here to add
-											</div>
-										{/if}
-									{:else}
-										{@render noDataFound?.()}
-									{/if}
-								</div>
+								{@render emptyDropState()}
 							{/each}
 						</div>
 					</div>
@@ -1234,29 +1340,7 @@
 							flatGap={prevNode != null && (node.level ?? 0) > (prevNode.level ?? 0)}
 						/>
 					{:else}
-						<!-- Empty state when tree has no items -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							class="stv__empty-state"
-							class:stv__drop-placeholder={controller.isDropPlaceholderActive}
-							ondragenter={controller.handleEmptyTreeDragOver}
-							ondragover={controller.handleEmptyTreeDragOver}
-							ondragleave={controller.handleEmptyTreeDragLeave}
-							ondrop={controller.handleEmptyTreeDrop}
-							ontouchend={controller.handleEmptyTreeTouchEnd}
-						>
-							{#if controller.isDropPlaceholderActive}
-								{#if dropPlaceholder}
-									{@render dropPlaceholder()}
-								{:else}
-									<div class="stv__drop-placeholder-content">
-										Drop here to add
-									</div>
-								{/if}
-							{:else}
-								{@render noDataFound?.()}
-							{/if}
-						</div>
+						{@render emptyDropState()}
 					{/each}
 				</div>
 			{:else}
@@ -1276,57 +1360,14 @@
 								dropOperation={controller.currentDropOperation}
 							/>
 						{:else}
-							<!-- Empty state when tree has no items -->
-							<!-- svelte-ignore a11y_no_static_element_interactions -->
-							<div
-								class="stv__empty-state"
-								class:stv__drop-placeholder={controller.isDropPlaceholderActive}
-								ondragenter={controller.handleEmptyTreeDragOver}
-								ondragover={controller.handleEmptyTreeDragOver}
-								ondragleave={controller.handleEmptyTreeDragLeave}
-								ondrop={controller.handleEmptyTreeDrop}
-								ontouchend={controller.handleEmptyTreeTouchEnd}
-							>
-								{#if controller.isDropPlaceholderActive}
-									{#if dropPlaceholder}
-										{@render dropPlaceholder()}
-									{:else}
-										<div class="stv__drop-placeholder-content">
-											Drop here to add
-										</div>
-									{/if}
-								{:else}
-									{@render noDataFound?.()}
-								{/if}
-							</div>
+							{@render emptyDropState()}
 						{/each}
 					</div>
 				{/key}
 			{/if}
 		{:else}
 			<!-- Empty tree drop zone -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="stv__empty-state"
-				class:stv__drop-placeholder={controller.isDropPlaceholderActive}
-				ondragenter={controller.handleEmptyTreeDragOver}
-				ondragover={controller.handleEmptyTreeDragOver}
-				ondragleave={controller.handleEmptyTreeDragLeave}
-				ondrop={controller.handleEmptyTreeDrop}
-				ontouchend={controller.handleEmptyTreeTouchEnd}
-			>
-				{#if controller.isDropPlaceholderActive}
-					{#if dropPlaceholder}
-						{@render dropPlaceholder()}
-					{:else}
-						<div class="stv__drop-placeholder-content">
-							Drop here to add
-						</div>
-					{/if}
-				{:else}
-					{@render noDataFound?.()}
-				{/if}
-			</div>
+			{@render emptyDropState()}
 		{/if}
 	</div>
 

@@ -10,8 +10,7 @@
 	import { Tree, uniqueName } from '$lib/index.js';
 	import type {
 		TreeController,
-		PasteNodeTransformContext,
-		CopyNodeTransformContext
+		NodeTransformContext
 	} from '$lib/index.js';
 	import type { LTreeNode, DropPosition } from '$lib/index.js';
 
@@ -50,15 +49,21 @@
 	}
 
 	// Clean at snapshot time: redact `secret` before data lands on the shared clipboard.
-	function copyTransform(item: Item, _ctx: CopyNodeTransformContext): Item {
+	function copyTransform(item: Item, _ctx: NodeTransformContext<Item>): Item {
 		return item.secret !== undefined ? { ...item, secret: 'REDACTED' } : item;
 	}
 
 	// Per-node paste derivation: fresh id, collision-free name on roots, and SKIP
 	// (return null) any node named "locked.txt" to exercise per-entry skipping.
-	function pasteTransform(item: Item, ctx: PasteNodeTransformContext<Item>): Item | null {
+	function pasteTransform(item: Item, ctx: NodeTransformContext<Item>): Item | null {
 		if (item.name === 'locked.txt') return null;
-		const taken = ctx.siblings.map((s) => s.data?.name ?? '');
+		// Landing neighbours = target.node's children for a 'child' paste, else the anchor's
+		// siblings (top-level = target.siblings when there's no anchor node at the root).
+		const landing =
+			ctx.position === 'child' && ctx.target?.node
+				? Object.values(ctx.target.node.children)
+				: ctx.target?.siblings ?? [];
+		const taken = landing.map((s) => s.data?.name ?? '');
 		return {
 			...item,
 			id: nextId++,
@@ -67,7 +72,15 @@
 		};
 	}
 
-	function onTreeKeydown(event: KeyboardEvent, controller: TreeController<Item>): boolean {
+	function onTreeKeydown({
+		event,
+		controller
+	}: {
+		event: KeyboardEvent;
+		focusedNode: LTreeNode<Item> | null;
+		highlightedNodes: LTreeNode<Item>[];
+		controller: TreeController<Item>;
+	}): boolean {
 		const mod = event.ctrlKey || event.metaKey;
 		const key = event.key.toLowerCase();
 

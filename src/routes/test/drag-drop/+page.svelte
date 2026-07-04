@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
+	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
+	import type { NodeDropContext } from '$lib/index.js';
 
 	// Deterministic e2e fixture for drag and drop. Targeted by e2e/drag-drop.spec.ts.
 	// Each section exposes the last drop event via dedicated data-testid spans so
@@ -49,17 +50,11 @@
 
 	let singleDrop: DropState = $state(emptyDropState());
 
-	function onSingleDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onSingleDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		singleDrop = {
 			count: singleDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'single'
@@ -83,41 +78,31 @@
 
 	let twoTreesDrop: DropState = $state(emptyDropState());
 
-	function onSourceDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onSourceDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		twoTreesDrop = {
 			count: twoTreesDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'source'
 		};
 	}
 
-	function onTargetDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onTargetDrop({ source, target, position, operation }: NodeDropContext<Item>) {
+		const dropNode = target?.node ?? null;
+		const draggedNode = source.node;
 		twoTreesDrop = {
 			count: twoTreesDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
+			dragged: draggedNode?.data?.name ?? '',
 			target: dropNode?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'target'
 		};
 
-		const isSameTree = draggedNode.treeId === 'two-trees-target';
-		if (isSameTree) return;
+		const isSameTree = draggedNode?.treeId === 'two-trees-target';
+		if (isSameTree || !draggedNode) return;
 
 		// Cross-tree: copy descendants into the target tree so spec can assert
 		// that the dragged node landed in the target with a fresh id.
@@ -168,17 +153,11 @@
 
 	let restrictedMemberDrop: DropState = $state(emptyDropState());
 
-	function onRestrictedMemberDrop(
-		dropNode: LTreeNode<RestrictedItem> | null,
-		draggedNode: LTreeNode<RestrictedItem>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onRestrictedMemberDrop({ source, target, position, operation }: NodeDropContext<RestrictedItem>) {
 		restrictedMemberDrop = {
 			count: restrictedMemberDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'restricted-member'
@@ -201,17 +180,11 @@
 
 	let restrictedCallbackDrop: DropState = $state(emptyDropState());
 
-	function onRestrictedCallbackDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onRestrictedCallbackDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		restrictedCallbackDrop = {
 			count: restrictedCallbackDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'restricted-callback'
@@ -227,17 +200,11 @@
 
 	let copyDrop: DropState = $state(emptyDropState());
 
-	function onCopyDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onCopyDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		copyDrop = {
 			count: copyDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'copy'
@@ -266,17 +233,11 @@
 		[...multiHighlighted].sort((a, b) => a.localeCompare(b)).join(',')
 	);
 
-	function onMultiDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onMultiDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		multiDrop = {
 			count: multiDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'multi'
@@ -310,17 +271,11 @@
 	let lockedFocused = $state<LTreeNode<LockableItem> | null>(null);
 	let lockedDrop: DropState = $state(emptyDropState());
 
-	function onLockedDrop(
-		dropNode: LTreeNode<LockableItem> | null,
-		draggedNode: LTreeNode<LockableItem>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onLockedDrop({ source, target, position, operation }: NodeDropContext<LockableItem>) {
 		lockedDrop = {
 			count: lockedDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'locked'
@@ -344,17 +299,11 @@
 
 	let touchDrop: DropState = $state(emptyDropState());
 
-	function onTouchDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onTouchDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		touchDrop = {
 			count: touchDrop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation,
 			tree: 'touch'

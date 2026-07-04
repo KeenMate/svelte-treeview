@@ -44,7 +44,7 @@
 	let formNotes = $state<string>('(form not loaded yet)');
 	let highlightChangeFires = $state(0);
 
-	function handleHighlightChange(paths: Set<string>) {
+	function handleHighlightChange({ paths }: { paths: Set<string> }) {
 		highlightChangeFires++;
 		// In a real app this is the listener that would re-fetch & overwrite
 		// form data based on the newly highlighted node.

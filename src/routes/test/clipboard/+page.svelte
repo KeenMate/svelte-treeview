@@ -55,10 +55,10 @@
 	// pasteNodeTransformationCallback instead (see /examples/tree-editor).
 	function beforePaste(ctx: BeforePasteContext<Item>): { targetPath?: string } | void {
 		if (ctx.operation !== 'copy') return;
-		let targetPath = ctx.targetPath;
+		let targetPath = ctx.target.path;
 		let redirect: { targetPath?: string } | undefined;
 		if (targetPath && ctx.entries.some((e) => e.sourcePath === targetPath)) {
-			targetPath = ctx.targetNode?.parentPath ?? '';
+			targetPath = ctx.target.node?.parentPath ?? '';
 			redirect = { targetPath };
 		}
 		const taken = new Set(treeRef.getChildren(targetPath).map((c) => c.data?.name ?? ''));
@@ -70,7 +70,15 @@
 		return redirect;
 	}
 
-	function onTreeKeydown(event: KeyboardEvent, controller: TreeController<Item>): boolean {
+	function onTreeKeydown({
+		event,
+		controller
+	}: {
+		event: KeyboardEvent;
+		focusedNode: LTreeNode<Item> | null;
+		highlightedNodes: LTreeNode<Item>[];
+		controller: TreeController<Item>;
+	}): boolean {
 		const mod = event.ctrlKey || event.metaKey;
 		const key = event.key.toLowerCase();
 
@@ -133,8 +141,8 @@
 			bind:focusedNode
 			bind:highlightedPaths
 			{onTreeKeydown}
-			onCopy={(paths) => (lastLog = `copied ${paths.length}`)}
-			onCut={(paths) => (lastLog = `cut ${paths.length}`)}
+			onCopy={({ paths }) => (lastLog = `copied ${paths.length}`)}
+			onCut={({ paths }) => (lastLog = `cut ${paths.length}`)}
 			onPaste={(result) => (lastLog = result.success ? `pasted ${result.count}` : `paste-failed ${result.error}`)}
 			beforePasteCallback={beforePaste}
 		>

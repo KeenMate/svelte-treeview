@@ -129,11 +129,17 @@ Monitor progressive rendering:
   isProgressiveRender={true}
   bind:isRendering
   onRenderStart={() => console.log('Render started')}
-  onRenderProgress={(rendered, total) =>
-    console.log(`Rendered ${rendered}/${total}`)
+  onRenderProgress={(stats) =>
+    console.log(`Rendered ${stats.processed}, ${stats.pending} pending`)
   }
-  onRenderComplete={() => console.log('Render complete')}
+  onRenderComplete={(stats) =>
+    console.log(`Render complete: ${stats.processed} nodes`)
+  }
 />
+
+onRenderProgress/onRenderComplete each receive one RenderStats object:
+  RenderStats = { pending: number; processed: number }
+onRenderStart takes no arguments.
 
 isRendering is a bindable boolean — useful for showing spinners/progress bars.
 

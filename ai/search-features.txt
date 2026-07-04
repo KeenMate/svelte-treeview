@@ -279,7 +279,7 @@ SEARCH WITH EMPTY TREE
 Handle no results state:
 
 <Tree {data} bind:searchText>
-  {#snippet noDataFound()}
+  {#snippet noData()}
     {#if searchText}
       <p>No results for "{searchText}"</p>
     {:else}

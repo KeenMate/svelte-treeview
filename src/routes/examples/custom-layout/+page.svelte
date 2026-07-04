@@ -693,8 +693,10 @@
 			dragDropMode="self"
 			getIsDraggableCallback={() => true}
 			getIsDropAllowedCallback={() => true}
-			onNodeDrop={(dropNode, draggedNode, position) => {
-				tokenDropLog = [`Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name}"`, ...tokenDropLog.slice(0, 4)];
+			onNodeDrop={({ source, target, position }) => {
+				const draggedNode = source.node;
+				const dropNode = target?.node ?? null;
+				tokenDropLog = [`Moved "${draggedNode?.data?.name}" ${position} "${dropNode?.data?.name}"`, ...tokenDropLog.slice(0, 4)];
 				if (position === 'child' && dropNode) {
 					tokenExpanded = new Set([...tokenExpanded, dropNode.path]);
 				}
@@ -827,8 +829,10 @@
 			dragDropMode="self"
 			getIsDraggableCallback={() => true}
 			getIsDropAllowedCallback={() => true}
-			onNodeDrop={(dropNode, draggedNode, position) => {
-				const msg = `Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
+			onNodeDrop={({ source, target, position }) => {
+				const draggedNode = source.node;
+				const dropNode = target?.node ?? null;
+				const msg = `Moved "${draggedNode?.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
 				dendroDropLog = [msg, ...dendroDropLog.slice(0, 4)];
 				// Expand target if dropping as child
 				if (position === 'child' && dropNode) {
@@ -887,8 +891,10 @@
 			dragDropMode="self"
 			getIsDraggableCallback={() => true}
 			getIsDropAllowedCallback={() => true}
-			onNodeDrop={(dropNode, draggedNode, position) => {
-				const msg = `Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
+			onNodeDrop={({ source, target, position }) => {
+				const draggedNode = source.node;
+				const dropNode = target?.node ?? null;
+				const msg = `Moved "${draggedNode?.data?.name}" ${position} "${dropNode?.data?.name ?? 'root'}"`;
 				dendroDropLog = [msg, ...dendroDropLog.slice(0, 4)];
 				if (position === 'child' && dropNode) {
 					dendroExpanded = new Set([...dendroExpanded, dropNode.path]);

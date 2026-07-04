@@ -34,7 +34,13 @@ import {
 	getClipboard,
 	clearClipboard,
 	hasClipboard,
-	getClipboardOperation as getClipboardOp
+	getClipboardOperation as getClipboardOp,
+	registerClipboardTree,
+	unregisterClipboardTree,
+	getClipboardTree,
+	setDragSet,
+	getDragSet,
+	clearDragSet
 } from './clipboard.js';
 import type { TreeNavigation } from './navigation.js';
 
@@ -57,47 +63,138 @@ export interface PasteResult<T> {
 }
 
 /**
- * Context passed to copyNodeTransformationCallback for each node as it is snapshotted
- * onto the clipboard. Use it to strip transient/sensitive fields before the data lands
- * on the (cross-tree) shared clipboard.
+ * A pointer to one node plus the relational context the tree already knows about it:
+ * its live `parent` node and `siblings` (the children of that parent, which includes the
+ * node itself). Shared shape across the clipboard callbacks (as `NodeTransformContext`'s
+ * `source`/`target`) and the on* event contexts, so a consumer never has to re-resolve a
+ * parent via `getNodeByPath(node.parentPath)`.
+ *
+ * `path` is always present. `node`/`parent`/`siblings` are live when the node is reachable
+ * in this tree and null/[] when it isn't (cross-tree source, or a node removed by a cut).
  */
-export interface CopyNodeTransformContext {
-	operation: 'copy' | 'cut';
-	/** True for the copied node itself, false for a descendant riding along. */
-	isRoot: boolean;
-	/** Path of the root node being copied. */
-	sourcePath: string;
-}
-
-/**
- * Context passed to pasteNodeTransformationCallback for each node about to be inserted.
- * Return new data to derive ids/values/names, or null to skip this node (skipping a root
- * skips its whole subtree). The callback is pure — it reads the pristine clipboard
- * snapshot and never mutates it, so repeat pastes stay clean.
- */
-export interface PasteNodeTransformContext<T> {
-	operation: 'copy' | 'cut';
-	/** True for a top-level pasted node, false for a descendant. */
-	isRoot: boolean;
-	/** Index of the root entry within this paste (descendants share their root's index). */
-	index: number;
-	/** Where this node came from. */
-	sourcePath: string;
-	/** The original node still in the tree (same-tree copy/cut); null if unavailable
-	 * (cross-tree, or the source was already removed). */
-	sourceNode: LTreeNode<T> | null;
-	/** The destination parent node (null when pasting at the root). Has `.children`. */
-	targetParent: LTreeNode<T> | null;
-	/** The nodes already at the destination — the parent's existing children (root-level
-	 * nodes when targetParent is null). LIVE and batch-aware: includes nodes added earlier
-	 * in THIS paste, so collision logic dedupes correctly. Derive whatever "taken" means
-	 * yourself, e.g. `uniqueName(data.name, siblings.map(s => s.data?.name))`. */
+export interface NodeRef<T> {
+	path: string;
+	node: LTreeNode<T> | null;
+	parent: LTreeNode<T> | null;
+	/** Children of `parent` (includes `node` itself); top-level nodes when `parent` is null. */
 	siblings: LTreeNode<T>[];
 }
 
 /**
- * Context for beforeCopyCallback / beforeCutCallback — runs before the snapshot is taken.
- * Return a new path list to rewrite the set, false to block, or nothing to proceed.
+ * Context passed to copyNodeTransformationCallback for each node as it is snapshotted
+ * onto the clipboard. Use it to strip transient/sensitive fields before the data lands
+ * on the (cross-tree) shared clipboard.
+ */
+/**
+ * Context passed to BOTH copyNodeTransformationCallback and pasteNodeTransformationCallback,
+ * one per node. `phase` says which callback is running; `target` is null during the copy
+ * phase (no destination has been chosen yet) and populated during paste. `source` is the
+ * origin side — always carries the path; node/parent/siblings are live when reachable
+ * (same-tree) and null/[] cross-tree or once a cut source has been removed.
+ *
+ * Symmetric by design: the same field means the same thing in both phases, so a naming/id
+ * derivation reads identically whether you clean data on copy or on paste. Return new data
+ * to derive ids/values/names; from pasteNodeTransformationCallback return null to skip a
+ * node (skipping a root skips its whole subtree). Pure — reads the pristine snapshot, never
+ * mutates it, so repeat pastes stay clean.
+ */
+export interface NodeTransformContext<T> {
+	operation: 'copy' | 'cut';
+	/** Which callback is running: 'copy' at snapshot time, 'paste' at insert time. */
+	phase: 'copy' | 'paste';
+	/** True for a top-level node, false for a descendant riding along inside it. */
+	isRoot: boolean;
+	/** Index of the root entry within this batch (descendants share their root's index). */
+	index: number;
+	/** How the pasted roots land relative to `target.node` — null during the copy phase
+	 * (no destination chosen yet). Mirrors the DropPosition vocabulary of onNodeDrop. */
+	position: 'child' | 'before' | 'after' | null;
+	/** The origin side. `path` is always present; node/parent/siblings are live when the
+	 * source is reachable (same-tree) and null/[] cross-tree or after a cut removed it. */
+	source: NodeRef<T>;
+	/** The destination side, symmetric with `source` — null during the copy phase. `node`
+	 * is the node you targeted (null when pasting at the tree root); `parent` is its parent;
+	 * `siblings` are its neighbours (children of `parent`), LIVE and batch-aware (include
+	 * nodes added earlier in THIS paste). The roots' actual landing neighbours depend on
+	 * `position`: for 'before'/'after' they ARE `target.siblings`; for 'child' they are
+	 * `target.node`'s children (top-level nodes = `target.siblings` when `node` is null).
+	 *   const landing = position === 'child' && target.node
+	 *     ? Object.values(target.node.children)
+	 *     : (target?.siblings ?? []);
+	 *   name = uniqueName(data.name, landing.map(s => s.data?.name)); */
+	target: NodeRef<T> | null;
+}
+
+/**
+ * Context for onNodeClick / onNodeDoubleClick. It IS a NodeRef: the clicked node plus its
+ * live parent/siblings, so a click handler never has to reach back through the controller
+ * for what the tree already resolved.
+ */
+export type NodeEventContext<T> = NodeRef<T>;
+
+/**
+ * Context for onNodeDragStart / onNodeDragOver. A NodeRef (for dragStart the node that
+ * started the drag; for dragOver the node currently hovered) plus the raw DragEvent and
+ * `dragged` — the FULL top-level set in flight. A drag is single-origin at the DOM level,
+ * so the event fires once; `dragged` is the whole multi-selection (or just the one node for
+ * a single drag) so a handler doesn't have to read `controller.highlightedPaths` itself.
+ */
+export interface NodeDragContext<T> extends NodeRef<T> {
+	event: DragEvent;
+	/** The full top-level set being dragged (multi-selection; a single-item array otherwise). */
+	dragged: NodeRef<T>[];
+}
+
+/**
+ * Context for onNodeDrop, symmetric with NodeTransformContext: `source` is the dragged node
+ * (with its parent/siblings), `target` is the drop node (null when dropped into empty space
+ * or the tree root), `position`/`operation` describe how it landed, `event` is the original
+ * DOM event.
+ *
+ * `dragged` is the full top-level dragged set (`source` is its lead node); a drop fires once
+ * even for a multi-drag, so this is how you see the whole set. `dropped` is the resulting
+ * placed nodes AFTER an auto-handled op (move: the moved nodes at their new home; copy: the
+ * fresh copies) — it is null when the library did NOT place them (a cross-tree drop, or
+ * shouldAutoHandleMove/Copy=false), because then the consumer owns insertion.
+ */
+export interface NodeDropContext<T> {
+	source: NodeRef<T>;
+	target: NodeRef<T> | null;
+	/** The full top-level dragged set (includes `source`). */
+	dragged: NodeRef<T>[];
+	/** The placed nodes after an auto-handled move/copy; null when the library didn't place them. */
+	dropped: NodeRef<T>[] | null;
+	position: DropPosition;
+	operation: DropOperation;
+	event: DragEvent | TouchEvent;
+}
+
+/**
+ * Context for the set-oriented clipboard/delete events (onCopy / onCut / onDelete), mirroring
+ * the BeforeCopyContext/BeforeDeleteContext shape of their before* twins. `nodes` are the
+ * resolved live nodes for `paths`; for onCut/onDelete they are pre-removal snapshots captured
+ * before the nodes left the tree (the tree no longer holds them by the time the event fires).
+ */
+export interface ClipboardEventContext<T> {
+	/** Present for copy/cut; omitted for delete (which has no copy/cut operation). */
+	operation?: 'copy' | 'cut';
+	paths: string[];
+	nodes: LTreeNode<T>[];
+}
+
+/**
+ * Context for the selection-change events (onHighlightChange = UI multi-select set;
+ * onSelectionChange = checkbox set). `paths` is the new set, `nodes` its resolved live nodes.
+ */
+export interface SelectionChangeContext<T> {
+	paths: Set<string>;
+	nodes: LTreeNode<T>[];
+}
+
+/**
+ * Context for beforeCopyCallback / beforeCutCallback — batch policy, runs before the
+ * snapshot is taken. Return a new path list to rewrite the set, false to block, or nothing
+ * to proceed.
  */
 export interface BeforeCopyContext<T> {
 	operation: 'copy' | 'cut';
@@ -108,15 +205,30 @@ export interface BeforeCopyContext<T> {
 }
 
 /**
+ * Context for beforeDeleteCallback — batch policy before the built-in Delete removes nodes.
+ * Return a narrowed path list to delete only those, false to block entirely, or nothing to
+ * proceed. Mirrors BeforeCopyContext's paths/nodes shape (delete has no copy/cut operation).
+ */
+export interface BeforeDeleteContext<T> {
+	/** The top-level paths about to be deleted. */
+	paths: string[];
+	/** The resolved live nodes for those paths. */
+	nodes: LTreeNode<T>[];
+}
+
+/**
  * Context for beforePasteCallback — batch policy run once before the insert loop.
  * Return { targetPath?, position? } to redirect, false to block, or nothing to proceed.
  */
 export interface BeforePasteContext<T> {
-	/** Resolved destination path ('' = root), after the leaf-aware position redirect. */
-	targetPath: string;
-	/** The resolved target node (null when pasting at the root). Has .parentPath/.children. */
-	targetNode: LTreeNode<T> | null;
 	operation: 'copy' | 'cut';
+	/** The destination side (proposed, pre-insert): `path` ('' = root, after the leaf-aware
+	 * position redirect) and the node at that path (null at root). The hook may still
+	 * redirect via its return value. */
+	target: {
+		path: string;
+		node: LTreeNode<T> | null;
+	};
 	/** Immutable clipboard snapshots ({ sourceTreeId, sourcePath, data, descendants }) —
 	 * NOT live tree nodes (sources may be cross-tree, or removed on a cut). */
 	entries: readonly ClipboardEntry<T>[];
@@ -286,28 +398,41 @@ export interface TreeControllerProps<T> {
 	shouldAutoHandlePaste?: boolean;
 	isAccordionExpand?: boolean;
 
-	// EVENTS (on* = fire-and-forget notifications)
-	onNodeClick?: (node: LTreeNode<T>) => void;
-	onNodeDoubleClick?: (node: LTreeNode<T>) => void;
-	onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
-	onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
-	onNodeDrop?: (
-		dropNode: LTreeNode<T> | null,
-		draggedNode: LTreeNode<T>,
-		position: DropPosition,
-		event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) => void;
-	onHighlightChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
-	onSelectionChange?: (paths: Set<string>, nodes: LTreeNode<T>[]) => void;
+	// EVENTS (on* = fire-and-forget notifications). Each carries a context object mirroring
+	// the clipboard callbacks: single-node events get a NodeRef (node + live parent/siblings);
+	// onNodeDrop gets symmetric source/target NodeRefs; the set events carry paths + nodes.
+	onNodeClick?: (ctx: NodeEventContext<T>) => void;
+	onNodeDoubleClick?: (ctx: NodeEventContext<T>) => void;
+	onNodeDragStart?: (ctx: NodeDragContext<T>) => void;
+	onNodeDragOver?: (ctx: NodeDragContext<T>) => void;
+	onNodeDrop?: (ctx: NodeDropContext<T>) => void;
+	onHighlightChange?: (ctx: SelectionChangeContext<T>) => void;
+	onSelectionChange?: (ctx: SelectionChangeContext<T>) => void;
 	// Post-operation clipboard notifications (fired AFTER the op succeeds). Symmetric
-	// with the before*Callback interceptors. onCopy/onCut receive the final paths
-	// (after beforeCopy/beforeCut); onPaste receives the PasteResult.
-	onCopy?: (paths: string[]) => void;
-	onCut?: (paths: string[]) => void;
+	// with the before*Callback interceptors: onCopy/onCut/onDelete carry the final paths
+	// plus resolved nodes (pre-removal snapshots for cut/delete); onPaste the PasteResult.
+	onCopy?: (ctx: ClipboardEventContext<T>) => void;
+	onCut?: (ctx: ClipboardEventContext<T>) => void;
 	onPaste?: (result: PasteResult<T>) => void;
+	/** Fired after `deleteNodes` removes nodes (built-in Delete key or the public method),
+	 *  with the top-level paths that were actually removed plus their pre-removal nodes. */
+	onDelete?: (ctx: ClipboardEventContext<T>) => void;
+
+	/**
+	 * Opt into built-in keyboard shortcuts (default false): Ctrl/Cmd+C/X/V (copy/cut/paste),
+	 * Delete (remove selection), Escape (cancel a pending cut), plus the classic CUA aliases
+	 * Ctrl+Insert (copy) / Shift+Insert (paste) / Shift+Delete (cut). Off by default so it
+	 * never hijacks keys; a consumer `onTreeKeydown` still runs first and can override or
+	 * suppress any of these. Paste targets the focused node (root when none) and uses
+	 * `pasteNodeTransformationCallback` for id/name derivation.
+	 */
+	shouldHandleKeyboardShortcuts?: boolean;
 
 	// INTERCEPTORS (before*Callback = can modify/block)
+	/** Runs before the built-in Delete removes anything. Return a narrowed path[] to
+	 *  restrict what's removed, or `false` to block entirely. `nodes` are the resolved
+	 *  top-level nodes about to be removed (descendants ride along). */
+	beforeDeleteCallback?: (ctx: BeforeDeleteContext<T>) => string[] | false | void;
 	beforeDropCallback?: (
 		dropNode: LTreeNode<T> | null,
 		draggedNode: LTreeNode<T>,
@@ -330,11 +455,11 @@ export interface TreeControllerProps<T> {
 	) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
 	/** Per-node transform applied as data is snapshotted onto the clipboard (copy/cut).
 	 *  Use to strip transient/sensitive fields before they hit the shared clipboard. */
-	copyNodeTransformationCallback?: (data: T, ctx: CopyNodeTransformContext) => T;
+	copyNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T;
 	/** Per-node transform applied as data is inserted on paste. Return new data (fresh
 	 *  ids/values/names) or null to skip the node (skipping a root skips its subtree).
 	 *  Pure: reads the pristine clipboard snapshot, never mutates it. */
-	pasteNodeTransformationCallback?: (data: T, ctx: PasteNodeTransformContext<T>) => T | null;
+	pasteNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T | null;
 
 	// DATA PROVIDERS (get*Callback = returns data the system uses)
 	getContextMenuItemsCallback?: (
@@ -440,18 +565,20 @@ export class TreeController<T> {
 	shouldAutoHandleCopy = $state(true);
 	shouldAutoHandleMove = $state(true);
 	shouldAutoHandlePaste = $state(true);
+	shouldHandleKeyboardShortcuts = $state(false);
 
 	// Event handlers (on* = fire-and-forget)
-	onNodeClickHandler: ((node: LTreeNode<T>) => void) | undefined;
-	onNodeDoubleClickHandler: ((node: LTreeNode<T>) => void) | undefined;
-	onHighlightChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
-	onSelectionChangeHandler: ((paths: Set<string>, nodes: LTreeNode<T>[]) => void) | undefined;
-	onNodeDragStartHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
-	onNodeDragOverHandler: ((node: LTreeNode<T>, event: DragEvent) => void) | undefined;
+	onNodeClickHandler: TreeControllerProps<T>['onNodeClick'];
+	onNodeDoubleClickHandler: TreeControllerProps<T>['onNodeDoubleClick'];
+	onHighlightChangeHandler: TreeControllerProps<T>['onHighlightChange'];
+	onSelectionChangeHandler: TreeControllerProps<T>['onSelectionChange'];
+	onNodeDragStartHandler: TreeControllerProps<T>['onNodeDragStart'];
+	onNodeDragOverHandler: TreeControllerProps<T>['onNodeDragOver'];
 	onNodeDropHandler: TreeControllerProps<T>['onNodeDrop'];
-	onCopyHandler: ((paths: string[]) => void) | undefined;
-	onCutHandler: ((paths: string[]) => void) | undefined;
+	onCopyHandler: TreeControllerProps<T>['onCopy'];
+	onCutHandler: TreeControllerProps<T>['onCut'];
 	onPasteHandler: ((result: PasteResult<T>) => void) | undefined;
+	onDeleteHandler: TreeControllerProps<T>['onDelete'];
 	onRenderStartHandler: (() => void) | undefined;
 	onRenderProgressHandler: ((stats: RenderStats) => void) | undefined;
 	onRenderCompleteHandler: ((stats: RenderStats) => void) | undefined;
@@ -461,6 +588,7 @@ export class TreeController<T> {
 	beforeCopyHandler: TreeControllerProps<T>['beforeCopyCallback'];
 	beforeCutHandler: TreeControllerProps<T>['beforeCutCallback'];
 	beforePasteHandler: TreeControllerProps<T>['beforePasteCallback'];
+	beforeDeleteHandler: TreeControllerProps<T>['beforeDeleteCallback'];
 	copyTransformHandler: TreeControllerProps<T>['copyNodeTransformationCallback'];
 	pasteTransformHandler: TreeControllerProps<T>['pasteNodeTransformationCallback'];
 	beforeCheckboxToggleHandler: TreeControllerProps<T>['beforeCheckboxToggleCallback'];
@@ -626,6 +754,10 @@ export class TreeController<T> {
 		this.treeId = props.treeId || this.generateTreeId();
 		this.treePathSeparator = props.treePathSeparator ?? '.';
 
+		// Register in the cross-tree clipboard registry so a cut pasted into ANOTHER
+		// tree can remove the originals from here (same-tree cut removes them directly).
+		registerClipboardTree(this.treeId, this);
+
 		this.data = props.data;
 		this.focusedNode = props.focusedNode ?? null;
 		this.highlightedPaths = props.highlightedPaths ?? new Set();
@@ -692,10 +824,13 @@ export class TreeController<T> {
 		this.onCopyHandler = props.onCopy;
 		this.onCutHandler = props.onCut;
 		this.onPasteHandler = props.onPaste;
+		this.onDeleteHandler = props.onDelete;
 		this.beforeDropHandler = props.beforeDropCallback;
 		this.beforeCopyHandler = props.beforeCopyCallback;
 		this.beforeCutHandler = props.beforeCutCallback;
 		this.beforePasteHandler = props.beforePasteCallback;
+		this.beforeDeleteHandler = props.beforeDeleteCallback;
+		this.shouldHandleKeyboardShortcuts = props.shouldHandleKeyboardShortcuts ?? false;
 		this.copyTransformHandler = props.copyNodeTransformationCallback;
 		this.pasteTransformHandler = props.pasteNodeTransformationCallback;
 		this.getContextMenuItemsHandler = props.getContextMenuItemsCallback;
@@ -1118,6 +1253,73 @@ export class TreeController<T> {
 		return this.tree?.getSiblings(path) || [];
 	}
 
+	/**
+	 * Build the shared { path, node, parent, siblings } pointer for a node the tree already
+	 * holds — used to give on* events and the clipboard callbacks the same relational context.
+	 * Pass the live node (preferred) or just a path (e.g. a pre-removal snapshot, where the
+	 * node is gone and only the path is known). Missing parent/siblings resolve to null/[].
+	 */
+	nodeRef(nodeOrPath: LTreeNode<T> | string | null): NodeRef<T> {
+		const node =
+			typeof nodeOrPath === 'string' ? this.tree?.getNodeByPath(nodeOrPath) ?? null : nodeOrPath;
+		if (!node) {
+			return {
+				path: typeof nodeOrPath === 'string' ? nodeOrPath : '',
+				node: null,
+				parent: null,
+				siblings: []
+			};
+		}
+		const parentPath = node.parentPath;
+		return {
+			path: node.path,
+			node,
+			parent: parentPath ? this.tree?.getNodeByPath(parentPath) ?? null : null,
+			siblings: this.getChildren(parentPath ?? '')
+		};
+	}
+
+	/**
+	 * The effective top-level set being dragged: when the grabbed node is part of a
+	 * same-tree multi-highlight, the draggable top-level highlighted subtrees (the same set
+	 * the multi-drag move loop uses); otherwise just the grabbed node. Used to populate
+	 * `dragged` on the drag/drop event contexts. Call BEFORE a move mutates the highlight set.
+	 */
+	private _draggedTopLevel(draggedNode: LTreeNode<T>): LTreeNode<T>[] {
+		const isSameTree = draggedNode.treeId === this.treeId;
+		if (
+			isSameTree &&
+			this.highlightedPaths.has(draggedNode.path) &&
+			this.highlightedPaths.size > 1
+		) {
+			const set = this._getTopLevelHighlightedPaths()
+				.map((p) => this.tree?.getNodeByPath(p) ?? null)
+				.filter((n): n is LTreeNode<T> => !!n && this.getNodeIsDraggable(n));
+			if (set.length) return set;
+		}
+		return [draggedNode];
+	}
+
+	/**
+	 * The full top-level dragged set as NodeRefs, correct for BOTH same-tree and
+	 * cross-tree drags — the single source of `ctx.dragged` on drag start/over/drop.
+	 * Same-tree reads the live highlight set (nodes resolve). Cross-tree can't see the
+	 * source's highlight, so it reads the paths the source published on drag start
+	 * (getDragSet) and builds path-only refs (node/parent null cross-tree, as documented);
+	 * falls back to the lead node alone when no set was published (e.g. touch). Call
+	 * BEFORE a move mutates the highlight set.
+	 */
+	private _draggedRefs(draggedNode: LTreeNode<T> | null): NodeRef<T>[] {
+		if (!draggedNode) return [];
+		if (draggedNode.treeId === this.treeId) {
+			return this._draggedTopLevel(draggedNode).map((n) => this.nodeRef(n));
+		}
+		const set = getDragSet();
+		const paths =
+			set && set.sourceTreeId === draggedNode.treeId ? set.paths : [draggedNode.path];
+		return paths.map((p) => this.nodeRef(p));
+	}
+
 	refreshSiblings(parentPath: string): void {
 		this.tree?.refreshSiblings(parentPath);
 	}
@@ -1340,19 +1542,33 @@ export class TreeController<T> {
 	 * Collect a node and all its descendants into a ClipboardEntry.
 	 * Descendants are ordered parent-first with paths relative to the source node.
 	 */
-	private _collectClipboardEntry(node: LTreeNode<T>, operation: 'copy' | 'cut'): ClipboardEntry<T> {
+	private _collectClipboardEntry(
+		node: LTreeNode<T>,
+		operation: 'copy' | 'cut',
+		rootIndex = 0
+	): ClipboardEntry<T> {
 		const descendants: ClipboardEntry<T>['descendants'] = [];
 
 		// $state.snapshot deproxies Svelte reactive state into a plain deep clone.
 		// structuredClone alone throws ("could not be cloned") when node.data is a
 		// $state proxy — which it is for any consumer passing default $state data.
 		// The optional copy transform then cleans the snapshot before it's stored, so
-		// transient/sensitive fields never travel on the shared clipboard.
-		const snapshot = (data: T | null | undefined, isRoot: boolean): T => {
-			const snap = $state.snapshot(data) as T;
-			return this.copyTransformHandler
-				? this.copyTransformHandler(snap, { operation, isRoot, sourcePath: node.path })
-				: snap;
+		// transient/sensitive fields never travel on the shared clipboard. The context is
+		// the SAME NodeTransformContext the paste transform sees (phase: 'copy'), with the
+		// real per-node source (path/node/parent/siblings) and target: null (no destination
+		// chosen yet).
+		const snapshot = (n: LTreeNode<T>, isRoot: boolean): T => {
+			const snap = $state.snapshot(n.data) as T;
+			if (!this.copyTransformHandler) return snap;
+			return this.copyTransformHandler(snap, {
+				operation,
+				phase: 'copy',
+				isRoot,
+				index: rootIndex,
+				position: null,
+				source: this.nodeRef(n),
+				target: null
+			});
 		};
 
 		const walk = (n: LTreeNode<T>) => {
@@ -1361,7 +1577,7 @@ export class TreeController<T> {
 				const rel = child.path.substring(node.path.length);
 				descendants.push({
 					relativePath: rel,
-					data: snapshot(child.data, false)
+					data: snapshot(child, false)
 				});
 				walk(child);
 			}
@@ -1371,7 +1587,7 @@ export class TreeController<T> {
 		return {
 			sourceTreeId: this.treeId,
 			sourcePath: node.path,
-			data: snapshot(node.data, true),
+			data: snapshot(node, true),
 			descendants
 		};
 	}
@@ -1395,9 +1611,9 @@ export class TreeController<T> {
 		}
 
 		const entries: ClipboardEntry<T>[] = [];
-		for (const p of pathsToUse) {
-			const node = this.tree.getNodeByPath(p);
-			if (node) entries.push(this._collectClipboardEntry(node, 'copy'));
+		for (let i = 0; i < pathsToUse.length; i++) {
+			const node = this.tree.getNodeByPath(pathsToUse[i]);
+			if (node) entries.push(this._collectClipboardEntry(node, 'copy', i));
 		}
 		if (entries.length === 0) return;
 
@@ -1410,7 +1626,13 @@ export class TreeController<T> {
 			sourceTreeId: this.treeId
 		});
 		uiLogger.debug(`[clipboard] Copied ${entries.length} node(s)`);
-		this.onCopyHandler?.(pathsToUse);
+		this.onCopyHandler?.({
+			operation: 'copy',
+			paths: pathsToUse,
+			nodes: pathsToUse
+				.map((p) => this.tree.getNodeByPath(p))
+				.filter((n): n is LTreeNode<T> => n !== null)
+		});
 	}
 
 	/**
@@ -1433,10 +1655,11 @@ export class TreeController<T> {
 
 		const entries: ClipboardEntry<T>[] = [];
 		const cutSet = new Set<string>();
-		for (const p of pathsToUse) {
+		for (let i = 0; i < pathsToUse.length; i++) {
+			const p = pathsToUse[i];
 			const node = this.tree.getNodeByPath(p);
 			if (node) {
-				entries.push(this._collectClipboardEntry(node, 'cut'));
+				entries.push(this._collectClipboardEntry(node, 'cut', i));
 				// Add the node itself and all its descendants to cutPaths for dimming
 				cutSet.add(p);
 				const walkDim = (n: LTreeNode<T>) => {
@@ -1457,7 +1680,14 @@ export class TreeController<T> {
 		});
 		this.cutPaths = cutSet;
 		uiLogger.debug(`[clipboard] Cut ${entries.length} node(s), dimming ${cutSet.size} paths`);
-		this.onCutHandler?.(pathsToUse);
+		// Cut only dims — nodes aren't removed until paste — so they're still live here.
+		this.onCutHandler?.({
+			operation: 'cut',
+			paths: pathsToUse,
+			nodes: pathsToUse
+				.map((p) => this.tree.getNodeByPath(p))
+				.filter((n): n is LTreeNode<T> => n !== null)
+		});
 	}
 
 	/**
@@ -1468,7 +1698,7 @@ export class TreeController<T> {
 	 */
 	pasteNodes(
 		targetPath: string,
-		transformData?: ((data: T, ctx: PasteNodeTransformContext<T>) => T | null) | null,
+		transformData?: ((data: T, ctx: NodeTransformContext<T>) => T | null) | null,
 		position: 'child' | 'before' | 'after' = 'child'
 	): PasteResult<T> {
 		const clip = getClipboard<T>();
@@ -1511,9 +1741,11 @@ export class TreeController<T> {
 		// transform's job).
 		if (this.beforePasteHandler) {
 			const result = this.beforePasteHandler({
-				targetPath,
-				targetNode: targetPath ? this.tree.getNodeByPath(targetPath) ?? null : null,
 				operation,
+				target: {
+					path: targetPath,
+					node: targetPath ? this.tree.getNodeByPath(targetPath) ?? null : null
+				},
 				entries: workEntries
 			});
 			if (result === false) {
@@ -1544,7 +1776,7 @@ export class TreeController<T> {
 				: targetNodeAfter!.parentPath ?? '';
 
 		const transform = transformData ?? this.pasteTransformHandler ?? null;
-		const apply = (data: T, ctx: PasteNodeTransformContext<T>): T | null =>
+		const apply = (data: T, ctx: NodeTransformContext<T>): T | null =>
 			transform ? transform(data, ctx) : data;
 		const sameTree = clip.sourceTreeId === this.treeId;
 
@@ -1573,25 +1805,42 @@ export class TreeController<T> {
 		let lastError: string | undefined;
 		const pastedSourcePaths: string[] = [];
 
-		// Build the per-node context with LIVE references — the destination parent node
-		// and its current children. The consumer decides what "collision" means (read any
-		// field off the sibling nodes); the library makes no display-name assumption. The
-		// children are re-read per node, so they already include nodes added earlier in
-		// THIS paste — batch-aware dedup with no accumulator to maintain.
+		// Build the per-node context with LIVE references, symmetric on both sides:
+		// `source` = the origin node (+ its parent/siblings), `target` = the node you aimed
+		// at (+ its parent/siblings), with `position` saying how the roots land relative to
+		// it. Nodes are re-resolved per call, so target.node.children / target.siblings
+		// already include nodes added earlier in THIS paste — batch-aware, no accumulator.
 		const ctxFor = (
-			parentPath: string,
+			anchorPath: string,
+			pos: 'child' | 'before' | 'after',
 			isRoot: boolean,
 			idx: number,
 			srcPath: string
-		): PasteNodeTransformContext<T> => ({
-			operation,
-			isRoot,
-			index: idx,
-			sourcePath: srcPath,
-			sourceNode: sameTree ? this.tree.getNodeByPath(srcPath) ?? null : null,
-			targetParent: parentPath ? this.tree.getNodeByPath(parentPath) ?? null : null,
-			siblings: this.getChildren(parentPath)
-		});
+		): NodeTransformContext<T> => {
+			const srcNode = sameTree ? this.tree.getNodeByPath(srcPath) ?? null : null;
+			const srcParentPath = srcNode?.parentPath ?? null;
+			const tgtNode = anchorPath ? this.tree.getNodeByPath(anchorPath) ?? null : null;
+			const tgtParentPath = tgtNode?.parentPath ?? null;
+			return {
+				operation,
+				phase: 'paste',
+				isRoot,
+				index: idx,
+				position: pos,
+				source: {
+					path: srcPath,
+					node: srcNode,
+					parent: srcParentPath ? this.tree.getNodeByPath(srcParentPath) ?? null : null,
+					siblings: srcNode ? this.getChildren(srcParentPath ?? '') : []
+				},
+				target: {
+					path: anchorPath,
+					node: tgtNode,
+					parent: tgtParentPath ? this.tree.getNodeByPath(tgtParentPath) ?? null : null,
+					siblings: this.getChildren(tgtParentPath ?? '')
+				}
+			};
+		};
 
 		for (let index = 0; index < workEntries.length; index++) {
 			const entry = workEntries[index];
@@ -1605,7 +1854,7 @@ export class TreeController<T> {
 				continue;
 			}
 
-			const rootData = apply(entry.data, ctxFor(destParentPath, true, index, entry.sourcePath));
+			const rootData = apply(entry.data, ctxFor(targetPath, position, true, index, entry.sourcePath));
 			if (rootData === null) { skipped++; continue; } // transform vetoed this entry
 
 			const addResult =
@@ -1634,7 +1883,7 @@ export class TreeController<T> {
 				const descParentPath = parentRel ? addResult.node.path + parentRel : addResult.node.path;
 				const descData = apply(
 					desc.data,
-					ctxFor(descParentPath, false, index, entry.sourcePath + desc.relativePath)
+					ctxFor(descParentPath, 'child', false, index, entry.sourcePath + desc.relativePath)
 				);
 				if (descData === null) {
 					skippedDescRel.add(desc.relativePath);
@@ -1648,9 +1897,18 @@ export class TreeController<T> {
 		}
 
 		// Cut = move: remove only the sources we actually pasted (skipped cuts stay put).
-		if (operation === 'cut' && sameTree) {
-			for (const src of pastedSourcePaths) {
-				this.tree.removeNode(src, true);
+		// Same-tree removes directly; cross-tree reaches back to the source tree via the
+		// registry so a cut-and-paste into another tree also removes the originals (was
+		// previously the consumer's job). Sources are top-level roots (their descendants
+		// ride along), so includeDescendants=true.
+		if (operation === 'cut') {
+			if (sameTree) {
+				for (const src of pastedSourcePaths) this.tree.removeNode(src, true);
+			} else {
+				const source = getClipboardTree(clip.sourceTreeId);
+				if (source && source !== this) {
+					for (const src of pastedSourcePaths) source.removeNode(src, true);
+				}
 			}
 		}
 
@@ -1691,6 +1949,124 @@ export class TreeController<T> {
 	/** Get the current clipboard operation type. */
 	getClipboardOperation(): 'copy' | 'cut' | null {
 		return getClipboardOp();
+	}
+
+	/** Paths a keyboard shortcut should act on: the highlight set if any, else the
+	 *  focused node, else empty. Shared by the built-in copy/cut/delete handling. */
+	private _shortcutSelectionPaths(): string[] {
+		if (this.highlightedPaths.size > 0) return [...this.highlightedPaths];
+		return this.focusedNode ? [this.focusedNode.path] : [];
+	}
+
+	/** Keep only the top-level paths in a set — a path whose ancestor is also present
+	 *  is dropped (removing/operating on the ancestor covers it). */
+	private _topLevelOf(paths: string[]): string[] {
+		const set = new Set(paths);
+		const sep = this.treePathSeparator;
+		return paths.filter((p) => {
+			let cursor = p;
+			while (cursor.includes(sep)) {
+				cursor = cursor.substring(0, cursor.lastIndexOf(sep));
+				if (set.has(cursor)) return false;
+			}
+			return true;
+		});
+	}
+
+	/**
+	 * Remove nodes (and their descendants) from the tree. Defaults to the current
+	 * selection (highlight set, else focused node). Runs `beforeDeleteCallback` first
+	 * (narrow or block), removes only top-level subtrees, clears highlight + focus of
+	 * anything removed, and fires `onDelete`. Deletion is a data mutation, so this is
+	 * the single place both the built-in Delete key and consumer code go through.
+	 */
+	deleteNodes(paths?: string[]): { removed: number; blocked: number } {
+		let targets = this._topLevelOf(paths ?? this._shortcutSelectionPaths());
+		if (targets.length === 0) return { removed: 0, blocked: 0 };
+
+		if (this.beforeDeleteHandler) {
+			const nodes = targets
+				.map((p) => this.tree.getNodeByPath(p))
+				.filter((n): n is LTreeNode<T> => n !== null);
+			const result = this.beforeDeleteHandler({ paths: targets, nodes });
+			if (result === false) return { removed: 0, blocked: targets.length };
+			if (Array.isArray(result)) targets = this._topLevelOf(result);
+		}
+
+		// Snapshot the target nodes BEFORE removal so onDelete can hand back resolved nodes
+		// (the tree no longer holds them once removeNode runs).
+		const preRemoval = new Map(targets.map((p) => [p, this.tree.getNodeByPath(p)]));
+
+		let removed = 0;
+		let blocked = 0;
+		for (const p of targets) {
+			if (this.removeNode(p, true).success) removed++;
+			else blocked++;
+		}
+		if (removed > 0) {
+			this.clearHighlight();
+			this.clearFocus();
+			const removedPaths = targets.slice(0, removed);
+			this.onDeleteHandler?.({
+				paths: removedPaths,
+				nodes: removedPaths
+					.map((p) => preRemoval.get(p))
+					.filter((n): n is LTreeNode<T> => n != null)
+			});
+			uiLogger.debug(`[delete] Removed ${removed} node(s), ${blocked} failed`);
+		}
+		return { removed, blocked };
+	}
+
+	/**
+	 * Built-in keyboard shortcuts, opt-in via `shouldHandleKeyboardShortcuts`. Returns
+	 * true when it consumed the event (caller should preventDefault + stop). A consumer
+	 * `onTreeKeydown` runs BEFORE this in Tree.svelte, so it can override or suppress any
+	 * of these. Shared by Tree.svelte and the canvas renderer.
+	 *   Ctrl/Cmd+C copy · Ctrl/Cmd+X cut · Ctrl/Cmd+V paste (into focused node / root,
+	 *   via pasteNodeTransformationCallback) · Delete remove selection · Escape cancel cut.
+	 *   Classic CUA aliases too: Ctrl+Insert copy · Shift+Insert paste · Shift+Delete cut.
+	 */
+	handleShortcutKeydown(event: KeyboardEvent): boolean {
+		if (!this.shouldHandleKeyboardShortcuts) return false;
+		const mod = event.ctrlKey || event.metaKey;
+		const key = event.key.toLowerCase();
+		// Classic CUA (old-school) aliases alongside the modern C/X/V:
+		//   Ctrl+Insert = copy · Shift+Insert = paste · Shift+Delete = cut.
+		const isInsert = event.key === 'Insert';
+
+		// Each branch returns false (not consumed) when there's nothing to act on, so an
+		// empty selection lets the browser's native Ctrl+C/V (text copy/paste) through.
+		if ((mod && key === 'c') || (event.ctrlKey && isInsert)) {
+			const p = this._shortcutSelectionPaths();
+			if (!p.length) return false;
+			this.copyNodes(p);
+			return true;
+		}
+		// Cut — Ctrl/Cmd+X or Shift+Delete. Checked before the plain-Delete branch below
+		// so Shift+Delete cuts rather than deletes.
+		if ((mod && key === 'x') || (event.shiftKey && event.key === 'Delete')) {
+			const p = this._shortcutSelectionPaths();
+			if (!p.length) return false;
+			this.cutNodes(p);
+			return true;
+		}
+		if ((mod && key === 'v') || (event.shiftKey && isInsert)) {
+			if (!hasClipboard()) return false;
+			this.pasteNodes(this.focusedNode?.path ?? '', this.pasteTransformHandler ?? null, 'child');
+			return true;
+		}
+		// Delete selection — plain Delete only (Shift+Delete was cut, handled above).
+		if (event.key === 'Delete' && !event.shiftKey) {
+			if (!this._shortcutSelectionPaths().length) return false;
+			this.deleteNodes();
+			return true;
+		}
+		if (event.key === 'Escape' && getClipboardOp() === 'cut') {
+			this.cancelCut();
+			return true;
+		}
+		return false;
 	}
 
 	getExpandedPaths(): string[] {
@@ -1806,7 +2182,11 @@ export class TreeController<T> {
 		}
 
 		dragLogger.debug('dragOver OK', { target: node.path, position: this.activeDropPosition, operation: this.currentDropOperation, hasElement: !!element });
-		this.onNodeDragOverHandler?.(node, event);
+		this.onNodeDragOverHandler?.({
+			...this.nodeRef(node),
+			event,
+			dragged: this._draggedRefs(this.draggedNode)
+		});
 	}
 
 	/** Call from ondragleave. Clears hover state when cursor leaves element bounds. */
@@ -2215,6 +2595,8 @@ export class TreeController<T> {
 			this.shouldAutoHandleMove = updates.shouldAutoHandleMove ?? true;
 		if (updates.shouldAutoHandlePaste !== undefined)
 			this.shouldAutoHandlePaste = updates.shouldAutoHandlePaste ?? true;
+		if (updates.shouldHandleKeyboardShortcuts !== undefined)
+			this.shouldHandleKeyboardShortcuts = updates.shouldHandleKeyboardShortcuts ?? false;
 		if (updates.dragDropMode !== undefined)
 			this.dragDropMode = updates.dragDropMode ?? 'none';
 		if (updates.scrollHighlightTimeout !== undefined)
@@ -2239,6 +2621,8 @@ export class TreeController<T> {
 			this.beforeCutHandler = updates.beforeCutCallback;
 		if (updates.beforePasteCallback !== undefined)
 			this.beforePasteHandler = updates.beforePasteCallback;
+		if (updates.beforeDeleteCallback !== undefined)
+			this.beforeDeleteHandler = updates.beforeDeleteCallback;
 		if (updates.copyNodeTransformationCallback !== undefined)
 			this.copyTransformHandler = updates.copyNodeTransformationCallback;
 		if (updates.pasteNodeTransformationCallback !== undefined)
@@ -2247,6 +2631,7 @@ export class TreeController<T> {
 		if (updates.onCopy !== undefined) this.onCopyHandler = updates.onCopy;
 		if (updates.onCut !== undefined) this.onCutHandler = updates.onCut;
 		if (updates.onPaste !== undefined) this.onPasteHandler = updates.onPaste;
+		if (updates.onDelete !== undefined) this.onDeleteHandler = updates.onDelete;
 		if (updates.getContextMenuItemsCallback !== undefined)
 			this.getContextMenuItemsHandler = updates.getContextMenuItemsCallback;
 		if (updates.onHighlightChange !== undefined)
@@ -2280,7 +2665,7 @@ export class TreeController<T> {
 			if (isDouble) {
 				this._lastClickPath = null;
 				this._lastClickTime = 0;
-				this.onNodeDoubleClickHandler?.(node);
+				this.onNodeDoubleClickHandler?.(this.nodeRef(node));
 				if (this.clickBehavior === 'select') {
 					const canonical = this.tree.getNodeByPath(node.path) ?? node;
 					if (canonical.hasChildren && canonical.isCollapsible !== false) {
@@ -2360,7 +2745,7 @@ export class TreeController<T> {
 		this._setFocusedNode(node);
 
 		if (!silent) {
-			this.onNodeClickHandler?.(node);
+			this.onNodeClickHandler?.(this.nodeRef(node));
 			this._notifyHighlightChanged();
 			this._mirrorHighlightToSelected();
 		}
@@ -2488,7 +2873,7 @@ export class TreeController<T> {
 			}
 		}
 
-		this.onNodeClickHandler?.(node);
+		this.onNodeClickHandler?.(this.nodeRef(node));
 		this._notifySelectionChanged();
 		this.tree.refresh();
 		if (!options?.skipFocus) this.containerElement?.focus();
@@ -2630,7 +3015,7 @@ export class TreeController<T> {
 	private _notifyHighlightChanged() {
 		if (this.onHighlightChangeHandler) {
 			const nodes = this.getHighlightedNodes();
-			this.onHighlightChangeHandler(this.highlightedPaths, nodes);
+			this.onHighlightChangeHandler({ paths: this.highlightedPaths, nodes });
 		}
 	}
 
@@ -2638,7 +3023,7 @@ export class TreeController<T> {
 	private _notifySelectionChanged() {
 		if (this.onSelectionChangeHandler) {
 			const nodes = this.getSelectedNodes();
-			this.onSelectionChangeHandler(this.selectedPaths, nodes);
+			this.onSelectionChangeHandler({ paths: this.selectedPaths, nodes });
 		}
 	}
 
@@ -3037,7 +3422,15 @@ export class TreeController<T> {
 
 		this.draggedNode = node;
 		this.isDragInProgress = true;
-		this.onNodeDragStartHandler?.(node, event);
+		// Publish the top-level set so a CROSS-TREE drop can expose it via ctx.dragged
+		// (the target controller can't see this tree's highlight set).
+		const draggedRefs = this._draggedRefs(node);
+		setDragSet(this.treeId, draggedRefs.map((r) => r.path));
+		this.onNodeDragStartHandler?.({
+			...this.nodeRef(node),
+			event,
+			dragged: draggedRefs
+		});
 
 		// The container-level `ondragend` listener on `.stv__container` misses
 		// the cancellation path when the rAF below calls `tree.refresh()`: the
@@ -3139,6 +3532,7 @@ export class TreeController<T> {
 
 	private _resetDragState(): void {
 		dragLogger.debug('_resetDragState');
+		clearDragSet();
 		this.isDragInProgress = false;
 		this.draggedNode = null;
 		this.hoveredNodeForDrop = null;
@@ -3186,6 +3580,26 @@ export class TreeController<T> {
 
 		const isSameTreeDrag = draggedNodeRef.treeId === this.treeId;
 
+		// Capture the full dragged set BEFORE any move mutates the highlight set, so the
+		// event's `dragged` reflects what the user picked up (not the post-move remap).
+		// _draggedRefs is cross-tree-aware: same-tree resolves live nodes, cross-tree pulls
+		// the top-level paths the source published on drag start (getDragSet).
+		const draggedRefs = this._draggedRefs(draggedNodeRef);
+		// One fire path for every branch: `dropped` = the nodes the library actually placed
+		// (null when it didn't — cross-tree or shouldAutoHandle*=false). NodeRefs are built
+		// at fire time so parent/siblings reflect the final tree.
+		const fireDrop = (dropped: LTreeNode<T>[] | null) => {
+			this.onNodeDropHandler?.({
+				source: this.nodeRef(draggedNodeRef),
+				target: dropNode ? this.nodeRef(dropNode) : null,
+				dragged: draggedRefs,
+				dropped: dropped ? dropped.map((n) => this.nodeRef(n)) : null,
+				position,
+				operation,
+				event
+			});
+		};
+
 		// Multi-drag (Decision 6 in selection-highlight-model.md):
 		// When the dragged node is part of a multi-highlight, move the whole highlight
 		// set as top-level-selected subtrees. Descendants whose nearest highlighted
@@ -3224,6 +3638,7 @@ export class TreeController<T> {
 			// children = [A, B, C]. moveNode mutates the source LTreeNode in place,
 			// so reading the held reference's .path post-move gives the new path.
 			let prevMovedNode: LTreeNode<T> | null = null;
+			const movedNodes: LTreeNode<T>[] = [];
 			for (let i = 0; i < topLevelPaths.length; i++) {
 				const sourcePath = topLevelPaths[i];
 				const targetPath = i === 0 ? dropNode!.path : prevMovedNode!.path;
@@ -3234,20 +3649,22 @@ export class TreeController<T> {
 					allOk = false;
 				} else if (sourceNode) {
 					prevMovedNode = sourceNode;
+					movedNodes.push(sourceNode);
 				}
 			}
-			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+			fireDrop(movedNodes);
 			return allOk;
 		}
 
 		if (isSameTreeDrag && operation === 'move' && dropNode) {
 			if (this.shouldAutoHandleMove) {
 				const result = this.moveNode(draggedNodeRef.path, dropNode.path, position);
-				this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+				// moveNode mutates in place, so draggedNodeRef IS the landed node.
+				fireDrop([draggedNodeRef]);
 				return result.success;
 			}
-			// shouldAutoHandleMove=false: don't modify tree, just notify consumer
-			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+			// shouldAutoHandleMove=false: library placed nothing → dropped is null.
+			fireDrop(null);
 			return true;
 		}
 
@@ -3267,11 +3684,14 @@ export class TreeController<T> {
 				siblingPath,
 				copyPosition
 			);
-			this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+			// The fresh copy's root is the landed node (distinct from the dragged original).
+			fireDrop(result.rootNode ? [result.rootNode] : null);
 			return result.success;
 		}
 
-		this.onNodeDropHandler?.(dropNode, draggedNodeRef, position, event, operation);
+		// Cross-tree, or copy without shouldAutoHandleCopy: the consumer performs the
+		// insertion, so the library placed nothing → dropped is null.
+		fireDrop(null);
 		return true;
 	}
 
@@ -3323,7 +3743,11 @@ export class TreeController<T> {
 				this.activeDropPosition = this.calculateDropPosition(event, nodeElement);
 			}
 			this.currentDropOperation = this.isCopyAllowed && event.ctrlKey ? 'copy' : 'move';
-			this.onNodeDragOverHandler?.(node, event);
+			this.onNodeDragOverHandler?.({
+				...this.nodeRef(node),
+				event,
+				dragged: this._draggedRefs(this.draggedNode)
+			});
 
 			if (event.dataTransfer) {
 				event.dataTransfer.dropEffect = this.currentDropOperation;
@@ -3478,6 +3902,7 @@ export class TreeController<T> {
 			this.touchDragState.isDragging = true;
 			this.draggedNode = node;
 			this.isDragInProgress = true;
+			setDragSet(this.treeId, this._draggedRefs(node).map((r) => r.path));
 			dragLogger.debug(`Touch drag started: ${node.path}`);
 			this.createGhostElement(node, touch.clientX, touch.clientY);
 			try { navigator.vibrate?.(50); } catch { /* blocked by browser policy */ }
@@ -3601,6 +4026,7 @@ export class TreeController<T> {
 		this.draggedNode = null;
 		this.isDragInProgress = false;
 		this.isDropPlaceholderActive = false;
+		clearDragSet();
 	}
 
 	private createGhostElement(node: LTreeNode<any>, x: number, y: number) {
@@ -3626,6 +4052,7 @@ export class TreeController<T> {
 
 	/** Clean up document-level listeners and ghost elements. Called on component destroy. */
 	destroy() {
+		unregisterClipboardTree(this.treeId, this);
 		if (typeof document === 'undefined') return;
 		this._removeDocumentTouchListeners();
 		this.removeGhostElement();

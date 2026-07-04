@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
-	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
+	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
+	import type { NodeDropContext } from '$lib/core/TreeController.svelte.js';
 
 	// Test fixture for the get*Callback props. Targeted by e2e/callbacks.spec.ts.
 	// Covers the bug class where seed-time callbacks reading node.data?.X
@@ -64,17 +65,11 @@
 
 	let drop: DropState = $state({ count: 0, dragged: '', target: '', position: '', operation: '' });
 
-	function onNodeDrop(
-		dropNode: LTreeNode<Item> | null,
-		draggedNode: LTreeNode<Item>,
-		position: string,
-		_event: DragEvent | TouchEvent,
-		operation: DropOperation
-	) {
+	function onNodeDrop({ source, target, position, operation }: NodeDropContext<Item>) {
 		drop = {
 			count: drop.count + 1,
-			dragged: draggedNode.data?.name ?? '',
-			target: dropNode?.data?.name ?? '(root)',
+			dragged: source.node?.data?.name ?? '',
+			target: target?.node?.data?.name ?? '(root)',
 			position,
 			operation
 		};

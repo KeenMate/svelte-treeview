@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
-	import type { TreeController, PasteNodeTransformContext, BeforePasteContext } from '$lib/core/TreeController.svelte.js';
+	import type { NodeTransformContext, BeforePasteContext, NodeDropContext, NodeEventContext } from '$lib/core/TreeController.svelte.js';
 	import { uniqueName } from '$lib/core/clipboard.js';
-	import type { LTreeNode, DropOperation, DropPosition } from '$lib/ltree/types.js';
+	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -50,6 +50,8 @@
 	let dropZoneLayout = $state<'around' | 'above' | 'below' | 'wave' | 'wave2'>('around');
 	let dropZoneStart = $state<number | string>('33%');
 	let dropZoneMaxWidth = $state(120);
+	let showDropZoneWhenEmpty = $state(true); // Keep the target tree's drop zone visible + paste-ready while empty
+	let handleKeyboardShortcuts = $state(true); // Built-in Ctrl/Cmd+C/X/V + Delete + CUA aliases
 	let isCopyAllowed = $state(false); // Enable Ctrl+drag to copy
 
 	// Selection mode for the source tree. Defaulting to 'multi' so the new
@@ -75,6 +77,8 @@
 				if (config.start !== undefined) dropZoneStart = config.start;
 				if (config.maxWidth !== undefined) dropZoneMaxWidth = config.maxWidth;
 				if (config.isCopyAllowed !== undefined) isCopyAllowed = config.isCopyAllowed;
+				if (config.showDropZoneWhenEmpty !== undefined) showDropZoneWhenEmpty = config.showDropZoneWhenEmpty;
+				if (config.handleKeyboardShortcuts !== undefined) handleKeyboardShortcuts = config.handleKeyboardShortcuts;
 			} catch (e) {
 				// Ignore invalid JSON
 			}
@@ -83,7 +87,7 @@
 
 	// Save settings to localStorage when they change
 	$effect(() => {
-		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, isCopyAllowed };
+		const config = { mode: dropZoneMode, layout: dropZoneLayout, start: dropZoneStart, maxWidth: dropZoneMaxWidth, isCopyAllowed, showDropZoneWhenEmpty, handleKeyboardShortcuts };
 		localStorage.setItem('dropZoneConfig', JSON.stringify(config));
 	});
 
@@ -106,24 +110,31 @@
 		activityLog = [...activityLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
 
-	function handleSourceDragStart(node: LTreeNode<FileItem>, event: DragEvent) {
-		addLog(`Started dragging: ${node.data?.name}`);
+	function handleSourceDragStart({ node }: NodeEventContext<FileItem>) {
+		addLog(`Started dragging: ${node?.data?.name}`);
 	}
 
-	// ── Cross-tree clipboard (Ctrl/Cmd + C / X / V) ──────────────────────────
-	// The clipboard is a shared module-level singleton, so copy in one tree + paste
-	// in the other "just works". A cross-tree CUT needs us to delete the originals
-	// from the source tree ourselves (the library only auto-removes a SAME-tree cut).
-	let sourceFocused = $state<LTreeNode<FileItem> | null>(null);
-	let targetFocused = $state<LTreeNode<FileItem> | null>(null);
-	let pendingCut: { treeId: string; paths: string[]; remove: (p: string) => void } | null = null;
+	// ── Cross-tree clipboard + Delete ────────────────────────────────────────
+	// Both trees opt into the library's built-in keyboard handling via
+	// shouldHandleKeyboardShortcuts: Ctrl/Cmd+C/X/V (copy/cut/paste), Delete, Esc.
+	// The clipboard is a shared singleton, so copy in one tree + paste in the other
+	// just works — and a cross-tree CUT now removes the originals automatically (the
+	// source tree is reached through the library's internal registry). All that's left
+	// for the consumer is the two policy hooks below (paste transform + self-paste
+	// redirect) and the on* events for the activity log — no hand-rolled keymap.
 
 	// Each pasted node gets a fresh id; path is assigned by the paste insert. A root
-	// node whose name already exists in the destination becomes "Name Copy 1/2/3…" —
-	// we read names off ctx.siblings (the destination's existing child nodes), which is
-	// batch-aware. Descendants keep their names.
-	function transformPasted(data: FileItem, ctx: PasteNodeTransformContext<FileItem>): FileItem {
-		const taken = ctx.siblings.map((s) => s.data?.name ?? '');
+	// node whose name already exists in the destination becomes "Name Copy 1/2/3…". The
+	// landing neighbours depend on ctx.position: a 'child' paste lands among target.node's
+	// children, a 'before'/'after' paste among the anchor's siblings (= target.siblings).
+	// Both are LIVE and batch-aware. Descendants keep their names. Same NodeTransformContext
+	// the copy transform would see, but with phase: 'paste' and a populated `target`.
+	function transformPasted(data: FileItem, ctx: NodeTransformContext<FileItem>): FileItem {
+		const landing =
+			ctx.position === 'child' && ctx.target?.node
+				? Object.values(ctx.target.node.children)
+				: ctx.target?.siblings ?? [];
+		const taken = landing.map((s) => s.data?.name ?? '');
 		return {
 			...data,
 			id: nextId++,
@@ -134,86 +145,17 @@
 
 	// Pasting onto one of the copied nodes itself (Ctrl+C then Ctrl+V without moving)
 	// would hit the paste-into-self guard and skip everything. Redirect into the node's
-	// parent so the copy lands beside it — ctx.targetNode.parentPath, no string surgery.
+	// parent so the copy lands beside it — ctx.target.node.parentPath, no string surgery.
 	function selfPasteRedirect(ctx: BeforePasteContext<FileItem>): { targetPath?: string } | void {
-		if (ctx.targetPath && ctx.entries.some((e) => e.sourcePath === ctx.targetPath)) {
-			return { targetPath: ctx.targetNode?.parentPath ?? '' };
+		if (ctx.target.path && ctx.entries.some((e) => e.sourcePath === ctx.target.path)) {
+			return { targetPath: ctx.target.node?.parentPath ?? '' };
 		}
 	}
 
-	function makeClipboardKeydown(
-		treeId: string,
-		getFocused: () => LTreeNode<FileItem> | null,
-		getRef: () => Tree<FileItem>
-	) {
-		return (event: KeyboardEvent, controller: TreeController<FileItem>): boolean => {
-			const mod = event.ctrlKey || event.metaKey;
-			const key = event.key.toLowerCase();
-			const paths = () =>
-				controller.highlightedPaths.size > 0
-					? [...controller.highlightedPaths]
-					: getFocused()
-						? [getFocused()!.path]
-						: [];
-
-			if (mod && key === 'c') {
-				const p = paths();
-				if (!p.length) { addLog('Nothing selected to copy'); return true; }
-				controller.copyNodes(p);
-				pendingCut = null;
-				addLog(`Copied ${p.length} from ${treeId}`);
-				return true;
-			}
-			if (mod && key === 'x') {
-				const p = paths();
-				if (!p.length) { addLog('Nothing selected to cut'); return true; }
-				controller.cutNodes(p);
-				pendingCut = { treeId, paths: p, remove: (path) => getRef().removeNode(path) };
-				addLog(`Cut ${p.length} from ${treeId}`);
-				return true;
-			}
-			if (mod && key === 'v') {
-				if (!controller.hasClipboardContent()) { addLog('Clipboard is empty'); return true; }
-				const wasCut = controller.getClipboardOperation() === 'cut';
-				const result = controller.pasteNodes(getFocused()?.path ?? '', transformPasted, 'child');
-				if (!result.success) { addLog(`Paste failed: ${result.error}`); return true; }
-				// Cross-tree cut = move: remove the originals from the source tree.
-				if (wasCut && pendingCut && pendingCut.treeId !== treeId) {
-					for (const path of topLevelPaths(pendingCut.paths)) pendingCut.remove(path);
-				}
-				pendingCut = null;
-				addLog(`Pasted ${result.count} into ${treeId}${result.skipped ? ` (skipped ${result.skipped})` : ''}`);
-				return true;
-			}
-			if (event.key === 'Escape' && controller.getClipboardOperation() === 'cut') {
-				controller.cancelCut();
-				pendingCut = null;
-				addLog('Cut cancelled');
-				return true;
-			}
-			return false;
-		};
-	}
-
-	const sourceKeydown = makeClipboardKeydown('source-tree', () => sourceFocused, () => sourceTreeRef);
-	const targetKeydown = makeClipboardKeydown('target-tree', () => targetFocused, () => targetTreeRef);
-
-	// Given a set of paths under a "." separator, return only the ones whose
-	// nearest highlighted ancestor is NOT in the set — i.e. the top-level
-	// subtrees. Mirrors the library's same-tree multi-drag absorption.
-	function topLevelPaths(paths: string[], separator = '.'): string[] {
-		const set = new Set(paths);
-		return paths.filter((p) => {
-			const parts = p.split(separator);
-			for (let i = 1; i < parts.length; i++) {
-				const ancestor = parts.slice(0, i).join(separator);
-				if (set.has(ancestor)) return false;
-			}
-			return true;
-		});
-	}
-
-	function handleTargetDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
+	function handleTargetDrop({ source, target, dragged, position, operation }: NodeDropContext<FileItem>) {
+		const dropNode = target?.node ?? null;
+		const draggedNode = source.node;
+		if (!draggedNode) return;
 		// Same-tree operations are auto-handled by the library - just log
 		const isSameTreeDrag = draggedNode.treeId === 'target-tree';
 		if (isSameTreeDrag) {
@@ -241,19 +183,11 @@
 		}
 
 		// Multi-drag across trees: cross-tree multi-drag isn't auto-handled by the
-		// library (the drop handler only receives one node ref). When the source
-		// tree has a multi-highlight that includes the dragged node, copy each
-		// top-level highlighted subtree in turn so the whole set rides along.
-		// Filter out pinned nodes (isDraggable=false) — same predicate as the
-		// tree's getIsDraggableCallback — so a locked node like "File C" that
-		// happens to be in the highlight set doesn't ride along. (Same-tree
-		// multi-drag enforces this inside the library; cross-tree is the
-		// consumer's responsibility because only the lead node ref crosses.)
-		const sourcePaths = (
-			sourceHighlightedPaths.size > 1 && sourceHighlightedPaths.has(draggedNode.path)
-				? topLevelPaths([...sourceHighlightedPaths])
-				: [draggedNode.path]
-		).filter((p) => sourceTreeRef.getNodeByPath(p)?.data?.isDraggable !== false);
+		// library (it only auto-places the lead node), but ctx.dragged still carries
+		// the FULL top-level dragged set — already draggable-filtered (pinned nodes
+		// like "File C" are excluded) — so we just copy each subtree in turn. No need
+		// to re-read highlightedPaths or re-run the isDraggable predicate here.
+		const sourcePaths = dragged.map((r) => r.path);
 
 		let copied = 0;
 		let failed = 0;
@@ -299,7 +233,10 @@
 		}
 	}
 
-	function handleSourceDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
+	function handleSourceDrop({ source, target, position, operation }: NodeDropContext<FileItem>) {
+		const dropNode = target?.node ?? null;
+		const draggedNode = source.node;
+		if (!draggedNode) return;
 		// Same-tree moves and copies are auto-handled by the library - just log
 		if (!dropNode) {
 			addLog(`Cannot drop at root level in source tree`);
@@ -391,12 +328,12 @@
 		touchLog = [...touchLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
 
-	function handleTouchDragStart(node: LTreeNode<FileItem>, event: DragEvent) {
-		addTouchLog(`dragStart: "${node.data?.name}"`);
+	function handleTouchDragStart({ node }: NodeEventContext<FileItem>) {
+		addTouchLog(`dragStart: "${node?.data?.name}"`);
 	}
 
-	function handleTouchDrop(dropNode: LTreeNode<FileItem> | null, draggedNode: LTreeNode<FileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
-		addTouchLog(`drop: "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
+	function handleTouchDrop({ source, target, position }: NodeDropContext<FileItem>) {
+		addTouchLog(`drop: "${source.node?.data?.name}" ${position} "${target?.node?.data?.name || 'root'}"`);
 	}
 
 	// Attach document-level touch logging to debug DevTools emulation
@@ -424,11 +361,12 @@
 		});
 	});
 
-	function handleRestrictedDrop(dropNode: LTreeNode<RestrictedFileItem> | null, draggedNode: LTreeNode<RestrictedFileItem>, position: string, event: DragEvent | TouchEvent, operation: DropOperation) {
+	function handleRestrictedDrop({ source, target, position }: NodeDropContext<RestrictedFileItem>) {
+		const dropNode = target?.node ?? null;
 		const positionLabel = dropNode?.data?.allowedDropPositions?.length === 1
 			? `(only ${dropNode.data.allowedDropPositions[0]} allowed)`
 			: '';
-		addRestrictedLog(`Dropped "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}" ${positionLabel}`);
+		addRestrictedLog(`Dropped "${source.node?.data?.name}" ${position} "${dropNode?.data?.name || 'root'}" ${positionLabel}`);
 	}
 </script>
 
@@ -458,8 +396,16 @@
 		<p class="description">
 			<strong>Clipboard (cross-tree):</strong> select nodes in either tree and press
 			<strong>Ctrl/Cmd+C</strong> (copy) or <strong>X</strong> (cut), then click the other tree
-			and <strong>Ctrl/Cmd+V</strong> to paste. The clipboard is a shared singleton, so it works
+			and <strong>Ctrl/Cmd+V</strong> to paste. While the target tree is empty it uses
+				<code>shouldShowDropPlaceholderWhenEmpty</code> — the drop zone stays visible and grabs keyboard
+				focus on hover, so you can copy in the left tree, hover the drop zone, and press
+				<strong>Ctrl/Cmd+V</strong> to fill it without clicking first. The clipboard is a shared singleton, so it works
 			across both trees — copy duplicates, cut moves (the source nodes are removed on paste).
+				<strong>Delete</strong> removes the selected node(s) (a folder takes its whole subtree with it);
+				<strong>Esc</strong> cancels a pending cut. The classic <strong>Ctrl+Insert</strong> /
+				<strong>Shift+Insert</strong> / <strong>Shift+Delete</strong> aliases work too. These keys come from
+				the library's built-in <code>shouldHandleKeyboardShortcuts</code> — no hand-rolled keymap; this
+				demo only supplies the paste transform (fresh ids / <em>Copy N</em> names) and a self-paste redirect.
 		</p>
 
 		<div class="controls">
@@ -501,6 +447,14 @@
 				Allow Ctrl+drag to copy
 			</label>
 			<label style="display: flex; align-items: center; gap: 0.5rem;">
+				<input type="checkbox" bind:checked={showDropZoneWhenEmpty} />
+				Show drop zone when target empty
+			</label>
+			<label style="display: flex; align-items: center; gap: 0.5rem;" title="Ctrl/Cmd+C/X/V, Delete, Esc + Ctrl+Insert / Shift+Insert / Shift+Delete">
+				<input type="checkbox" bind:checked={handleKeyboardShortcuts} />
+				Built-in keyboard shortcuts
+			</label>
+			<label style="display: flex; align-items: center; gap: 0.5rem;">
 				Selection mode:
 				<select bind:value={selectionMode}>
 					<option value="single">single (one highlight; one node per drag)</option>
@@ -529,9 +483,13 @@
 						{selectionMode}
 						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={sourceHighlightedPaths}
-						bind:focusedNode={sourceFocused}
-						onTreeKeydown={sourceKeydown}
+						shouldHandleKeyboardShortcuts={handleKeyboardShortcuts}
+						pasteNodeTransformationCallback={transformPasted}
 						beforePasteCallback={selfPasteRedirect}
+						onCopy={(c) => addLog(`Copied ${c.paths.length} from source-tree`)}
+						onCut={(c) => addLog(`Cut ${c.paths.length} from source-tree`)}
+						onPaste={(r) => addLog(`Pasted ${r.count} into source-tree${r.skipped ? ` (skipped ${r.skipped})` : ''}`)}
+						onDelete={(c) => addLog(`Deleted ${c.paths.length} node(s) from source-tree`)}
 						onNodeDragStart={handleSourceDragStart}
 						onNodeDrop={handleSourceDrop}
 						{isCopyAllowed}
@@ -567,11 +525,16 @@
 						{selectionMode}
 						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={targetHighlightedPaths}
-						bind:focusedNode={targetFocused}
-						onTreeKeydown={targetKeydown}
+						shouldHandleKeyboardShortcuts={handleKeyboardShortcuts}
+						pasteNodeTransformationCallback={transformPasted}
 						beforePasteCallback={selfPasteRedirect}
+						onCopy={(c) => addLog(`Copied ${c.paths.length} from target-tree`)}
+						onCut={(c) => addLog(`Cut ${c.paths.length} from target-tree`)}
+						onPaste={(r) => addLog(`Pasted ${r.count} into target-tree${r.skipped ? ` (skipped ${r.skipped})` : ''}`)}
+						onDelete={(c) => addLog(`Deleted ${c.paths.length} node(s) from target-tree`)}
 						onNodeDrop={handleTargetDrop}
 						shouldDisplayDebugInformation={true}
+						shouldShowDropPlaceholderWhenEmpty={showDropZoneWhenEmpty}
 						{isCopyAllowed}
 						{dropZoneMode}
 						{dropZoneLayout}
@@ -587,6 +550,7 @@
 							<div style="text-align: center; color: #667eea;">
 								<p style="font-size: 2rem;">📥</p>
 								<p>Drop items here to add them</p>
+								<p style="font-size: 0.8em; color: #999;">…or copy in the left tree, hover here, and press Ctrl/Cmd+V</p>
 							</div>
 						{/snippet}
 					</Tree>
@@ -762,12 +726,13 @@ const data = [
   pathMember="path"
   dragDropMode="self"
   sortCallback={sortByOrder}
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
-    // Handle the drop - position is 'before', 'after', or 'child'
-    console.log('Dropped:', draggedNode.data?.name);
-    console.log('Position:', position);
+  onNodeDrop={({ source, target, position, operation }) => {
+    // source.node = the dragged node (+ its parent/siblings)
+    // target.node = the drop node, or target is null on an empty tree/root
+    console.log('Dropped:', source.node?.data?.name);
+    console.log('Position:', position); // 'before', 'after', or 'child'
     console.log('Operation:', operation); // 'move' or 'copy'
-    console.log('On:', dropNode?.data?.name || 'empty tree');
+    console.log('On:', target?.node?.data?.name || 'empty tree');
   }}
 />`}</pre>
 		</div>
@@ -791,15 +756,15 @@ const data = [
 
 		<div class="note">
 			<p class="note-title">onNodeDrop Signature</p>
-			<p>The <code>position</code> parameter indicates where to drop: <code>'before'</code>, <code>'after'</code>, or <code>'child'</code>. The <code>operation</code> parameter is <code>'move'</code> or <code>'copy'</code> (Ctrl+drag):</p>
-			<pre style="margin-top: 0.5rem;">{`onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
-  if (dropNode === null) {
+			<p>onNodeDrop receives one context object. <code>source</code>/<code>target</code> are node pointers ({`{ node, parent, siblings }`}); <code>position</code> is <code>'before'</code>, <code>'after'</code>, or <code>'child'</code>; <code>operation</code> is <code>'move'</code> or <code>'copy'</code> (Ctrl+drag):</p>
+			<pre style="margin-top: 0.5rem;">{`onNodeDrop={({ source, target, position, operation }) => {
+  if (target === null) {
     // Dropped on empty tree placeholder or root drop zone
-    // Add as root node
+    // Add source.node as a root node
   } else {
-    // position: 'before' - insert as sibling before dropNode
-    // position: 'after' - insert as sibling after dropNode
-    // position: 'child' - insert as child of dropNode
+    // position: 'before' - insert as sibling before target.node
+    // position: 'after' - insert as sibling after target.node
+    // position: 'child' - insert as child of target.node
   }
   // operation: 'move' (default) or 'copy' (Ctrl+drag with isCopyAllowed)
 }}`}</pre>
@@ -843,7 +808,7 @@ const data = [
 <Tree
   data={targetData}
   dragDropMode="cross"
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+  onNodeDrop={({ source, target, position, operation }) => {
     // Only triggered when dropping from a different tree
   }}
 />`}</pre>

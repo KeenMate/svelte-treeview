@@ -379,8 +379,8 @@
 				clickBehavior="select"
 				leafIconClass=""
 				bind:focusedNode={focusedFolder}
-				onNodeClick={(node) => navigateTo(node.path, { syncTree: false })}
-				onNodeDoubleClick={(node) => navigateTo(node.path)}
+				onNodeClick={({ node }) => { if (node) navigateTo(node.path, { syncTree: false }); }}
+				onNodeDoubleClick={({ node }) => { if (node) navigateTo(node.path); }}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<FsNode>)}
 					<span class="winx__navrow">
@@ -421,8 +421,8 @@
 					leafIconClass=""
 					nodeClass={rightNodeClass}
 					bind:highlightedPaths={rightSel}
-					onNodeClick={(node) => { if (node.data) statusInfo = previewText(node.data); }}
-					onNodeDoubleClick={(node) => { if (node.data) open(node.data); }}
+					onNodeClick={({ node }) => { if (node?.data) statusInfo = previewText(node.data); }}
+					onNodeDoubleClick={({ node }) => { if (node?.data) open(node.data); }}
 					getContextMenuItemsCallback={rightMenu}
 				>
 					{#snippet nodeTemplate(node: LTreeNode<RightItem>)}

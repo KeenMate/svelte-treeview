@@ -36,17 +36,17 @@
 	let lastHighlightSize = $state(0);
 	let lastSelectionSize = $state(0);
 
-	function handleNodeClick(node: LTreeNode<Item>) {
+	function handleNodeClick({ node }: { node: LTreeNode<Item> | null }) {
 		onNodeClickCount++;
-		lastClickedPath = node.path;
+		lastClickedPath = node?.path ?? null;
 	}
 
-	function handleHighlightChange(paths: Set<string>) {
+	function handleHighlightChange({ paths }: { paths: Set<string> }) {
 		onHighlightChangeCount++;
 		lastHighlightSize = paths.size;
 	}
 
-	function handleSelectionChange(paths: Set<string>) {
+	function handleSelectionChange({ paths }: { paths: Set<string> }) {
 		onSelectionChangeCount++;
 		lastSelectionSize = paths.size;
 	}

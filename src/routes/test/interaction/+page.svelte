@@ -42,8 +42,8 @@
 	let navFocusedNode = $state<LTreeNode<Item> | null>(null);
 	let navLog = $state<string[]>([]);
 
-	function onNavNodeClick(node: LTreeNode<Item>) {
-		navLog = [`Navigated to: ${node.data?.name} (${node.path})`, ...navLog.slice(0, 9)];
+	function onNavNodeClick({ node }: { node: LTreeNode<Item> | null }) {
+		navLog = [`Navigated to: ${node?.data?.name} (${node?.path})`, ...navLog.slice(0, 9)];
 	}
 </script>
 

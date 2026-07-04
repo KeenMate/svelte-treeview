@@ -59,7 +59,8 @@ OPTIONAL MEMBERS
 | parentPathMember | string | Property for parent path (usually derived) |
 | levelMember | string | Property for depth level (usually calculated) |
 | isExpandedMember | string | Property for expanded state |
-| isSelectedMember | string | Property for selected state |
+| isSelectedMember | string | Property for selected state (checkbox data) |
+| isSelectableMember | string | Property for whether node is selectable |
 | isDraggableMember | string | Property for draggable state |
 | isDropAllowedMember | string | Property for drop allowed state |
 | isCollapsibleMember | string | Property for collapsible state |
@@ -67,6 +68,28 @@ OPTIONAL MEMBERS
 | searchValueMember | string | Property for search indexing |
 | orderMember | string | Property for sibling sort order |
 | allowedDropPositionsMember | string | Property for allowed drop positions |
+
+Behavior props:
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| treePathSeparator | string | "." | Separator character for hierarchical paths |
+| expandLevel | number | 2 | Automatically expand nodes up to this level |
+| isSorted | boolean | null | Whether items are pre-sorted (skip internal sorting) |
+
+MEMBER CALLBACKS
+----------------
+Each *Member has a matching get*Callback that overrides it (callback wins):
+| Callback | Signature |
+|----------|-----------|
+| getDisplayValueCallback | (node) => string |
+| getSearchValueCallback | (node) => string |
+| getIsExpandedCallback | (node) => boolean |
+| getIsSelectedCallback | (node) => boolean |
+| getIsSelectableCallback | (node) => boolean |
+| getIsDraggableCallback | (node) => boolean |
+| getIsDropAllowedCallback | (node) => boolean |
+| getIsCollapsibleCallback | (node) => boolean |
+| getAllowedDropPositionsCallback | (node) => DropPosition[] \| null |
 
 CUSTOM PATH SEPARATOR
 ---------------------
@@ -209,9 +232,12 @@ Track data insertion success/failure:
 
   $effect(() => {
     if (insertResult) {
+      // InsertArrayResult<T>: { successful, failed[], total }
       console.log('Successful:', insertResult.successful);
+      console.log('Total:', insertResult.total);
       console.log('Failed:', insertResult.failed.length);
 
+      // each failed = { node, originalData, error }
       insertResult.failed.forEach(f => {
         console.log(`Failed: ${f.originalData.name} - ${f.error}`);
       });
@@ -230,23 +256,35 @@ LTREENODE STRUCTURE
 Internal node structure (what you get in callbacks):
 
 interface LTreeNode<T> {
+  treeId: string;            // Owning tree id
+  id: NodeId;                // string | number id (from idMember)
   path: string;              // Full path "1.2.3"
   pathSegment: string;       // Last segment "3"
   parentPath: string | null; // Parent path "1.2" or null
-  level: number | null;      // Depth level (0 = root)
+  level: number | null;      // Depth level (1 = root level)
   data: T | null;            // Your original data object
   children: Record<string, LTreeNode<T>>;
-  isExpanded: boolean;
-  isSelected: boolean;
+  hasChildren: boolean;
   isDraggable: boolean;
+  isCollapsible: boolean;
   isDropAllowed: boolean;
   allowedDropPositions: DropPosition[] | null;
-  hasChildren: boolean;
+  visualState: VisualState;  // "indeterminate" | "true" | "false"
+  isExpanded: boolean;
+  isFocused: boolean;        // single focused node
+  isHighlighted: boolean;    // UI multi-select set
+  isSelected: boolean;       // checkbox data set
+  isSelectable: boolean;
+  _rev: number;              // bumps on change (keyed re-render)
 }
+
+Note: paths internally use an 'x' segment prefix for stable object-key
+ordering (e.g. "x1.x1.x2"); the public path uses your separator.
 
 Accessing data in callbacks:
 
-onNodeClicked={(node) => {
+onNodeClick={(ctx) => {
+  const node = ctx.node;                 // events pass ONE ctx object (NodeRef)
   console.log('Path:', node.path);
   console.log('Level:', node.level);
   console.log('Name:', node.data.name);  // Your data

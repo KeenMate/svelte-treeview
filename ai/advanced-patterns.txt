@@ -23,8 +23,8 @@ treeElement.update({ searchText: '' });
 All props updatable except snippets:
 - data, searchText, focusedNode, highlightedPaths, selectedPaths, expandLevel
 - Members: idMember, pathMember, displayValueMember
-- Callbacks: sortCallback, onNodeClicked, etc.
-- Visual: bodyClass, highlightedNodeClass, etc.
+- Callbacks: sortCallback, onNodeClick, etc.
+- Visual: highlightedNodeClass, focusedNodeClass, etc.
 
 LAZY LOADING CHILDREN
 ---------------------
@@ -35,7 +35,9 @@ Load children on demand:
     { id: '1', path: '1', name: 'Folder', hasChildren: true }
   ]);
 
-  async function handleClick(node) {
+  // on* events take ONE context object (NodeRef<T>): { path, node, parent, siblings }
+  async function handleClick(ctx) {
+    const node = ctx.node;
     if (node.data.hasChildren && !node.hasChildren) {
       // Fetch children from server
       const children = await fetchChildren(node.path);
@@ -52,7 +54,7 @@ Load children on demand:
 <Tree
   {data}
   hasChildrenMember="hasChildren"
-  onNodeClicked={handleClick}
+  onNodeClick={handleClick}
 />
 
 VIRTUALIZED TREE (EXTERNAL)
@@ -86,7 +88,7 @@ For extremely large trees (50,000+ nodes), implement external virtualization:
   </div>
 </VirtualList>
 
-THREE-LEVEL SELECTION (v5.0.0-rc05+)
+THREE-LEVEL SELECTION (v5.0.0-rc06+)
 -------------------------------------
 Three independent state tracks:
 
@@ -105,13 +107,15 @@ Three independent state tracks:
   bind:focusedNode
   bind:highlightedPaths
   bind:selectedPaths
-  highlightedNodeClass="ltree-selected-highlight"
+  highlightedNodeClass="stv__node-content--highlighted"
   shouldShowCheckboxes={true}
   checkboxMode="cascade"
   rangeSelectionMode="visual"
-  onHighlightChange={(paths, nodes) => console.log(`${paths.size} highlighted`)}
-  onSelectionChange={(paths, nodes) => console.log(`${paths.size} checked`)}
+  onHighlightChange={(ctx) => console.log(`${ctx.paths.size} highlighted`)}
+  onSelectionChange={(ctx) => console.log(`${ctx.paths.size} checked`)}
 />
+
+Events take ONE context object. SelectionChangeContext<T> = { paths: Set<string>, nodes }.
 
 Highlight interactions:
 - Ctrl+click (Cmd on Mac): toggle individual node highlight
@@ -128,12 +132,29 @@ rangeSelectionMode:
 - "visual" (default): highlights only visible/expanded nodes
 - "logical": highlights all nodes in depth-first order including collapsed
 
-TreeController API:
-- treeRef.selectNode(path, mode)    // mode: 'toggle' | 'range' | 'replace'
-- treeRef.selectNodes(paths)
-- treeRef.deselectAll()
+TreeController API — three symmetric families (opts = { silent? }):
+Access via bind:this on <Tree> (treeRef) — every method below is on the controller.
+
+HIGHLIGHT (UI multi-select set = highlightedPaths):
+- treeRef.highlightNode(path, mode?, opts?)   // mode: 'replace' | 'toggle' | 'range'
+- treeRef.highlightNodes(paths, opts?)        // additive
+- treeRef.setHighlightedPaths(paths, opts?)   // replace whole set
+- treeRef.highlightAll(opts?)
+- treeRef.clearHighlight(paths?, opts?)
+
+SELECTION (checkbox data set = selectedPaths):
+- treeRef.selectNode(path, opts?)
+- treeRef.selectNodes(paths, opts?)           // additive
+- treeRef.setSelectedPaths(paths, opts?)      // replace whole set
+- treeRef.selectAll(opts?)
+- treeRef.deselectNode(path, opts?)
+- treeRef.clearSelection(paths?, opts?)       // replaced the old deselectAll()
 - treeRef.getSelectedNodes()
 - treeRef.isNodeSelected(path)
+
+FOCUS (single = focusedNode):
+- treeRef.focusNode(path, opts?)
+- treeRef.clearFocus(opts?)
 
 KEYBOARD NAVIGATION (BUILT-IN)
 -------------------------------
@@ -148,13 +169,15 @@ Built-in keys:
 - Enter/Space: toggle expand/collapse
 - Backspace: collapse parent and select it
 
-For canvas trees, navigation is spatial (based on node positions) and layout-aware.
+Custom navigation overrides (navigationOverrides prop):
+Override individual navigation methods; unlisted methods fall back to defaults.
+Accepts a Partial<TreeNavigationOverrides<T>> object.
 
-Custom navigation overrides (canvas, v5.0.0-rc04+):
-<CanvasTree
+<Tree
   navigationOverrides={{
     navInto: () => { /* custom enter-children logic */ },
-    // other methods use default spatial nav
+    navOut: () => { /* custom move-to-parent logic */ },
+    // other methods use default flat-list traversal
   }}
 />
 
@@ -272,23 +295,27 @@ DRAG BETWEEN MULTIPLE TREES
   let sourceData = $state.raw([...]);
   let targetData = $state.raw([...]);
 
-  function handleSourceDrop(dropNode, draggedNode, position, event, operation) {
-    // Item dropped back to source
-    if (draggedNode.data.sourceTree === 'source') {
+  // onNodeDrop takes ONE NodeDropContext<T>:
+  //   { source: NodeRef, target: NodeRef|null, dragged: NodeRef[],
+  //     dropped: NodeRef[]|null, position, operation, event }
+  function handleSourceDrop(ctx) {
+    // Item dropped back to source. ctx.source.node = lead dragged node.
+    if (ctx.source.node?.data.sourceTree === 'source') {
       // Handle internal move
     }
   }
 
-  function handleTargetDrop(dropNode, draggedNode, position, event, operation) {
-    // Item dropped to target from source
-    if (draggedNode.data.sourceTree === 'source') {
+  function handleTargetDrop(ctx) {
+    // Item dropped to target from source. ctx.dragged = full top-level set.
+    const draggedNode = ctx.source.node;
+    if (draggedNode?.data.sourceTree === 'source') {
       // Remove from source
       sourceData = sourceData.filter(d => d.path !== draggedNode.path);
 
       // Add to target
       const newItem = {
         ...draggedNode.data,
-        path: calculateNewPath(dropNode, position),
+        path: calculateNewPath(ctx.target?.node, ctx.position),
         sourceTree: 'target'
       };
       targetData = [...targetData, newItem];

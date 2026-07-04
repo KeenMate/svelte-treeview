@@ -33,28 +33,67 @@ BASIC TYPED USAGE
 TYPE EXPORTS
 ------------
 import type {
-  // Core types
+  // Core node/tree types
   LTreeNode,           // Tree node interface
+  NodeId,              // string | number
+  VisualState,         // enum: node selection visual state
   Ltree,               // Tree instance interface
-  DropPosition,        // 'before' | 'after' | 'child'
 
-  // Context menu (v5.0.0-rc03+ unified types)
+  // Drag & drop / behaviour enums
+  DropPosition,        // 'before' | 'after' | 'child'
+  DragDropMode,        // 'none' | 'self' | 'cross' | 'both'
+  DropOperation,       // 'move' | 'copy'
+  ToggleIconMode,      // 'rotate' | 'swap'
+  ClickBehavior,       // 'select' | 'expand' | 'expand-and-focus'
+  CheckboxMode,        // 'independent' | 'cascade'
+  SelectionMode,       // 'single' | 'multi'
+  HighlightMode,       // 'replace' | 'toggle' | 'range'
+  TreeMutationOptions, // { silent? } — passed to selection/highlight/focus mutators
+
+  // Context menu (unified types)
   ContextMenuEntry,    // ContextMenuItem | ContextMenuDivider
   ContextMenuItem,     // { label, icon?, shortcut?, onclick?, children?, ... }
   ContextMenuDivider,  // { divider: true, label?: string }
 
-  // Navigation (v5.0.0-rc04+)
-  TreeNavigation,      // Interface for pluggable keyboard nav
-  TreeNavigationOverrides,  // Partial overrides
+  // Event / callback context types (single-object args)
+  NodeRef,                 // { path, node, parent, siblings }
+  NodeEventContext,        // = NodeRef<T> (onNodeClick / onNodeDoubleClick)
+  NodeDragContext,         // NodeRef + { event, dragged }
+  NodeDropContext,         // { source, target, dragged, dropped, position, operation, event }
+  ClipboardEventContext,   // { operation?, paths, nodes } (onCopy/onCut/onDelete)
+  SelectionChangeContext,  // { paths: Set<string>, nodes }
 
-  // Multi-select (v5.0.0-rc03+)
-  SelectionModifiers,  // { ctrl: boolean; shift: boolean }
+  // Clipboard / transform callback context types
+  NodeTransformContext,    // copy/paste transform context (source/target symmetric)
+  BeforeCopyContext,       // { operation, paths, nodes }
+  BeforeDeleteContext,     // { paths, nodes }
+  BeforePasteContext,      // { operation, target: { path, node }, entries }
+  PasteResult,             // pasteNodes() / onPaste result
 
-  // Results
-  InsertArrayResult,   // Insert operation result
+  // Navigation (pluggable keyboard nav)
+  TreeNavigation,          // Interface for pluggable keyboard nav
+  TreeNavigationOverrides, // Partial overrides
+
+  // Multi-select
+  SelectionModifiers,      // { ctrl: boolean; shift: boolean }
+
+  // Results / incremental updates
+  InsertArrayResult,       // insertArray() result
+  InsertBranchResult,      // insertBranch()/replaceBranch() result
+  DeleteBranchResult,      // deleteBranch() result
+  TreeChange,              // incremental change descriptor
+  ApplyChangesResult,      // applyChanges() result
+
+  // Clipboard entries
+  ClipboardEntry,          // immutable clipboard snapshot
+  TreeClipboard,           // shared clipboard singleton shape
+
+  // Render stats + global API
+  RenderStats,             // per-render stats
+  GlobalTreeviewAPI,       // window.__svelteTreeview global API shape
 
   // Internal (advanced)
-  NodeCallbacks,       // Event callback types
+  NodeCallbacks,       // Node event callback types
   NodeConfig           // Node configuration
 } from '@keenmate/svelte-treeview';
 
@@ -98,8 +137,8 @@ function getAllowedPositions(node: LTreeNode<MyItem>): DropPosition[] | null {
   return null;  // all positions
 }
 
-CONTEXT MENU TYPES (v5.0.0-rc03+)
-----------------------------------
+CONTEXT MENU TYPES
+------------------
 interface ContextMenuItem {
   id?: string;
   label: string;              // was "title" in old API
@@ -109,6 +148,7 @@ interface ContextMenuItem {
   isVisible?: boolean;
   className?: string;         // e.g. "danger"
   onclick?: () => void | Promise<void>;  // was "callback" in old API
+  shouldCloseOnClick?: boolean;   // default true; false keeps menu open (handler closes via close())
   children?: ContextMenuEntry[];  // submenu items
 }
 
@@ -122,8 +162,7 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;
 Usage:
 function createMenu(
   node: LTreeNode<MyItem>,
-  closeMenu: () => void,
-  selectedNodes?: LTreeNode<MyItem>[]
+  close: () => void
 ): ContextMenuEntry[] {
   return [
     { label: 'Open', icon: '📂', shortcut: 'Enter', onclick: () => openItem(node.data) },
@@ -132,8 +171,8 @@ function createMenu(
   ];
 }
 
-TREENAVIGATION INTERFACE (v5.0.0-rc04+)
-----------------------------------------
+TREENAVIGATION INTERFACE
+------------------------
 interface TreeNavigation<T> {
   navTo(path: string): void;
   navNextSibling(): void;
@@ -195,45 +234,161 @@ interface Ltree<T> {
   getNodeAllowedDropPositions(node: LTreeNode<T>): DropPosition[] | null;
 }
 
-CALLBACK TYPES
---------------
-// Node click
-onNodeClicked?: (node: LTreeNode<T>) => void;
+EVENT TYPES (on* — fire-and-forget, ONE context object)
+-------------------------------------------------------
+// All on* events take a single context object, NOT positional args.
+// on* = notification (return value ignored, except onTreeKeydown which intercepts).
 
-// Drag events
-onNodeDragStart?: (node: LTreeNode<T>, event: DragEvent) => void;
-onNodeDragOver?: (node: LTreeNode<T>, event: DragEvent) => void;
-onNodeDrop?: (
-  dropNode: LTreeNode<T> | null,
-  draggedNode: LTreeNode<T>,
-  position: DropPosition,
-  event: DragEvent,
-  operation: 'move' | 'copy'
-) => void;
+onNodeClick?: (ctx: NodeEventContext<T>) => void;        // ctx.node = clicked node
+onNodeDoubleClick?: (ctx: NodeEventContext<T>) => void;
+onNodeDragStart?: (ctx: NodeDragContext<T>) => void;     // grabbed node + event + dragged set
+onNodeDragOver?: (ctx: NodeDragContext<T>) => void;      // hovered node + event + dragged set
+onNodeDrop?: (ctx: NodeDropContext<T>) => void;          // source/target/dragged/dropped/...
+onHighlightChange?: (ctx: SelectionChangeContext<T>) => void;  // UI multi-select (highlightedPaths)
+onSelectionChange?: (ctx: SelectionChangeContext<T>) => void;  // checkbox set (selectedPaths)
+onCopy?: (ctx: ClipboardEventContext<T>) => void;
+onCut?: (ctx: ClipboardEventContext<T>) => void;
+onDelete?: (ctx: ClipboardEventContext<T>) => void;      // ctx.operation omitted for delete
+onPaste?: (result: PasteResult<T>) => void;
 
-// Validation
+// Interceptor: return true to suppress default + built-in shortcuts.
+onTreeKeydown?: (ctx: {
+  event: KeyboardEvent;
+  focusedNode: LTreeNode<T> | null;
+  highlightedNodes: LTreeNode<T>[];
+  controller: TreeController<T>;
+}) => boolean | void;
+
+CALLBACK TYPES (before*/get*/*TransformationCallback — intercept / provide data)
+-------------------------------------------------------------------------------
+// beforeDropCallback is DELIBERATELY still 5-arg positional (drop pair is asymmetric).
 beforeDropCallback?: (
   dropNode: LTreeNode<T> | null,
   draggedNode: LTreeNode<T>,
   position: DropPosition,
   event: DragEvent,
-  operation: 'move' | 'copy'
-) => boolean | { position?: DropPosition; operation?: 'move' | 'copy' } | Promise<...>;
+  operation: DropOperation
+) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<...>;
+
+// Clipboard batch-policy interceptors (single context object).
+// Return a new path[] to rewrite the set, false to block, or nothing to proceed.
+beforeCopyCallback?: (ctx: BeforeCopyContext<T>) => string[] | false | void;
+beforeCutCallback?: (ctx: BeforeCopyContext<T>) => string[] | false | void;
+beforeDeleteCallback?: (ctx: BeforeDeleteContext<T>) => string[] | false | void;
+// Return { targetPath?, position? } to redirect, false to block, or nothing.
+beforePasteCallback?: (ctx: BeforePasteContext<T>) => { targetPath?: string; position?: DropPosition } | false | void;
+
+// Per-node transforms (symmetric NodeTransformContext).
+copyNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T;
+pasteNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T | null;  // null skips node/subtree
 
 // Value getters
 getDisplayValueCallback?: (node: LTreeNode<T>) => string;
 getSearchValueCallback?: (node: LTreeNode<T>) => string;
-getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null;
+getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => DropPosition[] | null | undefined;
 
-// Context menu (v5.0.0-rc03+ — label/onclick/divider API)
-contextMenuCallback?: (
+// Context menu (label/onclick/divider API). closeMenuCallback closes the menu;
+// selectedNodes is the current highlight set when the menu opened.
+getContextMenuItemsCallback?: (
   node: LTreeNode<T>,
-  closeMenu: () => void,
-  selectedNodes?: LTreeNode<T>[]  // multi-select aware (rc03+)
+  closeMenuCallback: () => void,
+  selectedNodes?: LTreeNode<T>[]
 ) => ContextMenuEntry[];
 
 // Sort
-sortCallback?: (nodes: LTreeNode<T>[]) => LTreeNode<T>[];
+sortCallback?: (items: LTreeNode<T>[]) => LTreeNode<T>[];
+
+CONTEXT TYPES (shared shapes — exported for consumers)
+------------------------------------------------------
+// A pointer to one node plus the relational context the tree already knows.
+// node/parent/siblings are LIVE when reachable, null/[] cross-tree or after a cut.
+interface NodeRef<T> {
+  path: string;
+  node: LTreeNode<T> | null;
+  parent: LTreeNode<T> | null;
+  siblings: LTreeNode<T>[];  // children of parent (includes node); top-level nodes when parent is null
+}
+
+// onNodeClick / onNodeDoubleClick receive a bare NodeRef.
+type NodeEventContext<T> = NodeRef<T>;
+
+// onNodeDragStart / onNodeDragOver. A drag is single-origin → fires ONCE even
+// for a multi-selection; `dragged` carries the full top-level set.
+interface NodeDragContext<T> extends NodeRef<T> {
+  event: DragEvent;
+  dragged: NodeRef<T>[];  // full top-level set (single-item array for a single drag)
+}
+
+// onNodeDrop. `dropped` = nodes the library placed (move: moved; copy: fresh copies);
+// null cross-tree or when shouldAutoHandleMove/Copy=false (consumer inserts).
+interface NodeDropContext<T> {
+  source: NodeRef<T>;                    // lead dragged node
+  target: NodeRef<T> | null;            // drop node; null = empty / root
+  dragged: NodeRef<T>[];                // full top-level dragged set (includes source)
+  dropped: NodeRef<T>[] | null;         // placed nodes; null when library didn't place them
+  position: DropPosition;
+  operation: DropOperation;
+  event: DragEvent | TouchEvent;
+}
+
+// onCopy / onCut / onDelete. operation omitted for delete. For cut/delete,
+// nodes are PRE-REMOVAL snapshots (the tree no longer holds them at fire time).
+interface ClipboardEventContext<T> {
+  operation?: 'copy' | 'cut';
+  paths: string[];
+  nodes: LTreeNode<T>[];
+}
+
+// onHighlightChange (highlightedPaths) / onSelectionChange (selectedPaths).
+// Suppressed by { silent: true } mutations.
+interface SelectionChangeContext<T> {
+  paths: Set<string>;
+  nodes: LTreeNode<T>[];
+}
+
+TRANSFORM / CLIPBOARD CONTEXT TYPES
+-----------------------------------
+// Passed to BOTH copy & paste transforms, one per node. Symmetric source/target:
+// same field, same meaning. target + position are null during the copy phase.
+interface NodeTransformContext<T> {
+  operation: 'copy' | 'cut';
+  phase: 'copy' | 'paste';                       // which callback is running
+  isRoot: boolean;                               // top-level node vs. descendant riding along
+  index: number;                                 // index of the root entry in this batch
+  position: 'child' | 'before' | 'after' | null; // how roots land relative to target.node
+  source: NodeRef<T>;                            // origin side (live same-tree, null/[] cross-tree/cut)
+  target: NodeRef<T> | null;                     // destination side (null during copy phase)
+}
+
+interface BeforeCopyContext<T> {
+  operation: 'copy' | 'cut';
+  paths: string[];
+  nodes: LTreeNode<T>[];  // resolved live nodes (missing paths dropped)
+}
+
+interface BeforeDeleteContext<T> {
+  paths: string[];        // top-level paths about to be deleted
+  nodes: LTreeNode<T>[];
+}
+
+interface BeforePasteContext<T> {
+  operation: 'copy' | 'cut';
+  target: { path: string; node: LTreeNode<T> | null };  // path '' = root; may be redirected
+  entries: readonly ClipboardEntry<T>[];                // immutable clipboard snapshots (not live nodes)
+}
+
+PASTERESULT INTERFACE
+---------------------
+interface PasteResult<T> {
+  success: boolean;
+  count: number;
+  skipped: number;        // entries skipped by transform (null) or self-paste guard
+  error?: string;
+  entries?: ClipboardEntry<T>[];   // only when shouldAutoHandlePaste=false
+  operation?: 'copy' | 'cut';      // only when shouldAutoHandlePaste=false
+  targetPath?: string;
+  position?: 'child' | 'before' | 'after';
+}
 
 GENERIC TREE REFERENCE
 ----------------------
@@ -261,17 +416,16 @@ GENERIC TREE REFERENCE
   Get Node
 </button>
 
-STATISTICS TYPE
----------------
-interface Statistics {
+STATISTICS SHAPE
+----------------
+// Inline shape (not a separate exported type) returned by the tree's statistics getter.
+const stats: {
   nodeCount: number;
   maxLevel: number;
   filteredNodeCount: number;
   isIndexing: boolean;
   pendingIndexCount: number;
-}
-
-const stats: Statistics = treeRef.statistics;
+} = treeRef.statistics;
 
 COMPLEX DATA TYPES
 ------------------
@@ -318,18 +472,18 @@ function isFolder(item: TreeItem): item is FolderItem {
 
 STRICT NULL CHECKS
 ------------------
-Handle nullable data:
+Handle nullable data (ctx.node can be null cross-tree/after-cut; ctx.node.data can be null):
 
-onNodeClicked={(node) => {
-  // node.data can be null
-  if (node.data) {
-    console.log(node.data.name);
+onNodeClick={(ctx) => {
+  // ctx.node and ctx.node.data can both be null
+  if (ctx.node?.data) {
+    console.log(ctx.node.data.name);
   }
 }}
 
 // Or with optional chaining
-onNodeClicked={(node) => {
-  console.log(node.data?.name ?? 'Unknown');
+onNodeClick={(ctx) => {
+  console.log(ctx.node?.data?.name ?? 'Unknown');
 }}
 
 TYPE NARROWING IN TEMPLATES

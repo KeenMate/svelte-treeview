@@ -52,6 +52,15 @@
 	align-items: center;
 	justify-content: center;
 	transition: all 0.2s ease;
+	cursor: pointer;
+}
+
+/* Hover feedback — signals the empty drop zone is interactive (it grabs keyboard
+   focus on hover so a Ctrl/Cmd+V pastes here). Applies to both the mid-drag
+   placeholder and the permanent one (shouldShowDropPlaceholderWhenEmpty). */
+.stv__drop-placeholder:hover {
+	background-color: var(--stv-drop-placeholder-hover-bg) !important;
+	box-shadow: var(--stv-drop-placeholder-hover-shadow);
 }
 
 .stv__drop-placeholder-content {

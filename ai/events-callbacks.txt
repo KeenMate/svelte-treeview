@@ -2,18 +2,25 @@ EVENTS AND CALLBACKS
 ====================
 
 CRITICAL: Event-driven architecture
-- Callbacks for user interactions
-- Callbacks for data transformation
-- Callbacks for drag and drop
-- All callbacks receive LTreeNode<T>
+- on* events are FIRE-AND-FORGET notifications
+- Every on* event takes exactly ONE context object (NOT positional args)
+- before*/get* callbacks intercept or provide data (beforeDropCallback stays positional)
+- Context objects carry NodeRef<T> = { path, node, parent, siblings } (live, or null/[] cross-tree)
 
 NODE CLICK
 ----------
 <Tree
-  onNodeClicked={(node) => {
+  onNodeClick={(ctx) => {
+    const node = ctx.node;  // clicked node (null if unreachable)
     console.log('Clicked:', node.data.name);
-    console.log('Path:', node.path);
+    console.log('Path:', ctx.path);
     console.log('Level:', node.level);
+    console.log('Parent:', ctx.parent?.data.name);
+    console.log('Siblings:', ctx.siblings.length);
+  }}
+
+  onNodeDoubleClick={(ctx) => {
+    console.log('Double-clicked:', ctx.node.data.name);
   }}
 />
 
@@ -26,27 +33,101 @@ Click behavior (default: 'expand-and-focus'):
 
 DRAG EVENTS
 -----------
+Each drag event takes ONE ctx. A drag is single-origin, so dragStart/dragOver/drop
+each fire ONCE even for a multi-selection; ctx.dragged carries the full top-level set.
+
 <Tree
-  onNodeDragStart={(node, event) => {
-    console.log('Started dragging:', node.data.name);
-    // Can modify event.dataTransfer here
+  onNodeDragStart={(ctx) => {
+    // ctx = NodeRef + { event, dragged }; ctx.node is the grabbed node
+    console.log('Started dragging:', ctx.node.data.name);
+    console.log('In flight:', ctx.dragged.length);  // NodeRef[]
+    // Can modify ctx.event.dataTransfer here
   }}
 
-  onNodeDragOver={(node, event) => {
-    console.log('Dragging over:', node.data.name);
+  onNodeDragOver={(ctx) => {
+    // ctx.node is the HOVERED node; ctx.dragged is the in-flight set
+    console.log('Dragging over:', ctx.node.data.name);
   }}
 
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
-    console.log('Dropped:', draggedNode.data.name);
-    console.log('Target:', dropNode?.data.name);
-    console.log('Position:', position);  // 'before', 'after', 'child'
-    console.log('Operation:', operation);  // 'move', 'copy'
+  onNodeDrop={(ctx) => {
+    // ctx = NodeDropContext { source, target, dragged, dropped, position, operation, event }
+    console.log('Dropped:', ctx.source.node.data.name);   // lead dragged node
+    console.log('Target:', ctx.target?.node.data.name);   // drop node; target null = empty/root
+    console.log('Position:', ctx.position);   // 'before', 'after', 'child'
+    console.log('Operation:', ctx.operation); // 'move', 'copy'
+    console.log('Whole set:', ctx.dragged.length);        // full top-level dragged set
+    // dropped = nodes the LIBRARY placed (move: moved nodes; copy: fresh copies);
+    // null cross-tree or when shouldAutoHandleMove/Copy=false (you insert)
+    console.log('Placed:', ctx.dropped?.length ?? 'consumer-handled');
+  }}
+/>
+
+SELECTION EVENTS
+----------------
+Fire after highlight (UI multi-select) or checkbox selection changes.
+Both take SelectionChangeContext { paths: Set<string>, nodes: LTreeNode<T>[] }.
+Suppressed by { silent: true } mutations.
+
+<Tree
+  onHighlightChange={(ctx) => {
+    // highlightedPaths (Ctrl/Shift+click UI set) changed
+    console.log('Highlighted:', ctx.paths.size, 'nodes:', ctx.nodes.length);
+  }}
+
+  onSelectionChange={(ctx) => {
+    // selectedPaths (checkbox data set) changed
+    console.log('Selected:', [...ctx.paths]);
+  }}
+/>
+
+CLIPBOARD EVENTS
+----------------
+Fire after clipboard/delete operations. onCopy/onCut/onDelete take
+ClipboardEventContext { operation?: 'copy'|'cut', paths, nodes }
+(operation omitted for delete). onPaste takes the PasteResult.
+
+<Tree
+  onCopy={(ctx) => {
+    // ctx = { operation: 'copy', paths, nodes } — nodes live
+    console.log('Copied:', ctx.paths);
+  }}
+
+  onCut={(ctx) => {
+    // ctx = { operation: 'cut', paths, nodes } — nodes still live (dimmed until paste)
+    console.log('Cut:', ctx.paths);
+  }}
+
+  onDelete={(ctx) => {
+    // ctx = { paths, nodes } (no operation) — nodes are PRE-REMOVAL snapshots
+    console.log('Deleted:', ctx.nodes.map((n) => n.data.name));
+  }}
+
+  onPaste={(result) => {
+    // result = PasteResult { success, count, skipped, error? }
+    console.log('Pasted:', result.count, 'skipped:', result.skipped);
+  }}
+/>
+
+TREE KEYDOWN (INTERCEPTOR)
+--------------------------
+Not fire-and-forget: onTreeKeydown intercepts keydown before default + built-in
+shortcuts. Return true to suppress them. Focus-scoped to .stv__container.
+ctx = { event, focusedNode, highlightedNodes, controller }.
+
+<Tree
+  onTreeKeydown={(ctx) => {
+    if (ctx.event.key === 'Enter' && ctx.focusedNode) {
+      openItem(ctx.focusedNode.data);
+      return true;  // suppress default handling
+    }
+    // ctx.controller for imperative actions (copyNodes, pasteNodes, ...)
   }}
 />
 
 BEFORE DROP CALLBACK
 --------------------
-Validate or modify drops before they happen:
+NOTE: beforeDropCallback is DELIBERATELY still 5-arg positional (the only
+un-migrated callback). Validate or modify drops before they happen:
 
 <Tree
   beforeDropCallback={async (dropNode, draggedNode, position, event, operation) => {
@@ -132,22 +213,23 @@ CONTEXT MENU CALLBACK
 Generate context menu items dynamically:
 
 <Tree
-  contextMenuCallback={(node, closeMenuCallback) => {
+  getContextMenuItemsCallback={(node, closeMenuCallback) => {
     return [
       {
         icon: '📂',
-        title: 'Open',
-        callback: () => {
+        label: 'Open',
+        onclick: () => {
           openItem(node.data);
           closeMenuCallback();
         }
       },
-      { isDivider: true },
+      { divider: true },
       {
         icon: '🗑️',
-        title: 'Delete',
+        label: 'Delete',
+        className: 'danger',
         isDisabled: node.data.isProtected,
-        callback: async () => {
+        onclick: async () => {
           if (await confirmDelete()) {
             deleteItem(node.data);
             closeMenuCallback();
@@ -200,49 +282,75 @@ Bindable props (two-way):
 - insertResult
 
 Callback props (one-way notification):
-- onNodeClicked
+- onNodeClick
+- onNodeDoubleClick
 - onNodeDrop
 - onNodeDragStart
 - onNodeDragOver
+- onHighlightChange
+- onSelectionChange
+- onCopy / onCut / onPaste / onDelete
+- onTreeKeydown (interceptor)
 
 Example combining both:
 
 <script>
   let selectedNode = $state(null);
 
-  function handleClick(node) {
+  function handleClick(ctx) {
     // Called in addition to selectedNode update
-    console.log('Clicked:', node.path);
-    analytics.track('node_click', { path: node.path });
+    console.log('Clicked:', ctx.path);
+    analytics.track('node_click', { path: ctx.path });
   }
 </script>
 
 <Tree
   bind:focusedNode
-  onNodeClicked={handleClick}
+  onNodeClick={handleClick}
 />
 
 CALLBACK SIGNATURES
 -------------------
-onNodeClicked:
-(node: LTreeNode<T>) => void
+All on* events take ONE ctx object (fire-and-forget), except onTreeKeydown.
 
-onNodeDragStart:
-(node: LTreeNode<T>, event: DragEvent) => void
+NodeRef<T> = { path, node, parent, siblings }  // node/parent/siblings null/[] cross-tree
 
-onNodeDragOver:
-(node: LTreeNode<T>, event: DragEvent) => void
+onNodeClick / onNodeDoubleClick:
+(ctx: NodeRef<T>) => void
+
+onNodeDragStart / onNodeDragOver:
+(ctx: NodeDragContext<T>) => void
+  // NodeDragContext = NodeRef<T> & { event: DragEvent, dragged: NodeRef<T>[] }
 
 onNodeDrop:
-(
-  dropNode: LTreeNode<T> | null,
-  draggedNode: LTreeNode<T>,
-  position: 'before' | 'after' | 'child',
-  event: DragEvent,
-  operation: 'move' | 'copy'
-) => void
+(ctx: NodeDropContext<T>) => void
+  // NodeDropContext = {
+  //   source: NodeRef<T>,           // lead dragged node
+  //   target: NodeRef<T> | null,    // drop node; null = empty/root
+  //   dragged: NodeRef<T>[],        // full top-level dragged set
+  //   dropped: NodeRef<T>[] | null, // library-placed nodes; null cross-tree / auto-handle off
+  //   position: 'before' | 'after' | 'child',
+  //   operation: 'move' | 'copy',
+  //   event: DragEvent | TouchEvent
+  // }
 
-beforeDropCallback:
+onHighlightChange / onSelectionChange:
+(ctx: SelectionChangeContext<T>) => void
+  // SelectionChangeContext = { paths: Set<string>, nodes: LTreeNode<T>[] }
+
+onCopy / onCut / onDelete:
+(ctx: ClipboardEventContext<T>) => void
+  // ClipboardEventContext = { operation?: 'copy' | 'cut', paths: string[], nodes: LTreeNode<T>[] }
+  // operation omitted for onDelete
+
+onPaste:
+(result: PasteResult<T>) => void
+  // PasteResult = { success, count, skipped, error? }
+
+onTreeKeydown (interceptor — return true to suppress default + built-in shortcuts):
+(ctx: { event, focusedNode, highlightedNodes, controller }) => boolean | void
+
+beforeDropCallback (deliberately still 5-arg positional):
 (
   dropNode: LTreeNode<T> | null,
   draggedNode: LTreeNode<T>,
@@ -260,8 +368,8 @@ getSearchValueCallback:
 getAllowedDropPositionsCallback:
 (node: LTreeNode<T>) => DropPosition[] | null | undefined
 
-contextMenuCallback:
-(node: LTreeNode<T>, closeMenu: () => void) => ContextMenuItem[]
+getContextMenuItemsCallback:
+(node: LTreeNode<T>, closeMenu: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[]
 
 sortCallback:
 (nodes: LTreeNode<T>[]) => LTreeNode<T>[]
@@ -274,7 +382,7 @@ ASYNC CALLBACKS
 These callbacks support async/Promise:
 
 - beforeDropCallback (awaited before drop)
-- contextMenuCallback item callbacks (individual actions)
+- getContextMenuItemsCallback item onclick handlers (individual actions)
 
 Example async beforeDropCallback:
 beforeDropCallback={async (drop, drag, pos) => {
@@ -284,8 +392,8 @@ beforeDropCallback={async (drop, drag, pos) => {
 
 Example async context menu:
 {
-  title: 'Save',
-  callback: async () => {
+  label: 'Save',
+  onclick: async () => {
     await saveToServer();
     closeMenu();
   }
@@ -307,8 +415,8 @@ beforeDropCallback={async (drop, drag, pos) => {
 
 Context menu with error handling:
 {
-  title: 'Delete',
-  callback: async () => {
+  label: 'Delete',
+  onclick: async () => {
     try {
       await deleteItem(node.data);
       closeMenu();
@@ -338,8 +446,8 @@ Selection tracking:
 </script>
 
 <Tree
-  onNodeClicked={(node) => {
-    history = [...history, node.path];
+  onNodeClick={(ctx) => {
+    history = [...history, ctx.path];
   }}
 />
 
@@ -357,17 +465,17 @@ Prevent certain drops:
 
 Analytics integration:
 <Tree
-  onNodeClicked={(node) => {
+  onNodeClick={(ctx) => {
     analytics.track('tree_click', {
-      path: node.path,
-      type: node.data.type
+      path: ctx.path,
+      type: ctx.node.data.type
     });
   }}
-  onNodeDrop={(drop, drag, pos) => {
+  onNodeDrop={(ctx) => {
     analytics.track('tree_drop', {
-      from: drag.path,
-      to: drop?.path,
-      position: pos
+      from: ctx.source.path,
+      to: ctx.target?.path,
+      position: ctx.position
     });
   }}
 />

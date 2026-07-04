@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
+	import type { NodeRef } from '$lib/index.js';
 
 	// Deterministic e2e fixture for the basic-rendering feature set.
 	// Targeted by e2e/basic.spec.ts. Mirrors /examples/basic but strips
@@ -38,8 +39,8 @@
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
 
-	function handleNodeClick(node: LTreeNode<Item>) {
-		clickedNode = `${node.data?.name} (path: ${node.path})`;
+	function handleNodeClick({ node, path }: NodeRef<Item>) {
+		clickedNode = `${node?.data?.name} (path: ${path})`;
 	}
 
 	function scrollToPath() {

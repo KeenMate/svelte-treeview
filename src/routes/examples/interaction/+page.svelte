@@ -2,6 +2,7 @@
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
 	import type { ClickBehavior, CheckboxMode, SelectionMode } from '$lib/ltree/types.js';
+	import type { NodeRef } from '$lib/index.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -146,7 +147,7 @@
 
 	$effect(() => { clickBehavior; selectionMode; highlightedNodeClass; focusedNodeClass; shouldShowCheckboxes; checkboxMode; shouldClickToggleCheckbox; rangeSelectionMode; saveSettings(); });
 
-	function onClickDemoNodeClick(node: LTreeNode<Item>) {
+	function onClickDemoNodeClick(_ctx: NodeRef<Item>) {
 	}
 
 	// ── Multi-select demo ────────────────────────────────────────────
@@ -159,8 +160,8 @@
 	let navFocusedNode = $state<LTreeNode<Item> | null>(null);
 	let navLog = $state<string[]>([]);
 
-	function onNavNodeClick(node: LTreeNode<Item>) {
-		navLog = [`Navigated to: ${node.data?.name} (${node.path})`, ...navLog.slice(0, 9)];
+	function onNavNodeClick({ node, path }: NodeRef<Item>) {
+		navLog = [`Navigated to: ${node?.data?.name} (${path})`, ...navLog.slice(0, 9)];
 	}
 </script>
 
@@ -432,7 +433,7 @@
   shouldShowCheckboxes={true}
   rangeSelectionMode="${rangeSelectionMode}"
   bind:highlightedPaths={selectedPaths}
-  onSelectionChange={(paths, nodes) => { ... }}
+  onSelectionChange={({ paths, nodes }) => { ... }}
   ...
 />`}</pre>
 		</div>

@@ -52,7 +52,9 @@ MOVE NODE
     const result = treeRef.moveNode(sourcePath, targetPath, position);
 
     if (result.success) {
-      console.log('Moved to:', result.newPath);
+      console.log('Moved', sourcePath, '->', targetPath, position);
+    } else {
+      console.log('Move failed:', result.error);
     }
   }
 </script>
@@ -72,6 +74,8 @@ moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 
 - targetPath: Target node
 - position: Where relative to target
 
+Returns: { success: boolean, error?: string }
+
 Positions:
 - 'before': Insert as sibling before target
 - 'after': Insert as sibling after target
@@ -84,7 +88,7 @@ REMOVE NODE
     const result = treeRef.removeNode(path, true);
 
     if (result.success) {
-      console.log('Removed:', result.removedCount, 'nodes');
+      console.log('Removed:', result.node?.path);
     }
   }
 </script>
@@ -97,7 +101,7 @@ removeNode(path: string, includeDescendants?: boolean)
 - path: Node to remove
 - includeDescendants: Remove children too (default: true)
 
-Returns: { success: boolean, removedCount: number, error?: string }
+Returns: { success: boolean, node?: LTreeNode<T>, error?: string }
 
 ORDER MEMBER
 ------------
@@ -199,33 +203,40 @@ const allItems = treeRef.getAllData();
 
 APPLY CHANGES
 -------------
-Force-apply pending changes and refresh the tree:
+Apply a batch of tracked changes in one reactive update:
 
-treeRef.applyChanges();
+const result = treeRef.applyChanges(changes);   // changes: TreeChange<T>[]
+// result: ApplyChangesResult = { successful: number, failed: [...] }
 
-COPY NODE
----------
+COPY NODE (low-level)
+---------------------
+For most copy/paste workflows use the CLIPBOARD API below. This lower-level
+method copies a single node + subtree directly to a destination.
+
 <script>
-  function copyNode(sourcePath, targetPath, position) {
+  function copyNode(sourceNode, targetParentPath) {
     const result = treeRef.copyNodeWithDescendants(
-      sourcePath,
-      targetPath,
-      position
+      sourceNode,
+      targetParentPath,
+      (data) => ({ ...data, id: crypto.randomUUID() })  // transform each copy
     );
 
     if (result.success) {
-      console.log('Copied to:', result.newPath);
+      console.log('Copied root:', result.rootNode?.path, 'count:', result.count);
     }
   }
 </script>
 
 copyNodeWithDescendants signature:
 copyNodeWithDescendants(
-  sourcePath: string,
-  targetParentPath?: string,
+  sourceNode: LTreeNode<T>,
+  targetParentPath: string,
+  transformData: (data: T) => T,
   siblingPath?: string,
   position?: 'before' | 'after'
 )
+
+Returns: { success: boolean, rootNode?: LTreeNode<T>, count: number, error?: string }
 
 NEW ITEM WORKFLOW
 -----------------
@@ -336,16 +347,20 @@ BULK SUBTREE OPERATIONS (rc04+)
 -------------------------------
 Insert, replace, or delete entire subtrees with a single tree emission:
 
-insertBranch(parentPath: string, nodes: T[]): void
+insertBranch(parentPath: string, data: T[]): InsertBranchResult<T>
 - Inserts an array of nodes as a subtree under parentPath
 - All nodes are inserted in one batch, triggering a single reactive update
+- Returns { success, count, failed, parentNode }
 
-replaceBranch(path: string, nodes: T[]): void
-- Removes the node at path and all descendants, then inserts new nodes
+replaceBranch(parentPath: string, data: T[]): InsertBranchResult<T>
+- Removes the node at parentPath and all descendants, then inserts new nodes
 - Useful for server-driven updates where a subtree is replaced wholesale
+- Returns { success, count, failed, parentNode }
 
-deleteBranch(path: string): void
+deleteBranch(path: string, keepParent?: boolean): DeleteBranchResult<T>
 - Removes the node at path and all its descendants in one operation
+- keepParent: keep the node itself, remove only its descendants
+- Returns { success, removedCount, error? }
 
 Example: server-driven cut/paste
 <script>
@@ -357,34 +372,104 @@ Example: server-driven cut/paste
   }
 </script>
 
-CLIPBOARD API (rc04+)
----------------------
-Built-in clipboard for copy/cut/paste workflows:
+CLIPBOARD API
+-------------
+Built-in clipboard for copy/cut/paste workflows. These methods live on the
+TreeController, NOT on the Tree component ref. Reach the controller via the
+onTreeKeydown interceptor (ctx.controller) or hold your own reference. Below,
+`controller` is that TreeController instance.
 
 // Copy selected nodes (or specific paths)
-treeRef.copyNodes();                    // copies highlightedPaths
-treeRef.copyNodes(['1.2', '1.3']);      // copies specific paths
+controller.copyNodes();                 // copies highlightedPaths
+controller.copyNodes(['1.2', '1.3']);   // copies specific paths
 
 // Cut selected nodes (dims them visually, removes on paste)
-treeRef.cutNodes();                     // cuts highlightedPaths
-treeRef.cutNodes(['1.2']);              // cuts specific paths
+controller.cutNodes();                  // cuts highlightedPaths
+controller.cutNodes(['1.2']);           // cuts specific paths
 
-// Paste under target node
-treeRef.pasteNodes('2.1', 'child');     // paste as children of 2.1
-treeRef.pasteNodes('2.1', 'after');     // paste as siblings after 2.1
+// Paste at target node
+controller.pasteNodes('2.1');           // paste as children of 2.1 (default)
+controller.pasteNodes('2.1', null, 'after');  // paste as siblings after 2.1
+
+// Delete nodes (highlightedPaths, or specific paths; honors beforeDeleteCallback)
+controller.deleteNodes();               // returns { removed, blocked }
+controller.deleteNodes(['1.2']);
 
 // Cancel cut (removes dimming)
-treeRef.cancelCut();
+controller.cancelCut();
 
 // Check clipboard state
-treeRef.hasClipboard();                 // boolean
-treeRef.getClipboardOperation();        // 'copy' | 'cut' | null
+controller.hasClipboardContent();       // boolean
+controller.getClipboardOperation();     // 'copy' | 'cut' | null
 
-Cut nodes are tracked via treeRef.cutPaths (Set<string>) and rendered at reduced opacity.
+Cut nodes are tracked via controller.cutPaths (Set<string>) and rendered at
+reduced opacity.
 
-Manual paste mode (server-driven):
-treeRef.pasteNodes('2.1', 'child', { shouldAutoHandlePaste: false });
-// Returns clipboard data for you to send to server, doesn't modify tree
+pasteNodes signature:
+pasteNodes(
+  targetPath: string,
+  transform?: (data: T, ctx: NodeTransformContext<T>) => T | null,
+  position: 'child' | 'before' | 'after' = 'child'
+)
+- transform (optional) overrides pasteNodeTransformationCallback for this paste;
+  return null from it to SKIP a node (skipping a root skips its subtree).
+- position 'child' onto a node that disallows 'child' (a leaf/file) is redirected
+  to paste beside it, honoring getAllowedDropPositionsCallback.
+Returns: PasteResult = { success, count, skipped, error? }
+
+BUILT-IN KEYBOARD SHORTCUTS
+---------------------------
+Set shouldHandleKeyboardShortcuts (default false) to enable Ctrl/Cmd+C/X/V,
+Delete, Esc (cancel cut), plus classic aliases Ctrl+Insert / Shift+Insert /
+Shift+Delete. Shortcuts are FOCUS-SCOPED to the tree's .stv__container
+(tabindex=0): they only fire when focus is inside the tree.
+
+CLIPBOARD CALLBACKS (props on <Tree>)
+-------------------------------------
+Interceptors (return value modifies/blocks the operation):
+
+beforeCopyCallback / beforeCutCallback:
+  (ctx: { operation, paths, nodes }) => string[] | false | void
+  Return a new path[] to rewrite the set, or false to block.
+
+beforePasteCallback:
+  (ctx: { operation, target: { path, node }, entries }) => { targetPath?, position? } | false | void
+  Redirect the target/position, or return false to block.
+
+beforeDeleteCallback:
+  (ctx: { paths, nodes }) => string[] | false | void
+  Narrow the delete set (return path[]) or block it (false).
+
+Per-node transforms (both take NodeTransformContext<T>):
+
+copyNodeTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T
+  Clean/redact fields at snapshot time (phase 'copy'; target + position null).
+
+pasteNodeTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T | null
+  Derive ids/values/names at insert (phase 'paste'); return null to skip.
+
+NodeTransformContext<T> = {
+  operation: 'copy' | 'cut';
+  phase: 'copy' | 'paste';
+  isRoot; index;
+  position: 'child' | 'before' | 'after' | null;   // null during copy phase
+  source: { path, node, parent, siblings };
+  target: { path, node, parent, siblings } | null; // null during copy phase / at root
+}
+
+Collision-free names — use the exported uniqueName helper inside the paste
+transform (import from '@keenmate/svelte-treeview'):
+
+  import { uniqueName } from '@keenmate/svelte-treeview';
+  pasteNodeTransformationCallback={(data, ctx) => {
+    const landing = ctx.position === 'child' && ctx.target?.node
+      ? Object.values(ctx.target.node.children)
+      : (ctx.target?.siblings ?? []);
+    return { ...data, name: uniqueName(data.name, landing.map(s => s.data?.name)) };
+  }}
+
+uniqueName(base, taken, suffix?) — returns a collision-free name (default
+`${base} Copy ${n}`).
 
 BATCH OPERATIONS
 ----------------

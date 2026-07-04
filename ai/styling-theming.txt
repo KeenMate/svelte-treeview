@@ -3,15 +3,16 @@ STYLING AND THEMING
 
 CRITICAL: Styles must be imported separately
 - Component has no embedded styles
-- Import CSS or SCSS
+- Import the bundled CSS once at app level
 - Extensive CSS variables for theming
+- Styling is PURE CSS (bundled via lightningcss to dist/styles.css) — there is NO SCSS/SASS
 
 IMPORT STYLES
 -------------
 // Bundled CSS (all partials merged)
 import '@keenmate/svelte-treeview/styles.css';
 
-// Or individual partials (override per-section)
+// Or an individual partial (rarely needed; the bundle is preferred)
 import '@keenmate/svelte-treeview/styles/main.css';
 
 CSS VARIABLES
@@ -20,18 +21,18 @@ Override in your CSS:
 
 :root {
   /* Base sizing unit — scale all dimensions with one knob */
-  --ltree-rem: 10px;
+  --stv-rem: 10px;
 
   /* Indentation */
-  --ltree-node-indent-per-level: calc(0.8 * var(--ltree-rem));
+  --stv-node-indent-per-level: calc(0.8 * var(--stv-rem));
 
   /* Colors — tints derived automatically via color-mix() */
-  --ltree-primary: #0d6efd;
-  --ltree-success: #198754;
-  --ltree-danger: #dc3545;
-  --ltree-light: #f8f9fa;
-  --ltree-border: #dee2e6;
-  --ltree-body-color: #212529;
+  --stv-primary: #0d6efd;
+  --stv-success: #198754;
+  --stv-danger: #dc3545;
+  --stv-light: #f8f9fa;
+  --stv-border: #dee2e6;
+  --stv-body-color: #212529;
 
   /* Touch ghost */
   --tree-ghost-bg: rgba(59, 130, 246, 0.9);
@@ -40,10 +41,10 @@ Override in your CSS:
 
 --base-* TOKEN INTEGRATION
 --------------------------
-Every --ltree-* variable chains through a --base-* token shared with other
+Every --stv-* variable chains through a --base-* token shared with other
 @keenmate/* web components, then falls back to a hardcoded default:
 
-  --ltree-primary: var(--base-accent-color, #0d6efd);
+  --stv-primary: var(--base-accent-color, #0d6efd);
 
 Set --base-* once at :root and every KM component picks it up automatically:
 
@@ -57,34 +58,36 @@ Set --base-* once at :root and every KM component picks it up automatically:
   --base-hover-bg: #f3f4f6;
 }
 
-Tree-specific --ltree-* overrides take precedence over --base-* tokens, so
+Tree-specific --stv-* overrides take precedence over --base-* tokens, so
 you can theme a single tree without affecting other components.
 
-SELECTED NODE CLASSES
----------------------
-<Tree highlightedNodeClass="ltree-selected-bold" />
+HIGHLIGHTED NODE CLASSES
+------------------------
+<Tree highlightedNodeClass="stv__node-content--highlight-bold" />
 
 Built-in classes:
-- ltree-selected-bold - Bold text with primary color
-- ltree-selected-border - Border and background highlight
-- ltree-selected-brackets - Decorative brackets ❯ Node ❮
+- stv__node-content--highlight-bold - Bold text with primary color
+- stv__node-content--highlight-border - Border and background highlight
+- stv__node-content--highlight-brackets - Decorative brackets ❯ Node ❮
+- stv__node-content--highlight-fill - Filled background
+- stv__node-content--highlight-glow - Shadow glow
 
-Custom selected style:
-.my-selected {
+Custom highlighted style:
+.my-highlight {
   background: #e0f2fe;
   border-left: 3px solid #0284c7;
   font-weight: 600;
 }
 
-<Tree highlightedNodeClass="my-selected" />
+<Tree highlightedNodeClass="my-highlight" />
 
 DRAG-OVER CLASSES
 -----------------
-<Tree dragOverNodeClass="ltree-dragover-glow" />
+<Tree dragOverNodeClass="stv__node-content--dragover-glow" />
 
 Built-in classes:
-- ltree-dragover-highlight - Dashed border with background
-- ltree-dragover-glow - Shadow glow effect
+- stv__node-content--dragover-highlight - Dashed border with background
+- stv__node-content--dragover-glow - Shadow glow effect
 
 Custom drag-over style:
 .my-drag-over {
@@ -98,10 +101,12 @@ Custom drag-over style:
 ICON CLASSES
 ------------
 <Tree
-  expandIconClass="ltree-icon-expand"
-  collapseIconClass="ltree-icon-collapse"
-  leafIconClass="ltree-icon-leaf"
+  expandIconClass="stv__toggle-icon--expand"
+  collapseIconClass="stv__toggle-icon--collapse"
+  leafIconClass="stv__toggle-icon--leaf"
 />
+
+(These are the defaults — omit them to keep the built-in icons.)
 
 Custom icons with CSS:
 .my-expand::before { content: '▶'; }
@@ -117,13 +122,13 @@ Custom icons with CSS:
 SCROLL HIGHLIGHT CLASSES
 ------------------------
 <Tree
-  scrollHighlightClass="ltree-scroll-highlight"
+  scrollHighlightClass="stv__node-content--scroll-highlight"
   scrollHighlightTimeout={4000}
 />
 
 Built-in classes:
-- ltree-scroll-highlight - Blue background glow
-- ltree-scroll-highlight-arrow - Red arrow indicator
+- stv__node-content--scroll-highlight - Blue background glow
+- stv__scroll-arrow - Red arrow indicator
 
 Custom highlight:
 .my-highlight {
@@ -139,58 +144,57 @@ Custom highlight:
 
 DROP ZONE STYLING
 -----------------
-SCSS variables for drop zones:
+Drop zones are styled via CSS custom properties (override in your own CSS):
 
-// Border radius
-$drop-zone-border-radius: 4px;
+:root {
+  /* Border radius */
+  --stv-drop-zone-border-radius: 4px;
 
-// Before zone
-$drop-zone-before-bg: rgba(134, 239, 172, 0.25);
-$drop-zone-before-color: #166534;
-$drop-zone-before-active-bg: rgba(134, 239, 172, 0.85);
-$drop-zone-before-active-color: #14532d;
-$drop-zone-before-active-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+  /* Before zone */
+  --stv-drop-zone-before-bg: rgba(134, 239, 172, 0.25);
+  --stv-drop-zone-before-color: #166534;
+  --stv-drop-zone-before-active-bg: rgba(134, 239, 172, 0.85);
+  --stv-drop-zone-before-active-color: #14532d;
 
-// After zone
-$drop-zone-after-bg: rgba(253, 186, 116, 0.25);
-$drop-zone-after-color: #9a3412;
-$drop-zone-after-active-bg: rgba(253, 186, 116, 0.85);
-$drop-zone-after-active-color: #7c2d12;
-$drop-zone-after-active-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+  /* After zone */
+  --stv-drop-zone-after-bg: rgba(253, 186, 116, 0.25);
+  --stv-drop-zone-after-color: #9a3412;
+  --stv-drop-zone-after-active-bg: rgba(253, 186, 116, 0.85);
+  --stv-drop-zone-after-active-color: #7c2d12;
 
-// Child zone
-$drop-zone-child-bg: rgba(196, 181, 253, 0.25);
-$drop-zone-child-color: #5b21b6;
-$drop-zone-child-active-bg: rgba(196, 181, 253, 0.85);
-$drop-zone-child-active-color: #4c1d95;
-$drop-zone-child-active-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  /* Child zone */
+  --stv-drop-zone-child-bg: rgba(196, 181, 253, 0.25);
+  --stv-drop-zone-child-color: #5b21b6;
+  --stv-drop-zone-child-active-bg: rgba(196, 181, 253, 0.85);
+  --stv-drop-zone-child-active-color: #4c1d95;
+}
 
-// Arrow indicators
-$drop-arrow-size: 24px;
-$drop-arrow-position: 66%;
+Or target the zone classes directly:
+- .stv__drop-zone (base), .stv__drop-zone--before / --after / --child
+- .stv__drop-zone--active (during drag)
 
 GLOW MODE STYLING
 -----------------
-CSS classes for glow indicators:
+CSS classes for glow indicators (applied to .stv__node-content):
 
-.ltree-glow-before {
+.stv__node-content--glow-before {
   border-top: 3px solid #22c55e;
   box-shadow: 0 -4px 8px rgba(34, 197, 94, 0.3);
 }
 
-.ltree-glow-after {
+.stv__node-content--glow-after {
   border-bottom: 3px solid #f97316;
   box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
 }
 
-.ltree-glow-child {
+.stv__node-content--glow-child {
   border: 3px solid #8b5cf6;
   box-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
 }
 
 CONTEXT MENU STYLING
 --------------------
-.ltree-context-menu {
+.stv__context-menu {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -199,7 +203,7 @@ CONTEXT MENU STYLING
   min-width: 160px;
 }
 
-.ltree-context-menu-item {
+.stv__context-menu-item {
   display: flex;
   align-items: center;
   padding: 8px 12px;
@@ -208,16 +212,16 @@ CONTEXT MENU STYLING
   gap: 8px;
 }
 
-.ltree-context-menu-item:hover {
+.stv__context-menu-item:hover {
   background: #f3f4f6;
 }
 
-.ltree-context-menu-item-disabled {
+.stv__context-menu-item--disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.ltree-context-menu-divider {
+.stv__context-menu-divider {
   height: 1px;
   background: #e5e7eb;
   margin: 4px 0;
@@ -225,7 +229,7 @@ CONTEXT MENU STYLING
 
 TOUCH GHOST STYLING
 -------------------
-.ltree-touch-ghost {
+.stv__touch-ghost {
   background: var(--tree-ghost-bg, rgba(59, 130, 246, 0.9));
   color: var(--tree-ghost-color, white);
   padding: 8px 16px;
@@ -237,69 +241,85 @@ TOUCH GHOST STYLING
 CSS CLASS REFERENCE
 -------------------
 Tree structure:
-- .ltree-tree - Main container
-- .ltree-tree-body - Tree body
-- .ltree-node - Node container
-- .ltree-node-row - Node row wrapper
-- .ltree-node-content - Node content area
-- .ltree-toggle-icon - Expand/collapse icon
-- .ltree-children - Children container
+- .stv__container - Root container (carries data-theme)
+- .stv__tree - Main tree element
+- .stv__node - Node container
+- .stv__node-row - Node row wrapper
+- .stv__node-content - Node content area
+- .stv__node-label - Node label span
+- .stv__toggle-icon - Expand/collapse icon
+- .stv__children - Children container
 
-States:
-- .ltree-expanded - Expanded node
-- .ltree-collapsed - Collapsed node
-- .ltree-selected - Selected node
-- .ltree-draggable - Draggable node
-- .ltree-drag-over - Drop target during drag
+States (modifiers on .stv__node-content):
+- .stv__node-content--focused - Focused node (single)
+- .stv__node-content--highlighted - Highlighted node (UI multi-select)
+- .stv__node-content--multi-selected - Part of a multi-selection
+- .stv__node-content--draggable - Draggable node
+- .stv__node-content--drag-over - Drop target during drag
 
 Drop zones:
-- .ltree-drop-zones - Drop zone container
-- .ltree-drop-zone - Individual drop zone
-- .ltree-drop-before - Before position
-- .ltree-drop-after - After position
-- .ltree-drop-child - Child position
-- .ltree-drop-copy - Copy operation active
+- .stv__drop-zones - Drop zone container
+- .stv__drop-zone - Individual drop zone
+- .stv__drop-zone--before - Before position
+- .stv__drop-zone--after - After position
+- .stv__drop-zone--child - Child position
+- .stv__node-content--drop-copy - Copy operation active
 
 Context menu:
-- .ltree-context-menu - Menu container
-- .ltree-context-menu-item - Menu item
-- .ltree-context-menu-icon - Item icon
-- .ltree-context-menu-divider - Divider
+- .stv__context-menu - Menu container
+- .stv__context-menu-item - Menu item
+- .stv__context-menu-icon - Item icon
+- .stv__context-menu-divider - Divider
 
 Empty/loading:
-- .ltree-empty-state - Empty tree state
-- .ltree-drop-placeholder - Drop placeholder
+- .stv__empty-state - Empty tree state
+- .stv__drop-placeholder - Drop placeholder
 
 BODY CLASS
 ----------
 <Tree bodyClass="my-tree-body" />
 
-Adds class to tree body element for scoped styling:
+Adds a class to the tree body element for scoped styling:
 
-.my-tree-body .ltree-node-content {
+.my-tree-body .stv__node-content {
   padding: 4px 8px;
 }
 
-DARK THEME EXAMPLE
-------------------
-.dark-theme {
-  --ltree-body-color: #e5e7eb;
-  --ltree-border: #374151;
-  --ltree-light: #1f2937;
-  --ltree-primary: #60a5fa;
-}
+DATA-DRIVEN CLASS HOOKS
+-----------------------
+Per-row class hooks recompute when a node changes (node._rev):
 
-.dark-theme .ltree-tree {
-  background: #111827;
-}
+<Tree
+  nodeClass={(node) => node.data?.isArchived ? 'archived' : null}
+  nodeContentClass={(node) => node.data?.priority === 'high' ? 'urgent' : null}
+/>
 
-.dark-theme .ltree-node-content:hover {
-  background: #1f2937;
-}
+nodeClass applies to .stv__node; nodeContentClass applies to .stv__node-content.
 
-.dark-theme .ltree-context-menu {
-  background: #1f2937;
-  border-color: #374151;
+DARK MODE
+---------
+Three ways dark mode kicks in:
+1. Automatic: --stv-* colors use light-dark() fallbacks, so they follow the
+   OS preference (prefers-color-scheme) with no extra config.
+2. dark-mode.css also reacts to framework theme classes/attributes
+   ([data-theme], [data-bs-theme], .dark) on any ancestor.
+3. Per-instance: the theme prop forces one tree dark or light regardless of
+   the page. It is forwarded to the root .stv__container as data-theme:
+
+<Tree {data} theme="dark" />
+<Tree {data} theme="light" />
+
+Leave theme undefined to inherit from the page.
+
+DARK THEME OVERRIDE EXAMPLE
+---------------------------
+You can also override the --stv-* tokens for a custom dark palette:
+
+[data-theme="dark"] {
+  --stv-body-color: #e5e7eb;
+  --stv-border: #374151;
+  --stv-light: #1f2937;
+  --stv-primary: #60a5fa;
 }
 
 INDENTATION
@@ -307,11 +327,12 @@ INDENTATION
 Control node indentation:
 
 :root {
-  --tree-node-indent-per-level: 1rem;
+  --stv-node-indent-per-level: 1rem;
 }
 
 Each level gets this fixed indent.
-Level 1 = 1rem, Level 2 = 2rem, etc.
+Level 1 = 0 offset, Level 2 = 1rem, Level 3 = 2rem, etc. (indent is
+(level − 1) × per-level).
 
 NODE TEMPLATE STYLING
 ---------------------
@@ -344,10 +365,10 @@ NODE TEMPLATE STYLING
 BEST PRACTICES
 --------------
 ✅ Import styles at app level (once)
-✅ Use CSS variables for theming
-✅ Override SCSS variables before import
+✅ Use CSS variables (--stv-* / --base-*) for theming
 ✅ Use built-in classes when possible
 ✅ Scope custom styles properly
+✅ Use the theme prop for per-instance dark/light
 
 ❌ Don't import styles multiple times
 ❌ Don't override built-in classes globally

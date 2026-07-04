@@ -174,15 +174,17 @@
 	// In flat mode, children rendering is handled by Tree.svelte, so we skip these computations
 	const childrenArray = $derived(!flatMode ? Object.values(node?.children || []) : [])
 	const hasChildren = $derived(node?.hasChildren || false)
-	// In recursive mode, each nested Node compounds one level of margin-left.
-	// In flat mode, all nodes are siblings so we multiply level × indent explicitly.
-	// Both use the same CSS variable so theming works identically across modes.
+	// Root nodes (level 1) sit flush against the left edge; only descendants indent,
+	// so the offset is (level - 1) × indent (matches web-treeview's root-at-zero math).
+	// In recursive mode, each nested Node compounds one level, so a root gets 0 and every
+	// deeper node adds one indent. In flat mode all nodes are siblings, so we multiply
+	// (level - 1) × indent explicitly. Both use the same CSS variable across modes.
 	// flatGap replicates the recursive .stv__children { margin-top: 2px } gap
 	// — only applied before first-child nodes (where level > previous node's level).
 	const indentStyle = $derived(
 		flatMode
-			? `margin-left: calc(${node?.level || 1} * var(--stv-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
-			: `margin-left: var(--stv-node-indent-per-level, 0.5rem)`,
+			? `margin-left: calc(${Math.max(0, (node?.level || 1) - 1)} * var(--stv-node-indent-per-level, 0.5rem))${flatGap ? '; margin-top: 2px' : ''}`
+			: `margin-left: ${(node?.level || 1) <= 1 ? '0px' : 'var(--stv-node-indent-per-level, 0.5rem)'}`,
 	)
 
 	// Progressive rendering state - only used in recursive mode

@@ -60,7 +60,7 @@ Without both requirements, no search indexing will occur.
 |------|------|---------|-------------|
 | `treeId` | `string \| null` | auto-generated | Unique identifier for the tree |
 | `treePathSeparator` | `string \| null` | `"."` | Separator character for hierarchical paths (e.g., "." for "1.2.3" or "/" for "1/2/3") |
-| `selectedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently selected node |
+| `focusedNode` | `LTreeNode<T>` (bindable) | `undefined` | Currently focused node (single-focus family; click / arrow keys) |
 | `insertResult` | `InsertArrayResult<T>` (bindable) | `undefined` | Result of the last data insertion including failed nodes |
 
 ### Behavior properties
@@ -113,33 +113,49 @@ Without both requirements, no search indexing will occur.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `onNodeClicked` | `(node) => void` | `undefined` | Node click event handler |
-| `nodeClass` | `(node) => string \| null \| undefined` | `undefined` | Data-driven per-row class hook. Returned class(es) are applied to `.stv__node`. Recomputes when the node's `_rev` changes. |
-| `nodeContentClass` | `(node) => string \| null \| undefined` | `undefined` | Like `nodeClass`, but applied to `.stv__node-content`. |
-| `onNodeDoubleClick` | `(node) => void` | `undefined` | Node double-click event handler. Fires for every `clickBehavior` (detection is manual on the controller, so it's reliable in flat mode where the native `dblclick` is not — see [FLAT_MODE_PERFORMANCE.md](./FLAT_MODE_PERFORMANCE.md#double-click-detection-and-why-not-native-dblclick)). In `clickBehavior="select"` a double-click also toggles expand/collapse. |
-| `onNodeDragStart` | `(node, event) => void` | `undefined` | Drag start event handler |
-| `onNodeDragOver` | `(node, event) => void` | `undefined` | Drag over event handler |
-| `onNodeDrop` | `(dropNode, draggedNode, position, event, operation) => void` | `undefined` | Drop event handler. `dropNode` can be `null` (e.g., drop on empty tree). Position is `'before'`, `'after'`, or `'child'`. Operation is `'move'` or `'copy'` |
-| `onCopy` | `(paths: string[]) => void` | `undefined` | Fired after `controller.copyNodes()` succeeds, with the final copied paths |
-| `onCut` | `(paths: string[]) => void` | `undefined` | Fired after `controller.cutNodes()` succeeds, with the final cut paths |
-| `onPaste` | `(result: PasteResult) => void` | `undefined` | Fired after `controller.pasteNodes()` runs, with the paste result (`success`, `count`, `error`) |
+Every `on*` event receives a **single context object** mirroring the clipboard callbacks. The shared shape is `NodeRef<T> = { path, node, parent, siblings }` — the node the event is about plus the relational context the tree already resolved (`parent` node and `siblings`, the children of that parent), so you never need a `getNodeByPath(node.parentPath)` round-trip. `node`/`parent`/`siblings` are `null`/`[]` when the node isn't reachable (cross-tree, or removed by a cut). `NodeRef`, `NodeEventContext`, `NodeDragContext`, `NodeDropContext`, `ClipboardEventContext`, and `SelectionChangeContext` are exported from the package.
 
-### Clipboard interceptor properties
-
-The clipboard operations live on the `TreeController` (`copyNodes` / `cutNodes` / `pasteNodes` / `cancelCut`), reachable via `onTreeKeydown(event, controller)`. The key bindings are not wired automatically — paste needs an app-specific `transformData` (e.g. fresh ids) and a target path. The `before*` interceptors can rewrite or block an operation; `onCopy` / `onCut` / `onPaste` above are the post-operation notifications.
+> **Drag/drop is single-origin.** A drag has one DOM origin, so `onNodeDragStart` / `onNodeDragOver` / `onNodeDrop` each fire **once**, even when multiple nodes are selected. `ctx.dragged` (on all three) carries the full top-level dragged set — the multi-selection, or a single-item array for a plain drag — so you never have to read `controller.highlightedPaths` yourself. This holds **cross-tree too**: the source publishes its top-level set on drag start, so a cross-tree drop's `ctx.dragged` still lists every dragged path (as path-only refs — `node`/`parent` are `null` cross-tree). `source` (drop) is just the lead node of that set. Note the library only *auto-places* the lead node on a cross-tree drop; use `ctx.dragged` to fan out the rest yourself.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `beforeCopyCallback` | `(paths: string[]) => string[] \| false \| void` | `undefined` | Runs before copy. Return a new path list to change the set, `false` to block |
-| `beforeCutCallback` | `(paths: string[]) => string[] \| false \| void` | `undefined` | Runs before cut. Return a new path list to change the set, `false` to block |
-| `beforePasteCallback` | `(targetPath, operation, entries) => { targetPath?, position? } \| false \| void` | `undefined` | Runs before paste. Redirect the target/position, mutate `entries[i].data` (e.g. append `"Copy 1"`), or return `false` to block |
+| `onNodeClick` | `(ctx: NodeRef<T>) => void` | `undefined` | Node click. `ctx.node` is the clicked node (`ctx.parent` / `ctx.siblings` also resolved). |
+| `nodeClass` | `(node) => string \| null \| undefined` | `undefined` | Data-driven per-row class hook. Returned class(es) are applied to `.stv__node`. Recomputes when the node's `_rev` changes. |
+| `nodeContentClass` | `(node) => string \| null \| undefined` | `undefined` | Like `nodeClass`, but applied to `.stv__node-content`. |
+| `onNodeDoubleClick` | `(ctx: NodeRef<T>) => void` | `undefined` | Node double-click. Fires for every `clickBehavior` (detection is manual on the controller, so it's reliable in flat mode where the native `dblclick` is not — see [FLAT_MODE_PERFORMANCE.md](./FLAT_MODE_PERFORMANCE.md#double-click-detection-and-why-not-native-dblclick)). In `clickBehavior="select"` a double-click also toggles expand/collapse. |
+| `onNodeDragStart` | `(ctx: NodeDragContext<T>) => void` | `undefined` | Drag start. `ctx` is the grabbed node's `NodeRef` + `{ event, dragged }`. `dragged` is the full top-level set in flight (see below). |
+| `onNodeDragOver` | `(ctx: NodeDragContext<T>) => void` | `undefined` | Drag over. `ctx.node` is the **hovered** node; `ctx.dragged` is the in-flight set. |
+| `onNodeDrop` | `(ctx: NodeDropContext<T>) => void` | `undefined` | Drop event. `ctx = { source, target, dragged, dropped, position, operation, event }`. `source` is the lead dragged node's `NodeRef`; `target` is the drop node's `NodeRef` **or `null`** (empty tree/root). `dragged` is the **full top-level dragged set** — a drop fires once even for a multi-drag, so this is how you see the whole set. `dropped` is the nodes the **library** placed (move: the moved nodes; copy: the fresh copies), or **`null`** when the library didn't place them (cross-tree drop, or `shouldAutoHandleMove`/`Copy=false`) and the consumer owns insertion. Position is `'before'`/`'after'`/`'child'`; operation is `'move'`/`'copy'`. Symmetric with `NodeTransformContext`. (Its twin `beforeDropCallback` remains the older 5-arg positional signature.) |
+| `onHighlightChange` | `(ctx: SelectionChangeContext<T>) => void` | `undefined` | UI multi-select set (`highlightedPaths`) changed. `ctx = { paths: Set<string>, nodes }`. Suppressed by `{ silent: true }` mutations. |
+| `onSelectionChange` | `(ctx: SelectionChangeContext<T>) => void` | `undefined` | Checkbox set (`selectedPaths`) changed. Same shape as `onHighlightChange`. Suppressed by `{ silent: true }`. |
+| `onCopy` | `(ctx: ClipboardEventContext<T>) => void` | `undefined` | Fired after `controller.copyNodes()` succeeds. `ctx = { operation: 'copy', paths, nodes }` (nodes live). |
+| `onCut` | `(ctx: ClipboardEventContext<T>) => void` | `undefined` | Fired after `controller.cutNodes()` succeeds. `ctx = { operation: 'cut', paths, nodes }` (nodes still live — cut only dims until paste). |
+| `onDelete` | `(ctx: ClipboardEventContext<T>) => void` | `undefined` | Fired after the built-in Delete (or `controller.deleteNodes()`) removes nodes. `ctx = { paths, nodes }` — `nodes` are **pre-removal snapshots** (captured before removal, since the tree no longer holds them). |
+| `onPaste` | `(result: PasteResult) => void` | `undefined` | Fired after `controller.pasteNodes()` runs, with the paste result (`success`, `count`, `skipped`, `error`). |
+
+### Clipboard interceptor properties
+
+The clipboard operations live on the `TreeController` (`copyNodes` / `cutNodes` / `pasteNodes` / `cancelCut`). You can opt into built-in key bindings with `shouldHandleKeyboardShortcuts`, or wire your own via `onTreeKeydown(ctx)` (ctx = `{ event, focusedNode, highlightedNodes, controller }`). The `before*` interceptors can rewrite or block an operation; `onCopy` / `onCut` / `onPaste` above are the post-operation notifications.
+
+> **Keyboard shortcuts are focus-scoped.** Both the built-in shortcuts and `onTreeKeydown` are bound to the tree's `.stv__container` (which is `tabindex="0"`), so they only fire when focus is **inside** the tree — the standard DOM keyboard model for a component-scoped widget (there is no OS-clipboard fallback; it's a synthetic `keydown` handler). If the user touches a control *outside* the tree first (a toolbar button, checkbox, search box, dropdown), or hasn't clicked into the tree yet, a following `Ctrl/Cmd+C/X/V` or `Delete` never reaches the tree and silently does nothing. To make shortcuts work regardless of where the user last clicked, either (1) re-focus the container (`containerEl.focus()`) after your external control's handler, (2) auto-focus on hover/pointer-down — this ships for the empty-tree case via `shouldShowDropPlaceholderWhenEmpty`, or (3) attach your own document/window-level `keydown` and forward to `controller.copyNodes` / `pasteNodes` / `deleteNodes` (you then own deciding whether a given key is meant for the tree).
+
+All the per-node transforms share **one** context type, `NodeTransformContext<T>` = `{ operation, phase: 'copy'|'paste', isRoot, index, position: 'child'|'before'|'after'|null, source: { path, node, parent, siblings }, target: { path, node, parent, siblings } | null }`. `source` and `target` are **symmetric** — the same field means the same thing on each side: `node` is the node in question (source = the copied node; target = the node you aimed at, `null` at the tree root), `parent` its parent, `siblings` its neighbours. `target` and `position` are `null` during the copy phase (no destination chosen yet); `position` (mirroring `DropPosition`) says how the roots land relative to `target.node`. For collision names, the roots' landing neighbours are `target.node`'s children on a `'child'` paste, else `target.siblings` (all LIVE + batch-aware): `const landing = ctx.position === 'child' && ctx.target?.node ? Object.values(ctx.target.node.children) : (ctx.target?.siblings ?? []);`.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `beforeCopyCallback` | `(ctx: BeforeCopyContext<T>) => string[] \| false \| void` | `undefined` | Runs before copy. `ctx = { operation, paths, nodes }`. Return a new path list to change the set, `false` to block |
+| `beforeCutCallback` | `(ctx: BeforeCopyContext<T>) => string[] \| false \| void` | `undefined` | Runs before cut. Same shape as `beforeCopyCallback` |
+| `beforePasteCallback` | `(ctx: BeforePasteContext<T>) => { targetPath?, position? } \| false \| void` | `undefined` | Runs before paste. `ctx = { operation, target: { path, node }, entries }` (entries are readonly snapshots). Redirect the target/position or return `false` to block |
+| `beforeDeleteCallback` | `(ctx: BeforeDeleteContext<T>) => string[] \| false \| void` | `undefined` | Runs before the built-in Delete. `ctx = { paths, nodes }`. Return a narrowed path list or `false` to block |
+| `copyNodeTransformationCallback` | `(data: T, ctx: NodeTransformContext<T>) => T` | `undefined` | Per-node clean/redact at snapshot time (phase `'copy'`, `target` + `position` null) |
+| `pasteNodeTransformationCallback` | `(data: T, ctx: NodeTransformContext<T>) => T \| null` | `undefined` | Per-node derive ids/values/names at insert (phase `'paste'`); return `null` to skip the node |
 
 ### Visual styling properties
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `bodyClass` | `string \| null` | `undefined` | CSS class for tree body |
-| `selectedNodeClass` | `string \| null` | `undefined` | CSS class for selected nodes |
+| `focusedNodeClass` | `string \| null` | `undefined` | CSS class applied to the focused node |
 | `dragOverNodeClass` | `string \| null` | `undefined` | CSS class for nodes being dragged over |
 | `expandIconClass` | `string \| null` | `"stv__toggle-icon--expand"` | CSS class for expand icons |
 | `collapseIconClass` | `string \| null` | `"stv__toggle-icon--collapse"` | CSS class for collapse icons |
@@ -154,7 +170,7 @@ The clipboard operations live on the `TreeController` (`copyNodes` / `cutNodes` 
 | `nodeTemplate` | `(node)` | Custom node template |
 | `treeHeader` | | Tree header content |
 | `treeFooter` | | Tree footer content |
-| `noDataFound` | | Content shown when tree has no data |
+| `noData` | | Content shown when tree has no data (falls back to the `noDataText` prop, default "No data") |
 | `dropPlaceholder` | | Content shown in empty drop target tree |
 | `loadingPlaceholder` | | Content shown while `isLoading` is true |
 | `contextMenu` | `(node, closeMenu)` | Context menu template |
@@ -303,11 +319,11 @@ treeElement.update({ searchText: 'new search' });
 ```
 
 **Updatable properties** — all Tree props can be updated except snippets/templates, including:
-- Data and state: `data`, `searchText`, `selectedNode`, `expandLevel`
+- Data and state: `data`, `searchText`, `focusedNode`, `expandLevel`
 - Members: `idMember`, `pathMember`, `displayValueMember`, `searchValueMember`
-- Callbacks: `sortCallback`, `getDisplayValueCallback`, `onNodeClicked`, etc.
-- Visual: `bodyClass`, `selectedNodeClass`, `expandIconClass`, etc.
-- Context menu: `contextMenuCallback`, `contextMenuXOffset`, `contextMenuYOffset`
+- Callbacks: `sortCallback`, `getDisplayValueCallback`, `onNodeClick`, etc.
+- Visual: `bodyClass`, `focusedNodeClass`, `expandIconClass`, etc.
+- Context menu: `getContextMenuItemsCallback`, `contextMenuXOffset`, `contextMenuYOffset`
 - Behavior: `clickBehavior`, `shouldUseInternalSearchIndex`, etc.
 
 ## Debug information

@@ -4,32 +4,55 @@ IMPORT PATTERNS
 CRITICAL: Always import styles along with the component
 - Component has no embedded styles
 - Styles must be imported separately
-- Both CSS and SCSS versions available
+- Pure CSS, bundled via lightningcss (no SCSS/SASS)
 
 BASIC IMPORT
 ------------
 // Component import
 import { Tree } from '@keenmate/svelte-treeview';
 
-// Style import (bundled, contains all partials)
+// Style import (bundled, pure CSS)
 import '@keenmate/svelte-treeview/styles.css';
 
 COMPONENT EXPORTS
 -----------------
 Named exports from the package:
 
-// Main component
-import { Tree } from '@keenmate/svelte-treeview';
+// Components
+import {
+  Tree,
+  TreeProvider,
+  ContextMenuItemC,
+  ContextMenuDividerC
+} from '@keenmate/svelte-treeview';
+
+// Core (headless controller)
+import { TreeController, createTreeController } from '@keenmate/svelte-treeview';
 
 // Types
 import type {
   LTreeNode,
   Ltree,
-  ContextMenuItem,
   DropPosition,
+  ContextMenuEntry,
   InsertArrayResult,
-  NodeCallbacks,
-  NodeConfig
+  NodeRef,
+  NodeDropContext,
+  NodeDragContext,
+  ClipboardEventContext,
+  SelectionChangeContext,
+  PasteResult,
+  NodeTransformContext
+} from '@keenmate/svelte-treeview';
+
+// Clipboard utilities
+import {
+  setClipboard,
+  getClipboard,
+  clearClipboard,
+  hasClipboard,
+  getClipboardOperation,
+  uniqueName
 } from '@keenmate/svelte-treeview';
 
 // Logging utilities
@@ -62,23 +85,17 @@ Option 3: In component file
   import '@keenmate/svelte-treeview/styles.css';
 </script>
 
-Option 4: In Svelte style block
-<style>
-  @import '@keenmate/svelte-treeview/styles.css';
-</style>
-
 THEMING VIA CSS VARIABLES
 -------------------------
-Override CSS custom properties to customize the look:
+Override CSS custom properties to customize the look
+(import the stylesheet once from JS/layout, then set variables):
 
 <style>
-  @import '@keenmate/svelte-treeview/styles.css';
-
   /* Component-scope override */
-  .my-tree-wrapper {
-    --ltree-primary: #6366f1;
-    --ltree-node-indent-per-level: 1.5rem;
-    --ltree-node-font-size: 16px;
+  .my-tree-wrapper .stv__container {
+    --stv-primary: #6366f1;
+    --stv-node-indent-per-level: 1.5rem;
+    --stv-node-font-size: 16px;
   }
 
   /* Or globally for all KeenMate components: */
@@ -105,13 +122,18 @@ let selectedNode: LTreeNode<MyItem> | null = $state(null);
 Full type imports:
 
 import type {
-  LTreeNode,           // Tree node interface
-  Ltree,               // Tree instance interface
-  ContextMenuItem,     // Context menu item
-  DropPosition,        // 'before' | 'after' | 'child'
-  InsertArrayResult,   // Insert operation result
-  NodeCallbacks,       // Event callback types
-  NodeConfig           // Node configuration types
+  LTreeNode,             // Tree node interface
+  Ltree,                 // Tree instance interface
+  ContextMenuEntry,      // Context menu item | divider
+  DropPosition,          // 'before' | 'after' | 'child'
+  InsertArrayResult,     // Insert operation result
+  NodeRef,               // { path, node, parent, siblings } — shared event shape
+  NodeDropContext,       // onNodeDrop context object
+  NodeDragContext,       // onNodeDragStart / onNodeDragOver context
+  ClipboardEventContext, // onCopy / onCut / onDelete context
+  SelectionChangeContext,// onHighlightChange / onSelectionChange context
+  PasteResult,           // onPaste result
+  NodeTransformContext   // copy/paste transformation callback context
 } from '@keenmate/svelte-treeview';
 
 LOGGING IMPORTS
@@ -233,20 +255,24 @@ PACKAGE STRUCTURE
 ├── dist/
 │   ├── index.js          # Main entry (ESM)
 │   ├── index.d.ts        # TypeScript declarations
-│   ├── styles.css        # Bundled CSS (all partials merged)
-│   └── styles/           # Individual partials (override per-section if needed)
+│   ├── styles.css        # Bundled CSS (all layers merged, lightningcss)
+│   └── styles/           # Individual source files (override per-section if needed)
 │       ├── main.css
-│       ├── _variables.css
-│       ├── _base.css
-│       ├── _node.css
-│       ├── _toggle-icons.css
-│       ├── _checkbox.css
-│       ├── _states.css
-│       ├── _drag-drop.css
-│       ├── _drop-zones.css
-│       ├── _context-menu.css
-│       ├── _debug.css
-│       └── _loading.css
+│       ├── variables.css
+│       ├── base.css
+│       ├── dark-mode.css
+│       ├── controls.css
+│       ├── floating.css
+│       ├── states.css
+│       ├── animations.css
+│       ├── node.css
+│       ├── toggle-icons.css
+│       ├── checkbox.css
+│       ├── drag-drop.css
+│       ├── drop-zones.css
+│       ├── context-menu.css
+│       ├── debug.css
+│       └── loading.css
 └── package.json
 
 PEER DEPENDENCIES

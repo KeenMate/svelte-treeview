@@ -3,9 +3,9 @@
 	import Tree from '$lib/components/Tree.svelte';
 	import type {
 		TreeController,
-		PasteNodeTransformContext,
-		CopyNodeTransformContext,
-		BeforePasteContext
+		NodeTransformContext,
+		BeforePasteContext,
+		NodeDropContext
 	} from '$lib/core/TreeController.svelte.js';
 	import { uniqueName } from '$lib/core/clipboard.js';
 	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
@@ -88,7 +88,7 @@
 	// copyNodeTransformationCallback: per-node, at snapshot time (copy/cut). Clean data
 	// before it lands on the shared (cross-tree) clipboard — here we redact the internal
 	// `secret`. The original node keeps its secret; any pasted copy shows "🔒 redacted".
-	function cleanOnCopy(data: EditorNode, _ctx: CopyNodeTransformContext): EditorNode {
+	function cleanOnCopy(data: EditorNode, _ctx: NodeTransformContext<EditorNode>): EditorNode {
 		return data.secret !== undefined ? { ...data, secret: '🔒 redacted' } : data;
 	}
 
@@ -99,10 +99,15 @@
 	// when the name already exists in the TARGET parent. Descendants keep their names.
 	// Because the transform reads the pristine clipboard snapshot, repeat pastes stay
 	// "Copy 1 / 2 / 3" with no compounding — no strip-regex, no clipboard mutation.
-	function pasteTransform(data: EditorNode, ctx: PasteNodeTransformContext<EditorNode>): EditorNode {
-		// Read names straight off the destination's existing child nodes — no
+	function pasteTransform(data: EditorNode, ctx: NodeTransformContext<EditorNode>): EditorNode {
+		// Read names straight off the roots' landing neighbours — a 'child' paste lands among
+		// target.node's children, a 'before'/'after' paste among the anchor's siblings. No
 		// displayValueMember needed; we decide what "taken" means.
-		const taken = ctx.siblings.map((s) => s.data?.name ?? '');
+		const landing =
+			ctx.position === 'child' && ctx.target?.node
+				? Object.values(ctx.target.node.children)
+				: ctx.target?.siblings ?? [];
+		const taken = landing.map((s) => s.data?.name ?? '');
 		return {
 			...data,
 			id: nextId++,
@@ -113,16 +118,25 @@
 
 	// beforePasteCallback now does policy only: when you paste onto the copied node
 	// itself (Ctrl+C then Ctrl+V, no move), redirect into its parent so the copy lands
-	// as a sibling — "duplicate in the same folder". ctx gives the resolved targetNode
-	// (no getNodeByPath needed); entries are readonly; naming lives in pasteTransform.
+	// as a sibling — "duplicate in the same folder". ctx.target gives the resolved
+	// destination node (no getNodeByPath needed); entries are readonly; naming lives in
+	// pasteTransform.
 	function beforePaste(ctx: BeforePasteContext<EditorNode>): { targetPath?: string } | void {
 		if (ctx.operation !== 'copy') return;
-		if (ctx.targetPath && ctx.entries.some((e) => e.sourcePath === ctx.targetPath)) {
-			return { targetPath: ctx.targetNode?.parentPath ?? '' };
+		if (ctx.target.path && ctx.entries.some((e) => e.sourcePath === ctx.target.path)) {
+			return { targetPath: ctx.target.node?.parentPath ?? '' };
 		}
 	}
 
-	function handleTreeKeydown(event: KeyboardEvent, controller: TreeController<EditorNode>): boolean {
+	function handleTreeKeydown({
+		event,
+		controller
+	}: {
+		event: KeyboardEvent;
+		focusedNode: LTreeNode<EditorNode> | null;
+		highlightedNodes: LTreeNode<EditorNode>[];
+		controller: TreeController<EditorNode>;
+	}): boolean {
 		// Ctrl on Windows/Linux, Cmd (metaKey) on macOS.
 		const mod = event.ctrlKey || event.metaKey;
 		const key = event.key.toLowerCase();
@@ -433,9 +447,11 @@
 		dropWarning = null;
 	}
 
-	function handleDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent) {
-		if (!dropNode) {
-			addLog(`Dropped "${draggedNode.data?.name}" at root`);
+	function handleDrop({ source, target, position }: NodeDropContext<EditorNode>) {
+		const dropNode = target?.node ?? null;
+		const draggedNode = source.node;
+		if (!dropNode || !draggedNode) {
+			addLog(`Dropped "${draggedNode?.data?.name}" at root`);
 			return;
 		}
 
@@ -532,8 +548,8 @@
 						bind:focusedNode={selectedNode}
 						bind:highlightedPaths={highlightedPaths}
 						onTreeKeydown={handleTreeKeydown}
-						onCopy={(paths) => { if (!suppressClipboardLog) addLog(`Copied ${paths.length} node(s) to clipboard`); }}
-						onCut={(paths) => addLog(`Cut ${paths.length} node(s) — paste to move`)}
+						onCopy={({ paths }) => { if (!suppressClipboardLog) addLog(`Copied ${paths.length} node(s) to clipboard`); }}
+						onCut={({ paths }) => addLog(`Cut ${paths.length} node(s) — paste to move`)}
 						onPaste={(result) => { if (!suppressClipboardLog) addLog(result.success ? `Pasted ${result.count} node(s)` : `Paste failed: ${result.error}`); }}
 						beforePasteCallback={beforePaste}
 						copyNodeTransformationCallback={cleanOnCopy}
@@ -801,7 +817,7 @@
 				</tr>
 				<tr>
 					<td><code>uniqueName(base, taken, suffix?)</code></td>
-					<td>Exported helper — collision-free name (default <code>"Name Copy N"</code>); use with names read off <code>ctx.siblings</code></td>
+					<td>Exported helper — collision-free name (default <code>"Name Copy N"</code>); use with names read off the roots' landing neighbours (<code>ctx.target.node.children</code> for a <code>'child'</code> paste, else <code>ctx.target.siblings</code>)</td>
 				</tr>
 			</tbody>
 		</table>
@@ -913,7 +929,7 @@
 
 		<div class="code-block">
 			<pre>{`import { uniqueName } from '@keenmate/svelte-treeview';
-import type { TreeController, PasteNodeTransformContext } from '@keenmate/svelte-treeview';
+import type { TreeController, NodeTransformContext } from '@keenmate/svelte-treeview';
 
 let focusedNode = $state<LTreeNode<MyNode> | null>(null);
 let highlightedPaths = $state<Set<string>>(new Set());
@@ -927,14 +943,19 @@ function clipboardPaths(controller: TreeController<MyNode>) {
 }
 
 // THE place for all paste-time data derivation — pure, per node, called by the
-// library with LIVE references: ctx.targetParent and ctx.siblings (the destination's
-// existing children). Return new data (fresh id/value/name) or null to SKIP this node
-// (skipping a root skips its subtree). You decide what "collision" means by reading the
-// sibling nodes — no displayValueMember assumption. ctx.siblings is batch-aware, so
-// repeats stay Copy 1/2/3 with no compounding.
-function pasteTransform(data: MyNode, ctx: PasteNodeTransformContext<MyNode>): MyNode | null {
+// library with LIVE references. target mirrors source: { path, node, parent, siblings }
+// = the node you aimed at + its context; ctx.position says how the roots land. Return new
+// data (fresh id/value/name) or null to SKIP this node (skipping a root skips its subtree).
+// You decide what "collision" means by reading the landing neighbours — no displayValueMember
+// assumption. They're LIVE and batch-aware, so repeats stay Copy 1/2/3 with no compounding.
+// (Same context type the copy transform gets, with phase: 'paste'; on copy, target is null.)
+function pasteTransform(data: MyNode, ctx: NodeTransformContext<MyNode>): MyNode | null {
   // e.g. skip what isn't allowed here: if (!allowed(data, ctx)) return null;
-  const taken = ctx.siblings.map(s => s.data?.name ?? '');
+  // Landing = target.node's children for a 'child' paste, else the anchor's siblings.
+  const landing = ctx.position === 'child' && ctx.target?.node
+    ? Object.values(ctx.target.node.children)
+    : ctx.target?.siblings ?? [];
+  const taken = landing.map(s => s.data?.name ?? '');
   return {
     ...data,
     id: nextId++,
@@ -943,16 +964,16 @@ function pasteTransform(data: MyNode, ctx: PasteNodeTransformContext<MyNode>): M
   };
 }
 
-// beforePaste = policy only. ctx = { targetPath, targetNode, operation, entries }
+// beforePaste = policy only. ctx = { operation, target: { path, node }, entries }
 // (entries are readonly snapshots). Pasting onto the copied node itself (Ctrl+C then
 // Ctrl+V, no move) → redirect into its parent so the copy lands as a sibling.
 function beforePaste(ctx) {
   if (ctx.operation !== 'copy') return;
-  if (ctx.targetPath && ctx.entries.some(e => e.sourcePath === ctx.targetPath))
-    return { targetPath: ctx.targetNode?.parentPath ?? '' };
+  if (ctx.target.path && ctx.entries.some(e => e.sourcePath === ctx.target.path))
+    return { targetPath: ctx.target.node?.parentPath ?? '' };
 }
 
-function handleKeydown(event: KeyboardEvent, controller: TreeController<MyNode>) {
+function handleKeydown({ event, controller }) {
   const mod = event.ctrlKey || event.metaKey;  // Ctrl on Win/Linux, Cmd on macOS
   const key = event.key.toLowerCase();
 
@@ -990,8 +1011,8 @@ function handleKeydown(event: KeyboardEvent, controller: TreeController<MyNode>)
   bind:focusedNode={focusedNode}
   bind:highlightedPaths={highlightedPaths}
   onTreeKeydown={handleKeydown}
-  onCopy={(paths) => log(\`copied \${paths.length}\`)}
-  onCut={(paths) => log(\`cut \${paths.length}\`)}
+  onCopy={({ paths }) => log(\`copied \${paths.length}\`)}
+  onCut={({ paths }) => log(\`cut \${paths.length}\`)}
   onPaste={(result) => log(result.success ? \`pasted \${result.count}, skipped \${result.skipped}\` : result.error)}
   beforePasteCallback={beforePaste}
   pasteNodeTransformationCallback={pasteTransform}
@@ -1009,10 +1030,11 @@ function handleKeydown(event: KeyboardEvent, controller: TreeController<MyNode>)
 				target/position or block; it sees <strong>readonly</strong> entries and never
 				mutates data. <code>pasteNodeTransformationCallback(data, ctx) =&gt; T | null</code>
 				is <strong>per-node derivation</strong> — ids, values, <code>"Copy N"</code> naming
-				(read names off <code>ctx.siblings</code>, the live destination children, and pass to
-				<code>uniqueName</code>), and per-entry skip (return <code>null</code>). It gets node
-				references — <code>ctx.targetParent</code> / <code>ctx.siblings</code> / <code>ctx.sourceNode</code>
-				— so collision logic is yours, with no display-name assumption. The clipboard snapshot is immutable; each paste runs
+				(read names off the roots' landing neighbours — <code>ctx.target.node.children</code> for a
+				<code>'child'</code> paste, else <code>ctx.target.siblings</code> — and pass to
+				<code>uniqueName</code>), and per-entry skip (return <code>null</code>). <code>target</code> mirrors
+				<code>source</code> — <code>path</code> / <code>node</code> / <code>parent</code> / <code>siblings</code>
+				for the node you aimed at, plus <code>ctx.position</code> — so collision logic is yours, with no display-name assumption. The clipboard snapshot is immutable; each paste runs
 				on a fresh working copy, and <code>copyNodeTransformationCallback</code> can clean data
 				before it ever lands on the shared clipboard.
 			</p>

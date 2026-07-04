@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode, DropPosition, DropOperation } from '$lib/ltree/types.js';
+	import type { NodeRef, NodeDropContext } from '$lib/index.js';
 	import ExampleHeader from '../ExampleHeader.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -169,7 +170,10 @@
 		return String(children.length + 1);
 	}
 
-	async function handleDropA(dropNode: LTreeNode<ScenarioNode> | null, draggedNode: LTreeNode<ScenarioNode>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) {
+	async function handleDropA(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
 		const isSameTree = draggedNode.treeId === 'tree-a';
 
 		// Step 1: Save expanded state BEFORE any changes
@@ -271,7 +275,10 @@
 	}
 
 	// ==================== SCENARIO B: Partial Redraw ====================
-	async function handleDropB(dropNode: LTreeNode<ScenarioNode> | null, draggedNode: LTreeNode<ScenarioNode>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) {
+	async function handleDropB(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
 		const isSameTree = draggedNode.treeId === 'tree-b';
 
 		isLoadingB = true;
@@ -325,7 +332,10 @@
 	}
 
 	// ==================== SCENARIO C: Individual CRUD ====================
-	async function handleDropC(dropNode: LTreeNode<ScenarioNode> | null, draggedNode: LTreeNode<ScenarioNode>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) {
+	async function handleDropC(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
 		const isSameTree = draggedNode.treeId === 'tree-c';
 
 		isLoadingC = true;
@@ -408,9 +418,9 @@
 		isLoadingC = false;
 	}
 
-	function onNodeClickC(node: LTreeNode<ScenarioNode>) {
-		selectedNodeC = node;
-		editNameC = node.data?.name || '';
+	function onNodeClickC(ctx: NodeRef<ScenarioNode>) {
+		selectedNodeC = ctx.node;
+		editNameC = ctx.node?.data?.name || '';
 	}
 
 	function resetC() {
@@ -424,7 +434,10 @@
 	}
 
 	// ==================== SCENARIO D: Empty + One by One ====================
-	async function handleDropD(dropNode: LTreeNode<ScenarioNode> | null, draggedNode: LTreeNode<ScenarioNode>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) {
+	async function handleDropD(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
 		const isSameTree = draggedNode.treeId === 'tree-d';
 
 		isLoadingD = true;
@@ -493,7 +506,10 @@
 	}
 
 	// ==================== SCENARIO E: Batch Create Then Save ====================
-	function handleDropE(dropNode: LTreeNode<ScenarioNode> | null, draggedNode: LTreeNode<ScenarioNode>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) {
+	function handleDropE(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
 		const isSameTree = draggedNode.treeId === 'tree-e';
 
 		if (isSameTree && operation === 'move') {
@@ -749,7 +765,7 @@
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
-							{#snippet noDataFound()}
+							{#snippet noData()}
 								<div class="drop-placeholder-content">
 									<p class="placeholder-icon">📂</p>
 									<p>Empty tree — drag items here or click "Add Root Node"</p>
@@ -782,7 +798,7 @@
 							{#snippet nodeTemplate(node: any)}
 								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
 							{/snippet}
-							{#snippet noDataFound()}
+							{#snippet noData()}
 								<div class="drop-placeholder-content">
 									<p class="placeholder-icon">📂</p>
 									<p>Empty tree — drag items here or add nodes</p>
@@ -855,7 +871,8 @@
 		<div class="code-block">
 			{#if activeTab === 'A'}
 				<pre>{`// Scenario A: Full Redraw with State Preservation
-async function handleDrop(dropNode, draggedNode, position) {
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
   // 1. Save expanded state BEFORE changes
   const expandedPaths = treeRef.getExpandedPaths();
 
@@ -871,7 +888,8 @@ async function handleDrop(dropNode, draggedNode, position) {
 }`}</pre>
 			{:else if activeTab === 'B'}
 				<pre>{`// Scenario B: Partial Redraw (Recommended)
-async function handleDrop(dropNode, draggedNode, position) {
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
   // Same-tree moves are AUTO-HANDLED by the library!
   // Library calls moveNode() internally - no rebuild needed.
 
@@ -916,7 +934,8 @@ async function handleDelete() {
   {/snippet}
 </Tree>
 
-async function handleDrop(dropNode, draggedNode, position) {
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
   const newNode = { ...draggedNode.data, id: nextId++ };
   const result = treeRef.addNode(dropNode?.path || '', newNode);
 
@@ -927,7 +946,8 @@ async function handleDrop(dropNode, draggedNode, position) {
 }`}</pre>
 			{:else if activeTab === 'E'}
 				<pre>{`// Scenario E: Batch Create Then Save
-function handleDrop(dropNode, draggedNode, position) {
+function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
   // Add to tree WITHOUT saving
   treeRef.copyNodeWithDescendants(
     draggedNode,

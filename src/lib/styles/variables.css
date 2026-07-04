@@ -74,7 +74,9 @@
 	   NODE LAYOUT
 	   ------------------------------------------------------------------------- */
 	--stv-node-indent-per-level: calc(0.8 * var(--stv-rem));
-	--stv-node-content-padding: calc(0.4 * var(--stv-rem)) calc(0.8 * var(--stv-rem));
+	/* Horizontal padding kept small so the label sits close to the icon while the
+	   hover/selection highlight still has a little breathing room — was 0.8rem. */
+	--stv-node-content-padding: calc(0.4 * var(--stv-rem)) calc(0.4 * var(--stv-rem));
 	--stv-node-content-border-radius: calc(var(--base-border-radius-sm, 0) * var(--stv-rem));
 	--stv-node-hover-bg: var(--base-hover-bg, color-mix(in srgb, var(--stv-primary) 8%, transparent));
 	--stv-children-margin-top: calc(0.2 * var(--stv-rem));
@@ -82,10 +84,14 @@
 	/* -------------------------------------------------------------------------
 	   TOGGLE ICON (chevron / +/- / arrow / leaf)
 	   ------------------------------------------------------------------------- */
-	--stv-toggle-icon-width: calc(2.0 * var(--stv-rem));
+	/* Slot width tracks the glyph size (+0.1rem breathing room) so the toggle
+	   column isn't wider than the chevron it holds. Was a hardcoded 2.0rem, which
+	   left ~4px of dead space next to a 1.6rem glyph. */
 	--stv-toggle-icon-size: calc(1.6 * var(--stv-rem));
+	--stv-toggle-icon-width: calc(var(--stv-toggle-icon-size) + calc(0.1 * var(--stv-rem)));
 	--stv-toggle-icon-color: var(--base-text-color-3, light-dark(#6c757d, #a3a3a3));
-	--stv-toggle-icon-margin-right: calc(0.8 * var(--stv-rem));
+	/* Pure gap between the chevron and the label — was 0.8rem, tightened to 0.25rem. */
+	--stv-toggle-icon-margin-right: calc(0.25 * var(--stv-rem));
 	--stv-toggle-icon-transition: transform 0.2s;
 
 	/* -------------------------------------------------------------------------
@@ -121,6 +127,9 @@
 	--stv-drop-placeholder-color: var(--stv-primary);
 	--stv-drop-placeholder-border-radius: calc(0.8 * var(--stv-rem));
 	--stv-drop-placeholder-min-height: calc(6.0 * var(--stv-rem));
+	/* Hover state for a permanently-shown empty drop zone (shouldShowDropPlaceholderWhenEmpty) */
+	--stv-drop-placeholder-hover-bg: color-mix(in srgb, var(--stv-primary) 20%, transparent);
+	--stv-drop-placeholder-hover-shadow: 0 0 0 3px color-mix(in srgb, var(--stv-primary) 20%, transparent);
 
 	/* Touch drag ghost */
 	--tree-ghost-bg: color-mix(in srgb, var(--stv-primary) 90%, transparent);

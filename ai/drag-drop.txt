@@ -13,11 +13,13 @@ CRITICAL: Drag and drop is DISABLED by default
 BASIC DRAG AND DROP
 -------------------
 <script>
-  function handleDrop(dropNode, draggedNode, position, event, operation) {
-    console.log(`Dropped ${draggedNode.data.name}`);
-    console.log(`Position: ${position}`);  // 'before', 'after', 'child'
-    console.log(`Target: ${dropNode?.data.name}`);
-    console.log(`Operation: ${operation}`);  // 'move' or 'copy'
+  // onNodeDrop takes ONE context object (NodeDropContext):
+  //   { source, target, dragged, dropped, position, operation, event }
+  function handleDrop(ctx) {
+    console.log(`Dropped ${ctx.source.node.data.name}`);
+    console.log(`Position: ${ctx.position}`);   // 'before', 'after', 'child'
+    console.log(`Target: ${ctx.target?.node?.data.name}`);  // null at root/empty
+    console.log(`Operation: ${ctx.operation}`); // 'move' or 'copy'
   }
 </script>
 
@@ -26,7 +28,7 @@ BASIC DRAG AND DROP
   idMember="id"
   pathMember="path"
   dragDropMode="both"
-  dragOverNodeClass="ltree-dragover-glow"
+  dragOverNodeClass="stv__node-content--dragover-glow"
   onNodeDrop={handleDrop}
 />
 
@@ -48,15 +50,15 @@ DROP ZONE MODES
 Two visual modes for drop zones:
 
 // Glow mode (default) - border/shadow indicators
-<Tree dropZoneMode="glow" dragOverNodeClass="ltree-dragover-glow" />
+<Tree dropZoneMode="glow" dragOverNodeClass="stv__node-content--dragover-glow" />
 
 // Floating mode - popup buttons
 <Tree dropZoneMode="floating" />
 
-Glow mode classes:
-- ltree-glow-before - top border glow (before position)
-- ltree-glow-after - bottom border glow (after position)
-- ltree-glow-child - full border glow (child position)
+Glow mode classes (applied to .stv__node-content):
+- stv__node-content--glow-before - top border glow (before position)
+- stv__node-content--glow-after - bottom border glow (after position)
+- stv__node-content--glow-child - full border glow (child position)
 
 DROP ZONE LAYOUTS (Floating Mode)
 ---------------------------------
@@ -133,9 +135,10 @@ When dropping within the same tree, the move is auto-handled:
 <Tree
   {data}
   orderMember="sortOrder"
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
+  onNodeDrop={(ctx) => {
     // Move already happened! This is for notification only.
-    console.log(`Moved ${draggedNode.data.name} ${position} ${dropNode.data.name}`);
+    console.log(`Moved ${ctx.source.node.data.name} ${ctx.position} ${ctx.target?.node?.data.name}`);
+    // ctx.dropped = the nodes the library actually placed (moved nodes)
   }}
 />
 
@@ -147,12 +150,17 @@ CROSS-TREE DRAG
   let leftData = $state.raw([...]);
   let rightData = $state.raw([...]);
 
-  function handleLeftDrop(dropNode, draggedNode, position, event, operation) {
-    // Handle item coming from right tree
+  function handleLeftDrop(ctx) {
+    // ctx = NodeDropContext { source, target, dragged, dropped, position, operation, event }
+    // Cross-tree: ctx.dropped is null (library only auto-places the LEAD node);
+    // fan out the rest via ctx.dragged.
+    for (const ref of ctx.dragged) {
+      // ref.path is the source path; ref.node/parent are null cross-tree
+    }
   }
 
-  function handleRightDrop(dropNode, draggedNode, position, event, operation) {
-    // Handle item coming from left tree
+  function handleRightDrop(ctx) {
+    // Handle item coming from left tree (same NodeDropContext shape)
   }
 </script>
 
@@ -202,9 +210,9 @@ Enable copying with Ctrl+drag:
 <Tree
   isCopyAllowed={true}
   shouldAutoHandleCopy={true}  <!-- Default: auto-creates copy -->
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
-    if (operation === 'copy') {
-      console.log('Copied node');
+  onNodeDrop={(ctx) => {
+    if (ctx.operation === 'copy') {
+      console.log('Copied node');   // ctx.dropped = the fresh copies
     } else {
       console.log('Moved node');
     }
@@ -265,11 +273,11 @@ Drop zone at bottom for adding root-level items:
 
 When dragging, a root drop zone appears at tree bottom
 - Dropping there adds item as root node
-- dropNode is null in callback
+- ctx.target is null in callback
 
 <Tree
-  onNodeDrop={(dropNode, draggedNode, position, event) => {
-    if (dropNode === null) {
+  onNodeDrop={(ctx) => {
+    if (ctx.target === null) {
       console.log('Dropped at root level');
     }
   }}
@@ -288,8 +296,8 @@ Custom placeholder for empty trees:
 </Tree>
 
 When dropping to empty tree:
-- dropNode is null
-- position is 'child'
+- ctx.target is null
+- ctx.position is 'child'
 
 TOUCH DRAG SUPPORT
 ------------------
@@ -306,30 +314,52 @@ Same callback as desktop:
 
 DRAG EVENTS
 -----------
+onNodeDragStart / onNodeDragOver each take ONE context object (NodeDragContext):
+a NodeRef (path, node, parent, siblings) plus { event, dragged }.
+
 <Tree
-  onNodeDragStart={(node, event) => {
-    console.log('Started dragging:', node.data.name);
+  onNodeDragStart={(ctx) => {
+    console.log('Started dragging:', ctx.node.data.name);
+    // ctx.dragged = full top-level dragged set (single-item array for a single drag)
   }}
-  onNodeDragOver={(node, event) => {
-    console.log('Dragging over:', node.data.name);
+  onNodeDragOver={(ctx) => {
+    console.log('Dragging over:', ctx.node.data.name);  // ctx.node = the hover target
   }}
-  onNodeDrop={(dropNode, draggedNode, position, event, operation) => {
-    console.log('Dropped');
+  onNodeDrop={(ctx) => {
+    console.log('Dropped');  // ctx = NodeDropContext
   }}
 />
+
+MULTI-DRAG
+A drag is single-origin at the DOM level, so onNodeDragStart / onNodeDragOver /
+onNodeDrop each fire ONCE even for a multi-selection. ctx.dragged carries the full
+top-level set (multi-selection, else [grabbed node]) on ALL three events, same-tree
+AND cross-tree (the source publishes the set on drag start; the target reads it back).
+- Same-tree: dragged refs are live nodes; the library moves/copies the whole set.
+- Cross-tree: the library only auto-places the LEAD node (ctx.source); fan out the
+  rest yourself via ctx.dragged. ctx.dropped is null cross-tree (also null when
+  shouldAutoHandleMove/Copy=false — the consumer inserts).
 
 VISUAL FEEDBACK CLASSES
 -----------------------
 Drag-over styling:
 
-<Tree dragOverNodeClass="ltree-dragover-glow" />
+<Tree dragOverNodeClass="stv__node-content--dragover-glow" />
 
-Built-in classes:
-- ltree-dragover-highlight - Dashed border
-- ltree-dragover-glow - Shadow glow effect
+Built-in classes (all applied to .stv__node-content):
+- stv__node-content--dragover-highlight - Dashed border
+- stv__node-content--dragover-glow - Shadow glow effect
 
 Copy operation class:
-- ltree-drop-copy - Applied during Ctrl+drag
+- stv__node-content--drop-copy - Applied during Ctrl+drag
+
+Drop-zone classes (floating mode):
+- stv__drop-zone (--active --before --after --child) - individual zone
+- stv__drop-zones (--around --above --below --wave --wave2) - zone container
+
+Touch drag ghost:
+- stv__touch-ghost - element that follows the finger
+  (customizable via --tree-ghost-bg / --tree-ghost-color)
 
 PROGRAMMATIC MOVE
 -----------------

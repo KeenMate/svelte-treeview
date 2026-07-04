@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
+	import type { NodeRef } from '$lib/index.js';
 
 	// Test fixture for the onNodeDoubleClick event (added v5.0.0-rc13). Targeted by
 	// e2e/double-click.spec.ts. Two trees side by side so we can assert the event
@@ -27,8 +28,8 @@
 	let clickLog = $state<string[]>([]);
 	let dblLog = $state<string[]>([]);
 
-	const onNodeClick = (n: LTreeNode<Item>) => { clickLog = [...clickLog, n.data?.name ?? n.path]; };
-	const onNodeDoubleClick = (n: LTreeNode<Item>) => { dblLog = [...dblLog, n.data?.name ?? n.path]; };
+	const onNodeClick = ({ node, path }: NodeRef<Item>) => { clickLog = [...clickLog, node?.data?.name ?? path]; };
+	const onNodeDoubleClick = ({ node, path }: NodeRef<Item>) => { dblLog = [...dblLog, node?.data?.name ?? path]; };
 
 	function reset() { clickLog = []; dblLog = []; }
 </script>

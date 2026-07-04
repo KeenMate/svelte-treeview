@@ -12,7 +12,7 @@ drag-drop.txt            - Drag and drop, positions, touch support, restrictions
 search-features.txt      - FlexSearch, async indexing, filtering
 context-menu.txt         - Callback-based and snippet-based menus (unified types: label/onclick/divider)
 tree-editing.txt         - addNode, moveNode, removeNode, bulk ops (insertBranch/deleteBranch), clipboard
-styling-theming.txt      - CSS variables, SCSS, classes
+styling-theming.txt      - CSS variables, styles.css, classes
 events-callbacks.txt     - Events, callbacks, handlers
 typescript-types.txt     - Types and interfaces
 performance.txt          - Flat rendering, progressive render, optimization
@@ -32,13 +32,20 @@ Async indexing → search-features.txt, performance.txt
 
 B
 -
+beforeCopyCallback → tree-editing.txt
+beforeCutCallback → tree-editing.txt
+beforeDeleteCallback → tree-editing.txt
 beforeDropCallback → drag-drop.txt, events-callbacks.txt
+beforePasteCallback → tree-editing.txt
 bodyClass → styling-theming.txt
 
 C
 -
 Callbacks → events-callbacks.txt, data-handling.txt
 cancelCut → tree-editing.txt
+clearFocus → advanced-patterns.txt
+clearHighlight → advanced-patterns.txt
+clearSelection → tree-editing.txt, advanced-patterns.txt
 clipboard → tree-editing.txt
 closeContextMenu → context-menu.txt
 collapseAll → basic-setup.txt, tree-editing.txt
@@ -46,13 +53,13 @@ ContextMenuDivider → context-menu.txt, typescript-types.txt
 ContextMenuEntry → context-menu.txt, typescript-types.txt
 ContextMenuItemC → context-menu.txt
 ContextMenuDividerC → context-menu.txt
+copyNodeTransformationCallback → tree-editing.txt
 copyNodes → tree-editing.txt
 cutNodes → tree-editing.txt
 cutPaths → tree-editing.txt
 collapseIconClass → styling-theming.txt
 collapseNodes → basic-setup.txt
 Context menu → context-menu.txt
-contextMenuCallback → context-menu.txt, events-callbacks.txt
 contextMenuXOffset → context-menu.txt
 contextMenuYOffset → context-menu.txt
 Copy operation → drag-drop.txt
@@ -63,7 +70,6 @@ D
 -
 data → basic-setup.txt, data-handling.txt
 deleteBranch → tree-editing.txt
-deselectAll → advanced-patterns.txt
 displayValueMember → data-handling.txt
 dropPlaceholder → drag-drop.txt, basic-setup.txt
 Drag and drop → drag-drop.txt
@@ -93,6 +99,7 @@ G
 getAllData → tree-editing.txt
 getAllowedDropPositionsCallback → drag-drop.txt
 getChildren → tree-editing.txt
+getContextMenuItemsCallback → context-menu.txt, events-callbacks.txt
 getDisplayValueCallback → data-handling.txt
 getExpandedPaths → tree-editing.txt
 getIsCollapsibleCallback → data-handling.txt
@@ -143,29 +150,38 @@ M
 -
 maxBatchSize → performance.txt
 moveNode → tree-editing.txt
-multiSelect → advanced-patterns.txt
 
 N
 -
 navigationOverrides → advanced-patterns.txt
 navInto → typescript-types.txt, advanced-patterns.txt
 navOut → typescript-types.txt, advanced-patterns.txt
+noData → basic-setup.txt
+noDataText → basic-setup.txt
 nodeTemplate → basic-setup.txt, styling-theming.txt
 
 O
 -
-onNodeClicked → events-callbacks.txt
-onSelectionChanged → advanced-patterns.txt
-onRenderComplete → performance.txt
-onRenderProgress → performance.txt
-onRenderStart → performance.txt
+onCopy → events-callbacks.txt
+onCut → events-callbacks.txt
+onDelete → events-callbacks.txt
+onHighlightChange → events-callbacks.txt
+onNodeClick → events-callbacks.txt
+onNodeDoubleClick → events-callbacks.txt
 onNodeDragOver → events-callbacks.txt, drag-drop.txt
 onNodeDragStart → events-callbacks.txt, drag-drop.txt
 onNodeDrop → events-callbacks.txt, drag-drop.txt
+onPaste → events-callbacks.txt
+onRenderComplete → performance.txt
+onRenderProgress → performance.txt
+onRenderStart → performance.txt
+onSelectionChange → events-callbacks.txt, advanced-patterns.txt
+onTreeKeydown → events-callbacks.txt
 orderMember → drag-drop.txt, tree-editing.txt
 
 P
 -
+pasteNodeTransformationCallback → tree-editing.txt
 pasteNodes → tree-editing.txt
 parentPathMember → data-handling.txt
 Path structure → data-handling.txt
@@ -186,8 +202,12 @@ Root drop zone → drag-drop.txt
 
 S
 -
-SCSS → styling-theming.txt, import-patterns.txt
+CSS / styles.css → styling-theming.txt, import-patterns.txt
+selectAll → tree-editing.txt, advanced-patterns.txt
+selectNode → tree-editing.txt, advanced-patterns.txt
 setExpandedPaths → tree-editing.txt
+setHighlightedPaths → advanced-patterns.txt
+setSelectedPaths → tree-editing.txt, advanced-patterns.txt
 scrollHighlightClass → styling-theming.txt
 scrollHighlightTimeout → styling-theming.txt
 scrollToPath → basic-setup.txt, tree-editing.txt
@@ -196,6 +216,7 @@ searchNodes → search-features.txt
 searchText → search-features.txt, basic-setup.txt
 searchValueMember → search-features.txt, data-handling.txt
 focusedNode → basic-setup.txt, events-callbacks.txt
+focusNode → advanced-patterns.txt
 highlightedNodeClass → styling-theming.txt
 highlightedPaths → advanced-patterns.txt
 highlightNode → advanced-patterns.txt
@@ -226,6 +247,7 @@ TypeScript → typescript-types.txt
 
 U
 -
+uniqueName → tree-editing.txt
 update() → basic-setup.txt, advanced-patterns.txt
 updateNode → tree-editing.txt
 isFlatRenderingEnabled → performance.txt
@@ -332,7 +354,7 @@ TREE EDITING
 
 CUSTOMIZATION
 - CSS variables → styling-theming.txt
-- SCSS → styling-theming.txt
+- CSS / styles.css → styling-theming.txt
 - Node templates → basic-setup.txt, styling-theming.txt
 - Context menus → context-menu.txt
 

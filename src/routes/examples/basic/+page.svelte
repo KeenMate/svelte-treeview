@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type { LTreeNode } from '$lib/ltree/types.js';
+	import type { NodeRef } from '$lib/index.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
 
@@ -32,12 +34,61 @@
 	let expandCollapseTreeRef: Tree<typeof sampleData[0]>;
 	let clickedNode = $state<string | null>(null);
 
+	// Indentation demo: --stv-node-indent-per-level is the only knob. It's declared
+	// ON .stv__container (the tree root), so a value must be set there — an ancestor
+	// wrapper is shadowed by the tree's own declaration. The buttons swap a class
+	// (indent-condensed/compact/generous) whose CSS rule targets .stv__container.
+	const indentPresets = { condensed: '0.35rem', compact: '0.8rem', generous: '1.75rem' } as const;
+	type IndentPreset = keyof typeof indentPresets;
+	let indentPreset = $state<IndentPreset>('compact');
+
+	// Live readout of the spacing-related CSS variables. They're declared on
+	// .stv__container, so we read the *resolved px* off the real tree elements
+	// (reading them from anywhere else would report the wrong value).
+	let simpleTreeWrap = $state<HTMLDivElement | null>(null);
+	let cssReadout = $state<{ name: string; value: string }[]>([]);
+
+	function measureSpacing(retries = 10) {
+		const container = simpleTreeWrap?.querySelector('.stv__container');
+		const toggle = container?.querySelector('.stv__toggle-icon') as HTMLElement | null;
+		const content = container?.querySelector('.stv__node-content') as HTMLElement | null;
+		if (!container || !toggle || !content) {
+			// Tree nodes may not be in the DOM yet on first paint — retry briefly.
+			if (retries > 0) requestAnimationFrame(() => measureSpacing(retries - 1));
+			return;
+		}
+
+		const ts = getComputedStyle(toggle);
+		const cs = getComputedStyle(content);
+
+		// Per-level indent = difference in margin-left between a level-1 and level-2 node.
+		const n1 = container.querySelector('.stv__node[data-tree-path="1"]') as HTMLElement | null;
+		const n2 = container.querySelector('.stv__node[data-tree-path="1.1"]') as HTMLElement | null;
+		const indentPx =
+			n1 && n2
+				? `${parseFloat(getComputedStyle(n2).marginLeft) - parseFloat(getComputedStyle(n1).marginLeft)}px`
+				: indentPresets[indentPreset];
+
+		cssReadout = [
+			{ name: '--stv-node-indent-per-level', value: indentPx },
+			{ name: '--stv-toggle-icon-size', value: ts.fontSize },
+			{ name: '--stv-toggle-icon-width', value: ts.width },
+			{ name: '--stv-toggle-icon-margin-right', value: ts.marginRight },
+			{ name: '--stv-node-content-padding (left)', value: cs.paddingLeft }
+		];
+	}
+
+	$effect(() => {
+		indentPreset; // re-measure when the preset changes
+		tick().then(() => measureSpacing());
+	});
+
 	function sortByName(items: LTreeNode<typeof sampleData[0]>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
 
-	function handleNodeClick(node: LTreeNode<typeof sampleData[0]>) {
-		clickedNode = `${node.data?.name} (path: ${node.path})`;
+	function handleNodeClick({ node, path }: NodeRef<typeof sampleData[0]>) {
+		clickedNode = `${node?.data?.name} (path: ${path})`;
 	}
 
 	function scrollToPath() {
@@ -62,7 +113,29 @@
 		<h2>Simple Tree</h2>
 		<p class="description">A basic tree with hierarchical data. Click nodes to select them.</p>
 
-		<div class="tree-container tree-container-tall">
+		<div class="controls">
+			<span class="controls-label">Indentation:</span>
+			<button
+				class="btn {indentPreset === 'condensed' ? '' : 'btn-secondary'}"
+				onclick={() => (indentPreset = 'condensed')}
+			>Condensed</button>
+			<button
+				class="btn {indentPreset === 'compact' ? '' : 'btn-secondary'}"
+				onclick={() => (indentPreset = 'compact')}
+			>Compact</button>
+			<button
+				class="btn {indentPreset === 'generous' ? '' : 'btn-secondary'}"
+				onclick={() => (indentPreset = 'generous')}
+			>Generous</button>
+		</div>
+
+		<div class="css-readout">
+			{#each cssReadout as v (v.name)}
+				<code><span class="css-readout-name">{v.name}</span>: <span class="css-readout-value">{v.value}</span></code>
+			{/each}
+		</div>
+
+		<div class="tree-container tree-container-tall indent-{indentPreset}" bind:this={simpleTreeWrap}>
 			<Tree
 				data={sampleData}
 				idMember="id"
@@ -75,9 +148,23 @@
 				{...getTreeProps()}
 			>
 				{#snippet nodeTemplate(node: any)}
-					<span>{node.data?.icon} {node.data?.name}</span>
+					<!-- "Work" (1.1) and "Reports" (1.1.1) intentionally have no icon to show label alignment for icon-less nodes -->
+					<span>{#if node.path !== '1.1' && node.path !== '1.1.1'}{node.data?.icon} {/if}{node.data?.name}</span>
 				{/snippet}
 			</Tree>
+		</div>
+
+		<div class="note">
+			<p class="note-title">Adjusting indentation</p>
+			<p>Indent width is a single CSS variable — <code>--stv-node-indent-per-level</code> (default <code>0.8rem</code>). There's no prop for it. It's declared <em>on</em> the tree's root element (<code>.stv__container</code>), so you must set your value there too — a value on an ancestor wrapper is shadowed by the tree's own declaration. Just target <code>.stv__container</code> in your CSS:</p>
+			<div class="code-block">
+				<pre>{`/* one instance — scope by a wrapper class */
+.my-tree .stv__container { --stv-node-indent-per-level: ${indentPresets[indentPreset]}; }
+
+/* every tree on the page */
+.stv__container { --stv-node-indent-per-level: ${indentPresets[indentPreset]}; }`}</pre>
+			</div>
+			<p>The buttons above swap a wrapper class (<code>indent-{indentPreset}</code>) whose rule sets the variable on the nested <code>.stv__container</code>.</p>
 		</div>
 
 		{#if selectedNode}
@@ -220,3 +307,47 @@ treeRef.collapseNodes('1');    // Collapse specific path`}</pre>
 		<p><a href="/">&larr; Back to Examples</a></p>
 	</footer>
 </div>
+
+<style>
+	.controls-label {
+		font-weight: 600;
+		color: #4a5568;
+		margin-right: 0.25rem;
+	}
+
+	.css-readout {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		margin: 0.75rem 0 1rem;
+	}
+
+	.css-readout code {
+		font-size: 0.8em;
+		background: #f7fafc;
+		border: 1px solid #e2e8f0;
+		border-radius: 4px;
+		padding: 0.15rem 0.5rem;
+	}
+
+	.css-readout-name {
+		color: #718096;
+	}
+
+	.css-readout-value {
+		color: #2b6cb0;
+		font-weight: 600;
+	}
+
+	/* The variable is declared on .stv__container, so the override must target it
+	   directly — setting it on the .tree-container wrapper alone would be shadowed. */
+	:global(.indent-condensed .stv__container) {
+		--stv-node-indent-per-level: 0.35rem;
+	}
+	:global(.indent-compact .stv__container) {
+		--stv-node-indent-per-level: 0.8rem;
+	}
+	:global(.indent-generous .stv__container) {
+		--stv-node-indent-per-level: 1.75rem;
+	}
+</style>

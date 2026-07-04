@@ -2,10 +2,12 @@ BASIC SETUP
 ===========
 
 CRITICAL: This is a Svelte 5 component using runes
-- Requires Svelte 5.0.0 or higher
+- Package: @keenmate/svelte-treeview v5.0.0-rc13
+- Requires Svelte 5.0.0 or higher (peer: svelte ^5.0.0)
 - Uses $state, $derived, $effect runes
 - NOT compatible with Svelte 4 or earlier
 - Works with SvelteKit, Vite, or any Svelte 5 setup
+- Canvas rendering lives in a separate package (@keenmate/svelte-treeview-canvas)
 
 INSTALLATION
 ------------
@@ -61,6 +63,11 @@ RECOMMENDED PROPS
 | displayValueMember | string | null | Property for display text |
 | sortCallback | function | built-in | Custom sort function |
 | expandLevel | number | 2 | Auto-expand nodes to this depth |
+| treeId | string | auto | Stable id (needed for cross-tree clipboard/drag) |
+| clickBehavior | string | 'expand-and-focus' | 'select' \| 'expand' \| 'expand-and-focus' |
+| shouldShowCheckboxes | boolean | false | Render a selection checkbox per node |
+| checkboxMode | string | 'independent' | 'independent' \| 'cascade' |
+| shouldDisplayDebugInformation | boolean | false | Show debug panel + logging |
 
 PATH STRUCTURE
 --------------
@@ -80,10 +87,10 @@ Custom separators:
 <Tree treePathSeparator="/" ... />
 // Paths: "1/2/3", "files/docs/readme"
 
-BINDING SELECTED NODE
----------------------
+BINDING FOCUSED NODE
+--------------------
 <script>
-  let selectedNode = $state(null);
+  let focusedNode = $state(null);
 </script>
 
 <Tree
@@ -93,9 +100,14 @@ BINDING SELECTED NODE
   bind:focusedNode
 />
 
-{#if selectedNode}
-  <p>Selected: {selectedNode.data.name}</p>
+{#if focusedNode}
+  <p>Focused: {focusedNode.data.name}</p>
 {/if}
+
+Other bindable selection state:
+- bind:focusedNode        // single focused node (click / arrow keys)
+- bind:highlightedPaths   // Set<string> — UI multi-select (Ctrl/Shift+click)
+- bind:selectedPaths      // Set<string> — checkbox data state
 
 BINDING SEARCH TEXT
 -------------------
@@ -161,17 +173,20 @@ CLICK HANDLING
   {data}
   idMember="id"
   pathMember="path"
-  onNodeClicked={(node) => {
-    console.log('Clicked:', node.data.name);
-    console.log('Path:', node.path);
+  onNodeClick={(ctx) => {
+    console.log('Clicked:', ctx.node.data.name);
+    console.log('Path:', ctx.path);
+    // ctx is a NodeRef: { path, node, parent, siblings }
   }}
 />
+
+All on* events are fire-and-forget and take ONE context object.
 
 Click behavior (default 'expand-and-focus'):
 <Tree clickBehavior="select" ... />
 <!-- 'select' = click selects, dblclick expands -->
 <!-- 'expand' = click expands only -->
-<!-- 'expand-and-focus' = click selects + expands -->
+<!-- 'expand-and-focus' = click focuses + expands -->
 
 SCROLL TO NODE
 --------------
@@ -226,13 +241,17 @@ EMPTY STATE
 Custom message when tree is empty:
 
 <Tree {data} ...>
-  {#snippet noDataFound()}
+  {#snippet noData()}
     <div class="empty-state">
       <p>No items found</p>
       <button>Add First Item</button>
     </div>
   {/snippet}
 </Tree>
+
+The snippet name is noData (not noDataFound). Without a snippet,
+the noDataText string is used as a fallback (default "No data"):
+<Tree {data} noDataText="Nothing here yet" />
 
 LOADING STATE
 -------------
@@ -301,9 +320,18 @@ With search and drag-drop:
   bind:searchText
   shouldUseInternalSearchIndex={true}
   searchValueMember="name"
-  dragOverNodeClass="ltree-dragover-glow"
+  dragDropMode="both"
   onNodeDrop={handleDrop}
 />
+
+onNodeDrop receives a single NodeDropContext object:
+<script>
+  function handleDrop(ctx) {
+    // ctx = { source, target, dragged, dropped, position, operation, event }
+    // source/target/dragged/dropped are NodeRef(s); target null = root/empty
+    console.log(ctx.operation, ctx.position, ctx.target?.path);
+  }
+</script>
 
 BROWSER SUPPORT
 ---------------
@@ -316,7 +344,7 @@ No IE11 support (Svelte 5 requirement)
 
 CRITICAL REMINDERS
 ------------------
-✅ Import styles (CSS or SCSS)
+✅ Import styles (pure CSS: '@keenmate/svelte-treeview/styles.css')
 ✅ Use Svelte 5.0.0 or higher
 ✅ Use path-based hierarchical data
 ✅ Set idMember and pathMember
