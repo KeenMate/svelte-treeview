@@ -600,7 +600,15 @@ export class TreeController<T> {
 	clickBehavior = $state<ClickBehavior>('expand-and-focus');
 	selectionMode = $state<SelectionMode>('single');
 	shouldShowCheckboxes = $state(false);
-	checkboxMode = $state<CheckboxMode>('independent');
+	#checkboxMode = $state<CheckboxMode>('independent');
+	get checkboxMode(): CheckboxMode {
+		return this.#checkboxMode;
+	}
+	set checkboxMode(value: CheckboxMode) {
+		if (this.#checkboxMode === value) return;
+		this.#checkboxMode = value;
+		this._reconcileVisualStatesForMode();
+	}
 	shouldClickToggleCheckbox = $state(false);
 	expandIconClass = $state('stv__toggle-icon--expand');
 	collapseIconClass = $state('stv__toggle-icon--collapse');
@@ -2903,6 +2911,71 @@ export class TreeController<T> {
 			path = ancestor.parentPath;
 		}
 		this.selectedPaths = newPaths;
+	}
+
+	/**
+	 * Re-derive every node's visualState (and keep isSelected/selectedPaths in sync)
+	 * for the current checkboxMode, then re-render the nodes that changed. Called
+	 * whenever checkboxMode flips so the switch is immediately consistent.
+	 *
+	 * - `cascade`: recompute each parent's indeterminate/selected from its descendants,
+	 *   and sync isSelected for the definitive states (all children selected → parent
+	 *   selected; none → unselected).
+	 * - `independent`: there is no inherited indeterminate, so a node sitting at [-]
+	 *   is promoted to fully CHECKED (isSelected = true) rather than dropped to
+	 *   unchecked; every other node's visualState collapses to its own isSelected.
+	 *
+	 * Bumping `_rev` on changed nodes re-creates their row, which is what actually
+	 * rewrites the checkbox's `indeterminate` DOM property — it's set imperatively, so
+	 * without a re-render a stale cascade dash would stick at [-] even after the mode
+	 * no longer wants it.
+	 */
+	private _reconcileVisualStatesForMode() {
+		if (!this.tree?.root) return;
+		const cascade = this.#checkboxMode === 'cascade';
+		const newPaths = new Set<string>(this.selectedPaths);
+		let anyChanged = false;
+		let selectionChanged = false;
+		const visit = (node: LTreeNode<T>) => {
+			let vs: VisualState;
+			let selectionTouched = false;
+			if (cascade) {
+				vs = this._computeVisualState(node);
+				// Sync isSelected with a definitive computed state (leave indeterminate as-is).
+				if (vs !== VisualState.indeterminate) {
+					const shouldBeSelected = vs === VisualState.selected;
+					if (node.isSelected !== shouldBeSelected) {
+						node.isSelected = shouldBeSelected;
+						if (shouldBeSelected) newPaths.add(node.path);
+						else newPaths.delete(node.path);
+						selectionTouched = true;
+					}
+				}
+			} else if (node.visualState === VisualState.indeterminate) {
+				// Independent mode has no partial state: promote [-] to fully checked.
+				if (!node.isSelected) {
+					node.isSelected = true;
+					selectionTouched = true;
+				}
+				newPaths.add(node.path);
+				vs = VisualState.selected;
+			} else {
+				vs = node.isSelected ? VisualState.selected : VisualState.notSelected;
+			}
+			if (node.visualState !== vs || selectionTouched) {
+				node.visualState = vs;
+				node._rev = (node._rev || 0) + 1;
+				anyChanged = true;
+				if (selectionTouched) selectionChanged = true;
+			}
+			for (const key in node.children) visit(node.children[key]!);
+		};
+		for (const key in this.tree.root.children) visit(this.tree.root.children[key]!);
+		if (selectionChanged) this.selectedPaths = newPaths;
+		if (anyChanged) {
+			this.tree.refresh();
+			if (selectionChanged) this._notifySelectionChanged();
+		}
 	}
 
 	/** Compute visual state for a node based on its descendants' isSelected */

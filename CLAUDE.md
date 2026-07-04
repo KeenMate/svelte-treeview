@@ -75,7 +75,7 @@ TREE_PROPS_KEY:
 - insertResult (bindable) - InsertArrayResult<T> with failed nodes info
 - clickBehavior: ClickBehavior (default 'expand-and-focus') - 'select' | 'expand' | 'expand-and-focus'
 - shouldShowCheckboxes: boolean (default false) - renders selection checkboxes per node
-- checkboxMode: CheckboxMode (default 'independent') - 'independent' | 'cascade'
+- checkboxMode: CheckboxMode (default 'independent') - 'independent' | 'cascade'. Changing it at runtime re-derives every node's visualState + re-renders (controller `checkboxMode` is a getter/setter → `_reconcileVisualStatesForMode`): switching to 'independent' PROMOTES an indeterminate [-] node to fully checked (isSelected=true); switching to 'cascade' recomputes parent dashes from descendants. Without this the [-] dash stuck (indeterminate is an imperative DOM prop, needs a re-render). Guarded by e2e/checkbox-mode.spec.ts.
 - shouldUseInternalSearchIndex: boolean
 - shouldDisplayDebugInformation: boolean
 - expandLevel: number (default 2)
