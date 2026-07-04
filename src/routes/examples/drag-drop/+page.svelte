@@ -470,6 +470,7 @@
 					<Tree
 						bind:this={sourceTreeRef}
 						treeId="source-tree"
+						clickBehavior="select"
 						data={sourceData}
 						idMember="id"
 						pathMember="path"
@@ -513,6 +514,7 @@
 					<Tree
 						bind:this={targetTreeRef}
 						treeId="target-tree"
+						clickBehavior="select"
 						data={targetData}
 						idMember="id"
 						pathMember="path"
@@ -603,6 +605,7 @@
 			<Tree
 				bind:this={restrictedTreeRef}
 				treeId="restricted-tree"
+				clickBehavior="select"
 				data={restrictedData}
 				idMember="id"
 				pathMember="path"
@@ -676,6 +679,7 @@ const data = [
 		<div class="tree-container touch-demo-tree" style="max-height: 260px;">
 			<Tree
 				data={touchData}
+				clickBehavior="select"
 				idMember="id"
 				pathMember="path"
 				orderMember="sortOrder"
