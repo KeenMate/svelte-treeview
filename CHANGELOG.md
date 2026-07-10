@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [5.0.0-rc13] - 2026-07-01
+## [5.0.0-rc13] - 2026-07-10 [PUBLISHED]
 
 Clipboard machinery overhaul: an immutable clipboard snapshot, a per-node paste transform that carries live node references (no display-name assumption), a copy-time clean hook, leaf-aware paste positioning, skip-aware (no silent all-or-nothing) pasting, and the `beforeCopy` / `beforeCut` / `beforePaste` interceptors brought to a consistent reference-passing shape. Plus a multi-drag focus-follow fix and demo parity (cross-tree clipboard, `Copy N` naming, `Delete` with a guard). Also a node-spacing pass — root nodes sit flush at the left edge, the chevron-to-label gap is tightened (~13px reclaimed per row), and leaf nodes drop their dot marker and align directly under their parent folder; all spacing stays CSS-variable driven and applies to both rendering modes.
 
