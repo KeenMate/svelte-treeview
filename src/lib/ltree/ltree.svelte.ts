@@ -14,6 +14,7 @@ import type { Ltree, InsertArrayResult, InsertBranchResult, DeleteBranchResult }
 import { createSearchIndex } from './flex.js';
 import { Indexer } from './indexer.js';
 import { perfStart, perfEnd, perfSummary } from '../perf-logger.js';
+import { dataLogger } from '../logger.js';
 
 /** Helper to safely access a property on a generic data item using a string member name */
 function getField(item: unknown, member: string): any {
@@ -43,7 +44,9 @@ export function createLTree<T>(
 	_searchValueMember?: string | null | undefined,
 	_getSearchValueCallback?: (node: LTreeNode<T>) => string,
 
-	_getAllowedDropPositionsCallback?: (node: LTreeNode<T>) => import('./types.js').DropPosition[] | null | undefined,
+	_getAllowedDropPositionsCallback?: (
+		node: LTreeNode<T>
+	) => import('./types.js').DropPosition[] | null | undefined,
 
 	_isCollapsibleMember?: string | null | undefined,
 	_getIsCollapsibleCallback?: (node: LTreeNode<T>) => boolean,
@@ -258,78 +261,93 @@ export function createLTree<T>(
 
 			const conversionFailures: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [];
 
-			let mappedData = data.map((row, index) => {
-				const node = createLTreeNode<T>();
-				node.treeId = _treeId || '';
-				node.id = _idMember ? getField(row, _idMember) : undefined;
-				const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
+			let mappedData = data
+				.map((row, index) => {
+					const node = createLTreeNode<T>();
+					node.treeId = _treeId || '';
+					node.id = _idMember ? getField(row, _idMember) : undefined;
+					const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
 
-				// Validate path - must be a non-empty string
-				if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
-					node.path = '';
+					// Validate path - must be a non-empty string
+					if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
+						node.path = '';
+						node.data = row;
+						const pathDesc =
+							rawPath === ''
+								? 'empty string'
+								: rawPath == null
+									? 'undefined/null'
+									: `non-string (${typeof rawPath})`;
+						conversionFailures.push({
+							node,
+							originalData: row,
+							error: `Item at index ${index} has invalid path (${pathDesc}). Check that pathMember="${_pathMember}" matches your data. First item keys: ${index === 0 ? JSON.stringify(Object.keys(row as any)) : '(see index 0)'}`
+						});
+						return null;
+					}
+					node.path = rawPath;
+
+					if (shouldCalculateParentPath) {
+						node.parentPath = getParentPath(node.path, this.treePathSeparator);
+					} else node.parentPath = getField(row, _parentPathMember!);
+
+					node.pathSegment = getPathSegments(
+						getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator),
+						0,
+						1,
+						this.treePathSeparator
+					);
+
+					if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
+					else node.level = getLevel(node.path, this.treePathSeparator);
+
+					// Assign data BEFORE the get*Callback evaluations so consumer
+					// callbacks reading node.data?.X see the real row, not undefined.
 					node.data = row;
-					const pathDesc = rawPath === '' ? 'empty string'
-						: rawPath == null ? 'undefined/null'
-						: `non-string (${typeof rawPath})`;
-					conversionFailures.push({
-						node,
-						originalData: row,
-						error: `Item at index ${index} has invalid path (${pathDesc}). Check that pathMember="${_pathMember}" matches your data. First item keys: ${index === 0 ? JSON.stringify(Object.keys(row as any)) : '(see index 0)'}`
-					});
-					return null;
-				}
-				node.path = rawPath;
 
-				if (shouldCalculateParentPath) {
-					node.parentPath = getParentPath(node.path, this.treePathSeparator);
-				} else node.parentPath = getField(row, _parentPathMember!);
+					// isExpanded: callback > member > expandLevel
+					if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
+					else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+					else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
-				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator), 0, 1, this.treePathSeparator);
+					// isSelectable: callback > member (stored on node so renderers can read directly)
+					if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
+					else if (!shouldCalculateIsSelectable)
+						node.isSelectable = getField(row, _isSelectableMember!);
 
-				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
-				else node.level = getLevel(node.path, this.treePathSeparator);
+					// isSelected: callback > member
+					if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
+					else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 
-				// Assign data BEFORE the get*Callback evaluations so consumer
-				// callbacks reading node.data?.X see the real row, not undefined.
-				node.data = row;
+					if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
+					else if (!shouldCalculateIsDraggable)
+						node.isDraggable = getField(row, _isDraggableMember!);
+					if (!shouldCalculateIsCollapsible)
+						node.isCollapsible = getField(row, _isCollapsibleMember!);
+					if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
+					else if (!shouldCalculateIsDropAllowed)
+						node.isDropAllowed = getField(row, _isDropAllowedMember!);
+					if (!shouldCalculateAllowedDropPositions)
+						node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
 
-				// isExpanded: callback > member > expandLevel
-				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
-				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
-				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
+					if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
 
-				// isSelectable: callback > member (stored on node so renderers can read directly)
-				if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
-				else if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+					if (_getIsDraggableCallback || !shouldCalculateIsDraggable) {
+						dataLogger.debug(`[insertArray] isDraggable resolved for ${node.path}`, {
+							path: node.path,
+							isDraggable: node.isDraggable,
+							hadCallback: !!_getIsDraggableCallback,
+							hadMember: !shouldCalculateIsDraggable,
+							rowIsDraggable: _isDraggableMember
+								? (row as any)?.[_isDraggableMember]
+								: '(no member)',
+							nodeDataIsDraggable: (row as any)?.isDraggable
+						});
+					}
 
-				// isSelected: callback > member
-				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
-				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
-
-				if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
-				else if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
-				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
-				if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
-				else if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
-				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
-
-				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
-
-				if (_getIsDraggableCallback || !shouldCalculateIsDraggable) {
-					console.log(`[insertArray] isDraggable resolved for ${node.path}`, {
-						path: node.path,
-						isDraggable: node.isDraggable,
-						hadCallback: !!_getIsDraggableCallback,
-						hadMember: !shouldCalculateIsDraggable,
-						rowIsDraggable: _isDraggableMember
-							? (row as any)?.[_isDraggableMember]
-							: '(no member)',
-						nodeDataIsDraggable: (row as any)?.isDraggable
-					});
-				}
-
-				return node;
-			}).filter((node): node is LTreeNode<T> => node !== null);
+					return node;
+				})
+				.filter((node): node is LTreeNode<T> => node !== null);
 			const conversionTime = perfEnd(`[${_treeId}] insertArray:conversion`, data.length);
 
 			perfStart(`[${_treeId}] insertArray:sort`);
@@ -342,13 +360,15 @@ export function createLTree<T>(
 
 			perfStart(`[${_treeId}] insertArray:insert`);
 
-			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [...conversionFailures];
+			const failedNodes: Array<{ node: LTreeNode<T>; originalData: T; error: string }> = [
+				...conversionFailures
+			];
 
 			// Warn early about data mapping issues (most common user error)
 			if (conversionFailures.length > 0) {
 				console.warn(
 					`[Tree ${_treeId}] ${conversionFailures.length} of ${data.length} items have invalid paths (pathMember="${_pathMember}"). These items will be skipped.\n` +
-					`First failure: ${conversionFailures[0].error}`
+						`First failure: ${conversionFailures[0].error}`
 				);
 			}
 			const itemsToIndex: { node: LTreeNode<T>; index: number }[] = [];
@@ -361,7 +381,8 @@ export function createLTree<T>(
 			let lastExpandLevelIndex = -1;
 			if (_expandLevel && !noEmitChanges) {
 				for (let i = mappedData.length - 1; i >= 0; i--) {
-					const nodeLevel = mappedData[i].level || getLevel(mappedData[i].path, this.treePathSeparator);
+					const nodeLevel =
+						mappedData[i].level || getLevel(mappedData[i].path, this.treePathSeparator);
 					if (nodeLevel <= _expandLevel) {
 						lastExpandLevelIndex = i;
 						break;
@@ -387,7 +408,12 @@ export function createLTree<T>(
 					}
 
 					// Progressive rendering: emit changes when we complete expandLevel
-					if (!noEmitChanges && !hasRenderedExpandLevel && _expandLevel && index === lastExpandLevelIndex) {
+					if (
+						!noEmitChanges &&
+						!hasRenderedExpandLevel &&
+						_expandLevel &&
+						index === lastExpandLevelIndex
+					) {
 						// We've processed all nodes up to expandLevel - render now!
 						hasRenderedExpandLevel = true;
 						this._emitTreeChanged();
@@ -433,11 +459,15 @@ export function createLTree<T>(
 			const insertTime = perfEnd(`[${_treeId}] insertArray:insert`, data.length);
 
 			// Log performance summary
-			perfSummary(_treeId || 'unknown', {
-				'Conversion': conversionTime,
-				'Sort': sortTime,
-				'Insert': insertTime
-			}, data.length);
+			perfSummary(
+				_treeId || 'unknown',
+				{
+					Conversion: conversionTime,
+					Sort: sortTime,
+					Insert: insertTime
+				},
+				data.length
+			);
 
 			return {
 				successful: successfulCount,
@@ -461,7 +491,13 @@ export function createLTree<T>(
 			}
 
 			const newSegment =
-				segmentPrefix + getPathSegments(getRelativePath(newNode?.path, parentPath, this.treePathSeparator), 0, 1, this.treePathSeparator);
+				segmentPrefix +
+				getPathSegments(
+					getRelativePath(newNode?.path, parentPath, this.treePathSeparator),
+					0,
+					1,
+					this.treePathSeparator
+				);
 
 			if (!parentNode.children.hasOwnProperty(newSegment)) {
 				parentNode.children[newSegment] = newNode;
@@ -509,7 +545,10 @@ export function createLTree<T>(
 			this.createFilteredTree(foundPaths);
 		},
 
-		searchNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): LTreeNode<T>[] {
+		searchNodes(
+			_searchText: string | null | undefined,
+			_searchOptions?: SearchOptions
+		): LTreeNode<T>[] {
 			if (isEmptyString(_searchText)) {
 				return [];
 			}
@@ -598,7 +637,6 @@ export function createLTree<T>(
 			this._emitTreeChanged();
 
 			perfEnd(`[${_treeId}] createFilteredTree`, rootNodes.length);
-
 		},
 
 		clearFilter(): void {
@@ -880,7 +918,8 @@ export function createLTree<T>(
 		},
 
 		getNodeDisplayValue(node: LTreeNode<T>): string {
-			if (!shouldCalculateDisplayValue && node.data) return getField(node.data, _displayValueMember!);
+			if (!shouldCalculateDisplayValue && node.data)
+				return getField(node.data, _displayValueMember!);
 
 			if (this.getDisplayValueCallback) return this.getDisplayValueCallback(node);
 
@@ -895,7 +934,9 @@ export function createLTree<T>(
 			return '[N/A]';
 		},
 
-		getNodeAllowedDropPositions(node: LTreeNode<T>): import('./types.js').DropPosition[] | null | undefined {
+		getNodeAllowedDropPositions(
+			node: LTreeNode<T>
+		): import('./types.js').DropPosition[] | null | undefined {
 			// Priority: callback > member > node property
 			if (this.getAllowedDropPositionsCallback) {
 				return this.getAllowedDropPositionsCallback(node);
@@ -916,13 +957,15 @@ export function createLTree<T>(
 
 		getNodeIsDropAllowed(node: LTreeNode<T>): boolean {
 			if (this.getIsDropAllowedCallback) return this.getIsDropAllowedCallback(node);
-			if (!shouldCalculateIsDropAllowed && node.data) return getField(node.data, _isDropAllowedMember!);
+			if (!shouldCalculateIsDropAllowed && node.data)
+				return getField(node.data, _isDropAllowedMember!);
 			return node.isDropAllowed;
 		},
 
 		getNodeIsCollapsible(node: LTreeNode<T>): boolean {
 			if (this.getIsCollapsibleCallback) return this.getIsCollapsibleCallback(node);
-			if (!shouldCalculateIsCollapsible && node.data) return getField(node.data, _isCollapsibleMember!);
+			if (!shouldCalculateIsCollapsible && node.data)
+				return getField(node.data, _isCollapsibleMember!);
 			return node.isCollapsible;
 		},
 
@@ -994,7 +1037,7 @@ export function createLTree<T>(
 
 			// Rebuild children object in sorted order
 			const newChildren: Record<string, LTreeNode<T>> = {};
-			sorted.forEach(child => {
+			sorted.forEach((child) => {
 				const segment = segmentPrefix + child.pathSegment;
 				newChildren[segment] = child;
 			});
@@ -1021,7 +1064,11 @@ export function createLTree<T>(
 		 * @param position - Where to place relative to target: 'before', 'after', or 'child'
 		 * @returns Object with success status and optional error message
 		 */
-		moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child'): { success: boolean; error?: string } {
+		moveNode(
+			sourcePath: string,
+			targetPath: string,
+			position: 'before' | 'after' | 'child'
+		): { success: boolean; error?: string } {
 			// Find source node
 			const sourceNode = this.getNodeByPath(sourcePath);
 			if (!sourceNode) {
@@ -1089,7 +1136,9 @@ export function createLTree<T>(
 				}
 			}
 
-			const newPath = newParentPath ? `${newParentPath}${this.treePathSeparator}${newSegment}` : newSegment;
+			const newPath = newParentPath
+				? `${newParentPath}${this.treePathSeparator}${newSegment}`
+				: newSegment;
 			const oldPath = sourceNode.path;
 
 			// Update source node's path and parentPath
@@ -1125,18 +1174,18 @@ export function createLTree<T>(
 				if (position === 'before') {
 					// Find order value just before target
 					const siblingOrders = siblings
-						.filter(s => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
-						.map(s => getField(s.data!, om) as number)
-						.filter(o => o < targetOrder)
+						.filter((s) => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
+						.map((s) => getField(s.data!, om) as number)
+						.filter((o) => o < targetOrder)
 						.sort((a, b) => b - a);
 					const prevOrder = siblingOrders[0] ?? targetOrder - 20;
 					(sourceNode.data as any)[om] = Math.floor((prevOrder + targetOrder) / 2);
 				} else {
 					// Find order value just after target
 					const siblingOrders = siblings
-						.filter(s => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
-						.map(s => getField(s.data!, om) as number)
-						.filter(o => o > targetOrder)
+						.filter((s) => s !== sourceNode && s.data && getField(s.data, om) !== undefined)
+						.map((s) => getField(s.data!, om) as number)
+						.filter((o) => o > targetOrder)
 						.sort((a, b) => a - b);
 					const nextOrder = siblingOrders[0] ?? targetOrder + 20;
 					(sourceNode.data as any)[om] = Math.floor((targetOrder + nextOrder) / 2);
@@ -1183,7 +1232,10 @@ export function createLTree<T>(
 		 * @param includeDescendants - If true, removes all descendants (default: true)
 		 * @returns Object with success status and the removed node
 		 */
-		removeNode(path: string, includeDescendants: boolean = true): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		removeNode(
+			path: string,
+			includeDescendants: boolean = true
+		): { success: boolean; node?: LTreeNode<T>; error?: string } {
 			const node = this.getNodeByPath(path);
 			if (!node) {
 				return { success: false, error: `Node not found: ${path}` };
@@ -1234,7 +1286,11 @@ export function createLTree<T>(
 		 * @param pathSegment - Optional path segment (auto-generated if not provided)
 		 * @returns Object with success status and the created node
 		 */
-		addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		addNode(
+			parentPath: string,
+			data: T,
+			pathSegment?: string
+		): { success: boolean; node?: LTreeNode<T>; error?: string } {
 			const parent = parentPath ? this.getNodeByPath(parentPath) : root;
 			if (!parent && parentPath) {
 				return { success: false, error: `Parent not found: ${parentPath}` };
@@ -1244,14 +1300,17 @@ export function createLTree<T>(
 			if (!pathSegment) {
 				// Use ID from data if available, otherwise generate a unique one
 				const id = _idMember && data ? (data as any)[_idMember] : undefined;
-				pathSegment = id?.toString() || `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+				pathSegment =
+					id?.toString() || `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 			}
 
 			// At this point pathSegment is guaranteed to be a string
 			const segment: string = pathSegment!;
 
 			// Calculate full path
-			const newPath: string = parentPath ? `${parentPath}${this.treePathSeparator}${segment}` : segment;
+			const newPath: string = parentPath
+				? `${parentPath}${this.treePathSeparator}${segment}`
+				: segment;
 
 			// Check if path already exists
 			if (this.getNodeByPath(newPath)) {
@@ -1283,23 +1342,30 @@ export function createLTree<T>(
 			// callbacks see a populated node.
 			if (data) {
 				if (_getIsSelectableCallback) newNode.isSelectable = _getIsSelectableCallback(newNode);
-				else if (!shouldCalculateIsSelectable) newNode.isSelectable = getField(data, _isSelectableMember!);
+				else if (!shouldCalculateIsSelectable)
+					newNode.isSelectable = getField(data, _isSelectableMember!);
 
 				if (_getIsSelectedCallback) newNode.isSelected = _getIsSelectedCallback(newNode);
-				else if (!shouldCalculateIsSelected) newNode.isSelected = getField(data, _isSelectedMember!);
+				else if (!shouldCalculateIsSelected)
+					newNode.isSelected = getField(data, _isSelectedMember!);
 
 				if (_getIsExpandedCallback) newNode.isExpanded = _getIsExpandedCallback(newNode);
-				else if (!shouldCalculateIsExpanded) newNode.isExpanded = getField(data, _isExpandedMember!);
+				else if (!shouldCalculateIsExpanded)
+					newNode.isExpanded = getField(data, _isExpandedMember!);
 
 				if (_getIsDraggableCallback) newNode.isDraggable = _getIsDraggableCallback(newNode);
-				else if (!shouldCalculateIsDraggable) newNode.isDraggable = getField(data, _isDraggableMember!);
+				else if (!shouldCalculateIsDraggable)
+					newNode.isDraggable = getField(data, _isDraggableMember!);
 
-				if (!shouldCalculateIsCollapsible) newNode.isCollapsible = getField(data, _isCollapsibleMember!);
+				if (!shouldCalculateIsCollapsible)
+					newNode.isCollapsible = getField(data, _isCollapsibleMember!);
 
 				if (_getIsDropAllowedCallback) newNode.isDropAllowed = _getIsDropAllowedCallback(newNode);
-				else if (!shouldCalculateIsDropAllowed) newNode.isDropAllowed = getField(data, _isDropAllowedMember!);
+				else if (!shouldCalculateIsDropAllowed)
+					newNode.isDropAllowed = getField(data, _isDropAllowedMember!);
 
-				if (!shouldCalculateAllowedDropPositions) newNode.allowedDropPositions = getField(data, _allowedDropPositionsMember!);
+				if (!shouldCalculateAllowedDropPositions)
+					newNode.allowedDropPositions = getField(data, _allowedDropPositionsMember!);
 			}
 
 			// Sync data object fields to match new tree position
@@ -1339,7 +1405,10 @@ export function createLTree<T>(
 		 * @param dataUpdates - Partial data to merge into existing node data
 		 * @returns Object with success status and the updated node
 		 */
-		updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string } {
+		updateNode(
+			path: string,
+			dataUpdates: Partial<T>
+		): { success: boolean; node?: LTreeNode<T>; error?: string } {
 			const node = this.getNodeByPath(path);
 			if (!node) {
 				return { success: false, error: `Node not found: ${path}` };
@@ -1377,7 +1446,9 @@ export function createLTree<T>(
 		 * @param changes - Array of create/update/delete operations
 		 * @returns Object with count of successful operations and array of failures
 		 */
-		applyChanges(changes: import('./types.js').TreeChange<T>[]): import('./types.js').ApplyChangesResult {
+		applyChanges(
+			changes: import('./types.js').TreeChange<T>[]
+		): import('./types.js').ApplyChangesResult {
 			const failures: Array<{ index: number; operation: string; path: string; error: string }> = [];
 			let successCount = 0;
 
@@ -1449,7 +1520,7 @@ export function createLTree<T>(
 		copyNodeWithDescendants(
 			sourceNode: LTreeNode<T>,
 			targetParentPath: string,
-			transformData: (data: T) => T,
+			transformData: (data: T, node: LTreeNode<T>) => T | null,
 			siblingPath?: string,
 			position?: 'before' | 'after'
 		): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
@@ -1463,14 +1534,22 @@ export function createLTree<T>(
 			const copyRecursive = (node: LTreeNode<T>, parentPath: string): LTreeNode<T> | null => {
 				if (!node.data) return null;
 
-				// Transform the data (user assigns new IDs, etc.)
-				const transformedData = transformData(node.data);
+				// Transform the data (user assigns new IDs, etc.). The live SOURCE node is passed
+				// as the 2nd arg so batch callers (copyNodes) can gate on a manifest and build a
+				// per-node NodeTransformContext. A null/undefined return SKIPS this node AND its
+				// whole subtree (mirrors the input transform) — the way to "leave a descendant
+				// behind" when copying a subtree from a pruned manifest.
+				const transformedData = transformData(node.data, node);
+				if (transformedData === null || transformedData === undefined) return null;
 
 				// Add the node
 				const result = this.addNode(parentPath, transformedData);
 				if (!result.success || !result.node) {
 					if (this.shouldDisplayDebugInformation) {
-						console.warn(`[Tree ${_treeId}] copyNodeWithDescendants: Failed to add node`, result.error);
+						console.warn(
+							`[Tree ${_treeId}] copyNodeWithDescendants: Failed to add node`,
+							result.error
+						);
 					}
 					return null;
 				}
@@ -1509,18 +1588,18 @@ export function createLTree<T>(
 						if (position === 'before') {
 							// Find order value just before sibling
 							const siblingOrders = siblings
-								.filter(s => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
-								.map(s => (s.data as any)[oKey] as number)
-								.filter(o => o < siblingOrder)
+								.filter((s) => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
+								.map((s) => (s.data as any)[oKey] as number)
+								.filter((o) => o < siblingOrder)
 								.sort((a, b) => b - a);
 							const prevOrder = siblingOrders[0] ?? siblingOrder - 20;
 							(rootNode.data as any)[oKey] = Math.floor((prevOrder + siblingOrder) / 2);
 						} else {
 							// Find order value just after sibling
 							const siblingOrders = siblings
-								.filter(s => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
-								.map(s => (s.data as any)[oKey] as number)
-								.filter(o => o > siblingOrder)
+								.filter((s) => s !== rootNode && (s.data as any)?.[oKey] !== undefined)
+								.map((s) => (s.data as any)[oKey] as number)
+								.filter((o) => o > siblingOrder)
 								.sort((a, b) => a - b);
 							const nextOrder = siblingOrders[0] ?? siblingOrder + 20;
 							(rootNode.data as any)[oKey] = Math.floor((siblingOrder + nextOrder) / 2);
@@ -1608,58 +1687,76 @@ export function createLTree<T>(
 			const failed: Array<{ data: T; error: string }> = [];
 
 			// Convert raw data → LTreeNode (same logic as insertArray lines 244-288)
-			let mappedData = data.map((row, index) => {
-				const node = createLTreeNode<T>();
-				node.treeId = _treeId || '';
-				node.id = _idMember ? getField(row, _idMember) : undefined;
-				const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
+			let mappedData = data
+				.map((row, index) => {
+					const node = createLTreeNode<T>();
+					node.treeId = _treeId || '';
+					node.id = _idMember ? getField(row, _idMember) : undefined;
+					const rawPath = _pathMember ? getField(row, _pathMember) : undefined;
 
-				if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
-					const pathDesc = rawPath === '' ? 'empty string'
-						: rawPath == null ? 'undefined/null'
-						: `non-string (${typeof rawPath})`;
-					failed.push({ data: row, error: `Item at index ${index} has invalid path (${pathDesc})` });
-					return null;
-				}
-				node.path = rawPath;
+					if (rawPath == null || rawPath === '' || typeof rawPath !== 'string') {
+						const pathDesc =
+							rawPath === ''
+								? 'empty string'
+								: rawPath == null
+									? 'undefined/null'
+									: `non-string (${typeof rawPath})`;
+						failed.push({
+							data: row,
+							error: `Item at index ${index} has invalid path (${pathDesc})`
+						});
+						return null;
+					}
+					node.path = rawPath;
 
-				if (shouldCalculateParentPath) {
-					node.parentPath = getParentPath(node.path, this.treePathSeparator);
-				} else node.parentPath = getField(row, _parentPathMember!);
+					if (shouldCalculateParentPath) {
+						node.parentPath = getParentPath(node.path, this.treePathSeparator);
+					} else node.parentPath = getField(row, _parentPathMember!);
 
-				node.pathSegment = getPathSegments(getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator), 0, 1, this.treePathSeparator);
+					node.pathSegment = getPathSegments(
+						getRelativePath(node.path, node.parentPath ?? '', this.treePathSeparator),
+						0,
+						1,
+						this.treePathSeparator
+					);
 
-				if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
-				else node.level = getLevel(node.path, this.treePathSeparator);
+					if (!shouldCalculateLevel) node.level = getField(row, _levelMember!);
+					else node.level = getLevel(node.path, this.treePathSeparator);
 
-				// Assign data BEFORE the get*Callback evaluations so consumer
-				// callbacks reading node.data?.X see the real row, not undefined.
-				node.data = row;
+					// Assign data BEFORE the get*Callback evaluations so consumer
+					// callbacks reading node.data?.X see the real row, not undefined.
+					node.data = row;
 
-				// isExpanded: callback > member > expandLevel
-				if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
-				else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
-				else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
+					// isExpanded: callback > member > expandLevel
+					if (_getIsExpandedCallback) node.isExpanded = _getIsExpandedCallback(node);
+					else if (!shouldCalculateIsExpanded) node.isExpanded = getField(row, _isExpandedMember!);
+					else if (_expandLevel) node.isExpanded = (node.level ?? 0) <= _expandLevel;
 
-				// isSelectable: callback > member (stored on node so renderers can read directly)
-				if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
-				else if (!shouldCalculateIsSelectable) node.isSelectable = getField(row, _isSelectableMember!);
+					// isSelectable: callback > member (stored on node so renderers can read directly)
+					if (_getIsSelectableCallback) node.isSelectable = _getIsSelectableCallback(node);
+					else if (!shouldCalculateIsSelectable)
+						node.isSelectable = getField(row, _isSelectableMember!);
 
-				// isSelected: callback > member
-				if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
-				else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
+					// isSelected: callback > member
+					if (_getIsSelectedCallback) node.isSelected = _getIsSelectedCallback(node);
+					else if (!shouldCalculateIsSelected) node.isSelected = getField(row, _isSelectedMember!);
 
-				if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
-				else if (!shouldCalculateIsDraggable) node.isDraggable = getField(row, _isDraggableMember!);
-				if (!shouldCalculateIsCollapsible) node.isCollapsible = getField(row, _isCollapsibleMember!);
-				if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
-				else if (!shouldCalculateIsDropAllowed) node.isDropAllowed = getField(row, _isDropAllowedMember!);
-				if (!shouldCalculateAllowedDropPositions) node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
+					if (_getIsDraggableCallback) node.isDraggable = _getIsDraggableCallback(node);
+					else if (!shouldCalculateIsDraggable)
+						node.isDraggable = getField(row, _isDraggableMember!);
+					if (!shouldCalculateIsCollapsible)
+						node.isCollapsible = getField(row, _isCollapsibleMember!);
+					if (_getIsDropAllowedCallback) node.isDropAllowed = _getIsDropAllowedCallback(node);
+					else if (!shouldCalculateIsDropAllowed)
+						node.isDropAllowed = getField(row, _isDropAllowedMember!);
+					if (!shouldCalculateAllowedDropPositions)
+						node.allowedDropPositions = getField(row, _allowedDropPositionsMember!);
 
-				if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
+					if (!shouldCalculateHasChildren) node.hasChildren = getField(row, _hasChildrenMember!);
 
-				return node;
-			}).filter((node): node is LTreeNode<T> => node !== null);
+					return node;
+				})
+				.filter((node): node is LTreeNode<T> => node !== null);
 
 			// Sort to ensure parents come before children
 			if (!this.isSorted) {
@@ -1707,7 +1804,7 @@ export function createLTree<T>(
 					});
 				}
 				const newChildren: Record<string, LTreeNode<T>> = {};
-				sorted.forEach(child => {
+				sorted.forEach((child) => {
 					newChildren[segmentPrefix + child.pathSegment] = child;
 				});
 				parent.children = newChildren;
@@ -1782,7 +1879,7 @@ export function createLTree<T>(
 				};
 				const pathsToRemove = new Set<string>();
 				collectPaths(parentNode, pathsToRemove);
-				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+				flatTreeNodes = flatTreeNodes.filter((n) => !pathsToRemove.has(n.path));
 			}
 
 			// Clear children
@@ -1829,7 +1926,7 @@ export function createLTree<T>(
 				// Remove from flatTreeNodes
 				const pathsToRemove = new Set<string>();
 				collectPaths(targetNode, pathsToRemove);
-				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+				flatTreeNodes = flatTreeNodes.filter((n) => !pathsToRemove.has(n.path));
 
 				targetNode.children = {};
 				targetNode.hasChildren = false;
@@ -1875,7 +1972,7 @@ export function createLTree<T>(
 				const pathsToRemove = new Set<string>();
 				pathsToRemove.add(node.path);
 				collectPaths(node, pathsToRemove);
-				flatTreeNodes = flatTreeNodes.filter(n => !pathsToRemove.has(n.path));
+				flatTreeNodes = flatTreeNodes.filter((n) => !pathsToRemove.has(n.path));
 
 				// Remove from parent
 				const segment = segmentPrefix + node.pathSegment;

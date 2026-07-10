@@ -105,7 +105,11 @@
 		shouldShowCheckboxes?: boolean | null | undefined;
 		checkboxMode?: CheckboxMode | null | undefined;
 		shouldClickToggleCheckbox?: boolean | null | undefined;
-		beforeCheckboxToggleCallback?: (node: LTreeNode<T>, checked: boolean, affectedPaths: string[]) => boolean | string[] | void;
+		beforeCheckboxToggleCallback?: (
+			node: LTreeNode<T>,
+			checked: boolean,
+			affectedPaths: string[]
+		) => boolean | string[] | void;
 		rangeSelectionMode?: 'visual' | 'logical';
 		initializeIndexCallback?: () => Index;
 		searchText?: string | null | undefined;
@@ -157,6 +161,14 @@
 		 * lands on this tree without needing a node to click first. Default: false.
 		 */
 		shouldShowDropPlaceholderWhenEmpty?: boolean;
+		/**
+		 * Render a single drop zone covering the WHOLE populated tree (default false). While a drag
+		 * is in progress an overlay accepts a drop anywhere over the tree — the drop lands with
+		 * `target = null` regardless of per-node `getIsDropAllowedCallback`, so you route each item
+		 * from `beforeDropCallback` (return a `DropGroup[]`) instead of by where it was dropped. Use
+		 * for "drop a basket, auto-sort into category nodes" flows.
+		 */
+		shouldEnableTreeDropZone?: boolean;
 		isCopyAllowed?: boolean; // Enable Ctrl+drag to copy instead of move (default: false)
 		shouldAutoHandleCopy?: boolean; // Auto-handle same-tree copy operations (default: true). Set to false for external DB/API handling.
 		shouldAutoHandleMove?: boolean; // Auto-handle same-tree move operations (default: true). Set to false for database-first workflow.
@@ -165,7 +177,7 @@
 		 *  Delete (remove selection), Escape (cancel cut), plus classic CUA aliases Ctrl+Insert
 		 *  (copy) / Shift+Insert (paste) / Shift+Delete (cut). A consumer `onTreeKeydown` still runs
 		 *  first and can override or suppress any of these. Paste targets the focused node (root
-		 *  when none) and uses `pasteNodeTransformationCallback`. */
+		 *  when none) and uses `nodeInputTransformationCallback`. */
 		shouldHandleKeyboardShortcuts?: boolean;
 		isAccordionExpand?: boolean; // Expanding a node auto-collapses its siblings (default: false)
 
@@ -190,24 +202,64 @@
 
 		// INTERCEPTORS (before*Callback = can modify/block)
 		/**
-		 * Called before a drop is processed. Return false to cancel the drop.
-		 * Return { position, operation } to override the drop position or operation.
-		 * Return true or undefined to proceed normally.
-		 * Can be async - return a Promise to show dialogs or perform async validation.
+		 * Called before a drop is processed with a BeforeDropContext ({ target, dragged, position,
+		 * operation, event }). Return `false` to cancel the drop, `{ position, operation }` to
+		 * redirect it, or a `DropGroup[]` ({ targetPath, position?, paths }) to fan the drop out to
+		 * several destinations (content-addressed routing — same-tree nodes are auto-moved,
+		 * cross-tree nodes are left for onNodeDrop). Return `void` to proceed. Async-capable.
 		 */
-		beforeDropCallback?: (dropNode: LTreeNode<T> | null, draggedNode: LTreeNode<T>, position: DropPosition, event: DragEvent | TouchEvent, operation: DropOperation) => boolean | { position?: DropPosition; operation?: DropOperation } | void | Promise<boolean | { position?: DropPosition; operation?: DropOperation } | void>;
-		beforeCopyCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
-		beforeCutCallback?: (ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>) => string[] | false | void;
-		beforePasteCallback?: (ctx: import('../core/TreeController.svelte').BeforePasteContext<T>) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
+		beforeDropCallback?: (
+			ctx: import('../core/TreeController.svelte').BeforeDropContext<T>
+		) =>
+			| boolean
+			| { position?: DropPosition; operation?: DropOperation }
+			| import('../core/TreeController.svelte').DropGroup[]
+			| void
+			| Promise<
+					| boolean
+					| { position?: DropPosition; operation?: DropOperation }
+					| import('../core/TreeController.svelte').DropGroup[]
+					| void
+			  >;
+		/** Set-level pre-drag interceptor. Return a `string[]` of top-level paths to REPLACE the
+		 *  dragged set (prune and/or force-add nodes that can't be omitted), `false` to cancel the
+		 *  drag, or `void` to keep the default. Synchronous. See DragStartContext. */
+		beforeDragStartCallback?: (
+			ctx: import('../core/TreeController.svelte').DragStartContext<T>
+		) => string[] | false | void;
+		beforeCopyCallback?: (
+			ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>
+		) => string[] | false | void;
+		beforeCutCallback?: (
+			ctx: import('../core/TreeController.svelte').BeforeCopyContext<T>
+		) => string[] | false | void;
+		beforePasteCallback?: (
+			ctx: import('../core/TreeController.svelte').BeforePasteContext<T>
+		) => { targetPath?: string; position?: 'child' | 'before' | 'after' } | false | void;
 		/** Runs before the built-in Delete removes anything. Return a narrowed path[] to restrict, or false to block. */
-		beforeDeleteCallback?: (ctx: import('../core/TreeController.svelte').BeforeDeleteContext<T>) => string[] | false | void;
-		/** Per-node transform applied as data is snapshotted onto the clipboard (copy/cut). */
-		copyNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').NodeTransformContext<T>) => T;
-		/** Per-node transform applied as data is inserted on paste; return null to skip the node. */
-		pasteNodeTransformationCallback?: (data: T, ctx: import('../core/TreeController.svelte').NodeTransformContext<T>) => T | null;
+		beforeDeleteCallback?: (
+			ctx: import('../core/TreeController.svelte').BeforeDeleteContext<T>
+		) => string[] | false | void;
+		/** OUTPUT transform (egress) — per node as it LEAVES the source: Ctrl+C/X, or the capture
+		 *  side of a copy-drop. Strip transient/sensitive fields. Fires for copy, never a move. */
+		nodeOutputTransformationCallback?: (
+			data: T,
+			ctx: import('../core/TreeController.svelte').NodeTransformContext<T>
+		) => T;
+		/** INPUT transform (ingress) — per node as a DUPLICATE LANDS in a destination: Ctrl+V
+		 *  paste, or the insert side of a copy-drop (same- or cross-tree). Return new data
+		 *  (fresh ids/names) or null to skip the node. Fires for copy, never a move. */
+		nodeInputTransformationCallback?: (
+			data: T,
+			ctx: import('../core/TreeController.svelte').NodeTransformContext<T>
+		) => T | null;
 
 		// DATA PROVIDERS (get*Callback = returns data the system uses)
-		getContextMenuItemsCallback?: (node: LTreeNode<T>, closeMenuCallback: () => void, selectedNodes?: LTreeNode<T>[]) => ContextMenuEntry[];
+		getContextMenuItemsCallback?: (
+			node: LTreeNode<T>,
+			closeMenuCallback: () => void,
+			selectedNodes?: LTreeNode<T>[]
+		) => ContextMenuEntry[];
 
 		// VISUALS
 		/** Per-instance theme override. Forwarded to the root `.stv__container`
@@ -344,6 +396,7 @@
 		dropZoneStart = 33,
 		dropZoneMaxWidth = 120,
 		shouldShowDropPlaceholderWhenEmpty = false,
+		shouldEnableTreeDropZone = false,
 		isCopyAllowed = false,
 		shouldAutoHandleCopy = true,
 		shouldAutoHandleMove = true,
@@ -364,13 +417,14 @@
 		onPaste,
 		onDelete,
 		// INTERCEPTORS
+		beforeDragStartCallback,
 		beforeDropCallback,
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
 		beforeDeleteCallback,
-		copyNodeTransformationCallback,
-		pasteNodeTransformationCallback,
+		nodeOutputTransformationCallback,
+		nodeInputTransformationCallback,
 		// DATA PROVIDERS
 		getContextMenuItemsCallback,
 
@@ -483,13 +537,14 @@
 		onCut,
 		onPaste,
 		onDelete,
+		beforeDragStartCallback,
 		beforeDropCallback,
 		beforeCopyCallback,
 		beforeCutCallback,
 		beforePasteCallback,
 		beforeDeleteCallback,
-		copyNodeTransformationCallback,
-		pasteNodeTransformationCallback,
+		nodeOutputTransformationCallback,
+		nodeInputTransformationCallback,
 		getContextMenuItemsCallback,
 		hasContextMenuSnippet: !!contextMenu,
 		bodyClass,
@@ -505,7 +560,7 @@
 		scrollHighlightTimeout,
 		scrollHighlightClass,
 		contextMenuXOffset,
-		contextMenuYOffset,
+		contextMenuYOffset
 	});
 
 	// ── Apply navigation overrides if provided ─────────────────────────
@@ -554,7 +609,19 @@
 			getBoundingClientRect: () => {
 				const ax = controller.contextMenuX + xOff;
 				const ay = controller.contextMenuY + yOff;
-				return { x: ax, y: ay, width: 0, height: 0, top: ay, left: ax, right: ax, bottom: ay, toJSON() { return this; } };
+				return {
+					x: ax,
+					y: ay,
+					width: 0,
+					height: 0,
+					top: ay,
+					left: ax,
+					right: ax,
+					bottom: ay,
+					toJSON() {
+						return this;
+					}
+				};
 			}
 		};
 		const menu = contextMenuEl;
@@ -571,109 +638,269 @@
 	});
 
 	// ── Sync props → controller (one-way: parent prop changes flow in) ─
-	$effect(() => { controller.data = data; });
-	$effect(() => { controller.searchText = searchText; });
-	$effect(() => { if (treeId) controller.treeId = treeId; });
-	$effect(() => { controller.treePathSeparator = treePathSeparator ?? '.'; });
-	$effect(() => { controller.shouldDisplayDebugInformation = shouldDisplayDebugInformation ?? false; });
-	$effect(() => { controller.shouldDisplayContextMenuInDebugMode = shouldDisplayContextMenuInDebugMode ?? false; });
-	$effect(() => { controller.isLoading = isLoading ?? false; });
-	$effect(() => { controller.bodyClass = bodyClass; });
-	$effect(() => { controller.isFlatRenderingEnabled = isFlatRenderingEnabled ?? true; });
-	$effect(() => { controller.isVirtualScrollEnabled = isVirtualScrollEnabled ?? false; });
-	$effect(() => { controller.virtualRowHeight = virtualRowHeight; });
-	$effect(() => { controller.virtualOverscan = virtualOverscan ?? 5; });
-	$effect(() => { controller.virtualContainerHeight = virtualContainerHeight; });
-	$effect(() => { controller.isProgressiveRender = isProgressiveRender ?? true; });
-	$effect(() => { controller.initialBatchSize = initialBatchSize ?? 20; });
-	$effect(() => { controller.maxBatchSize = maxBatchSize ?? 500; });
-	$effect(() => { controller.dragDropMode = dragDropMode ?? 'none'; });
-	$effect(() => { controller.isCopyAllowed = isCopyAllowed ?? false; });
-	$effect(() => { controller.shouldAutoHandleCopy = shouldAutoHandleCopy ?? true; });
-	$effect(() => { controller.shouldAutoHandleMove = shouldAutoHandleMove ?? true; });
-	$effect(() => { controller.shouldAutoHandlePaste = shouldAutoHandlePaste ?? true; });
-	$effect(() => { controller.shouldHandleKeyboardShortcuts = shouldHandleKeyboardShortcuts ?? false; });
-	$effect(() => { controller.isAccordionExpand = isAccordionExpand ?? false; });
-	$effect(() => { controller.hasContextMenuSnippet = !!contextMenu; });
+	$effect(() => {
+		controller.data = data;
+	});
+	$effect(() => {
+		controller.searchText = searchText;
+	});
+	$effect(() => {
+		if (treeId) controller.treeId = treeId;
+	});
+	$effect(() => {
+		controller.treePathSeparator = treePathSeparator ?? '.';
+	});
+	$effect(() => {
+		controller.shouldDisplayDebugInformation = shouldDisplayDebugInformation ?? false;
+	});
+	$effect(() => {
+		controller.shouldDisplayContextMenuInDebugMode = shouldDisplayContextMenuInDebugMode ?? false;
+	});
+	$effect(() => {
+		controller.isLoading = isLoading ?? false;
+	});
+	$effect(() => {
+		controller.bodyClass = bodyClass;
+	});
+	$effect(() => {
+		controller.shouldEnableTreeDropZone = shouldEnableTreeDropZone;
+	});
+	$effect(() => {
+		controller.isFlatRenderingEnabled = isFlatRenderingEnabled ?? true;
+	});
+	$effect(() => {
+		controller.isVirtualScrollEnabled = isVirtualScrollEnabled ?? false;
+	});
+	$effect(() => {
+		controller.virtualRowHeight = virtualRowHeight;
+	});
+	$effect(() => {
+		controller.virtualOverscan = virtualOverscan ?? 5;
+	});
+	$effect(() => {
+		controller.virtualContainerHeight = virtualContainerHeight;
+	});
+	$effect(() => {
+		controller.isProgressiveRender = isProgressiveRender ?? true;
+	});
+	$effect(() => {
+		controller.initialBatchSize = initialBatchSize ?? 20;
+	});
+	$effect(() => {
+		controller.maxBatchSize = maxBatchSize ?? 500;
+	});
+	$effect(() => {
+		controller.dragDropMode = dragDropMode ?? 'none';
+	});
+	$effect(() => {
+		controller.isCopyAllowed = isCopyAllowed ?? false;
+	});
+	$effect(() => {
+		controller.shouldAutoHandleCopy = shouldAutoHandleCopy ?? true;
+	});
+	$effect(() => {
+		controller.shouldAutoHandleMove = shouldAutoHandleMove ?? true;
+	});
+	$effect(() => {
+		controller.shouldAutoHandlePaste = shouldAutoHandlePaste ?? true;
+	});
+	$effect(() => {
+		controller.shouldHandleKeyboardShortcuts = shouldHandleKeyboardShortcuts ?? false;
+	});
+	$effect(() => {
+		controller.isAccordionExpand = isAccordionExpand ?? false;
+	});
+	$effect(() => {
+		controller.hasContextMenuSnippet = !!contextMenu;
+	});
 
 	// Visual config sync (drives nodeConfig update via controller's internal effect)
-	$effect(() => { controller.clickBehavior = clickBehavior ?? 'expand-and-focus'; });
-	$effect(() => { controller.selectionMode = selectionMode ?? 'single'; });
-	$effect(() => { controller.shouldShowCheckboxes = shouldShowCheckboxes ?? false; });
-	$effect(() => { controller.checkboxMode = checkboxMode ?? 'independent'; });
-	$effect(() => { controller.shouldClickToggleCheckbox = shouldClickToggleCheckbox ?? false; });
-	$effect(() => { controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback; });
-	$effect(() => { controller.rangeSelectionMode = rangeSelectionMode ?? 'visual'; });
-	$effect(() => { controller.expandIconClass = expandIconClass ?? 'stv__toggle-icon--expand'; });
-	$effect(() => { controller.collapseIconClass = collapseIconClass ?? 'stv__toggle-icon--collapse'; });
-	$effect(() => { controller.leafIconClass = leafIconClass ?? 'stv__toggle-icon--leaf'; });
-	$effect(() => { controller.toggleIconMode = toggleIconMode ?? 'rotate'; });
-	$effect(() => { controller.highlightedNodeClass = highlightedNodeClass; });
-	$effect(() => { controller.nodeClass = nodeClass; });
-	$effect(() => { controller.nodeContentClass = nodeContentClass; });
-	$effect(() => { controller.focusedNodeClass = focusedNodeClass; });
-	$effect(() => { controller.dragOverNodeClass = dragOverNodeClass; });
-	$effect(() => { controller.dropZoneMode = dropZoneMode ?? 'glow'; });
-	$effect(() => { controller.dropZoneLayout = dropZoneLayout ?? 'around'; });
-	$effect(() => { controller.dropZoneStart = dropZoneStart ?? 33; });
-	$effect(() => { controller.dropZoneMaxWidth = dropZoneMaxWidth ?? 120; });
-	$effect(() => { controller.scrollHighlightTimeout = scrollHighlightTimeout ?? 4000; });
-	$effect(() => { controller.scrollHighlightClass = scrollHighlightClass ?? 'stv__node-content--scroll-highlight'; });
-	$effect(() => { controller.contextMenuXOffset = contextMenuXOffset ?? 8; });
-	$effect(() => { controller.contextMenuYOffset = contextMenuYOffset ?? 0; });
+	$effect(() => {
+		controller.clickBehavior = clickBehavior ?? 'expand-and-focus';
+	});
+	$effect(() => {
+		controller.selectionMode = selectionMode ?? 'single';
+	});
+	$effect(() => {
+		controller.shouldShowCheckboxes = shouldShowCheckboxes ?? false;
+	});
+	$effect(() => {
+		controller.checkboxMode = checkboxMode ?? 'independent';
+	});
+	$effect(() => {
+		controller.shouldClickToggleCheckbox = shouldClickToggleCheckbox ?? false;
+	});
+	$effect(() => {
+		controller.beforeCheckboxToggleHandler = beforeCheckboxToggleCallback;
+	});
+	$effect(() => {
+		controller.rangeSelectionMode = rangeSelectionMode ?? 'visual';
+	});
+	$effect(() => {
+		controller.expandIconClass = expandIconClass ?? 'stv__toggle-icon--expand';
+	});
+	$effect(() => {
+		controller.collapseIconClass = collapseIconClass ?? 'stv__toggle-icon--collapse';
+	});
+	$effect(() => {
+		controller.leafIconClass = leafIconClass ?? 'stv__toggle-icon--leaf';
+	});
+	$effect(() => {
+		controller.toggleIconMode = toggleIconMode ?? 'rotate';
+	});
+	$effect(() => {
+		controller.highlightedNodeClass = highlightedNodeClass;
+	});
+	$effect(() => {
+		controller.nodeClass = nodeClass;
+	});
+	$effect(() => {
+		controller.nodeContentClass = nodeContentClass;
+	});
+	$effect(() => {
+		controller.focusedNodeClass = focusedNodeClass;
+	});
+	$effect(() => {
+		controller.dragOverNodeClass = dragOverNodeClass;
+	});
+	$effect(() => {
+		controller.dropZoneMode = dropZoneMode ?? 'glow';
+	});
+	$effect(() => {
+		controller.dropZoneLayout = dropZoneLayout ?? 'around';
+	});
+	$effect(() => {
+		controller.dropZoneStart = dropZoneStart ?? 33;
+	});
+	$effect(() => {
+		controller.dropZoneMaxWidth = dropZoneMaxWidth ?? 120;
+	});
+	$effect(() => {
+		controller.scrollHighlightTimeout = scrollHighlightTimeout ?? 4000;
+	});
+	$effect(() => {
+		controller.scrollHighlightClass = scrollHighlightClass ?? 'stv__node-content--scroll-highlight';
+	});
+	$effect(() => {
+		controller.contextMenuXOffset = contextMenuXOffset ?? 8;
+	});
+	$effect(() => {
+		controller.contextMenuYOffset = contextMenuYOffset ?? 0;
+	});
 
 	// Callback sync
-	$effect(() => { controller.onNodeClickHandler = onNodeClick; });
-	$effect(() => { controller.onNodeDoubleClickHandler = onNodeDoubleClick; });
-	$effect(() => { controller.onHighlightChangeHandler = onHighlightChange; });
-	$effect(() => { controller.onSelectionChangeHandler = onSelectionChange; });
-	$effect(() => { controller.onNodeDragStartHandler = onNodeDragStart; });
-	$effect(() => { controller.onNodeDragOverHandler = onNodeDragOver; });
-	$effect(() => { controller.onNodeDropHandler = onNodeDrop; });
-	$effect(() => { controller.onCopyHandler = onCopy; });
-	$effect(() => { controller.onCutHandler = onCut; });
-	$effect(() => { controller.onPasteHandler = onPaste; });
-	$effect(() => { controller.onDeleteHandler = onDelete; });
-	$effect(() => { controller.beforeDropHandler = beforeDropCallback; });
-	$effect(() => { controller.beforeCopyHandler = beforeCopyCallback; });
-	$effect(() => { controller.beforeCutHandler = beforeCutCallback; });
-	$effect(() => { controller.beforePasteHandler = beforePasteCallback; });
-	$effect(() => { controller.beforeDeleteHandler = beforeDeleteCallback; });
-	$effect(() => { controller.copyTransformHandler = copyNodeTransformationCallback; });
-	$effect(() => { controller.pasteTransformHandler = pasteNodeTransformationCallback; });
-	$effect(() => { controller.getContextMenuItemsHandler = getContextMenuItemsCallback; });
-	$effect(() => { controller.onRenderStartHandler = onRenderStart; });
-	$effect(() => { controller.onRenderProgressHandler = onRenderProgress; });
-	$effect(() => { controller.onRenderCompleteHandler = onRenderComplete; });
+	$effect(() => {
+		controller.onNodeClickHandler = onNodeClick;
+	});
+	$effect(() => {
+		controller.onNodeDoubleClickHandler = onNodeDoubleClick;
+	});
+	$effect(() => {
+		controller.onHighlightChangeHandler = onHighlightChange;
+	});
+	$effect(() => {
+		controller.onSelectionChangeHandler = onSelectionChange;
+	});
+	$effect(() => {
+		controller.onNodeDragStartHandler = onNodeDragStart;
+	});
+	$effect(() => {
+		controller.onNodeDragOverHandler = onNodeDragOver;
+	});
+	$effect(() => {
+		controller.onNodeDropHandler = onNodeDrop;
+	});
+	$effect(() => {
+		controller.onCopyHandler = onCopy;
+	});
+	$effect(() => {
+		controller.onCutHandler = onCut;
+	});
+	$effect(() => {
+		controller.onPasteHandler = onPaste;
+	});
+	$effect(() => {
+		controller.onDeleteHandler = onDelete;
+	});
+	$effect(() => {
+		controller.beforeDragStartHandler = beforeDragStartCallback;
+	});
+	$effect(() => {
+		controller.beforeDropHandler = beforeDropCallback;
+	});
+	$effect(() => {
+		controller.beforeCopyHandler = beforeCopyCallback;
+	});
+	$effect(() => {
+		controller.beforeCutHandler = beforeCutCallback;
+	});
+	$effect(() => {
+		controller.beforePasteHandler = beforePasteCallback;
+	});
+	$effect(() => {
+		controller.beforeDeleteHandler = beforeDeleteCallback;
+	});
+	$effect(() => {
+		controller.outputTransformHandler = nodeOutputTransformationCallback;
+	});
+	$effect(() => {
+		controller.inputTransformHandler = nodeInputTransformationCallback;
+	});
+	$effect(() => {
+		controller.getContextMenuItemsHandler = getContextMenuItemsCallback;
+	});
+	$effect(() => {
+		controller.onRenderStartHandler = onRenderStart;
+	});
+	$effect(() => {
+		controller.onRenderProgressHandler = onRenderProgress;
+	});
+	$effect(() => {
+		controller.onRenderCompleteHandler = onRenderComplete;
+	});
 
 	// ── Sync controller → bindable props (outputs flow back to parent) ──
-	$effect(() => { focusedNode = controller.focusedNode; });
-	$effect(() => { highlightedPaths = controller.highlightedPaths; });
-	$effect(() => { selectedPaths = controller.selectedPaths; });
-	$effect(() => { insertResult = controller.insertResult; });
-	$effect(() => { isRendering = controller.isRendering; });
+	$effect(() => {
+		focusedNode = controller.focusedNode;
+	});
+	$effect(() => {
+		highlightedPaths = controller.highlightedPaths;
+	});
+	$effect(() => {
+		selectedPaths = controller.selectedPaths;
+	});
+	$effect(() => {
+		insertResult = controller.insertResult;
+	});
+	$effect(() => {
+		isRendering = controller.isRendering;
+	});
 
 	// Bidirectional: parent can also SET these
-	$effect(() => { controller.focusedNode = focusedNode; });
+	$effect(() => {
+		controller.focusedNode = focusedNode;
+	});
 	$effect(() => {
 		// Compare by size + content to avoid proxy identity loops
 		const hp = highlightedPaths;
 		const cp = controller.highlightedPaths;
-		if (hp.size !== cp.size || [...hp].some(p => !cp.has(p))) {
+		if (hp.size !== cp.size || [...hp].some((p) => !cp.has(p))) {
 			controller.highlightedPaths = new Set(hp);
 		}
 	});
 	$effect(() => {
 		const sp = selectedPaths;
 		const cp = controller.selectedPaths;
-		if (sp.size !== cp.size || [...sp].some(p => !cp.has(p))) {
+		if (sp.size !== cp.size || [...sp].some((p) => !cp.has(p))) {
 			controller.selectedPaths = new Set(sp);
 		}
 	});
 
 	// ── Floating drop zone helpers ───────────────────────────────────────
 	const formattedDropZoneStart = $derived(
-		typeof controller.dropZoneStart === 'number' ? `${controller.dropZoneStart}%` : controller.dropZoneStart
+		typeof controller.dropZoneStart === 'number'
+			? `${controller.dropZoneStart}%`
+			: controller.dropZoneStart
 	);
 
 	// Show the drop placeholder either mid-drag (isDropPlaceholderActive) or, when
@@ -697,10 +924,7 @@
 		controller.expandNodes(nodePath, options);
 	}
 
-	export async function collapseNodes(
-		nodePath: string | string[],
-		options?: { noEmit?: boolean }
-	) {
+	export async function collapseNodes(nodePath: string | string[], options?: { noEmit?: boolean }) {
 		controller.collapseNodes(nodePath, options);
 	}
 
@@ -749,19 +973,53 @@
 		return controller.getNodeByPath(path);
 	}
 
-	export function moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child'): { success: boolean; error?: string } {
+	export function moveNode(
+		sourcePath: string,
+		targetPath: string,
+		position: 'before' | 'after' | 'child'
+	): { success: boolean; error?: string } {
 		return controller.moveNode(sourcePath, targetPath, position);
 	}
 
-	export function removeNode(path: string, includeDescendants: boolean = true): { success: boolean; node?: LTreeNode<T>; error?: string } {
+	export function moveNodes(
+		paths: string[],
+		targetPath: string,
+		position: 'before' | 'after' | 'child'
+	): { success: boolean; movedNodes: LTreeNode<T>[]; leftBehind: LTreeNode<T>[]; error?: string } {
+		return controller.moveNodes(paths, targetPath, position);
+	}
+
+	export function duplicateNodes(
+		paths: string[],
+		targetPath: string,
+		position: 'before' | 'after' | 'child',
+		transform?: (
+			data: T,
+			ctx: import('../core/TreeController.svelte').NodeTransformContext<T>
+		) => T | null
+	): { success: boolean; copiedNodes: LTreeNode<T>[]; skipped: number; error?: string } {
+		return controller.duplicateNodes(paths, targetPath, position, transform);
+	}
+
+	export function removeNode(
+		path: string,
+		includeDescendants: boolean = true
+	): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		return controller.removeNode(path, includeDescendants);
 	}
 
-	export function addNode(parentPath: string, nodeData: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string } {
+	export function addNode(
+		parentPath: string,
+		nodeData: T,
+		pathSegment?: string
+	): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		return controller.addNode(parentPath, nodeData, pathSegment);
 	}
 
-	export function updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string } {
+	export function updateNode(
+		path: string,
+		dataUpdates: Partial<T>
+	): { success: boolean; node?: LTreeNode<T>; error?: string } {
 		return controller.updateNode(path, dataUpdates);
 	}
 
@@ -784,11 +1042,17 @@
 	export function copyNodeWithDescendants(
 		sourceNode: LTreeNode<T>,
 		targetParentPath: string,
-		transformData: (data: T) => T,
+		transformData: (data: T, node: LTreeNode<T>) => T | null,
 		siblingPath?: string,
 		position?: 'before' | 'after'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string } {
-		return controller.copyNodeWithDescendants(sourceNode, targetParentPath, transformData, siblingPath, position);
+		return controller.copyNodeWithDescendants(
+			sourceNode,
+			targetParentPath,
+			transformData,
+			siblingPath,
+			position
+		);
 	}
 
 	export function getExpandedPaths(): string[] {
@@ -808,7 +1072,11 @@
 	}
 
 	// ── Highlight set (UI multi-select — highlightedPaths) ──────────────
-	export function highlightNode(path: string, mode: HighlightMode = 'replace', options?: TreeMutationOptions) {
+	export function highlightNode(
+		path: string,
+		mode: HighlightMode = 'replace',
+		options?: TreeMutationOptions
+	) {
 		controller.highlightNode(path, mode, options);
 	}
 
@@ -888,94 +1156,96 @@
 		updates: Partial<
 			Pick<
 				Props,
-				| "treeId"
-				| "treePathSeparator"
-				| "idMember"
-				| "pathMember"
-				| "parentPathMember"
-				| "levelMember"
-				| "hasChildrenMember"
-				| "isExpandedMember"
-				| "getIsExpandedCallback"
-				| "isSelectableMember"
-				| "getIsSelectableCallback"
-				| "isSelectedMember"
-				| "getIsSelectedCallback"
-				| "isDraggableMember"
-				| "getIsDraggableCallback"
-				| "isDropAllowedMember"
-				| "getIsDropAllowedCallback"
-				| "displayValueMember"
-				| "getDisplayValueCallback"
-				| "searchValueMember"
-				| "getSearchValueCallback"
-				| "isCollapsibleMember"
-				| "getIsCollapsibleCallback"
-				| "orderMember"
-				| "isSorted"
-				| "sortCallback"
-				| "data"
-				| "focusedNode"
-				| "highlightedPaths"
-				| "selectedPaths"
-				| "expandLevel"
-				| "clickBehavior"
-				| "selectionMode"
-				| "shouldShowCheckboxes"
-				| "checkboxMode"
-				| "shouldClickToggleCheckbox"
-				| "beforeCheckboxToggleCallback"
-				| "rangeSelectionMode"
-				| "shouldUseInternalSearchIndex"
-				| "initializeIndexCallback"
-				| "searchText"
-				| "indexerBatchSize"
-				| "indexerTimeout"
-				| "shouldDisplayDebugInformation"
-				| "shouldDisplayContextMenuInDebugMode"
-				| "onNodeClick"
-				| "onNodeDoubleClick"
-				| "onHighlightChange"
-				| "onSelectionChange"
-				| "onNodeDragStart"
-				| "onNodeDragOver"
-				| "onNodeDrop"
-				| "onCopy"
-				| "onCut"
-				| "onPaste"
-				| "onDelete"
-				| "beforeDropCallback"
-				| "beforeCopyCallback"
-				| "beforeCutCallback"
-				| "beforePasteCallback"
-				| "beforeDeleteCallback"
-				| "shouldHandleKeyboardShortcuts"
-				| "copyNodeTransformationCallback"
-				| "pasteNodeTransformationCallback"
-				| "getContextMenuItemsCallback"
-				| "isVirtualScrollEnabled"
-				| "virtualRowHeight"
-				| "virtualOverscan"
-				| "virtualContainerHeight"
-				| "dragDropMode"
-				| "dropZoneMode"
-				| "shouldShowDropPlaceholderWhenEmpty"
-				| "noDataText"
-				| "bodyClass"
-				| "expandIconClass"
-				| "collapseIconClass"
-				| "leafIconClass"
-				| "toggleIconMode"
-				| "highlightedNodeClass"
-				| "nodeClass"
-				| "nodeContentClass"
-				| "focusedNodeClass"
-				| "dragOverNodeClass"
-				| "scrollHighlightTimeout"
-				| "scrollHighlightClass"
-				| "contextMenuXOffset"
-				| "contextMenuYOffset"
-				| "isAccordionExpand"
+				| 'treeId'
+				| 'treePathSeparator'
+				| 'idMember'
+				| 'pathMember'
+				| 'parentPathMember'
+				| 'levelMember'
+				| 'hasChildrenMember'
+				| 'isExpandedMember'
+				| 'getIsExpandedCallback'
+				| 'isSelectableMember'
+				| 'getIsSelectableCallback'
+				| 'isSelectedMember'
+				| 'getIsSelectedCallback'
+				| 'isDraggableMember'
+				| 'getIsDraggableCallback'
+				| 'isDropAllowedMember'
+				| 'getIsDropAllowedCallback'
+				| 'displayValueMember'
+				| 'getDisplayValueCallback'
+				| 'searchValueMember'
+				| 'getSearchValueCallback'
+				| 'isCollapsibleMember'
+				| 'getIsCollapsibleCallback'
+				| 'orderMember'
+				| 'isSorted'
+				| 'sortCallback'
+				| 'data'
+				| 'focusedNode'
+				| 'highlightedPaths'
+				| 'selectedPaths'
+				| 'expandLevel'
+				| 'clickBehavior'
+				| 'selectionMode'
+				| 'shouldShowCheckboxes'
+				| 'checkboxMode'
+				| 'shouldClickToggleCheckbox'
+				| 'beforeCheckboxToggleCallback'
+				| 'rangeSelectionMode'
+				| 'shouldUseInternalSearchIndex'
+				| 'initializeIndexCallback'
+				| 'searchText'
+				| 'indexerBatchSize'
+				| 'indexerTimeout'
+				| 'shouldDisplayDebugInformation'
+				| 'shouldDisplayContextMenuInDebugMode'
+				| 'onNodeClick'
+				| 'onNodeDoubleClick'
+				| 'onHighlightChange'
+				| 'onSelectionChange'
+				| 'onNodeDragStart'
+				| 'onNodeDragOver'
+				| 'onNodeDrop'
+				| 'onCopy'
+				| 'onCut'
+				| 'onPaste'
+				| 'onDelete'
+				| 'beforeDragStartCallback'
+				| 'beforeDropCallback'
+				| 'beforeCopyCallback'
+				| 'beforeCutCallback'
+				| 'beforePasteCallback'
+				| 'beforeDeleteCallback'
+				| 'shouldHandleKeyboardShortcuts'
+				| 'nodeOutputTransformationCallback'
+				| 'nodeInputTransformationCallback'
+				| 'getContextMenuItemsCallback'
+				| 'isVirtualScrollEnabled'
+				| 'virtualRowHeight'
+				| 'virtualOverscan'
+				| 'virtualContainerHeight'
+				| 'dragDropMode'
+				| 'dropZoneMode'
+				| 'shouldShowDropPlaceholderWhenEmpty'
+				| 'shouldEnableTreeDropZone'
+				| 'noDataText'
+				| 'bodyClass'
+				| 'expandIconClass'
+				| 'collapseIconClass'
+				| 'leafIconClass'
+				| 'toggleIconMode'
+				| 'highlightedNodeClass'
+				| 'nodeClass'
+				| 'nodeContentClass'
+				| 'focusedNodeClass'
+				| 'dragOverNodeClass'
+				| 'scrollHighlightTimeout'
+				| 'scrollHighlightClass'
+				| 'contextMenuXOffset'
+				| 'contextMenuYOffset'
+				| 'isAccordionExpand'
 			>
 		>
 	) {
@@ -988,21 +1258,31 @@
 		if (updates.levelMember !== undefined) levelMember = updates.levelMember;
 		if (updates.hasChildrenMember !== undefined) hasChildrenMember = updates.hasChildrenMember;
 		if (updates.isExpandedMember !== undefined) isExpandedMember = updates.isExpandedMember;
-		if (updates.getIsExpandedCallback !== undefined) getIsExpandedCallback = updates.getIsExpandedCallback;
+		if (updates.getIsExpandedCallback !== undefined)
+			getIsExpandedCallback = updates.getIsExpandedCallback;
 		if (updates.isSelectableMember !== undefined) isSelectableMember = updates.isSelectableMember;
-		if (updates.getIsSelectableCallback !== undefined) getIsSelectableCallback = updates.getIsSelectableCallback;
+		if (updates.getIsSelectableCallback !== undefined)
+			getIsSelectableCallback = updates.getIsSelectableCallback;
 		if (updates.isSelectedMember !== undefined) isSelectedMember = updates.isSelectedMember;
-		if (updates.getIsSelectedCallback !== undefined) getIsSelectedCallback = updates.getIsSelectedCallback;
+		if (updates.getIsSelectedCallback !== undefined)
+			getIsSelectedCallback = updates.getIsSelectedCallback;
 		if (updates.isDraggableMember !== undefined) isDraggableMember = updates.isDraggableMember;
-		if (updates.getIsDraggableCallback !== undefined) getIsDraggableCallback = updates.getIsDraggableCallback;
-		if (updates.isDropAllowedMember !== undefined) isDropAllowedMember = updates.isDropAllowedMember;
-		if (updates.getIsDropAllowedCallback !== undefined) getIsDropAllowedCallback = updates.getIsDropAllowedCallback;
+		if (updates.getIsDraggableCallback !== undefined)
+			getIsDraggableCallback = updates.getIsDraggableCallback;
+		if (updates.isDropAllowedMember !== undefined)
+			isDropAllowedMember = updates.isDropAllowedMember;
+		if (updates.getIsDropAllowedCallback !== undefined)
+			getIsDropAllowedCallback = updates.getIsDropAllowedCallback;
 		if (updates.displayValueMember !== undefined) displayValueMember = updates.displayValueMember;
-		if (updates.getDisplayValueCallback !== undefined) getDisplayValueCallback = updates.getDisplayValueCallback;
+		if (updates.getDisplayValueCallback !== undefined)
+			getDisplayValueCallback = updates.getDisplayValueCallback;
 		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
-		if (updates.getSearchValueCallback !== undefined) getSearchValueCallback = updates.getSearchValueCallback;
-		if (updates.isCollapsibleMember !== undefined) isCollapsibleMember = updates.isCollapsibleMember;
-		if (updates.getIsCollapsibleCallback !== undefined) getIsCollapsibleCallback = updates.getIsCollapsibleCallback;
+		if (updates.getSearchValueCallback !== undefined)
+			getSearchValueCallback = updates.getSearchValueCallback;
+		if (updates.isCollapsibleMember !== undefined)
+			isCollapsibleMember = updates.isCollapsibleMember;
+		if (updates.getIsCollapsibleCallback !== undefined)
+			getIsCollapsibleCallback = updates.getIsCollapsibleCallback;
 		if (updates.orderMember !== undefined) orderMember = updates.orderMember;
 		if (updates.isSorted !== undefined) isSorted = updates.isSorted;
 		if (updates.sortCallback !== undefined) sortCallback = updates.sortCallback;
@@ -1013,18 +1293,25 @@
 		if (updates.expandLevel !== undefined) expandLevel = updates.expandLevel;
 		if (updates.clickBehavior !== undefined) clickBehavior = updates.clickBehavior;
 		if (updates.selectionMode !== undefined) selectionMode = updates.selectionMode;
-		if (updates.shouldShowCheckboxes !== undefined) shouldShowCheckboxes = updates.shouldShowCheckboxes;
+		if (updates.shouldShowCheckboxes !== undefined)
+			shouldShowCheckboxes = updates.shouldShowCheckboxes;
 		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
-		if (updates.shouldClickToggleCheckbox !== undefined) shouldClickToggleCheckbox = updates.shouldClickToggleCheckbox;
-		if (updates.beforeCheckboxToggleCallback !== undefined) beforeCheckboxToggleCallback = updates.beforeCheckboxToggleCallback;
+		if (updates.shouldClickToggleCheckbox !== undefined)
+			shouldClickToggleCheckbox = updates.shouldClickToggleCheckbox;
+		if (updates.beforeCheckboxToggleCallback !== undefined)
+			beforeCheckboxToggleCallback = updates.beforeCheckboxToggleCallback;
 		if (updates.rangeSelectionMode !== undefined) rangeSelectionMode = updates.rangeSelectionMode;
-		if (updates.shouldUseInternalSearchIndex !== undefined) shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
-		if (updates.initializeIndexCallback !== undefined) initializeIndexCallback = updates.initializeIndexCallback;
+		if (updates.shouldUseInternalSearchIndex !== undefined)
+			shouldUseInternalSearchIndex = updates.shouldUseInternalSearchIndex;
+		if (updates.initializeIndexCallback !== undefined)
+			initializeIndexCallback = updates.initializeIndexCallback;
 		if (updates.searchText !== undefined) searchText = updates.searchText;
 		if (updates.indexerBatchSize !== undefined) indexerBatchSize = updates.indexerBatchSize;
 		if (updates.indexerTimeout !== undefined) indexerTimeout = updates.indexerTimeout;
-		if (updates.shouldDisplayDebugInformation !== undefined) shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
-		if (updates.shouldDisplayContextMenuInDebugMode !== undefined) shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
+		if (updates.shouldDisplayDebugInformation !== undefined)
+			shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
+		if (updates.shouldDisplayContextMenuInDebugMode !== undefined)
+			shouldDisplayContextMenuInDebugMode = updates.shouldDisplayContextMenuInDebugMode;
 		if (updates.onNodeClick !== undefined) onNodeClick = updates.onNodeClick;
 		if (updates.onNodeDoubleClick !== undefined) onNodeDoubleClick = updates.onNodeDoubleClick;
 		if (updates.onHighlightChange !== undefined) onHighlightChange = updates.onHighlightChange;
@@ -1036,35 +1323,51 @@
 		if (updates.onCut !== undefined) onCut = updates.onCut;
 		if (updates.onPaste !== undefined) onPaste = updates.onPaste;
 		if (updates.onDelete !== undefined) onDelete = updates.onDelete;
+		if (updates.beforeDragStartCallback !== undefined)
+			beforeDragStartCallback = updates.beforeDragStartCallback;
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
 		if (updates.beforeCopyCallback !== undefined) beforeCopyCallback = updates.beforeCopyCallback;
 		if (updates.beforeCutCallback !== undefined) beforeCutCallback = updates.beforeCutCallback;
-		if (updates.beforePasteCallback !== undefined) beforePasteCallback = updates.beforePasteCallback;
-		if (updates.beforeDeleteCallback !== undefined) beforeDeleteCallback = updates.beforeDeleteCallback;
-		if (updates.shouldHandleKeyboardShortcuts !== undefined) shouldHandleKeyboardShortcuts = updates.shouldHandleKeyboardShortcuts;
-		if (updates.copyNodeTransformationCallback !== undefined) copyNodeTransformationCallback = updates.copyNodeTransformationCallback;
-		if (updates.pasteNodeTransformationCallback !== undefined) pasteNodeTransformationCallback = updates.pasteNodeTransformationCallback;
-		if (updates.getContextMenuItemsCallback !== undefined) getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
-		if (updates.isVirtualScrollEnabled !== undefined) isVirtualScrollEnabled = updates.isVirtualScrollEnabled;
+		if (updates.beforePasteCallback !== undefined)
+			beforePasteCallback = updates.beforePasteCallback;
+		if (updates.beforeDeleteCallback !== undefined)
+			beforeDeleteCallback = updates.beforeDeleteCallback;
+		if (updates.shouldHandleKeyboardShortcuts !== undefined)
+			shouldHandleKeyboardShortcuts = updates.shouldHandleKeyboardShortcuts;
+		if (updates.nodeOutputTransformationCallback !== undefined)
+			nodeOutputTransformationCallback = updates.nodeOutputTransformationCallback;
+		if (updates.nodeInputTransformationCallback !== undefined)
+			nodeInputTransformationCallback = updates.nodeInputTransformationCallback;
+		if (updates.getContextMenuItemsCallback !== undefined)
+			getContextMenuItemsCallback = updates.getContextMenuItemsCallback;
+		if (updates.isVirtualScrollEnabled !== undefined)
+			isVirtualScrollEnabled = updates.isVirtualScrollEnabled;
 		if (updates.virtualRowHeight !== undefined) virtualRowHeight = updates.virtualRowHeight;
 		if (updates.virtualOverscan !== undefined) virtualOverscan = updates.virtualOverscan;
-		if (updates.virtualContainerHeight !== undefined) virtualContainerHeight = updates.virtualContainerHeight;
+		if (updates.virtualContainerHeight !== undefined)
+			virtualContainerHeight = updates.virtualContainerHeight;
 		if (updates.dragDropMode !== undefined) dragDropMode = updates.dragDropMode;
 		if (updates.dropZoneMode !== undefined) dropZoneMode = updates.dropZoneMode;
-		if (updates.shouldShowDropPlaceholderWhenEmpty !== undefined) shouldShowDropPlaceholderWhenEmpty = updates.shouldShowDropPlaceholderWhenEmpty;
+		if (updates.shouldShowDropPlaceholderWhenEmpty !== undefined)
+			shouldShowDropPlaceholderWhenEmpty = updates.shouldShowDropPlaceholderWhenEmpty;
+		if (updates.shouldEnableTreeDropZone !== undefined)
+			shouldEnableTreeDropZone = updates.shouldEnableTreeDropZone;
 		if (updates.noDataText !== undefined) noDataText = updates.noDataText;
 		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
 		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
 		if (updates.toggleIconMode !== undefined) toggleIconMode = updates.toggleIconMode;
-		if (updates.highlightedNodeClass !== undefined) highlightedNodeClass = updates.highlightedNodeClass;
+		if (updates.highlightedNodeClass !== undefined)
+			highlightedNodeClass = updates.highlightedNodeClass;
 		if (updates.nodeClass !== undefined) nodeClass = updates.nodeClass;
 		if (updates.nodeContentClass !== undefined) nodeContentClass = updates.nodeContentClass;
 		if (updates.focusedNodeClass !== undefined) focusedNodeClass = updates.focusedNodeClass;
 		if (updates.dragOverNodeClass !== undefined) dragOverNodeClass = updates.dragOverNodeClass;
-		if (updates.scrollHighlightTimeout !== undefined) scrollHighlightTimeout = updates.scrollHighlightTimeout;
-		if (updates.scrollHighlightClass !== undefined) scrollHighlightClass = updates.scrollHighlightClass;
+		if (updates.scrollHighlightTimeout !== undefined)
+			scrollHighlightTimeout = updates.scrollHighlightTimeout;
+		if (updates.scrollHighlightClass !== undefined)
+			scrollHighlightClass = updates.scrollHighlightClass;
 		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
 		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
 		if (updates.isAccordionExpand !== undefined) isAccordionExpand = updates.isAccordionExpand;
@@ -1112,15 +1415,33 @@
 		// Shift+nav extends the highlight range. In single mode the controller
 		// short-circuits these to no-ops (see _navHighlightTo).
 		switch (event.key) {
-			case 'ArrowDown':  event.shiftKey ? controller.navHighlightNext() : controller.navNextSibling(); break;
-			case 'ArrowUp':    event.shiftKey ? controller.navHighlightPrev() : controller.navPrevSibling(); break;
-			case 'ArrowRight': controller.navInto(); break;
-			case 'ArrowLeft':  controller.navOut(); break;
-			case 'Backspace':  controller.navBackOut(); break;
-			case 'Home':       event.shiftKey ? controller.navHighlightFirst() : controller.navFirst(); break;
-			case 'End':        event.shiftKey ? controller.navHighlightLast() : controller.navLast(); break;
-			case 'PageDown':   event.shiftKey ? controller.navHighlightPageDown() : controller.navPageDown(); break;
-			case 'PageUp':     event.shiftKey ? controller.navHighlightPageUp() : controller.navPageUp(); break;
+			case 'ArrowDown':
+				event.shiftKey ? controller.navHighlightNext() : controller.navNextSibling();
+				break;
+			case 'ArrowUp':
+				event.shiftKey ? controller.navHighlightPrev() : controller.navPrevSibling();
+				break;
+			case 'ArrowRight':
+				controller.navInto();
+				break;
+			case 'ArrowLeft':
+				controller.navOut();
+				break;
+			case 'Backspace':
+				controller.navBackOut();
+				break;
+			case 'Home':
+				event.shiftKey ? controller.navHighlightFirst() : controller.navFirst();
+				break;
+			case 'End':
+				event.shiftKey ? controller.navHighlightLast() : controller.navLast();
+				break;
+			case 'PageDown':
+				event.shiftKey ? controller.navHighlightPageDown() : controller.navPageDown();
+				break;
+			case 'PageUp':
+				event.shiftKey ? controller.navHighlightPageUp() : controller.navPageUp();
+				break;
 			case 'Enter':
 				// single: no-op (per spec); multi: toggle highlight on focused node.
 				if (controller.selectionMode === 'multi') controller.toggleFocusedHighlight();
@@ -1147,32 +1468,46 @@
 					handled = false;
 				}
 				break;
-			default:           handled = false;
+			default:
+				handled = false;
 		}
 
 		if (handled) event.preventDefault();
 	}
 
 	// ── Context menu keyboard shortcut handling ──────────────────────────
-	function parseShortcut(shortcut: string): { key: string; ctrl: boolean; shift: boolean; alt: boolean } {
-		const parts = shortcut.split('+').map(p => p.trim());
+	function parseShortcut(shortcut: string): {
+		key: string;
+		ctrl: boolean;
+		shift: boolean;
+		alt: boolean;
+	} {
+		const parts = shortcut.split('+').map((p) => p.trim());
 		const key = parts.pop()!; // last part is the key
 		return {
 			key: key.toLowerCase(),
-			ctrl: parts.some(p => p.toLowerCase() === 'ctrl'),
-			shift: parts.some(p => p.toLowerCase() === 'shift'),
-			alt: parts.some(p => p.toLowerCase() === 'alt'),
+			ctrl: parts.some((p) => p.toLowerCase() === 'ctrl'),
+			shift: parts.some((p) => p.toLowerCase() === 'shift'),
+			alt: parts.some((p) => p.toLowerCase() === 'alt')
 		};
 	}
 
-	function findEntryByShortcut(entries: ContextMenuEntry[], event: KeyboardEvent): import('../ltree/types.js').ContextMenuItem | null {
+	function findEntryByShortcut(
+		entries: ContextMenuEntry[],
+		event: KeyboardEvent
+	): import('../ltree/types.js').ContextMenuItem | null {
 		for (const entry of entries) {
 			if ('divider' in entry) continue;
 			if (entry.isVisible === false || entry.isDisabled) continue;
 			if (entry.shortcut) {
 				const parsed = parseShortcut(entry.shortcut);
 				const eventKey = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-				if (eventKey === parsed.key && event.ctrlKey === parsed.ctrl && event.shiftKey === parsed.shift && event.altKey === parsed.alt) {
+				if (
+					eventKey === parsed.key &&
+					event.ctrlKey === parsed.ctrl &&
+					event.shiftKey === parsed.shift &&
+					event.altKey === parsed.alt
+				) {
 					return entry;
 				}
 			}
@@ -1186,14 +1521,23 @@
 	}
 
 	async function handleContextMenuKeydown(event: KeyboardEvent) {
-		if (!controller.contextMenuVisible || !controller.contextMenuNode || !getContextMenuItemsCallback) return;
+		if (
+			!controller.contextMenuVisible ||
+			!controller.contextMenuNode ||
+			!getContextMenuItemsCallback
+		)
+			return;
 
 		if (event.key === 'Escape') {
 			controller.closeContextMenu();
 			return;
 		}
 
-		const entries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes());
+		const entries = getContextMenuItemsCallback(
+			controller.contextMenuNode,
+			controller.closeContextMenu.bind(controller),
+			controller.getSelectedNodes()
+		);
 		const match = findEntryByShortcut(entries, event);
 		if (match) {
 			event.preventDefault();
@@ -1230,9 +1574,7 @@
 			{#if dropPlaceholder}
 				{@render dropPlaceholder()}
 			{:else}
-				<div class="stv__drop-placeholder-content">
-					Drop here to add
-				</div>
+				<div class="stv__drop-placeholder-content">Drop here to add</div>
 			{/if}
 		{:else if noData}
 			{@render noData()}
@@ -1246,12 +1588,15 @@
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
 	class="stv__container"
+	class:stv__tree-drop-zone--active={shouldEnableTreeDropZone && controller.isDropPlaceholderActive}
 	tabindex="0"
 	data-theme={theme}
 	bind:this={treeContainerRef}
 	onkeydown={handleTreeKeydown}
 	ondragenter={controller.handleTreeDragEnter}
+	ondragover={shouldEnableTreeDropZone ? controller.handleTreeZoneDragOver : undefined}
 	ondragleave={controller.handleTreeDragLeave}
+	ondrop={shouldEnableTreeDropZone ? controller.handleTreeZoneDrop : undefined}
 	ondragend={controller._onNodeDragEnd}
 >
 	{#if controller.shouldDisplayDebugInformation}
@@ -1304,7 +1649,8 @@
 						<div style="transform: translateY({controller.vsOffsetY}px);">
 							{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
 								{@const absoluteIndex = controller.vsStartIndex + i}
-								{@const prevNode = absoluteIndex > 0 ? controller.allFlatNodes[absoluteIndex - 1] : null}
+								{@const prevNode =
+									absoluteIndex > 0 ? controller.allFlatNodes[absoluteIndex - 1] : null}
 								<Node
 									{node}
 									children={nodeTemplate}
@@ -1379,31 +1725,43 @@
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="stv__drop-zones stv__drop-zones--{controller.dropZoneLayout}"
-			style="position: fixed; top: {controller.floatingZoneRect.top}px; left: {controller.floatingZoneRect.left}px; width: {controller.floatingZoneRect.width}px; height: {controller.floatingZoneRect.height}px; z-index: 10000; --drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {controller.dropZoneMaxWidth}px;"
+			style="position: fixed; top: {controller.floatingZoneRect.top}px; left: {controller
+				.floatingZoneRect.left}px; width: {controller.floatingZoneRect.width}px; height: {controller
+				.floatingZoneRect
+				.height}px; z-index: 10000; --drop-zone-start: {formattedDropZoneStart}; --drop-zone-max-width: {controller.dropZoneMaxWidth}px;"
 		>
 			{#if controller.isFloatingPositionAllowed('before')}
-				<div class="stv__drop-zone stv__drop-zone--before"
+				<div
+					class="stv__drop-zone stv__drop-zone--before"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'before'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('before', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('before', e)}
-				>↑ Before</div>
+				>
+					↑ Before
+				</div>
 			{/if}
 			{#if controller.isFloatingPositionAllowed('after')}
-				<div class="stv__drop-zone stv__drop-zone--after"
+				<div
+					class="stv__drop-zone stv__drop-zone--after"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'after'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('after', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('after', e)}
-				>↓ After</div>
+				>
+					↓ After
+				</div>
 			{/if}
 			{#if controller.isFloatingPositionAllowed('child')}
-				<div class="stv__drop-zone stv__drop-zone--child"
+				<div
+					class="stv__drop-zone stv__drop-zone--child"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'child'}
 					ondragover={(e) => controller.handleFloatingZoneDragOver('child', e)}
 					ondragleave={() => controller.handleFloatingZoneDragLeave()}
 					ondrop={(e) => controller.handleFloatingZoneDrop('child', e)}
-				>→ Child</div>
+				>
+					→ Child
+				</div>
 			{/if}
 		</div>
 	{/if}
@@ -1412,14 +1770,21 @@
 	{#if controller.contextMenuVisible && controller.contextMenuNode}
 		<div bind:this={contextMenuEl} class="stv__context-menu" role="menu">
 			{#if getContextMenuItemsCallback}
-				{@const menuEntries = getContextMenuItemsCallback(controller.contextMenuNode, controller.closeContextMenu.bind(controller), controller.getSelectedNodes())}
+				{@const menuEntries = getContextMenuItemsCallback(
+					controller.contextMenuNode,
+					controller.closeContextMenu.bind(controller),
+					controller.getSelectedNodes()
+				)}
 				<ContextMenuLevel
 					entries={menuEntries}
 					contextNode={controller.contextMenuNode}
 					closeContextMenu={controller.closeContextMenu.bind(controller)}
 				/>
 			{:else if contextMenu}
-				{@render contextMenu(controller.contextMenuNode, controller.closeContextMenu.bind(controller))}
+				{@render contextMenu(
+					controller.contextMenuNode,
+					controller.closeContextMenu.bind(controller)
+				)}
 			{/if}
 		</div>
 	{/if}

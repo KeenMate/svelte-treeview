@@ -2,8 +2,8 @@ import { test, expect, Page } from '@playwright/test';
 
 /**
  * E2E for the rc12+ clipboard data-flow on /test/clipboard-transform:
- *   - pasteNodeTransformationCallback: per-node ids/names + return null to SKIP
- *   - copyNodeTransformationCallback: redact data at snapshot time
+ *   - nodeInputTransformationCallback: per-node ids/names + return null to SKIP
+ *   - nodeOutputTransformationCallback: redact data at snapshot time
  *   - leaf-aware paste position (paste onto a file → siblings, via allowedDropPositions)
  *   - per-entry self-paste skip + PasteResult.skipped (no silent all-or-nothing)
  *   - Delete with a "node has subnodes" guard + warning
@@ -32,7 +32,9 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 		await page.locator('h1').first().waitFor();
 	});
 
-	test('copyNodeTransformationCallback redacts data before it hits the clipboard', async ({ page }) => {
+	test('nodeOutputTransformationCallback redacts data before it hits the clipboard', async ({
+		page
+	}) => {
 		// a1.txt carries secret="top". Copy it, paste under Folder B.
 		await clickNode(page, 'a1.txt');
 		await page.keyboard.press('Control+c');
@@ -41,11 +43,15 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 		await expect(page.getByTestId('last-log')).toHaveText('pasted 1 skipped 0');
 
 		// The pasted copy is redacted; the original is untouched.
-		await expect.poll(() => tree(page).locator('[data-name="a1.txt"][data-secret="REDACTED"]').count()).toBe(1);
+		await expect
+			.poll(() => tree(page).locator('[data-name="a1.txt"][data-secret="REDACTED"]').count())
+			.toBe(1);
 		await expect(tree(page).locator('[data-name="a1.txt"][data-secret="top"]')).toHaveCount(1);
 	});
 
-	test('pasteNodeTransformationCallback returning null skips that node (skipped count)', async ({ page }) => {
+	test('nodeInputTransformationCallback returning null skips that node (skipped count)', async ({
+		page
+	}) => {
 		// Multi-select a1.txt + locked.txt (the transform returns null for locked.txt).
 		await nodeByName(page, 'a1.txt').click();
 		await nodeByName(page, 'locked.txt').click({ modifiers: ['Control'] });
@@ -62,7 +68,9 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 		await expect.poll(() => countByName(page, 'a1.txt')).toBe(2);
 	});
 
-	test('parent + its own child: self-paste guard skips the parent, pastes the child (no silent total failure)', async ({ page }) => {
+	test('parent + its own child: self-paste guard skips the parent, pastes the child (no silent total failure)', async ({
+		page
+	}) => {
 		const before = await tree(page).locator('.stv__node-content').count();
 		// Select Folder A + a1.txt (its child), then paste-in-place onto a1.txt.
 		// a1.txt is a leaf → paste redirects into Folder A; Folder A is then a self-paste
@@ -83,7 +91,9 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 		await expect.poll(() => tree(page).locator('.stv__node-content').count()).toBe(before + 1);
 	});
 
-	test('leaf-aware paste: pasting onto a file lands the copy as a sibling, not nested inside it', async ({ page }) => {
+	test('leaf-aware paste: pasting onto a file lands the copy as a sibling, not nested inside it', async ({
+		page
+	}) => {
 		// Copy a1.txt, focus b1.txt (a file = leaf, path 2.1), paste. The copy must land
 		// under Folder B (b1.txt's parent), NOT inside b1.txt.
 		await clickNode(page, 'a1.txt');
@@ -97,7 +107,9 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 		await expect(tree(page).locator('[data-path^="2.1."]')).toHaveCount(0);
 	});
 
-	test('repeated pastes via the transform number sequentially (Copy 1/2/3) with no compounding', async ({ page }) => {
+	test('repeated pastes via the transform number sequentially (Copy 1/2/3) with no compounding', async ({
+		page
+	}) => {
 		await clickNode(page, 'a1.txt');
 		await page.keyboard.press('Control+c');
 		await clickNode(page, 'Folder A');
@@ -119,7 +131,9 @@ test.describe('Clipboard transform (rc12 data-flow)', () => {
 	test('Delete is blocked for a node with subnodes, with a warning', async ({ page }) => {
 		await clickNode(page, 'Folder A');
 		await page.keyboard.press('Delete');
-		await expect(page.getByTestId('delete-warning')).toHaveText('Cannot delete 1 node(s) with subnodes');
+		await expect(page.getByTestId('delete-warning')).toHaveText(
+			'Cannot delete 1 node(s) with subnodes'
+		);
 		// Folder A is still there.
 		await expect(countByName(page, 'Folder A')).resolves.toBe(1);
 	});

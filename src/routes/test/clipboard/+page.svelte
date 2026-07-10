@@ -52,7 +52,7 @@
 	// NOTE: this fixture intentionally keeps the older "mutate entries in beforePaste"
 	// style to guard that it still works — the mutation now lands on the per-paste
 	// working copy (the clipboard singleton is never touched). New code should rename in
-	// pasteNodeTransformationCallback instead (see /examples/tree-editor).
+	// nodeInputTransformationCallback instead (see /examples/tree-editor).
 	function beforePaste(ctx: BeforePasteContext<Item>): { targetPath?: string } | void {
 		if (ctx.operation !== 'copy') return;
 		let targetPath = ctx.target.path;

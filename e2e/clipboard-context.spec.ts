@@ -3,7 +3,7 @@ import { test, expect, Page } from '@playwright/test';
 /**
  * E2E that asserts the EXACT context object each clipboard callback receives on
  * /test/clipboard-context — the field-level contract of the unified vocabulary:
- *   - NodeTransformContext (copy + paste transforms): operation, phase, isRoot, index,
+ *   - NodeTransformContext (output + input transforms): operation, phase, isRoot, index,
  *     position, and the symmetric source/target groups ({ path, node, parent, siblings }).
  *   - BeforeCopyContext / BeforeDeleteContext ({ paths, nodes }), BeforePasteContext
  *     ({ operation, target: { path, node }, entries }).
@@ -51,7 +51,9 @@ test.describe('Clipboard callback contexts', () => {
 		await page.getByTestId('clear').click();
 	});
 
-	test('copyNodeTransformationCallback: phase copy, target+position null, live source', async ({ page }) => {
+	test('nodeOutputTransformationCallback: phase output, target+position null, live source', async ({
+		page
+	}) => {
 		await clickA(page, 'A1'); // path 1.1
 		await page.keyboard.press('Control+c');
 
@@ -59,7 +61,7 @@ test.describe('Clipboard callback contexts', () => {
 		expect(copy).toHaveLength(1);
 		const c = copy[0];
 		expect(c.operation).toBe('copy');
-		expect(c.phase).toBe('copy');
+		expect(c.phase).toBe('output');
 		expect(c.isRoot).toBe(true);
 		expect(c.index).toBe(0);
 		expect(c.position).toBeNull();
@@ -74,19 +76,23 @@ test.describe('Clipboard callback contexts', () => {
 		expect(bc).toEqual([{ operation: 'copy', paths: ['1.1'], nodes: ['1.1'] }]);
 	});
 
-	test('cut routes through the copy transform with operation=cut + beforeCut', async ({ page }) => {
+	test('cut routes through the output transform with operation=cut + beforeCut', async ({
+		page
+	}) => {
 		await clickA(page, 'A1');
 		await page.keyboard.press('Control+x');
 
 		const copy = await readLog(page, 'copy-ctx');
 		expect(copy[0].operation).toBe('cut');
-		expect(copy[0].phase).toBe('copy');
+		expect(copy[0].phase).toBe('output');
 
 		const bcut = await readLog(page, 'before-cut-ctx');
 		expect(bcut).toEqual([{ operation: 'cut', paths: ['1.1'], nodes: ['1.1'] }]);
 	});
 
-	test('paste (child) onto a folder: target.node = the folder, landing = its children', async ({ page }) => {
+	test('paste (child) onto a folder: target.node = the folder, landing = its children', async ({
+		page
+	}) => {
 		await clickA(page, 'A1'); // copy leaf 1.1
 		await page.keyboard.press('Control+c');
 		await clickA(page, 'B'); // folder path 2 (children: 2.1)
@@ -95,7 +101,7 @@ test.describe('Clipboard callback contexts', () => {
 		const paste = await readLog(page, 'paste-ctx');
 		expect(paste).toHaveLength(1);
 		const p = paste[0];
-		expect(p.phase).toBe('paste');
+		expect(p.phase).toBe('input');
 		expect(p.isRoot).toBe(true);
 		expect(p.index).toBe(0);
 		expect(p.position).toBe('child');
@@ -112,7 +118,9 @@ test.describe('Clipboard callback contexts', () => {
 		expect(bp).toEqual([{ operation: 'copy', target: { path: '2', node: '2' }, entries: ['1.1'] }]);
 	});
 
-	test('paste (after) a sibling: position=after, target.node = the anchor, landing = its siblings', async ({ page }) => {
+	test('paste (after) a sibling: position=after, target.node = the anchor, landing = its siblings', async ({
+		page
+	}) => {
 		await clickA(page, 'A1');
 		await page.keyboard.press('Control+c');
 		await page.getByTestId('pos-after').check();
@@ -126,7 +134,9 @@ test.describe('Clipboard callback contexts', () => {
 		expect(sorted(p.target.siblings)).toEqual(['1.1', '1.2']); // before/after landing = anchor's siblings
 	});
 
-	test('paste at the root: target.node/parent null, position child, top-level siblings', async ({ page }) => {
+	test('paste at the root: target.node/parent null, position child, top-level siblings', async ({
+		page
+	}) => {
 		await clickA(page, 'A1');
 		await page.keyboard.press('Control+c');
 		await page.getByTestId('paste-at-root').check();
@@ -142,14 +152,16 @@ test.describe('Clipboard callback contexts', () => {
 		expect(p.target.childrenOfNode).toBeNull();
 	});
 
-	test('subtree copy/paste: root isRoot=true, descendants isRoot=false sharing the root index', async ({ page }) => {
+	test('subtree copy/paste: root isRoot=true, descendants isRoot=false sharing the root index', async ({
+		page
+	}) => {
 		await clickA(page, 'A'); // folder path 1 with A1/A2
 		await page.keyboard.press('Control+c');
 
-		// copy phase snapshots root + both descendants, all phase copy, index 0
+		// output phase snapshots root + both descendants, all phase output, index 0
 		const copy = await readLog(page, 'copy-ctx');
 		expect(copy).toHaveLength(3);
-		expect(copy.every((e) => e.phase === 'copy' && e.index === 0)).toBe(true);
+		expect(copy.every((e) => e.phase === 'output' && e.index === 0)).toBe(true);
 		expect(copy.filter((e) => e.isRoot).map((e) => e.dataName)).toEqual(['A']);
 		expect(sorted(copy.filter((e) => !e.isRoot).map((e) => e.dataName))).toEqual(['A1', 'A2']);
 
@@ -172,7 +184,9 @@ test.describe('Clipboard callback contexts', () => {
 		expect([...anchors][0]).not.toBe('1');
 	});
 
-	test('beforeDeleteCallback receives { paths, nodes } of the top-level target', async ({ page }) => {
+	test('beforeDeleteCallback receives { paths, nodes } of the top-level target', async ({
+		page
+	}) => {
 		await clickA(page, 'A2'); // leaf 1.2
 		await page.keyboard.press('Delete');
 		const bd = await readLog(page, 'before-delete-ctx');
@@ -192,14 +206,16 @@ test.describe('Clipboard callback contexts', () => {
 		expect(sorted(last.highlightedNodes)).toEqual(['1.1', '1.2']);
 	});
 
-	test('cross-tree paste: source refs are null/[], target refs resolve in the destination tree', async ({ page }) => {
+	test('cross-tree paste: source refs are null/[], target refs resolve in the destination tree', async ({
+		page
+	}) => {
 		await clickA(page, 'A1'); // copy in tree A (treeId treeA)
 		await page.keyboard.press('Control+c');
 		await clickB(page, 'T'); // paste into tree B (treeId treeB), path 1
 		await page.keyboard.press('Control+v');
 
 		const p = (await readLog(page, 'paste-ctx'))[0];
-		expect(p.phase).toBe('paste');
+		expect(p.phase).toBe('input');
 		// cross-tree: the source node is gone from this tree's perspective
 		expect(p.source.path).toBe('1.1'); // path is still carried
 		expect(p.source.node).toBeNull();

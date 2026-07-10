@@ -27,6 +27,12 @@ let _clipboard: TreeClipboard<any> | null = null;
 // (just removeNode) to avoid a circular type dependency on TreeController.
 export interface ClipboardSourceTree {
 	removeNode(path: string, includeDescendants?: boolean): unknown;
+	/** Resolve a live node by path in the SOURCE tree — needed for a cross-tree COPY that
+	 *  the library auto-handles (it reads the source subtree to duplicate it into the dest). */
+	getNodeByPath(path: string): unknown;
+	/** The source Ltree, passed to the dest's duplicateNodes() so the manifest paths resolve
+	 *  in the source tree's path space. Loosely typed to avoid a circular dep on TreeController. */
+	readonly tree: unknown;
 }
 
 const _trees = new Map<string, ClipboardSourceTree>();
@@ -44,18 +50,21 @@ export function getClipboardTree(id: string): ClipboardSourceTree | undefined {
 }
 
 // ─── Cross-tree drag set ──────────────────────────────────────────────────
-// The top-level dragged paths, published by the SOURCE tree on drag start so a
-// CROSS-TREE drop/dragover can expose the full multi-drag set via ctx.dragged.
-// The target controller only receives ONE reconstituted node (from dataTransfer)
-// and can't see the source's highlight set, so it reads the set from here. Same-
-// tree drops don't need this — they compute the set from their own live highlight.
-let _dragSet: { sourceTreeId: string; paths: string[] } | null = null;
+// Published by the SOURCE tree on drag start so a CROSS-TREE drop/dragover can see
+// what's moving (the target controller only gets ONE reconstituted node from
+// dataTransfer and can't read the source's highlight set). Two views:
+//  - `paths`: the TOP-LEVEL dragged set → exposed via ctx.dragged on the on* events.
+//  - `manifest`: the PLACEMENT manifest the library feeds to duplicateNodes/moveNodes —
+//    a curated beforeDragStart override AS-IS (holes preserved) or, for a plain drag, the
+//    COMPLETE set (every descendant) so whole subtrees copy. Cross-tree auto-copy reads this.
+// Same-tree drops don't need this — they compute the set from their own live highlight.
+let _dragSet: { sourceTreeId: string; paths: string[]; manifest: string[] } | null = null;
 
-export function setDragSet(sourceTreeId: string, paths: string[]): void {
-	_dragSet = { sourceTreeId, paths };
+export function setDragSet(sourceTreeId: string, paths: string[], manifest: string[]): void {
+	_dragSet = { sourceTreeId, paths, manifest };
 }
 
-export function getDragSet(): { sourceTreeId: string; paths: string[] } | null {
+export function getDragSet(): { sourceTreeId: string; paths: string[]; manifest: string[] } | null {
 	return _dragSet;
 }
 
@@ -85,7 +94,7 @@ export function getClipboardOperation(): 'copy' | 'cut' | null {
 
 /**
  * Pick a name that doesn't collide with `taken`, appending a suffix until free.
- * Convenience for collision-aware paste naming inside a pasteNodeTransformationCallback:
+ * Convenience for collision-aware paste naming inside a nodeInputTransformationCallback:
  * `name: uniqueName(data.name, ctx.target.siblings.map(s => s.data?.name))`. Because the transform
  * reads the pristine clipboard snapshot every paste, `base` is never pre-suffixed — no
  * "Copy 1 Copy 1".

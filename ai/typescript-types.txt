@@ -278,9 +278,9 @@ beforeDeleteCallback?: (ctx: BeforeDeleteContext<T>) => string[] | false | void;
 // Return { targetPath?, position? } to redirect, false to block, or nothing.
 beforePasteCallback?: (ctx: BeforePasteContext<T>) => { targetPath?: string; position?: DropPosition } | false | void;
 
-// Per-node transforms (symmetric NodeTransformContext).
-copyNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T;
-pasteNodeTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T | null;  // null skips node/subtree
+// Per-node transforms — operation-neutral, by DIRECTION. Both fire for clipboard AND drag.
+nodeOutputTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T;         // egress: node leaves source (phase 'output')
+nodeInputTransformationCallback?: (data: T, ctx: NodeTransformContext<T>) => T | null;   // ingress: duplicate lands (phase 'input'); null skips node/subtree
 
 // Value getters
 getDisplayValueCallback?: (node: LTreeNode<T>) => string;
@@ -348,16 +348,16 @@ interface SelectionChangeContext<T> {
 
 TRANSFORM / CLIPBOARD CONTEXT TYPES
 -----------------------------------
-// Passed to BOTH copy & paste transforms, one per node. Symmetric source/target:
-// same field, same meaning. target + position are null during the copy phase.
+// Passed to BOTH output & input transforms, one per node. Symmetric source/target:
+// same field, same meaning. target + position are null during the output phase.
 interface NodeTransformContext<T> {
   operation: 'copy' | 'cut';
-  phase: 'copy' | 'paste';                       // which callback is running
+  phase: 'output' | 'input';                     // egress (node leaves) vs. ingress (duplicate lands)
   isRoot: boolean;                               // top-level node vs. descendant riding along
   index: number;                                 // index of the root entry in this batch
   position: 'child' | 'before' | 'after' | null; // how roots land relative to target.node
   source: NodeRef<T>;                            // origin side (live same-tree, null/[] cross-tree/cut)
-  target: NodeRef<T> | null;                     // destination side (null during copy phase)
+  target: NodeRef<T> | null;                     // destination side (null during output phase)
 }
 
 interface BeforeCopyContext<T> {

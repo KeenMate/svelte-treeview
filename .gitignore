@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 
 # Generated files
 src/lib/constants.generated.ts
+
+# Playwright test artifacts
+test-results/

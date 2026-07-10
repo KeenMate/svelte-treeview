@@ -5,7 +5,7 @@
 	import type {Ltree, DropPosition, DropOperation} from "../ltree/types.js"
 	import type {RenderCoordinator} from "./RenderCoordinator.svelte.js"
 	import type {NodeCallbacks, NodeConfig} from "../core/TreeController.svelte.js"
-	import { uiLogger } from "../logger.js"
+	import { uiLogger, dragLogger } from "../logger.js"
 
 	// Define component props interface
 	// Callbacks and config come from context, drag state comes as props
@@ -271,10 +271,10 @@
 			// Accordion: collapse siblings when expanding
 			if (newState && isAccordionExpand) {
 				const siblings = tree.getSiblings(node.path)
-				console.log(`[accordion] expanding ${node.path}, checking ${siblings.length} siblings, isAccordionExpand=${isAccordionExpand}`)
+				uiLogger.debug(`[accordion] expanding ${node.path}, checking ${siblings.length} siblings, isAccordionExpand=${isAccordionExpand}`)
 				for (const sibling of siblings) {
 					if (sibling.path !== node.path && sibling.isExpanded && tree.getNodeIsCollapsible(sibling)) {
-						console.log(`[accordion] collapsing sibling: ${sibling.path}`)
+						uiLogger.debug(`[accordion] collapsing sibling: ${sibling.path}`)
 						sibling.isExpanded = false
 						sibling._rev = (sibling._rev || 0) + 1
 					}
@@ -404,7 +404,7 @@
 				callbacks.onNodeRightClicked(node, e);
 			}}
 			ondragstart={(e) => {
-				console.log(`[dragstart] gate on ${node?.path}`, {
+				dragLogger.debug(`[dragstart] gate on ${node?.path}`, {
 					path: node?.path,
 					nodeIsDraggable: node?.isDraggable,
 					hasDataTransfer: !!e.dataTransfer,

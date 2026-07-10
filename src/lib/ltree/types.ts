@@ -143,7 +143,13 @@ export interface Ltree<T> {
 	get tree(): LTreeNode<T>[];
 	/** Flat array of all visible nodes in render order (depth-first, respects isExpanded) */
 	get visibleFlatNodes(): LTreeNode<T>[];
-	get statistics(): { nodeCount: number; maxLevel: number; filteredNodeCount: number; isIndexing: boolean; pendingIndexCount: number };
+	get statistics(): {
+		nodeCount: number;
+		maxLevel: number;
+		filteredNodeCount: number;
+		isIndexing: boolean;
+		pendingIndexCount: number;
+	};
 
 	insertArray(data: T[]): InsertArrayResult<T>;
 
@@ -151,7 +157,10 @@ export interface Ltree<T> {
 
 	filterNodes(_searchText: string, _searchOptions?: SearchOptions): void;
 
-	searchNodes(_searchText: string | null | undefined, _searchOptions?: SearchOptions): LTreeNode<T>[];
+	searchNodes(
+		_searchText: string | null | undefined,
+		_searchOptions?: SearchOptions
+	): LTreeNode<T>[];
 
 	createFilteredTree(targetPaths: string[]): void;
 
@@ -194,10 +203,24 @@ export interface Ltree<T> {
 	refreshNode(path: string): void;
 
 	// Tree editor mutation methods
-	moveNode(sourcePath: string, targetPath: string, position: 'before' | 'after' | 'child'): { success: boolean; error?: string };
-	removeNode(path: string, includeDescendants?: boolean): { success: boolean; node?: LTreeNode<T>; error?: string };
-	addNode(parentPath: string, data: T, pathSegment?: string): { success: boolean; node?: LTreeNode<T>; error?: string };
-	updateNode(path: string, dataUpdates: Partial<T>): { success: boolean; node?: LTreeNode<T>; error?: string };
+	moveNode(
+		sourcePath: string,
+		targetPath: string,
+		position: 'before' | 'after' | 'child'
+	): { success: boolean; error?: string };
+	removeNode(
+		path: string,
+		includeDescendants?: boolean
+	): { success: boolean; node?: LTreeNode<T>; error?: string };
+	addNode(
+		parentPath: string,
+		data: T,
+		pathSegment?: string
+	): { success: boolean; node?: LTreeNode<T>; error?: string };
+	updateNode(
+		path: string,
+		dataUpdates: Partial<T>
+	): { success: boolean; node?: LTreeNode<T>; error?: string };
 	applyChanges(changes: TreeChange<T>[]): ApplyChangesResult;
 
 	// Bulk subtree operations (single emission)
@@ -209,7 +232,7 @@ export interface Ltree<T> {
 	copyNodeWithDescendants(
 		sourceNode: LTreeNode<T>,
 		targetParentPath: string,
-		transformData: (data: T) => T,
+		transformData: (data: T, node: LTreeNode<T>) => T | null,
 		siblingPath?: string,
 		position?: 'before' | 'after'
 	): { success: boolean; rootNode?: LTreeNode<T>; count: number; error?: string };

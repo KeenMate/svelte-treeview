@@ -53,7 +53,6 @@ ContextMenuDivider → context-menu.txt, typescript-types.txt
 ContextMenuEntry → context-menu.txt, typescript-types.txt
 ContextMenuItemC → context-menu.txt
 ContextMenuDividerC → context-menu.txt
-copyNodeTransformationCallback → tree-editing.txt
 copyNodes → tree-editing.txt
 cutNodes → tree-editing.txt
 cutPaths → tree-editing.txt
@@ -79,6 +78,7 @@ DropPosition → drag-drop.txt, typescript-types.txt
 dropZoneLayout → drag-drop.txt
 dropZoneMode → drag-drop.txt
 dropZoneStart → drag-drop.txt
+duplicateNodes → tree-editing.txt
 
 E
 -
@@ -150,6 +150,7 @@ M
 -
 maxBatchSize → performance.txt
 moveNode → tree-editing.txt
+moveNodes → tree-editing.txt
 
 N
 -
@@ -158,6 +159,8 @@ navInto → typescript-types.txt, advanced-patterns.txt
 navOut → typescript-types.txt, advanced-patterns.txt
 noData → basic-setup.txt
 noDataText → basic-setup.txt
+nodeInputTransformationCallback → tree-editing.txt
+nodeOutputTransformationCallback → tree-editing.txt
 nodeTemplate → basic-setup.txt, styling-theming.txt
 
 O
@@ -181,7 +184,6 @@ orderMember → drag-drop.txt, tree-editing.txt
 
 P
 -
-pasteNodeTransformationCallback → tree-editing.txt
 pasteNodes → tree-editing.txt
 parentPathMember → data-handling.txt
 Path structure → data-handling.txt

@@ -6,7 +6,7 @@ export {default as ContextMenuDividerC} from "./components/ContextMenuDivider.sv
 
 // Core layer (headless controller)
 export { TreeController } from "./core/TreeController.svelte"
-export type { TreeControllerProps, PasteResult, NodeTransformContext, BeforePasteContext, BeforeCopyContext, BeforeDeleteContext, NodeRef, NodeEventContext, NodeDragContext, NodeDropContext, ClipboardEventContext, SelectionChangeContext } from "./core/TreeController.svelte"
+export type { TreeControllerProps, PasteResult, NodeTransformContext, BeforePasteContext, BeforeCopyContext, BeforeDeleteContext, NodeRef, NodeEventContext, NodeDragContext, DragStartContext, BeforeDropContext, DropGroup, NodeDropContext, ClipboardEventContext, SelectionChangeContext } from "./core/TreeController.svelte"
 export { createTreeController } from "./core/createTreeController.js"
 
 // Export types

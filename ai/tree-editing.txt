@@ -411,7 +411,7 @@ pasteNodes(
   transform?: (data: T, ctx: NodeTransformContext<T>) => T | null,
   position: 'child' | 'before' | 'after' = 'child'
 )
-- transform (optional) overrides pasteNodeTransformationCallback for this paste;
+- transform (optional) overrides nodeInputTransformationCallback for this paste;
   return null from it to SKIP a node (skipping a root skips its subtree).
 - position 'child' onto a node that disallows 'child' (a leaf/file) is redirected
   to paste beside it, honoring getAllowedDropPositionsCallback.
@@ -440,28 +440,36 @@ beforeDeleteCallback:
   (ctx: { paths, nodes }) => string[] | false | void
   Narrow the delete set (return path[]) or block it (false).
 
-Per-node transforms (both take NodeTransformContext<T>):
+Per-node transforms — operation-neutral, defined by DIRECTION not by copy/cut.
+Both fire for clipboard AND drag; both take NodeTransformContext<T>:
 
-copyNodeTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T
-  Clean/redact fields at snapshot time (phase 'copy'; target + position null).
+nodeOutputTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T
+  OUTPUT/egress — a node LEAVES the source. Clean/redact fields before the data
+  travels (phase 'output'; target + position null). Fires at Ctrl+C/X snapshot AND
+  the capture side of a copy-drop. (was copyNodeTransformationCallback.)
 
-pasteNodeTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T | null
-  Derive ids/values/names at insert (phase 'paste'); return null to skip.
+nodeInputTransformationCallback: (data: T, ctx: NodeTransformContext<T>) => T | null
+  INPUT/ingress — a duplicate LANDS in a destination. Derive ids/values/names at
+  insert (phase 'input'); return null to skip. Fires on Ctrl+V paste AND the insert
+  side of a copy-drop (same- or cross-tree). (was pasteNodeTransformationCallback.)
+
+A plain MOVE fires NEITHER (nothing is duplicated). A copy-drop fires output THEN
+input, back-to-back.
 
 NodeTransformContext<T> = {
   operation: 'copy' | 'cut';
-  phase: 'copy' | 'paste';
+  phase: 'output' | 'input';
   isRoot; index;
-  position: 'child' | 'before' | 'after' | null;   // null during copy phase
+  position: 'child' | 'before' | 'after' | null;   // null during output phase
   source: { path, node, parent, siblings };
-  target: { path, node, parent, siblings } | null; // null during copy phase / at root
+  target: { path, node, parent, siblings } | null; // null during output phase / at root
 }
 
 Collision-free names — use the exported uniqueName helper inside the paste
 transform (import from '@keenmate/svelte-treeview'):
 
   import { uniqueName } from '@keenmate/svelte-treeview';
-  pasteNodeTransformationCallback={(data, ctx) => {
+  nodeInputTransformationCallback={(data, ctx) => {
     const landing = ctx.position === 'child' && ctx.target?.node
       ? Object.values(ctx.target.node.children)
       : (ctx.target?.siblings ?? []);
@@ -470,6 +478,24 @@ transform (import from '@keenmate/svelte-treeview'):
 
 uniqueName(base, taken, suffix?) — returns a collision-free name (default
 `${base} Copy ${n}`).
+
+BATCH PRIMITIVES (move / duplicate a whole manifest)
+----------------------------------------------------
+moveNodes(paths, targetPath, position) => { success, movedNodes, leftBehind }
+  BATCH MOVE of a COMPLETE manifest (every descendant present). Roots (entries whose
+  parent isn't in the manifest) move chained in order; a real descendant ABSENT from
+  the manifest is a HOLE left behind — re-homed to its moved root's OLD parent (it
+  physically stays put). A complete manifest has no holes → whole subtrees move.
+
+duplicateNodes(paths, targetPath, position, transform?, sourceTree?)
+    => { success, copiedNodes, skipped }
+  BATCH COPY — the copy-side twin of moveNodes (NOT copyNodes, which is the clipboard
+  "copy to clipboard" op). Same complete-manifest model, but a hole is simply NOT
+  copied (a copy has nothing to re-home). Each node's data flows through `transform`
+  (the INPUT transform, (data, ctx) => T | null). `sourceTree` defaults to this tree;
+  pass another tree's Ltree to copy its live nodes in (cross-tree). Both drag-copy
+  branches route through it; a cross-tree copy-drop with shouldAutoHandleCopy (default
+  true) is placed BY THE LIBRARY via the clipboard registry — no consumer loop.
 
 BATCH OPERATIONS
 ----------------

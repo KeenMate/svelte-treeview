@@ -38,11 +38,7 @@ function nodeRow(node: Locator): Locator {
  * We pad the chosen quadrant inset from the edges to avoid landing on a
  * boundary where rounding can flip the resolution.
  */
-async function dragNodeTo(
-	src: Locator,
-	dst: Locator,
-	position: 'before' | 'after' | 'child'
-) {
+async function dragNodeTo(src: Locator, dst: Locator, position: 'before' | 'after' | 'child') {
 	const box = await dst.boundingBox();
 	if (!box) throw new Error('Missing target boundingBox');
 	let x: number;
@@ -66,7 +62,11 @@ test.describe('single-tree drag', () => {
 
 		await expect(page.getByTestId('single-drop-count')).toHaveText('0');
 
-		await dragNodeTo(nodeRow(nodeByPath(section, '1.1')), nodeRow(nodeByPath(section, '2')), 'after');
+		await dragNodeTo(
+			nodeRow(nodeByPath(section, '1.1')),
+			nodeRow(nodeByPath(section, '2')),
+			'after'
+		);
 
 		await expect(page.getByTestId('single-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('single-drop-dragged')).toHaveText('Alpha-1');
@@ -78,7 +78,11 @@ test.describe('single-tree drag', () => {
 		await gotoFixture(page);
 		const section = page.getByTestId('section-single');
 
-		await dragNodeTo(nodeRow(nodeByPath(section, '1.1')), nodeRow(nodeByPath(section, '2')), 'child');
+		await dragNodeTo(
+			nodeRow(nodeByPath(section, '1.1')),
+			nodeRow(nodeByPath(section, '2')),
+			'child'
+		);
 
 		await expect(page.getByTestId('single-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('single-drop-position')).toHaveText('child');
@@ -197,11 +201,7 @@ test.describe('restricted drop positions — allowedDropPositionsMember', () => 
 		await expect(page.getByTestId('r-member-hint-3')).toHaveText('[before|after]');
 
 		// Aim at 'child' (right half) — should snap to before or after.
-		await dragNodeTo(
-			nodeRow(nodeByPath(section, '4')),
-			nodeRow(nodeByPath(section, '3')),
-			'child'
-		);
+		await dragNodeTo(nodeRow(nodeByPath(section, '4')), nodeRow(nodeByPath(section, '3')), 'child');
 
 		await expect(page.getByTestId('r-member-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('r-member-drop-position')).not.toHaveText('child');
@@ -221,11 +221,7 @@ test.describe('restricted drop positions — getAllowedDropPositionsCallback', (
 		const section = page.getByTestId('section-restricted-callback');
 
 		// Aim at 'child' (right half) onto OddBeforeOnly-31 (id 31 → ['before']).
-		await dragNodeTo(
-			nodeRow(nodeByPath(section, '4')),
-			nodeRow(nodeByPath(section, '1')),
-			'child'
-		);
+		await dragNodeTo(nodeRow(nodeByPath(section, '4')), nodeRow(nodeByPath(section, '1')), 'child');
 
 		await expect(page.getByTestId('r-callback-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('r-callback-drop-target')).toHaveText('OddBeforeOnly-31');
@@ -279,16 +275,12 @@ test.describe('Ctrl-drag copy (isCopyAllowed=true)', () => {
 		await page.mouse.move(srcBox.x + srcBox.width / 2, srcBox.y + srcBox.height / 2);
 		await page.mouse.down();
 		// Two move steps are needed to trigger the drag start in Chromium.
-		await page.mouse.move(
-			dstBox.x + dstBox.width / 2,
-			dstBox.y + dstBox.height * 0.75,
-			{ steps: 5 }
-		);
-		await page.mouse.move(
-			dstBox.x + dstBox.width / 2,
-			dstBox.y + dstBox.height * 0.75 + 2,
-			{ steps: 5 }
-		);
+		await page.mouse.move(dstBox.x + dstBox.width / 2, dstBox.y + dstBox.height * 0.75, {
+			steps: 5
+		});
+		await page.mouse.move(dstBox.x + dstBox.width / 2, dstBox.y + dstBox.height * 0.75 + 2, {
+			steps: 5
+		});
 		await page.mouse.up();
 		await page.keyboard.up('Control');
 
@@ -434,7 +426,11 @@ test.describe('multi-drag (selectionMode=multi)', () => {
 		// Highlight B, C and drop B 'before' D. Expected root order: [A, B, C, D].
 		await nodeRow(nodeByPath(section, '2')).click();
 		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
-		await dragNodeTo(nodeRow(nodeByPath(section, '2')), nodeRow(nodeByPath(section, '4')), 'before');
+		await dragNodeTo(
+			nodeRow(nodeByPath(section, '2')),
+			nodeRow(nodeByPath(section, '4')),
+			'before'
+		);
 
 		const afterRoots = await rootNodeNamesInOrder(section);
 		expect(afterRoots).toEqual(['Multi-A', 'Multi-B', 'Multi-C', 'Multi-D']);
@@ -501,12 +497,7 @@ test.describe('multi-drag (selectionMode=multi)', () => {
 		await section.scrollIntoViewIfNeeded();
 
 		// Initial roots: Lock-A, Lock-B, Lock-C (pinned), Lock-D.
-		expect(await rootNodeNamesInOrder(section)).toEqual([
-			'Lock-A',
-			'Lock-B',
-			'Lock-C',
-			'Lock-D'
-		]);
+		expect(await rootNodeNamesInOrder(section)).toEqual(['Lock-A', 'Lock-B', 'Lock-C', 'Lock-D']);
 
 		// Highlight all three of A, B and the LOCKED C.
 		await nodeRow(nodeByPath(section, '1')).click();
@@ -633,5 +624,274 @@ test.describe('touch drag', () => {
 		await expect(page.getByTestId('touch-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('touch-drop-dragged')).toHaveText('TouchA');
 		await expect(page.getByTestId('touch-drop-target')).toHaveText('TouchC');
+	});
+});
+
+// ── Section 8: beforeDragStartCallback (prune / augment / veto) ──────────────
+
+test.describe('beforeDragStartCallback', () => {
+	async function rootNodeNamesInOrder(section: Locator): Promise<string[]> {
+		const roots = section.locator('.stv__node[data-tree-path]:not([data-tree-path*="."])');
+		return await roots.locator('.stv__node-row .stv__node-content > span').allInnerTexts();
+	}
+
+	test('PRUNE: a pinned node is dropped from the dragged set and stays put', async ({ page }) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-before-drag');
+		await section.scrollIntoViewIfNeeded();
+
+		// Roots: A, B(pinned), C, D, E, F(protected), Target.
+		expect(await rootNodeNamesInOrder(section)).toEqual([
+			'BD-A',
+			'BD-B',
+			'BD-C',
+			'BD-D',
+			'BD-E',
+			'BD-F',
+			'BD-Target'
+		]);
+
+		// Highlight A + B(pinned) + C, then drag the lead A onto Target as child.
+		await nodeRow(nodeByPath(section, '1')).click();
+		await nodeRow(nodeByPath(section, '2')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '3')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('bd-highlighted-size')).toHaveText('3');
+
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '7')), 'child');
+
+		// Callback pruned B: only A and C were in the effective set.
+		await expect(page.getByTestId('bd-last-set')).toHaveText('1,3');
+		// B (pinned), D, E, F stay at root; only A + C moved under Target.
+		expect(await rootNodeNamesInOrder(section)).toEqual([
+			'BD-B',
+			'BD-D',
+			'BD-E',
+			'BD-F',
+			'BD-Target'
+		]);
+		await expect(page.getByTestId('bd-start-count')).toHaveText('1');
+	});
+
+	test('AUGMENT: a companion node is force-added even though it was never selected', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-before-drag');
+		await section.scrollIntoViewIfNeeded();
+
+		// Drag BD-D alone (no highlight). Its companion BD-E must ride along.
+		await dragNodeTo(nodeRow(nodeByPath(section, '4')), nodeRow(nodeByPath(section, '7')), 'child');
+
+		// Effective set = D plus its injected companion E.
+		await expect(page.getByTestId('bd-last-set')).toHaveText('4,5');
+		// Both D and E left root and landed under Target; the count stays 7 (no dupes).
+		const roots = await rootNodeNamesInOrder(section);
+		expect(roots).not.toContain('BD-D');
+		expect(roots).not.toContain('BD-E');
+		await expect(section.locator('.stv__node[data-tree-path]')).toHaveCount(7);
+		// Exactly the two augmented nodes are now nested under Target.
+		await expect(section.locator('.stv__node[data-tree-path*="."]')).toHaveCount(2);
+		await expect(page.getByTestId('bd-drop-count')).toHaveText('1');
+	});
+
+	test('VETO: grabbing a protected node cancels the drag entirely', async ({ page }) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-before-drag');
+		await section.scrollIntoViewIfNeeded();
+
+		const before = await rootNodeNamesInOrder(section);
+
+		// Drag BD-F (protected) onto Target — the callback returns false.
+		await dragNodeTo(nodeRow(nodeByPath(section, '6')), nodeRow(nodeByPath(section, '7')), 'child');
+
+		// Nothing moved, no drop fired, and onNodeDragStart was suppressed.
+		await expect(page.getByTestId('bd-last-set')).toHaveText('(cancelled)');
+		await expect(page.getByTestId('bd-drop-count')).toHaveText('0');
+		await expect(page.getByTestId('bd-start-count')).toHaveText('0');
+		expect(await rootNodeNamesInOrder(section)).toEqual(before);
+	});
+});
+
+// ── Section 9: tree-level drop zone + content-addressed routing ──────────────
+
+test.describe('tree drop zone + DropGroup routing', () => {
+	async function rootNodeNamesInOrder(section: Locator): Promise<string[]> {
+		const roots = section.locator('.stv__node[data-tree-path]:not([data-tree-path*="."])');
+		return await roots.locator('.stv__node-row .stv__node-content > span').allInnerTexts();
+	}
+
+	test('a mixed basket dropped on the tree zone is sorted into category nodes', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-tree-zone');
+		await section.scrollIntoViewIfNeeded();
+
+		// Roots: two categories + three loose produce items.
+		expect(await rootNodeNamesInOrder(section)).toEqual([
+			'Fruits',
+			'Vegetables',
+			'Apple',
+			'Carrot',
+			'Banana'
+		]);
+
+		// Multi-select Apple(3) + Carrot(4) + Banana(5).
+		await nodeRow(nodeByPath(section, '3')).click();
+		await nodeRow(nodeByPath(section, '4')).click({ modifiers: ['Control'] });
+		await nodeRow(nodeByPath(section, '5')).click({ modifiers: ['Control'] });
+		await expect(page.getByTestId('produce-highlighted-size')).toHaveText('3');
+
+		// Drop the basket anywhere on the tree — the container itself is the zone.
+		await nodeRow(nodeByPath(section, '3')).dragTo(section.locator('.stv__container'));
+
+		// One drop, routed by kind: 2 fruits under Fruits, 1 vegetable under Vegetables.
+		await expect(page.getByTestId('produce-drop-count')).toHaveText('1');
+		await expect(page.getByTestId('produce-routed')).toHaveText('Fruits:2,Vegetables:1');
+
+		// Only the two categories remain at root; the produce is nested under them.
+		expect(await rootNodeNamesInOrder(section)).toEqual(['Fruits', 'Vegetables']);
+		await expect(section.locator('.stv__node[data-tree-path^="1."]')).toHaveCount(2); // under Fruits
+		await expect(section.locator('.stv__node[data-tree-path^="2."]')).toHaveCount(1); // under Vegetables
+		await expect(section.locator('.stv__node[data-tree-path]')).toHaveCount(5); // no orphans/dupes
+	});
+
+	test('a single item dropped on the zone routes by its own data', async ({ page }) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-tree-zone');
+		await section.scrollIntoViewIfNeeded();
+
+		// Drag Banana (a fruit) alone onto the zone — no selection needed.
+		await nodeRow(nodeByPath(section, '5')).dragTo(section.locator('.stv__container'));
+
+		await expect(page.getByTestId('produce-drop-count')).toHaveText('1');
+		await expect(page.getByTestId('produce-routed')).toHaveText('Fruits:1');
+		// Banana left root and nested under Fruits; Vegetables untouched.
+		const roots = await rootNodeNamesInOrder(section);
+		expect(roots).not.toContain('Banana');
+		await expect(section.locator('.stv__node[data-tree-path^="1."]')).toHaveCount(1);
+	});
+});
+
+test.describe('moveNodes (batch move + hole leave-behind)', () => {
+	test('complete manifest moves the whole subtree, nothing left behind', async ({ page }) => {
+		await gotoFixture(page);
+		await page.getByTestId('section-move-nodes').scrollIntoViewIfNeeded();
+
+		await page.getByTestId('mn-move-whole').click();
+
+		await expect(page.getByTestId('mn-result')).toHaveText('moved:1,left:0');
+		// Folder landed under MN-Target (path '2') carrying all three children incl. the lock.
+		await expect(page.getByTestId('mn-folder-parent')).toHaveText('2');
+		await expect(page.getByTestId('mn-folder-children')).toHaveText('MN-A,MN-B,MN-Locked');
+	});
+
+	test('an omitted descendant is a hole: left behind at the moved subtree old parent', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		await page.getByTestId('section-move-nodes').scrollIntoViewIfNeeded();
+
+		// Manifest omits MN-Locked (1.2): the folder + MN-A + MN-B move; the lock stays put.
+		await page.getByTestId('mn-move-hole').click();
+
+		await expect(page.getByTestId('mn-result')).toHaveText('moved:1,left:1');
+		await expect(page.getByTestId('mn-folder-parent')).toHaveText('2'); // folder moved under target
+		await expect(page.getByTestId('mn-folder-children')).toHaveText('MN-A,MN-B'); // lock NOT carried
+		await expect(page.getByTestId('mn-locked-parent')).toHaveText('(root)'); // lock re-homed to old parent
+	});
+});
+
+test.describe('drag leaves a locked descendant behind (beforeDragStart → moveNodes hole)', () => {
+	test('dragging a folder omits its locked child, which stays put at the old parent', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-drag-hole');
+		await section.scrollIntoViewIfNeeded();
+
+		// Drag DH-Folder (1) as a child of DH-Target (2).
+		await dragNodeTo(nodeRow(nodeByPath(section, '1')), nodeRow(nodeByPath(section, '2')), 'child');
+
+		await expect(page.getByTestId('dh-drop-count')).toHaveText('1');
+		// ctx.dragged was the COMPLETE flattened set: folder + DH-A + DH-Lock + DH-B = 4.
+		await expect(page.getByTestId('dh-dragged-size')).toHaveText('4');
+		// The folder moved with only its non-locked children; the lock did not ride along.
+		await expect(page.getByTestId('dh-folder-children')).toHaveText('DH-A,DH-B');
+		// The omitted lock was re-homed to the folder's old parent (root).
+		await expect(page.getByTestId('dh-lock-parent')).toHaveText('(root)');
+	});
+});
+
+test.describe('copyNodeWithDescendants null-skip (cross-tree leave-behind twin)', () => {
+	test('a transform returning null skips that descendant (and its subtree) on copy', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-copy-skip');
+		await section.scrollIntoViewIfNeeded();
+
+		await section.getByTestId('cs-copy').click();
+
+		// Root + CS-A + CS-B copied; CS-Locked skipped → count 3 (not 4).
+		await expect(page.getByTestId('cs-result')).toHaveText('success:true,count:3');
+		// The copied subtree carries only the non-locked children.
+		await expect(page.getByTestId('cs-dest-children')).toHaveText('CS-A,CS-B');
+	});
+});
+
+test.describe('duplicateNodes (batch copy primitive)', () => {
+	test('an omitted descendant is a hole — NOT copied — and the source stays intact', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-duplicate-nodes');
+		await section.scrollIntoViewIfNeeded();
+
+		// Manifest omits DN-Locked (1.2). One root (DN-Src) is duplicated.
+		await section.getByTestId('dn-copy-hole').click();
+
+		await expect(page.getByTestId('dn-result')).toHaveText('success:true,roots:1,skipped:0');
+		// The copy carries only the manifest children — the hole is absent.
+		await expect(page.getByTestId('dn-dest-children')).toHaveText('DN-A,DN-B');
+		// A copy leaves nothing behind: the source subtree is untouched (still has the locked node).
+		await expect(page.getByTestId('dn-src-children')).toHaveText('DN-A,DN-B,DN-Locked');
+	});
+
+	test('two roots duplicate under the target, chained in source order', async ({ page }) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-duplicate-nodes');
+		await section.scrollIntoViewIfNeeded();
+
+		await section.getByTestId('dn-copy-two').click();
+
+		await expect(page.getByTestId('dn-result')).toHaveText('success:true,roots:2,skipped:0');
+		// Both leaves land as children of DN-Dest; the source is unchanged.
+		await expect(page.getByTestId('dn-dest-children')).toHaveText('DN-A,DN-B');
+		await expect(page.getByTestId('dn-src-children')).toHaveText('DN-A,DN-B,DN-Locked');
+	});
+});
+
+test.describe('cross-tree AUTO-copy (library places, no consumer loop)', () => {
+	test('a cross-tree copy-drop duplicates the pruned manifest into the dest; source stays', async ({
+		page
+	}) => {
+		await gotoFixture(page);
+		const section = page.getByTestId('section-xtree-copy');
+		await section.scrollIntoViewIfNeeded();
+
+		const srcBox = page.getByTestId('xc-src-box');
+		const destBox = page.getByTestId('xc-dest-box');
+
+		// Drag XC-Folder onto XC-Dest (child). beforeDropCallback forces operation 'copy', so the
+		// library auto-copies the source's guard-pruned manifest — no consumer placement code.
+		await dragNodeTo(nodeRow(nodeByPath(srcBox, '1')), nodeRow(nodeByPath(destBox, '1')), 'child');
+
+		// The library placed the root copy and reported it via ctx.dropped.
+		await expect(page.getByTestId('xc-dropped')).toHaveText('XC-Folder');
+		// The copy carries the unlocked children only — XC-Locked was a manifest hole (pruned).
+		await expect(page.getByTestId('xc-dest-children')).toHaveText('XC-A,XC-B');
+		// A copy re-homes nothing: the source subtree is intact, locked file included.
+		await expect(page.getByTestId('xc-src-children')).toHaveText('XC-A,XC-B,XC-Locked');
 	});
 });

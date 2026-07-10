@@ -78,6 +78,16 @@
 	text-align: center;
 }
 
+/* Whole-tree drop zone (shouldEnableTreeDropZone): the whole .stv__container becomes one drop
+   target — a drop anywhere lands with target=null and is routed by beforeDropCallback. While a
+   drag hovers the tree the container shows an engaged outline so the "basket" reads as active. */
+.stv__container.stv__tree-drop-zone--active {
+	outline: 2px dashed var(--stv-drop-placeholder-hover-border-color, var(--stv-primary));
+	outline-offset: -2px;
+	background-color: var(--stv-drop-placeholder-hover-bg);
+	transition: all 0.2s ease;
+}
+
 /* Drag-over node states (tinted background + dashed border) */
 .stv__node-content--dragover-highlight {
 	background-color: color-mix(in srgb, var(--stv-success) 15%, transparent) !important;

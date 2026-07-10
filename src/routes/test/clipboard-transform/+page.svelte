@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Deterministic e2e fixture for the NEW clipboard data-flow (rc12+):
-	//  - pasteNodeTransformationCallback (per-node derive ids/names, return null to SKIP)
-	//  - copyNodeTransformationCallback (clean/redact at snapshot time)
+	//  - nodeInputTransformationCallback (per-node derive ids/names, return null to SKIP)
+	//  - nodeOutputTransformationCallback (clean/redact at snapshot time)
 	//  - leaf-aware paste position (paste onto a file → siblings, via allowedDropPositions)
 	//  - per-entry self-paste skip + PasteResult.skipped (no silent all-or-nothing)
 	//  - Delete with a "node has subnodes" guard + warning
@@ -161,8 +161,8 @@
 			bind:focusedNode
 			bind:highlightedPaths
 			{onTreeKeydown}
-			copyNodeTransformationCallback={copyTransform}
-			pasteNodeTransformationCallback={pasteTransform}
+			nodeOutputTransformationCallback={copyTransform}
+			nodeInputTransformationCallback={pasteTransform}
 		>
 			{#snippet nodeTemplate(node: LTreeNode<Item>)}
 				<span

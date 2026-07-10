@@ -5,6 +5,7 @@
 		TreeController,
 		NodeTransformContext,
 		BeforePasteContext,
+		BeforeDropContext,
 		NodeDropContext
 	} from '$lib/core/TreeController.svelte.js';
 	import { uniqueName } from '$lib/core/clipboard.js';
@@ -20,7 +21,7 @@
 		icon: string;
 		sortOrder: number;
 		// An "internal" field that shouldn't travel on the clipboard — redacted by
-		// copyNodeTransformationCallback so a pasted copy never carries it.
+		// nodeOutputTransformationCallback so a pasted copy never carries it.
 		secret?: string;
 	}
 
@@ -85,14 +86,14 @@
 		return selectedNode ? [selectedNode.path] : [];
 	}
 
-	// copyNodeTransformationCallback: per-node, at snapshot time (copy/cut). Clean data
+	// nodeOutputTransformationCallback: per-node, at snapshot time (copy/cut). Clean data
 	// before it lands on the shared (cross-tree) clipboard — here we redact the internal
 	// `secret`. The original node keeps its secret; any pasted copy shows "🔒 redacted".
 	function cleanOnCopy(data: EditorNode, _ctx: NodeTransformContext<EditorNode>): EditorNode {
 		return data.secret !== undefined ? { ...data, secret: '🔒 redacted' } : data;
 	}
 
-	// pasteNodeTransformationCallback: the single per-node hook for all paste-time data
+	// nodeInputTransformationCallback: the single per-node hook for all paste-time data
 	// derivation. The library calls it (pure) for every node about to be inserted, with
 	// the resolved destination + the names already taken there. We give each node a fresh
 	// id and, for a root, a collision-free "Copy N" name (uniqueName, library helper) only
@@ -181,7 +182,7 @@
 				for (const src of copiedPaths) {
 					const parent = treeRef.getNodeByPath(src)?.parentPath ?? '';
 					controller.copyNodes([src]);
-					// transform comes from pasteNodeTransformationCallback on <Tree>
+					// transform comes from nodeInputTransformationCallback on <Tree>
 					const result = controller.pasteNodes(parent, undefined, 'child');
 					if (result.success) pasted += result.count;
 				}
@@ -403,7 +404,10 @@
 	const canHaveChildren = (node: LTreeNode<EditorNode> | null) =>
 		node?.data?.icon?.includes('📁') || node?.data?.icon?.includes('📂');
 
-	async function beforeDrop(dropNode: LTreeNode<EditorNode> | null, draggedNode: LTreeNode<EditorNode>, position: string, event: DragEvent | TouchEvent): Promise<boolean | { position: DropPosition } | void> {
+	async function beforeDrop(ctx: BeforeDropContext<EditorNode>): Promise<boolean | { position: DropPosition } | void> {
+		const { target, position } = ctx;
+		const dropNode = target?.node ?? null;
+		const draggedNode = ctx.dragged[0]?.node ?? null;
 		const isFolder = canHaveChildren;
 		const isImage = (node: LTreeNode<EditorNode> | null) =>
 			node?.data?.icon?.includes('🖼️');
@@ -521,7 +525,7 @@
 			dim until pasted; <strong>Esc</strong> cancels a pending cut. <strong>Delete</strong>
 			removes the selected node(s). Drag and drop also moves nodes. Some files carry an
 			internal <code>secret</code> token —
-			<code>copyNodeTransformationCallback</code> redacts it on copy, so a pasted copy shows
+			<code>nodeOutputTransformationCallback</code> redacts it on copy, so a pasted copy shows
 			<em>🔒 redacted</em> while the original keeps its value. Pasting onto a file (which
 			can't hold children) drops the copy beside it instead of inside.
 		</p>
@@ -552,8 +556,8 @@
 						onCut={({ paths }) => addLog(`Cut ${paths.length} node(s) — paste to move`)}
 						onPaste={(result) => { if (!suppressClipboardLog) addLog(result.success ? `Pasted ${result.count} node(s)` : `Paste failed: ${result.error}`); }}
 						beforePasteCallback={beforePaste}
-						copyNodeTransformationCallback={cleanOnCopy}
-						pasteNodeTransformationCallback={pasteTransform}
+						nodeOutputTransformationCallback={cleanOnCopy}
+						nodeInputTransformationCallback={pasteTransform}
 						beforeDropCallback={beforeDrop}
 						onNodeDrop={handleDrop}
 						onNodeDragStart={handleDragStart}
@@ -804,11 +808,11 @@
 			</thead>
 			<tbody>
 				<tr>
-					<td><code>pasteNodeTransformationCallback(data, ctx) =&gt; T | null</code></td>
+					<td><code>nodeInputTransformationCallback(data, ctx) =&gt; T | null</code></td>
 					<td>Per-node paste derivation — fresh ids/values/names; return <code>null</code> to skip a node (skipping a root skips its subtree)</td>
 				</tr>
 				<tr>
-					<td><code>copyNodeTransformationCallback(data, ctx) =&gt; T</code></td>
+					<td><code>nodeOutputTransformationCallback(data, ctx) =&gt; T</code></td>
 					<td>Per-node clean at copy time — strip/redact fields before they hit the shared clipboard</td>
 				</tr>
 				<tr>
@@ -826,7 +830,7 @@
 			<p class="note-title">Two roles, two hooks</p>
 			<p>
 				<code>beforePasteCallback</code> is batch <strong>policy</strong> (redirect/block, readonly
-				entries); <code>pasteNodeTransformationCallback</code> is per-node <strong>derivation</strong>
+				entries); <code>nodeInputTransformationCallback</code> is per-node <strong>derivation</strong>
 				(ids, values, naming, skip). The clipboard snapshot is immutable — each paste runs on a
 				fresh working copy, so naming never compounds.
 			</p>
@@ -922,7 +926,7 @@
 			The controller implements the clipboard operations and a shared cross-tree
 			clipboard; the key bindings are left to you via <code>onTreeKeydown</code>.
 			Per-node paste derivation (fresh ids, values, "Copy N" naming, per-entry skip)
-			lives in <code>pasteNodeTransformationCallback</code>; <code>beforePasteCallback</code>
+			lives in <code>nodeInputTransformationCallback</code>; <code>beforePasteCallback</code>
 			is policy only (redirect/block) and gets <strong>readonly</strong> entries.
 			Enable multi-select with <code>selectionMode="multi"</code>.
 		</p>
@@ -948,7 +952,7 @@ function clipboardPaths(controller: TreeController<MyNode>) {
 // data (fresh id/value/name) or null to SKIP this node (skipping a root skips its subtree).
 // You decide what "collision" means by reading the landing neighbours — no displayValueMember
 // assumption. They're LIVE and batch-aware, so repeats stay Copy 1/2/3 with no compounding.
-// (Same context type the copy transform gets, with phase: 'paste'; on copy, target is null.)
+// (Same context type the output transform gets, with phase: 'input'; on output, target is null.)
 function pasteTransform(data: MyNode, ctx: NodeTransformContext<MyNode>): MyNode | null {
   // e.g. skip what isn't allowed here: if (!allowed(data, ctx)) return null;
   // Landing = target.node's children for a 'child' paste, else the anchor's siblings.
@@ -1015,7 +1019,7 @@ function handleKeydown({ event, controller }) {
   onCut={({ paths }) => log(\`cut \${paths.length}\`)}
   onPaste={(result) => log(result.success ? \`pasted \${result.count}, skipped \${result.skipped}\` : result.error)}
   beforePasteCallback={beforePaste}
-  pasteNodeTransformationCallback={pasteTransform}
+  nodeInputTransformationCallback={pasteTransform}
 >
   {#snippet nodeTemplate(node)}
     <span class:cut-dimmed={cutPaths.has(node.path)}>{node.data?.name}</span>
@@ -1028,14 +1032,14 @@ function handleKeydown({ event, controller }) {
 			<p>
 				<code>beforePasteCallback</code> is <strong>batch policy</strong> — redirect
 				target/position or block; it sees <strong>readonly</strong> entries and never
-				mutates data. <code>pasteNodeTransformationCallback(data, ctx) =&gt; T | null</code>
+				mutates data. <code>nodeInputTransformationCallback(data, ctx) =&gt; T | null</code>
 				is <strong>per-node derivation</strong> — ids, values, <code>"Copy N"</code> naming
 				(read names off the roots' landing neighbours — <code>ctx.target.node.children</code> for a
 				<code>'child'</code> paste, else <code>ctx.target.siblings</code> — and pass to
 				<code>uniqueName</code>), and per-entry skip (return <code>null</code>). <code>target</code> mirrors
 				<code>source</code> — <code>path</code> / <code>node</code> / <code>parent</code> / <code>siblings</code>
 				for the node you aimed at, plus <code>ctx.position</code> — so collision logic is yours, with no display-name assumption. The clipboard snapshot is immutable; each paste runs
-				on a fresh working copy, and <code>copyNodeTransformationCallback</code> can clean data
+				on a fresh working copy, and <code>nodeOutputTransformationCallback</code> can clean data
 				before it ever lands on the shared clipboard.
 			</p>
 		</div>

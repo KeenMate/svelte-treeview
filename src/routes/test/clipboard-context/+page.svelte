@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Deterministic e2e fixture that captures the EXACT context object each clipboard
 	// callback receives, serialized to the DOM so a spec can assert field-by-field:
-	//   - copyNodeTransformationCallback / pasteNodeTransformationCallback (NodeTransformContext)
+	//   - nodeOutputTransformationCallback / nodeInputTransformationCallback (NodeTransformContext)
 	//   - beforeCopyCallback / beforeCutCallback (BeforeCopyContext)
 	//   - beforePasteCallback (BeforePasteContext) / beforeDeleteCallback (BeforeDeleteContext)
 	//   - onTreeKeydown ({ event, focusedNode, highlightedNodes, controller })
@@ -227,8 +227,8 @@
 				beforeCutCallback={beforeCut}
 				beforePasteCallback={beforePaste}
 				beforeDeleteCallback={beforeDelete}
-				copyNodeTransformationCallback={copyTransform}
-				pasteNodeTransformationCallback={pasteTransform}
+				nodeOutputTransformationCallback={copyTransform}
+				nodeInputTransformationCallback={pasteTransform}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
 					<span data-name={node.data?.name} data-path={node.path}>{node.data?.name}</span>
@@ -254,8 +254,8 @@
 				beforeCutCallback={beforeCut}
 				beforePasteCallback={beforePaste}
 				beforeDeleteCallback={beforeDelete}
-				copyNodeTransformationCallback={copyTransform}
-				pasteNodeTransformationCallback={pasteTransform}
+				nodeOutputTransformationCallback={copyTransform}
+				nodeInputTransformationCallback={pasteTransform}
 			>
 				{#snippet nodeTemplate(node: LTreeNode<Item>)}
 					<span data-name={node.data?.name} data-path={node.path}>{node.data?.name}</span>
