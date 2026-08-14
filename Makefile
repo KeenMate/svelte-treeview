@@ -1,4 +1,4 @@
-.PHONY: help setup dev install build build-all build-showcase test test-watch test-e2e test-e2e-ui test-e2e-headed publish publish-dry docker-build docker-start docker-stop docker-restart
+.PHONY: help setup dev install build build-all build-showcase test test-watch test-e2e test-e2e-ui test-e2e-headed publish publish-rc publish-dry docker-build docker-start docker-stop docker-restart
 
 help: ## Show this help
 	@echo ""
@@ -42,6 +42,9 @@ test-e2e-headed: ## Run Playwright e2e tests headed
 
 publish: ## Publish to npm (TAG=rc for pre-release)
 	npm publish $(if $(TAG),--tag $(TAG))
+
+publish-rc: ## Publish pre-release to npm under the rc dist-tag
+	npm publish --tag rc
 
 publish-dry: ## Dry-run publish (TAG=rc for pre-release)
 	npm publish --dry-run $(if $(TAG),--tag $(TAG))
