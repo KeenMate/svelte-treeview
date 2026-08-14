@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.0.0-rc14] - 2026-08-14 [PUBLISHED]
 
 ### Added
 - **`displayValueFallback?: string` (default `'[N/A]'`) — the text shown for a node with no resolvable display value is now configurable.** `getNodeDisplayValue` returns a fallback when neither `displayValueMember` nor `getDisplayValueCallback` yields a value (e.g. a dataless/synthetic node, or a tree that renders labels only via a `nodeTemplate` snippet); that fallback was a hardcoded `'[N/A]'` — also what surfaced in the touch-drag ghost. Now overridable per-tree (empty string to render nothing). Carried as a **reactive** `$state`-backed property on the `Ltree` (getter/setter, so a runtime change re-renders the fallback labels), threaded through `<Tree>`, a live `$effect`, and `update()`. NOTE: the resolution order is member → callback → fallback, so the fallback only applies when both are absent/unresolved. Demonstrated in `/examples/data` (a live fallback-text input beside a member-configured tree).
