@@ -15,6 +15,7 @@ import {
 	type ToggleIconMode,
 	type ClickBehavior,
 	type CheckboxMode,
+	type CascadeSelectPolicy,
 	type SelectionMode,
 	type HighlightMode,
 	type TreeMutationOptions
@@ -366,6 +367,7 @@ export interface TreeControllerProps<T> {
 
 	displayValueMember?: string | null | undefined;
 	getDisplayValueCallback?: (node: LTreeNode<T>) => string;
+	displayValueFallback?: string;
 
 	searchValueMember?: string | null | undefined;
 	getSearchValueCallback?: (node: LTreeNode<T>) => string;
@@ -393,6 +395,12 @@ export interface TreeControllerProps<T> {
 	selectionMode?: SelectionMode | null | undefined;
 	shouldShowCheckboxes?: boolean | null | undefined;
 	checkboxMode?: CheckboxMode | null | undefined;
+	/**
+	 * Which paths `selectedPaths` / `onSelectionChange` EMIT in cascade mode
+	 * (rolled-up | leaves | all). Orthogonal to `checkboxMode`. Ignored in
+	 * `'independent'` mode. Default `'rolled-up'`.
+	 */
+	cascadeSelectPolicy?: CascadeSelectPolicy | null | undefined;
 	/**
 	 * When true AND `shouldShowCheckboxes` is on, a plain click on a selectable node's label
 	 * toggles the checkbox instead of running the normal click flow — `focusedNode` and
@@ -469,6 +477,14 @@ export interface TreeControllerProps<T> {
 	onNodeDragStart?: (ctx: NodeDragContext<T>) => void;
 	onNodeDragOver?: (ctx: NodeDragContext<T>) => void;
 	onNodeDrop?: (ctx: NodeDropContext<T>) => void;
+	/** Fired when a long-press (touch) engages on a NON-draggable node — the user tried to
+	 *  move something locked. Fire-and-forget; carries the locked node's NodeRef. The source-side
+	 *  twin of a drop rejection; use it for a toast/snackbar/custom haptic. */
+	onNodeDragDenied?: (ctx: NodeEventContext<T>) => void;
+	/** Fired when a drop is REJECTED because the target node refuses it (`isDropAllowed` false /
+	 *  getIsDropAllowedCallback). The target-side twin of onNodeDragDenied; carries the refusing
+	 *  node's NodeRef. Not fired when a tree-drop-zone catches the forwarded drop instead. */
+	onNodeDropDenied?: (ctx: NodeEventContext<T>) => void;
 	onHighlightChange?: (ctx: SelectionChangeContext<T>) => void;
 	onSelectionChange?: (ctx: SelectionChangeContext<T>) => void;
 	// Post-operation clipboard notifications (fired AFTER the op succeeds). Symmetric
@@ -564,6 +580,8 @@ export interface TreeControllerProps<T> {
 	scrollHighlightClass?: string | null | undefined;
 	contextMenuXOffset?: number | null | undefined;
 	contextMenuYOffset?: number | null | undefined;
+	touchDragDelay?: number | null | undefined;
+	shouldIndicateUndraggable?: boolean;
 }
 
 // ─── TreeController ───────────────────────────────────────────────────────
@@ -620,7 +638,31 @@ export class TreeController<T> {
 	 *  clickBehaviors) and the built-in expand/collapse-on-double for 'select' mode. */
 	private _lastClickPath: string | null = null;
 	private _lastClickTime: number = 0;
-	selectedPaths = $state.raw<Set<string>>(new Set());
+	/**
+	 * CANONICAL checkbox state: every fully-checked node (leaves + fully-checked
+	 * branches). This is what every internal mutation reads/writes. The PUBLIC
+	 * `selectedPaths` getter still returns this (back-compat: "all checked nodes"),
+	 * but the value that flows OUT through the bindable prop + `onSelectionChange`
+	 * is the policy PROJECTION (`#emittedPaths`, see `cascadeSelectPolicy`).
+	 */
+	#selectedPaths = $state.raw<Set<string>>(new Set());
+	/** Policy-projected view of `#selectedPaths` (rolled-up | leaves | all). Kept in
+	 *  sync by the `selectedPaths` setter and the `cascadeSelectPolicy`/`checkboxMode`
+	 *  setters. This is the emitted selection surface. */
+	#emittedPaths = $state.raw<Set<string>>(new Set());
+	get selectedPaths(): Set<string> {
+		return this.#selectedPaths;
+	}
+	set selectedPaths(value: Set<string>) {
+		this.#selectedPaths = value;
+		this.#emittedPaths = this._projectSelection(value);
+	}
+	/** The emitted (policy-projected) selection set — what `bind:selectedPaths` and
+	 *  `onSelectionChange` expose. Equals the canonical set in independent mode or
+	 *  under the `'all'` policy. */
+	get emittedPaths(): Set<string> {
+		return this.#emittedPaths;
+	}
 	insertResult = $state.raw<InsertArrayResult<T> | null | undefined>(null);
 	searchText = $state<string | null | undefined>(undefined);
 	isRendering = $state(false);
@@ -653,6 +695,8 @@ export class TreeController<T> {
 	onNodeDragStartHandler: TreeControllerProps<T>['onNodeDragStart'];
 	onNodeDragOverHandler: TreeControllerProps<T>['onNodeDragOver'];
 	onNodeDropHandler: TreeControllerProps<T>['onNodeDrop'];
+	onNodeDragDeniedHandler: TreeControllerProps<T>['onNodeDragDenied'];
+	onNodeDropDeniedHandler: TreeControllerProps<T>['onNodeDropDenied'];
 	onCopyHandler: TreeControllerProps<T>['onCopy'];
 	onCutHandler: TreeControllerProps<T>['onCut'];
 	onPasteHandler: ((result: PasteResult<T>) => void) | undefined;
@@ -687,6 +731,20 @@ export class TreeController<T> {
 		if (this.#checkboxMode === value) return;
 		this.#checkboxMode = value;
 		this._reconcileVisualStatesForMode();
+		// Switching independent⇄cascade changes whether the policy applies, so the
+		// emitted projection can change even when the canonical set is untouched.
+		this.#emittedPaths = this._projectSelection(this.#selectedPaths);
+	}
+	#cascadeSelectPolicy = $state<CascadeSelectPolicy>('rolled-up');
+	get cascadeSelectPolicy(): CascadeSelectPolicy {
+		return this.#cascadeSelectPolicy;
+	}
+	set cascadeSelectPolicy(value: CascadeSelectPolicy) {
+		if (this.#cascadeSelectPolicy === value) return;
+		this.#cascadeSelectPolicy = value;
+		// Re-project the (unchanged) canonical set through the new policy and notify.
+		this.#emittedPaths = this._projectSelection(this.#selectedPaths);
+		this._notifySelectionChanged();
 	}
 	shouldClickToggleCheckbox = $state(false);
 	expandIconClass = $state('stv__toggle-icon--expand');
@@ -708,6 +766,14 @@ export class TreeController<T> {
 	scrollHighlightClass = $state<string | null | undefined>('stv__node-content--scroll-highlight');
 	contextMenuXOffset = $state(8);
 	contextMenuYOffset = $state(0);
+
+	/** Milliseconds to hold a touch before a touch-drag engages (long-press). */
+	touchDragDelay = $state(300);
+
+	/** Show the built-in blocked-action indicator (haptic buzz + no-entry icon) — held while a
+	 *  locked node is long-pressed, and flashed on a target that refuses a drop. The
+	 *  onNodeDragDenied / onNodeDropDenied events fire regardless of this flag. */
+	shouldIndicateUndraggable = $state(true);
 
 	hasContextMenuSnippet = $state(false);
 
@@ -766,6 +832,7 @@ export class TreeController<T> {
 		startX: number;
 		startY: number;
 		isDragging: boolean;
+		isDenied: boolean;
 		ghostElement: HTMLElement | null;
 		currentDropTarget: LTreeNode<any> | null;
 	}>({
@@ -773,10 +840,15 @@ export class TreeController<T> {
 		startX: 0,
 		startY: 0,
 		isDragging: false,
+		isDenied: false,
 		ghostElement: null,
 		currentDropTarget: null
 	});
 	touchTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Held "can't move this" indicator: shown while a locked node stays pressed, torn down on release.
+	private _deniedBadgeEl: HTMLElement | null = null;
+	private _deniedRowEl: HTMLElement | null = null;
 
 	// Progressive flat rendering
 	flatRenderedIds = $state.raw<Set<string>>(new Set());
@@ -888,6 +960,7 @@ export class TreeController<T> {
 		this.selectionMode = props.selectionMode ?? 'single';
 		this.shouldShowCheckboxes = props.shouldShowCheckboxes ?? false;
 		this.checkboxMode = props.checkboxMode ?? 'independent';
+		this.cascadeSelectPolicy = props.cascadeSelectPolicy ?? 'rolled-up';
 		this.shouldClickToggleCheckbox = props.shouldClickToggleCheckbox ?? false;
 		this.beforeCheckboxToggleHandler = props.beforeCheckboxToggleCallback;
 		this.expandIconClass = props.expandIconClass ?? 'stv__toggle-icon--expand';
@@ -907,6 +980,8 @@ export class TreeController<T> {
 		this.scrollHighlightClass = props.scrollHighlightClass ?? 'stv__node-content--scroll-highlight';
 		this.contextMenuXOffset = props.contextMenuXOffset ?? 8;
 		this.contextMenuYOffset = props.contextMenuYOffset ?? 0;
+		this.touchDragDelay = props.touchDragDelay ?? 300;
+		this.shouldIndicateUndraggable = props.shouldIndicateUndraggable ?? true;
 		this.hasContextMenuSnippet = props.hasContextMenuSnippet ?? false;
 
 		// Virtual scrolling
@@ -923,6 +998,8 @@ export class TreeController<T> {
 		this.onNodeDragStartHandler = props.onNodeDragStart;
 		this.onNodeDragOverHandler = props.onNodeDragOver;
 		this.onNodeDropHandler = props.onNodeDrop;
+		this.onNodeDragDeniedHandler = props.onNodeDragDenied;
+		this.onNodeDropDeniedHandler = props.onNodeDropDenied;
 		this.onCopyHandler = props.onCopy;
 		this.onCutHandler = props.onCut;
 		this.onPasteHandler = props.onPaste;
@@ -978,7 +1055,8 @@ export class TreeController<T> {
 			{
 				shouldDisplayDebugInformation: props.shouldDisplayDebugInformation,
 				isSorted: props.isSorted,
-				sortCallback: props.sortCallback
+				sortCallback: props.sortCallback,
+				displayValueFallback: props.displayValueFallback
 			}
 		);
 
@@ -1173,7 +1251,13 @@ export class TreeController<T> {
 			}
 		});
 
-		// Virtual scroll: auto-measure row height from first rendered node
+		// Virtual scroll: auto-measure row height from the first rendered node.
+		// Virtual scroll assumes UNIFORM row heights: the spacer is count * rowHeight,
+		// so if the measured height is smaller than the real row stride the spacer
+		// under-estimates total content and the last rows fall outside the scroll
+		// range (can't reach the bottom + near-bottom jitter). The flat rows carry no
+		// inter-row margin in virtual mode (flatGap is forced off — see Tree.svelte),
+		// so getBoundingClientRect().height is the exact, sub-pixel-accurate stride.
 		$effect(() => {
 			if (!this.vsActive || this.virtualRowHeight || this.vsMeasuredRowHeight) return;
 			if (this.allFlatNodes.length === 0) return;
@@ -3034,7 +3118,11 @@ export class TreeController<T> {
 		if (updates.highlightedPaths !== undefined)
 			this.highlightedPaths = updates.highlightedPaths ?? new Set();
 		if (updates.selectedPaths !== undefined)
-			this.selectedPaths = updates.selectedPaths ?? new Set();
+			// Incoming set is a projection intent — expand it (cascade-down) into the
+			// canonical checked state rather than storing it raw.
+			this.setSelectedPaths([...(updates.selectedPaths ?? new Set<string>())], { silent: true });
+		if (updates.cascadeSelectPolicy !== undefined)
+			this.cascadeSelectPolicy = updates.cascadeSelectPolicy ?? 'rolled-up';
 		if (updates.searchText !== undefined) this.searchText = updates.searchText;
 		if (updates.shouldDisplayDebugInformation !== undefined)
 			this.shouldDisplayDebugInformation = updates.shouldDisplayDebugInformation;
@@ -3101,6 +3189,12 @@ export class TreeController<T> {
 			this.contextMenuXOffset = updates.contextMenuXOffset ?? 8;
 		if (updates.contextMenuYOffset !== undefined)
 			this.contextMenuYOffset = updates.contextMenuYOffset ?? 0;
+		if (updates.touchDragDelay !== undefined)
+			this.touchDragDelay = updates.touchDragDelay ?? 300;
+		if (updates.displayValueFallback !== undefined)
+			this.tree.displayValueFallback = updates.displayValueFallback ?? '[N/A]';
+		if (updates.shouldIndicateUndraggable !== undefined)
+			this.shouldIndicateUndraggable = updates.shouldIndicateUndraggable ?? true;
 
 		// Callbacks
 		if (updates.onNodeClick !== undefined) this.onNodeClickHandler = updates.onNodeClick;
@@ -3125,6 +3219,10 @@ export class TreeController<T> {
 		if (updates.nodeInputTransformationCallback !== undefined)
 			this.inputTransformHandler = updates.nodeInputTransformationCallback;
 		if (updates.onNodeDrop !== undefined) this.onNodeDropHandler = updates.onNodeDrop;
+		if (updates.onNodeDragDenied !== undefined)
+			this.onNodeDragDeniedHandler = updates.onNodeDragDenied;
+		if (updates.onNodeDropDenied !== undefined)
+			this.onNodeDropDeniedHandler = updates.onNodeDropDenied;
 		if (updates.onCopy !== undefined) this.onCopyHandler = updates.onCopy;
 		if (updates.onCut !== undefined) this.onCutHandler = updates.onCut;
 		if (updates.onPaste !== undefined) this.onPasteHandler = updates.onPaste;
@@ -3503,6 +3601,45 @@ export class TreeController<T> {
 		return VisualState.indeterminate;
 	}
 
+	/**
+	 * Project the canonical checked set through the active `cascadeSelectPolicy`
+	 * to produce the EMITTED selection (what the bindable `selectedPaths` prop and
+	 * `onSelectionChange` expose). Pure — reads `node.isSelected` off the live tree,
+	 * never mutates. See {@link CascadeSelectPolicy}.
+	 *
+	 * - independent mode OR `'all'` policy → the canonical set as-is (every
+	 *   fully-checked node; canonical never contains an indeterminate branch).
+	 * - `'leaves'` → only checked leaf nodes.
+	 * - `'rolled-up'` → a fully-checked selectable branch collapses to its root
+	 *   (stop descending); indeterminate branches descend to emit their checked bits.
+	 */
+	private _projectSelection(canonical: Set<string>): Set<string> {
+		if (this.#checkboxMode !== 'cascade' || this.#cascadeSelectPolicy === 'all' || !this.tree) {
+			return canonical;
+		}
+		const policy = this.#cascadeSelectPolicy;
+		const out = new Set<string>();
+		const walk = (node: LTreeNode<T>) => {
+			const vs = this._computeVisualState(node);
+			if (vs === VisualState.notSelected) return;
+			const children = Object.values(node.children);
+			const selectable = node.isSelectable !== false;
+			if (policy === 'leaves') {
+				if (children.length === 0 && node.isSelected && selectable) out.add(node.path);
+				for (const child of children) walk(child);
+				return;
+			}
+			// rolled-up: a fully-checked selectable node covers its whole subtree.
+			if (vs === VisualState.selected && selectable) {
+				out.add(node.path);
+				return;
+			}
+			for (const child of children) walk(child);
+		};
+		for (const root of this.tree.tree) walk(root);
+		return out;
+	}
+
 	/** Set focused node, clearing previous focus flag */
 	private _setFocusedNode(node: LTreeNode<T> | null) {
 		// IMPORTANT: bidirectional bind on `focusedNode` can route the value through
@@ -3591,11 +3728,16 @@ export class TreeController<T> {
 		}
 	}
 
-	/** Notify listeners about checkbox selection change */
+	/** Notify listeners about checkbox selection change. Emits the POLICY-PROJECTED
+	 *  set (`#emittedPaths`), matching what the bindable `selectedPaths` prop exposes. */
 	private _notifySelectionChanged() {
 		if (this.onSelectionChangeHandler) {
-			const nodes = this.getSelectedNodes();
-			this.onSelectionChangeHandler({ paths: this.selectedPaths, nodes });
+			const nodes: LTreeNode<T>[] = [];
+			for (const path of this.#emittedPaths) {
+				const node = this.tree.getNodeByPath(path);
+				if (node) nodes.push(node);
+			}
+			this.onSelectionChangeHandler({ paths: this.#emittedPaths, nodes });
 		}
 	}
 
@@ -4504,6 +4646,7 @@ export class TreeController<T> {
 		// here. Mirrors the touch path at line ~3110.
 		if (!node.isDropAllowed) {
 			if (this.shouldEnableTreeDropZone) return this.handleTreeZoneDrop(event);
+			this._indicateDropDenied(node);
 			this._onNodeDragEnd(event);
 			return;
 		}
@@ -4546,6 +4689,7 @@ export class TreeController<T> {
 		// Per-node opt-out gate (glow mode equivalent of the _onNodeDrop gate).
 		if (!node.isDropAllowed) {
 			if (this.shouldEnableTreeDropZone) return this.handleTreeZoneDrop(event);
+			this._indicateDropDenied(node);
 			this._onNodeDragEnd(event);
 			return;
 		}
@@ -4592,7 +4736,10 @@ export class TreeController<T> {
 	// ── Touch drag handlers ─────────────────────────────────────────────
 
 	private _onTouchStart(node: LTreeNode<any>, event: TouchEvent) {
-		if (!this.getNodeIsDraggable(node)) return;
+		// NOTE: don't early-return on a non-draggable node. We still arm the long-press timer so
+		// a deliberate hold on a LOCKED node triggers "can't move this" feedback (below), while a
+		// tap/scroll cancels it via the same move-threshold + touchend paths as a real drag.
+		const draggable = this.getNodeIsDraggable(node);
 
 		const touch = event.touches[0];
 		this.touchDragState = {
@@ -4600,6 +4747,7 @@ export class TreeController<T> {
 			startX: touch.clientX,
 			startY: touch.clientY,
 			isDragging: false,
+			isDenied: false,
 			ghostElement: null,
 			currentDropTarget: null
 		};
@@ -4610,6 +4758,15 @@ export class TreeController<T> {
 		this._addDocumentTouchListeners();
 
 		this.touchTimer = setTimeout(() => {
+			// The user held long enough to signal drag intent. If this node can't be moved,
+			// show the "can't move this" indicator and KEEP it up while the finger stays down
+			// (torn down on touchend/touchcancel via _resetTouchState). Don't start a drag.
+			if (!draggable) {
+				this.touchDragState = { ...this.touchDragState, isDenied: true };
+				this._indicateDragDenied(node);
+				return;
+			}
+
 			this.draggedNode = node;
 			this.isDragInProgress = true;
 
@@ -4651,7 +4808,7 @@ export class TreeController<T> {
 			} catch {
 				/* blocked by browser policy */
 			}
-		}, 300);
+		}, this.touchDragDelay);
 	}
 
 	// The per-node Svelte handlers are kept as no-ops so the callbacks interface
@@ -4694,6 +4851,13 @@ export class TreeController<T> {
 		if (!this.touchDragState.node) return;
 
 		const touch = event.touches[0];
+
+		// A locked node was long-pressed: keep the "can't move this" indicator up while the
+		// finger stays down (don't cancel on movement, and hold the page still under it).
+		if (this.touchDragState.isDenied) {
+			event.preventDefault();
+			return;
+		}
 
 		if (!this.touchDragState.isDragging) {
 			const dx = Math.abs(touch.clientX - this.touchDragState.startX);
@@ -4747,6 +4911,10 @@ export class TreeController<T> {
 				this._handleDrop(dropNode, this.draggedNode, 'child', event);
 			} else {
 				dragLogger.debug(`Touch drag cancelled: ${this.draggedNode.path}`);
+				// A drop landed on a node that refuses it (or on itself) — surface it.
+				if (dropNode && dropNode !== this.draggedNode) {
+					this._indicateDropDenied(dropNode);
+				}
 			}
 
 			this.removeGhostElement();
@@ -4758,11 +4926,13 @@ export class TreeController<T> {
 
 	private _resetTouchState() {
 		this._removeDocumentTouchListeners();
+		this._clearDragDenied();
 		this.touchDragState = {
 			node: null,
 			startX: 0,
 			startY: 0,
 			isDragging: false,
+			isDenied: false,
 			ghostElement: null,
 			currentDropTarget: null
 		};
@@ -4770,6 +4940,97 @@ export class TreeController<T> {
 		this.isDragInProgress = false;
 		this.isDropPlaceholderActive = false;
 		clearDragSet();
+	}
+
+	/**
+	 * "Can't move this" feedback for a long-press on a NON-draggable node. Fires the
+	 * onNodeDragDenied consumer hook always; the built-in indicator (haptic double-buzz +
+	 * a no-entry icon that STAYS on the row while the finger is held) only when
+	 * shouldIndicateUndraggable is on. Purely imperative DOM (mirrors the touch drop-target
+	 * highlight) — no per-node render state. Torn down by _clearDragDenied on release.
+	 */
+	private _indicateDragDenied(node: LTreeNode<any>) {
+		dragLogger.debug('[drag-denied] locked node long-pressed', { path: node?.path });
+
+		this.onNodeDragDeniedHandler?.(this.nodeRef(node));
+
+		if (!this.shouldIndicateUndraggable) return;
+
+		// Distinct double-buzz (a real drag start is a single 50ms buzz).
+		try {
+			navigator.vibrate?.([30, 25, 30]);
+		} catch {
+			/* blocked by browser policy */
+		}
+
+		if (typeof document === 'undefined') return;
+		const el = document.querySelector(
+			`[data-tree-path="${node.path}"] .stv__node-content`
+		) as HTMLElement | null;
+		if (!el) return;
+
+		// Clear any previous indicator, then show one that persists until release.
+		this._clearDragDenied();
+
+		el.classList.add('stv__node-content--drag-denied');
+		this._deniedRowEl = el;
+
+		const badge = document.createElement('span');
+		badge.className = 'stv__drag-denied-badge';
+		badge.textContent = '🚫';
+		badge.setAttribute('aria-hidden', 'true');
+		el.appendChild(badge);
+		this._deniedBadgeEl = badge;
+	}
+
+	/** Remove the held "can't move this" indicator (badge + row class). Idempotent. */
+	private _clearDragDenied() {
+		if (this._deniedBadgeEl) {
+			this._deniedBadgeEl.remove();
+			this._deniedBadgeEl = null;
+		}
+		if (this._deniedRowEl) {
+			this._deniedRowEl.classList.remove('stv__node-content--drag-denied');
+			this._deniedRowEl = null;
+		}
+	}
+
+	/**
+	 * "Can't drop here" feedback — the target-side twin of _indicateDragDenied. Fires the
+	 * onNodeDropDenied consumer hook always; the built-in indicator (haptic + a brief no-entry
+	 * flash on the refusing target) only when shouldIndicateUndraggable is on. Transient (a drop
+	 * is a discrete moment, not a held gesture), so it auto-clears after a short beat.
+	 */
+	private _indicateDropDenied(node: LTreeNode<any>) {
+		dragLogger.debug('[drop-denied] target refused drop', { path: node?.path });
+
+		this.onNodeDropDeniedHandler?.(this.nodeRef(node));
+
+		if (!this.shouldIndicateUndraggable) return;
+
+		try {
+			navigator.vibrate?.([30, 25, 30]);
+		} catch {
+			/* blocked by browser policy */
+		}
+
+		if (typeof document === 'undefined') return;
+		const el = document.querySelector(
+			`[data-tree-path="${node.path}"] .stv__node-content`
+		) as HTMLElement | null;
+		if (!el) return;
+
+		el.classList.add('stv__node-content--drag-denied');
+		const badge = document.createElement('span');
+		badge.className = 'stv__drag-denied-badge';
+		badge.textContent = '🚫';
+		badge.setAttribute('aria-hidden', 'true');
+		el.appendChild(badge);
+
+		setTimeout(() => {
+			el.classList.remove('stv__node-content--drag-denied');
+			badge.remove();
+		}, 700);
 	}
 
 	private createGhostElement(node: LTreeNode<any>, x: number, y: number) {

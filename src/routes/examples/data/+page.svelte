@@ -49,6 +49,10 @@
 
 	let insertResult = $state<InsertArrayResult<FileItem> | null>(null);
 
+	// Display-value fallback demo: a tree with no displayValueMember / getDisplayValueCallback
+	// falls back to this text for every node label (also what the touch-drag ghost shows).
+	let displayValueFallbackText = $state('(no name)');
+
 	function sortByName(items: LTreeNode<FileItem>[]) {
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
@@ -120,6 +124,82 @@ const data = [
 				<li><strong>Path "1.1"</strong> is a child of "1"</li>
 				<li><strong>Path "1.1.1"</strong> is a child of "1.1" (grandchild of "1")</li>
 				<li>The separator (default ".") splits path into segments</li>
+			</ul>
+		</div>
+	</div>
+
+	<!-- Display Value Fallback -->
+	<div class="card">
+		<h2>Display Value Fallback</h2>
+		<p class="description">
+			A node's label comes from <code>getNodeDisplayValue</code>, resolved in order:
+			<code>displayValueMember</code> &rarr; <code>getDisplayValueCallback</code> &rarr;
+			<code>displayValueFallback</code>. When a tree configures neither a member nor a
+			callback (or a node has no <code>data</code>), the fallback text is shown for every
+			node — this is also what the touch-drag ghost displays. Default is <code>'[N/A]'</code>,
+			and it's now configurable per-tree (and live-updatable).
+		</p>
+
+		<div class="control-row">
+			<label for="fallback-input">Fallback text:</label>
+			<input
+				id="fallback-input"
+				type="text"
+				bind:value={displayValueFallbackText}
+				placeholder="[N/A]"
+			/>
+			<span class="hint">Type here — the right-hand tree updates live.</span>
+		</div>
+
+		<div class="grid-2">
+			<div>
+				<h3>With <code>displayValueMember="name"</code></h3>
+				<div class="tree-container">
+					<Tree
+						data={dotSeparatorData}
+						idMember="id"
+						pathMember="path"
+						displayValueMember="name"
+						sortCallback={sortByName}
+						isSorted={true}
+						expandLevel={3}
+						{...getTreeProps()}
+					/>
+				</div>
+			</div>
+
+			<div>
+				<h3>No member / no callback &rarr; fallback</h3>
+				<div class="tree-container">
+					<Tree
+						data={dotSeparatorData}
+						idMember="id"
+						pathMember="path"
+						displayValueFallback={displayValueFallbackText}
+						sortCallback={sortByName}
+						isSorted={true}
+						expandLevel={3}
+						{...getTreeProps()}
+					/>
+				</div>
+			</div>
+		</div>
+
+		<div class="code-block">
+			<pre>{`<Tree
+  data={data}
+  idMember="id"
+  pathMember="path"
+  displayValueFallback="${displayValueFallbackText || '[N/A]'}"
+/>`}</pre>
+		</div>
+
+		<div class="note">
+			<p class="note-title">Resolution order</p>
+			<ul>
+				<li><strong>displayValueMember</strong> — used when set and the node has data (wins over the callback)</li>
+				<li><strong>getDisplayValueCallback</strong> — used when no member (or the node has no data)</li>
+				<li><strong>displayValueFallback</strong> — used only when neither resolves; set <code>""</code> to render nothing</li>
 			</ul>
 		</div>
 	</div>
@@ -417,3 +497,27 @@ ${"<"}/script>
 		<p><a href="/">&larr; Back to Examples</a></p>
 	</footer>
 </div>
+
+<style>
+	.control-row {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		margin-bottom: 1rem;
+	}
+	.control-row label {
+		font-weight: 600;
+	}
+	.control-row input {
+		padding: 0.4rem 0.6rem;
+		border: 1px solid #cbd5e1;
+		border-radius: 0.4rem;
+		font-size: 0.95rem;
+		min-width: 12rem;
+	}
+	.control-row .hint {
+		color: #64748b;
+		font-size: 0.85rem;
+	}
+</style>

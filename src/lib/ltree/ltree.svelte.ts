@@ -77,6 +77,9 @@ export function createLTree<T>(
 	let shouldCalculateDisplayValue: boolean = isEmptyString(_displayValueMember);
 	let shouldCalculateSearchValue: boolean = isEmptyString(_searchValueMember);
 
+	// Reactive so a runtime change (Tree prop / update()) re-renders the fallback labels.
+	let displayValueFallbackState = $state<string>(opts?.displayValueFallback ?? '[N/A]');
+
 	// this is absolutely crucial to keep order of sorted items. Segments are just numbers and numbers as properties are always sorted
 	// see https://stackoverflow.com/questions/33351816/how-to-prevent-automatic-sort-of-object-numeric-property/51497854#51497854
 	const segmentPrefix = 'x';
@@ -152,6 +155,12 @@ export function createLTree<T>(
 		hasChildrenMember: _hasChildrenMember,
 		displayValueMember: _displayValueMember,
 		getDisplayValueCallback: _getDisplayValueCallback,
+		get displayValueFallback(): string {
+			return displayValueFallbackState;
+		},
+		set displayValueFallback(v: string) {
+			displayValueFallbackState = v ?? '[N/A]';
+		},
 
 		searchValueMember: _searchValueMember,
 		getSearchValueCallback: _getSearchValueCallback,
@@ -923,7 +932,7 @@ export function createLTree<T>(
 
 			if (this.getDisplayValueCallback) return this.getDisplayValueCallback(node);
 
-			return '[N/A]';
+			return this.displayValueFallback ?? '[N/A]';
 		},
 
 		getNodeSearchValue(node: LTreeNode<T>): string {

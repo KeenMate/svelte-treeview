@@ -889,6 +889,7 @@
 						data={sourceData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
 						getIsDropAllowedCallback={() => true}
@@ -938,6 +939,7 @@
 						data={targetData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
 						getIsDropAllowedCallback={() => true}
@@ -1047,6 +1049,7 @@
 				data={restrictedData}
 				idMember="id"
 				pathMember="path"
+				displayValueMember="name"
 				orderMember="sortOrder"
 				getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
 				getIsDropAllowedCallback={() => true}
@@ -1165,6 +1168,7 @@ const data = [
 						data={guardSourceData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						isSorted={true}
@@ -1194,6 +1198,7 @@ const data = [
 						data={guardDestData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						isSorted={true}
@@ -1258,6 +1263,7 @@ const data = [
 				data={leaveBehindData}
 				idMember="id"
 				pathMember="path"
+				displayValueMember="name"
 				orderMember="sortOrder"
 				sortCallback={sortByOrder}
 				isSorted={true}
@@ -1337,6 +1343,7 @@ const data = [
 						data={basketData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						isSorted={true}
@@ -1365,6 +1372,7 @@ const data = [
 						data={pantryData}
 						idMember="id"
 						pathMember="path"
+						displayValueMember="name"
 						orderMember="sortOrder"
 						sortCallback={sortByOrder}
 						isSorted={true}

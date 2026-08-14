@@ -14,6 +14,7 @@
 		type DropOperation,
 		type ClickBehavior,
 		type CheckboxMode,
+		type CascadeSelectPolicy,
 		type SelectionMode,
 		type HighlightMode,
 		type TreeMutationOptions,
@@ -61,6 +62,9 @@
 
 		displayValueMember?: string | null | undefined;
 		getDisplayValueCallback?: (node: LTreeNode<T>) => string;
+		/** Text shown for a node with no resolvable display value (no displayValueMember /
+		 *  getDisplayValueCallback match). Default '[N/A]'. Also used by the touch-drag ghost. */
+		displayValueFallback?: string;
 
 		searchValueMember?: string | null | undefined;
 		getSearchValueCallback?: (node: LTreeNode<T>) => string;
@@ -104,6 +108,13 @@
 		selectionMode?: SelectionMode | null | undefined;
 		shouldShowCheckboxes?: boolean | null | undefined;
 		checkboxMode?: CheckboxMode | null | undefined;
+		/**
+		 * Which paths `selectedPaths` / `onSelectionChange` EMIT in cascade mode:
+		 * `'rolled-up'` (default) collapses a fully-checked subtree to its root,
+		 * `'leaves'` emits only checked leaves, `'all'` emits every fully-checked node.
+		 * Orthogonal to `checkboxMode`; ignored in `'independent'` mode.
+		 */
+		cascadeSelectPolicy?: CascadeSelectPolicy | null | undefined;
 		shouldClickToggleCheckbox?: boolean | null | undefined;
 		beforeCheckboxToggleCallback?: (
 			node: LTreeNode<T>,
@@ -191,6 +202,10 @@
 		onNodeDragStart?: (ctx: NodeDragContext<T>) => void;
 		onNodeDragOver?: (ctx: NodeDragContext<T>) => void;
 		onNodeDrop?: (ctx: NodeDropContext<T>) => void;
+		/** Fired when a long-press engages on a non-draggable node (touch). Fire-and-forget. */
+		onNodeDragDenied?: (ctx: NodeEventContext<T>) => void;
+		/** Fired when a drop is rejected because the target node refuses it. Fire-and-forget. */
+		onNodeDropDenied?: (ctx: NodeEventContext<T>) => void;
 		// Post-operation clipboard notifications (fired AFTER the op). onCopy/onCut/onDelete
 		// carry paths + resolved nodes (pre-removal snapshots for delete); onPaste the PasteResult.
 		onCopy?: (ctx: ClipboardEventContext<T>) => void;
@@ -284,6 +299,14 @@
 		contextMenuXOffset?: number | null | undefined;
 		contextMenuYOffset?: number | null | undefined;
 
+		/** Milliseconds to hold a touch before a touch-drag engages (long-press). Default 300. */
+		touchDragDelay?: number | null | undefined;
+
+		/** Show the built-in blocked-action indicator (haptic buzz + no-entry icon) — held while a
+		 *  locked node is long-pressed, and flashed on a target that refuses a drop. Default true.
+		 *  The onNodeDragDenied / onNodeDropDenied events fire regardless. */
+		shouldIndicateUndraggable?: boolean;
+
 		/** Custom keydown handler. Return true to prevent default tree keyboard handling
 		 *  (including the built-in shortcuts). Gets a context object mirroring the other
 		 *  callback families: the resolved `focusedNode` (single) and `highlightedNodes`
@@ -329,6 +352,7 @@
 
 		displayValueMember,
 		getDisplayValueCallback,
+		displayValueFallback = '[N/A]',
 		searchValueMember,
 		getSearchValueCallback,
 		orderMember,
@@ -359,6 +383,7 @@
 		selectionMode = 'single',
 		shouldShowCheckboxes = false,
 		checkboxMode = 'independent',
+		cascadeSelectPolicy = 'rolled-up',
 		shouldClickToggleCheckbox = false,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode = 'visual',
@@ -412,6 +437,8 @@
 		onNodeDragStart,
 		onNodeDragOver,
 		onNodeDrop,
+		onNodeDragDenied,
+		onNodeDropDenied,
 		onCopy,
 		onCut,
 		onPaste,
@@ -444,6 +471,8 @@
 		scrollHighlightClass = 'stv__node-content--scroll-highlight',
 		contextMenuXOffset = 8,
 		contextMenuYOffset = 0,
+		touchDragDelay = 300,
+		shouldIndicateUndraggable = true,
 		onTreeKeydown,
 		navigationOverrides
 	}: Props = $props();
@@ -477,6 +506,7 @@
 		getIsCollapsibleCallback,
 		displayValueMember,
 		getDisplayValueCallback,
+		displayValueFallback,
 		searchValueMember,
 		getSearchValueCallback,
 		orderMember,
@@ -493,6 +523,7 @@
 		selectionMode,
 		shouldShowCheckboxes,
 		checkboxMode,
+		cascadeSelectPolicy,
 		shouldClickToggleCheckbox,
 		beforeCheckboxToggleCallback,
 		rangeSelectionMode,
@@ -533,6 +564,8 @@
 		onNodeDragStart,
 		onNodeDragOver,
 		onNodeDrop,
+		onNodeDragDenied,
+		onNodeDropDenied,
 		onCopy,
 		onCut,
 		onPaste,
@@ -560,7 +593,9 @@
 		scrollHighlightTimeout,
 		scrollHighlightClass,
 		contextMenuXOffset,
-		contextMenuYOffset
+		contextMenuYOffset,
+		touchDragDelay,
+		shouldIndicateUndraggable
 	});
 
 	// ── Apply navigation overrides if provided ─────────────────────────
@@ -728,6 +763,9 @@
 		controller.checkboxMode = checkboxMode ?? 'independent';
 	});
 	$effect(() => {
+		controller.cascadeSelectPolicy = cascadeSelectPolicy ?? 'rolled-up';
+	});
+	$effect(() => {
 		controller.shouldClickToggleCheckbox = shouldClickToggleCheckbox ?? false;
 	});
 	$effect(() => {
@@ -787,6 +825,15 @@
 	$effect(() => {
 		controller.contextMenuYOffset = contextMenuYOffset ?? 0;
 	});
+	$effect(() => {
+		controller.touchDragDelay = touchDragDelay ?? 300;
+	});
+	$effect(() => {
+		controller.shouldIndicateUndraggable = shouldIndicateUndraggable ?? true;
+	});
+	$effect(() => {
+		if (controller?.tree) controller.tree.displayValueFallback = displayValueFallback ?? '[N/A]';
+	});
 
 	// Callback sync
 	$effect(() => {
@@ -809,6 +856,12 @@
 	});
 	$effect(() => {
 		controller.onNodeDropHandler = onNodeDrop;
+	});
+	$effect(() => {
+		controller.onNodeDragDeniedHandler = onNodeDragDenied;
+	});
+	$effect(() => {
+		controller.onNodeDropDeniedHandler = onNodeDropDenied;
 	});
 	$effect(() => {
 		controller.onCopyHandler = onCopy;
@@ -867,7 +920,9 @@
 		highlightedPaths = controller.highlightedPaths;
 	});
 	$effect(() => {
-		selectedPaths = controller.selectedPaths;
+		// The bindable prop exposes the POLICY-PROJECTED selection (rolled-up /
+		// leaves / all), not the internal canonical set. See cascadeSelectPolicy.
+		selectedPaths = controller.emittedPaths;
 	});
 	$effect(() => {
 		insertResult = controller.insertResult;
@@ -890,9 +945,11 @@
 	});
 	$effect(() => {
 		const sp = selectedPaths;
-		const cp = controller.selectedPaths;
+		const cp = controller.emittedPaths;
 		if (sp.size !== cp.size || [...sp].some((p) => !cp.has(p))) {
-			controller.selectedPaths = new Set(sp);
+			// Incoming set is a projection; expand it (cascade-down) into the canonical
+			// checked state. Silent — the parent set this, so don't echo onSelectionChange.
+			controller.setSelectedPaths([...sp], { silent: true });
 		}
 	});
 
@@ -1175,6 +1232,7 @@
 				| 'getIsDropAllowedCallback'
 				| 'displayValueMember'
 				| 'getDisplayValueCallback'
+				| 'displayValueFallback'
 				| 'searchValueMember'
 				| 'getSearchValueCallback'
 				| 'isCollapsibleMember'
@@ -1191,6 +1249,7 @@
 				| 'selectionMode'
 				| 'shouldShowCheckboxes'
 				| 'checkboxMode'
+				| 'cascadeSelectPolicy'
 				| 'shouldClickToggleCheckbox'
 				| 'beforeCheckboxToggleCallback'
 				| 'rangeSelectionMode'
@@ -1208,6 +1267,8 @@
 				| 'onNodeDragStart'
 				| 'onNodeDragOver'
 				| 'onNodeDrop'
+				| 'onNodeDragDenied'
+				| 'onNodeDropDenied'
 				| 'onCopy'
 				| 'onCut'
 				| 'onPaste'
@@ -1245,6 +1306,8 @@
 				| 'scrollHighlightClass'
 				| 'contextMenuXOffset'
 				| 'contextMenuYOffset'
+				| 'touchDragDelay'
+				| 'shouldIndicateUndraggable'
 				| 'isAccordionExpand'
 			>
 		>
@@ -1276,6 +1339,8 @@
 		if (updates.displayValueMember !== undefined) displayValueMember = updates.displayValueMember;
 		if (updates.getDisplayValueCallback !== undefined)
 			getDisplayValueCallback = updates.getDisplayValueCallback;
+		if (updates.displayValueFallback !== undefined)
+			displayValueFallback = updates.displayValueFallback;
 		if (updates.searchValueMember !== undefined) searchValueMember = updates.searchValueMember;
 		if (updates.getSearchValueCallback !== undefined)
 			getSearchValueCallback = updates.getSearchValueCallback;
@@ -1296,6 +1361,8 @@
 		if (updates.shouldShowCheckboxes !== undefined)
 			shouldShowCheckboxes = updates.shouldShowCheckboxes;
 		if (updates.checkboxMode !== undefined) checkboxMode = updates.checkboxMode;
+		if (updates.cascadeSelectPolicy !== undefined)
+			cascadeSelectPolicy = updates.cascadeSelectPolicy;
 		if (updates.shouldClickToggleCheckbox !== undefined)
 			shouldClickToggleCheckbox = updates.shouldClickToggleCheckbox;
 		if (updates.beforeCheckboxToggleCallback !== undefined)
@@ -1319,6 +1386,8 @@
 		if (updates.onNodeDragStart !== undefined) onNodeDragStart = updates.onNodeDragStart;
 		if (updates.onNodeDragOver !== undefined) onNodeDragOver = updates.onNodeDragOver;
 		if (updates.onNodeDrop !== undefined) onNodeDrop = updates.onNodeDrop;
+		if (updates.onNodeDragDenied !== undefined) onNodeDragDenied = updates.onNodeDragDenied;
+		if (updates.onNodeDropDenied !== undefined) onNodeDropDenied = updates.onNodeDropDenied;
 		if (updates.onCopy !== undefined) onCopy = updates.onCopy;
 		if (updates.onCut !== undefined) onCut = updates.onCut;
 		if (updates.onPaste !== undefined) onPaste = updates.onPaste;
@@ -1370,6 +1439,9 @@
 			scrollHighlightClass = updates.scrollHighlightClass;
 		if (updates.contextMenuXOffset !== undefined) contextMenuXOffset = updates.contextMenuXOffset;
 		if (updates.contextMenuYOffset !== undefined) contextMenuYOffset = updates.contextMenuYOffset;
+		if (updates.touchDragDelay !== undefined) touchDragDelay = updates.touchDragDelay;
+		if (updates.shouldIndicateUndraggable !== undefined)
+			shouldIndicateUndraggable = updates.shouldIndicateUndraggable;
 		if (updates.isAccordionExpand !== undefined) isAccordionExpand = updates.isAccordionExpand;
 	}
 
@@ -1647,10 +1719,7 @@
 					<div style="height: {controller.vsTotalHeight}px; position: relative;">
 						<!-- Rendered window at correct offset -->
 						<div style="transform: translateY({controller.vsOffsetY}px);">
-							{#each controller.flatNodesToRender as node, i (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
-								{@const absoluteIndex = controller.vsStartIndex + i}
-								{@const prevNode =
-									absoluteIndex > 0 ? controller.allFlatNodes[absoluteIndex - 1] : null}
+							{#each controller.flatNodesToRender as node (node.id + '|' + node.path + '|' + node.hasChildren + '|' + node._rev)}
 								<Node
 									{node}
 									children={nodeTemplate}
@@ -1661,7 +1730,7 @@
 									activeDropPosition={controller.activeDropPosition}
 									dropOperation={controller.currentDropOperation}
 									flatMode={true}
-									flatGap={prevNode != null && (node.level ?? 0) > (prevNode.level ?? 0)}
+									flatGap={false}
 								/>
 							{:else}
 								{@render emptyDropState()}

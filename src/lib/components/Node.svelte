@@ -458,9 +458,26 @@
 				}
 				glowPosition = null;
 			}}
-			ontouchstart={(e) => callbacks.onTouchDragStart(node, e)}
+			ontouchstart={(e) => {
+				// Native HTML5 `draggable` and synthetic touch events collide: a
+				// draggable=true element swallows the subsequent touchmove/touchend
+				// (Chrome tries to start a mouse-driven native drag). Most visible in
+				// DevTools device emulation, where the touch-drag freezes on the first
+				// move. Disable native DnD for the duration of THIS touch gesture —
+				// synchronously, before the move that would trigger the hijack — so the
+				// touch handlers get the full stream. Mouse never fires touchstart, so a
+				// touchscreen laptop's mouse-drag is untouched. Restored on end/cancel.
+				(e.currentTarget as HTMLElement).draggable = false;
+				callbacks.onTouchDragStart(node, e);
+			}}
 			ontouchmove={(e) => callbacks.onTouchDragMove(node, e)}
-			ontouchend={(e) => callbacks.onTouchDragEnd(node, e)}
+			ontouchend={(e) => {
+				(e.currentTarget as HTMLElement).draggable = node?.isDraggable ?? false;
+				callbacks.onTouchDragEnd(node, e);
+			}}
+			ontouchcancel={(e) => {
+				(e.currentTarget as HTMLElement).draggable = node?.isDraggable ?? false;
+			}}
 		>
 			{#if children}
 				{@render children(node)}

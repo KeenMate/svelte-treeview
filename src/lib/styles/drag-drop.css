@@ -194,3 +194,53 @@
 	mask-image: var(--stv-drop-arrow-child-image);
 	background-color: var(--stv-drop-glow-child-color);
 }
+
+/* =============================================================================
+   "Can't move this" — feedback when a locked (non-draggable) node is long-pressed.
+   Fired imperatively by the controller (_indicateDragDenied) via the
+   .stv__node-content--drag-denied class + an appended .stv__drag-denied-badge.
+   ============================================================================= */
+
+/* Row tint gently pulses for as long as the locked node stays pressed (class is added on
+   long-press, removed on release). */
+.stv__node-content--drag-denied {
+	animation: stv-drag-denied-flash 0.9s ease-in-out infinite;
+}
+
+@keyframes stv-drag-denied-flash {
+	0%,
+	100% {
+		background-color: transparent;
+	}
+	50% {
+		background-color: var(--stv-drag-denied-flash-bg, color-mix(in srgb, #e11d48 18%, transparent));
+	}
+}
+
+/* No-entry icon pops in and STAYS visible until the finger lifts. */
+.stv__drag-denied-badge {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	font-size: 1em;
+	line-height: 1;
+	pointer-events: none;
+	z-index: 3;
+	transform: translateY(-50%);
+	animation: stv-drag-denied-badge 0.22s ease-out forwards;
+}
+
+@keyframes stv-drag-denied-badge {
+	0% {
+		opacity: 0;
+		transform: translateY(-50%) scale(0.5);
+	}
+	70% {
+		opacity: 1;
+		transform: translateY(-50%) scale(1.15);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(-50%) scale(1);
+	}
+}

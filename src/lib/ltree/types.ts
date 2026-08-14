@@ -8,6 +8,17 @@ export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type CheckboxMode = 'independent' | 'cascade';
+/**
+ * Which paths the checkbox selection EMITS (via `selectedPaths` + `onSelectionChange`)
+ * when `checkboxMode === 'cascade'`. Orthogonal to `checkboxMode` (which controls the
+ * cascade BEHAVIOUR); this controls the projected OUTPUT. Ignored in `'independent'` mode
+ * (there the emitted set is the raw toggled set).
+ * - `'rolled-up'` (default): minimal cover — a fully-checked subtree collapses to its root;
+ *   a partially-checked branch emits its individually-checked descendants.
+ * - `'leaves'`: only the checked leaf nodes.
+ * - `'all'`: every fully-checked node (branches + leaves).
+ */
+export type CascadeSelectPolicy = 'rolled-up' | 'leaves' | 'all';
 export type SelectionMode = 'single' | 'multi';
 /** Gesture mode for highlightNode(): replace = plain click, toggle = Ctrl+click, range = Shift+click. */
 export type HighlightMode = 'replace' | 'toggle' | 'range';
@@ -104,6 +115,9 @@ export interface Ltree<T> {
 
 	displayValueMember?: string | null | undefined;
 	getDisplayValueCallback?: (node: LTreeNode<T>) => string;
+	/** Text returned by getNodeDisplayValue when neither displayValueMember nor
+	 *  getDisplayValueCallback resolves a value (default '[N/A]'). */
+	displayValueFallback?: string;
 
 	searchValueMember?: string | null | undefined;
 	getSearchValueCallback?: (node: LTreeNode<T>) => string;
