@@ -39,18 +39,39 @@ function nodeRow(node: Locator): Locator {
  * boundary where rounding can flip the resolution.
  */
 async function dragNodeTo(src: Locator, dst: Locator, position: 'before' | 'after' | 'child') {
+	// Pointer drag drives raw page.mouse coords, so both endpoints must be on-screen
+	// (Playwright's old dragTo auto-scrolled; page.mouse does not).
+	await dst.scrollIntoViewIfNeeded();
+	await src.scrollIntoViewIfNeeded();
 	const box = await dst.boundingBox();
-	if (!box) throw new Error('Missing target boundingBox');
-	let x: number;
-	let y: number;
+	const from = await src.boundingBox();
+	if (!box || !from) throw new Error('Missing boundingBox');
+	let ox: number;
+	let oy: number;
 	if (position === 'child') {
-		x = box.width * 0.8;
-		y = box.height / 2;
+		ox = box.width * 0.8;
+		oy = box.height / 2;
 	} else {
-		x = box.width * 0.2;
-		y = position === 'before' ? Math.max(1, box.height * 0.15) : box.height * 0.85;
+		ox = box.width * 0.2;
+		oy = position === 'before' ? Math.max(1, box.height * 0.15) : box.height * 0.85;
 	}
-	await src.dragTo(dst, { targetPosition: { x, y } });
+	await pointerDrag(src.page(), from.x + from.width / 2, from.y + from.height / 2, box.x + ox, box.y + oy);
+}
+
+/**
+ * Pointer-driven drag (the lib no longer uses native HTML5 DnD). Playwright's real
+ * mouse events synthesize pointerdown/move/up, which is exactly what the tree's
+ * unified pointer manager listens for on window. We step the first move past the
+ * 5px engage threshold, then travel to the target, then release.
+ */
+async function pointerDrag(page: Page, fromX: number, fromY: number, toX: number, toY: number, opts?: { ctrl?: boolean }) {
+	if (opts?.ctrl) await page.keyboard.down('Control');
+	await page.mouse.move(fromX, fromY);
+	await page.mouse.down();
+	await page.mouse.move(fromX + 8, fromY + 8, { steps: 3 });
+	await page.mouse.move(toX, toY, { steps: 10 });
+	await page.mouse.up();
+	if (opts?.ctrl) await page.keyboard.up('Control');
 }
 
 // ── Section 1: single-tree drag ────────────────────────────────────────────
@@ -263,40 +284,27 @@ test.describe('Ctrl-drag copy (isCopyAllowed=true)', () => {
 		await gotoFixture(page);
 		const section = page.getByTestId('section-copy');
 
-		// Playwright's dragTo doesn't honor modifiers, so script the drag manually
-		// while holding Control.
+		// Pointer drag reads event.ctrlKey directly, so holding Control across the
+		// pointer stream reliably marks the drop as a copy.
 		const src = nodeRow(nodeByPath(section, '1'));
 		const dst = nodeRow(nodeByPath(section, '2'));
+		await dst.scrollIntoViewIfNeeded();
+		await src.scrollIntoViewIfNeeded();
 		const srcBox = await src.boundingBox();
 		const dstBox = await dst.boundingBox();
 		if (!srcBox || !dstBox) throw new Error('Missing bounding box for drag endpoints');
 
-		await page.keyboard.down('Control');
-		await page.mouse.move(srcBox.x + srcBox.width / 2, srcBox.y + srcBox.height / 2);
-		await page.mouse.down();
-		// Two move steps are needed to trigger the drag start in Chromium.
-		await page.mouse.move(dstBox.x + dstBox.width / 2, dstBox.y + dstBox.height * 0.75, {
-			steps: 5
-		});
-		await page.mouse.move(dstBox.x + dstBox.width / 2, dstBox.y + dstBox.height * 0.75 + 2, {
-			steps: 5
-		});
-		await page.mouse.up();
-		await page.keyboard.up('Control');
+		await pointerDrag(
+			page,
+			srcBox.x + srcBox.width / 2,
+			srcBox.y + srcBox.height / 2,
+			dstBox.x + dstBox.width / 2,
+			dstBox.y + dstBox.height * 0.75,
+			{ ctrl: true }
+		);
 
-		// Native drag-and-drop synthesis via mouse events is not 100% reliable —
-		// some Chromium versions reject the chain entirely. Only assert on the
-		// operation field IF a drop fired.
-		const count = await page.getByTestId('copy-drop-count').textContent();
-		if (count && Number(count) > 0) {
-			await expect(page.getByTestId('copy-drop-operation')).toHaveText('copy');
-		} else {
-			test.info().annotations.push({
-				type: 'note',
-				description:
-					'Ctrl+drag synthesized chain did not register a drop in this Chromium build — skipping op assertion.'
-			});
-		}
+		await expect(page.getByTestId('copy-drop-count')).toHaveText('1');
+		await expect(page.getByTestId('copy-drop-operation')).toHaveText('copy');
 	});
 });
 
@@ -533,10 +541,11 @@ test.describe('touch drag', () => {
 	// Chrome project is mouse-only.
 	test.use({ hasTouch: true });
 
-	// Dispatch a synthetic TouchEvent on a specific element. CDP-level
-	// dispatchTouchEvent reliably triggers global touch listeners but does not
-	// always reach individual Node `ontouchstart` handlers in Chromium —
-	// dispatching the event on the element directly bridges that gap.
+	// The unified drag manager is pointer-driven: a touch drag is a PointerEvent stream with
+	// pointerType 'touch'. pointerdown must hit the node element (Svelte's delegated
+	// onpointerdown arms the long-press); pointermove/pointerup are read off window (that's
+	// where the controller attaches its drag listeners). Signature kept as-is (touchstart/
+	// touchmove/touchend) so the tests read the same.
 	async function dispatchTouch(
 		page: Page,
 		target: Locator,
@@ -546,24 +555,24 @@ test.describe('touch drag', () => {
 	) {
 		await target.evaluate(
 			(el, { type, clientX, clientY }) => {
-				const touch = new Touch({
-					identifier: 0,
-					target: el,
+				const pointerType =
+					type === 'touchstart' ? 'pointerdown' : type === 'touchmove' ? 'pointermove' : 'pointerup';
+				const ev = new PointerEvent(pointerType, {
+					bubbles: true,
+					cancelable: true,
+					composed: true,
+					pointerId: 1,
+					pointerType: 'touch',
+					isPrimary: true,
+					button: type === 'touchstart' ? 0 : -1,
+					buttons: type === 'touchend' ? 0 : 1,
 					clientX,
 					clientY,
 					screenX: clientX,
-					screenY: clientY,
-					pageX: clientX,
-					pageY: clientY
+					screenY: clientY
 				});
-				const init: TouchEventInit = {
-					bubbles: true,
-					cancelable: true,
-					touches: type === 'touchend' ? [] : [touch],
-					targetTouches: type === 'touchend' ? [] : [touch],
-					changedTouches: [touch]
-				};
-				el.dispatchEvent(new TouchEvent(type, init));
+				if (type === 'touchstart') el.dispatchEvent(ev);
+				else window.dispatchEvent(ev);
 			},
 			{ type, clientX, clientY }
 		);
@@ -742,8 +751,14 @@ test.describe('tree drop zone + DropGroup routing', () => {
 		await nodeRow(nodeByPath(section, '5')).click({ modifiers: ['Control'] });
 		await expect(page.getByTestId('produce-highlighted-size')).toHaveText('3');
 
-		// Drop the basket anywhere on the tree — the container itself is the zone.
-		await nodeRow(nodeByPath(section, '3')).dragTo(section.locator('.stv__container'));
+		// Drop the basket on the tree — routing is content-addressed (beforeDrop returns
+		// DropGroup[] by kind), so the landing node is irrelevant; aim at Vegetables (not in
+		// the dragged set, and on-screen) to keep the pointer release inside the viewport.
+		await dragNodeTo(
+			nodeRow(nodeByPath(section, '3')),
+			nodeRow(nodeByPath(section, '2')),
+			'child'
+		);
 
 		// One drop, routed by kind: 2 fruits under Fruits, 1 vegetable under Vegetables.
 		await expect(page.getByTestId('produce-drop-count')).toHaveText('1');
@@ -761,8 +776,13 @@ test.describe('tree drop zone + DropGroup routing', () => {
 		const section = page.getByTestId('section-tree-zone');
 		await section.scrollIntoViewIfNeeded();
 
-		// Drag Banana (a fruit) alone onto the zone — no selection needed.
-		await nodeRow(nodeByPath(section, '5')).dragTo(section.locator('.stv__container'));
+		// Drag Banana (a fruit) alone onto the zone — content-addressed routing sends it under
+		// Fruits regardless of the landing node; aim at Fruits (not the dragged node) on-screen.
+		await dragNodeTo(
+			nodeRow(nodeByPath(section, '5')),
+			nodeRow(nodeByPath(section, '1')),
+			'child'
+		);
 
 		await expect(page.getByTestId('produce-drop-count')).toHaveText('1');
 		await expect(page.getByTestId('produce-routed')).toHaveText('Fruits:1');

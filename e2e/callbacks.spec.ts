@@ -55,16 +55,18 @@ async function dragNodeTo(
 // ── isDraggable per-node opt-out (callback form) ─────────────────────────────
 
 test.describe('isDraggable callback', () => {
-	test('normal node renders draggable="true"', async ({ page }) => {
+	// Pointer-driven drag no longer uses the native `draggable` attribute; draggability is
+	// signalled by the .stv__node-content--draggable class (cursor: grab + touch-action).
+	test('normal node renders the draggable class', async ({ page }) => {
 		await gotoFixture(page);
 		const row = nodeRow(nodeByPath(page, '1.1'));
-		await expect(row).toHaveAttribute('draggable', 'true');
+		await expect(row).toHaveClass(/stv__node-content--draggable/);
 	});
 
-	test('pinned node renders draggable="false"', async ({ page }) => {
+	test('pinned node does NOT render the draggable class', async ({ page }) => {
 		await gotoFixture(page);
 		const row = nodeRow(nodeByPath(page, '1.2'));
-		await expect(row).toHaveAttribute('draggable', 'false');
+		await expect(row).not.toHaveClass(/stv__node-content--draggable/);
 	});
 
 	test('attempting to drag a pinned node does NOT fire onNodeDrop', async ({ page }) => {

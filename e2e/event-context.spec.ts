@@ -164,12 +164,10 @@ test.describe('Event contexts', () => {
 		await page.getByTestId('clear').click();
 
 		// A drag has one DOM origin, so onNodeDragStart fires once even for a 2-node
-		// selection — `dragged` is how the whole set is exposed. (Chromium's synthetic
-		// multi-source DnD doesn't reliably land the drop, and the drop's dragged/dropped
-		// mechanics are already covered by the single + cross-tree cases above and by
-		// drag-drop.spec.ts, so we fire dragstart directly and assert its contract.)
-		const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
-		await rowA(page, '1.1').dispatchEvent('dragstart', { dataTransfer });
+		// selection — `dragged` is how the whole set is exposed. The pointer-driven drag
+		// engages on grab; we drag the (highlighted) lead onto another node so the drop lands,
+		// and assert dragStart fired exactly once carrying the full {1.1, 1.2} set.
+		await dragTo(rowA(page, '1.1'), rowA(page, '2'), 'after');
 
 		const ds = await readLog(page, 'dragstart-ctx');
 		expect(ds).toHaveLength(1); // ONE fire, not one-per-selected-node

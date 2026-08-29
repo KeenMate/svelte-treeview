@@ -1634,11 +1634,6 @@
 		class="stv__empty-state"
 		class:stv__drop-placeholder={showEmptyDropPlaceholder}
 		class:stv__drop-placeholder--active={controller.isDropPlaceholderActive}
-		ondragenter={controller.handleEmptyTreeDragOver}
-		ondragover={controller.handleEmptyTreeDragOver}
-		ondragleave={controller.handleEmptyTreeDragLeave}
-		ondrop={controller.handleEmptyTreeDrop}
-		ontouchend={controller.handleEmptyTreeTouchEnd}
 		onmouseenter={focusEmptyDropZone}
 		onpointerdown={focusEmptyDropZone}
 	>
@@ -1663,13 +1658,9 @@
 	class:stv__tree-drop-zone--active={shouldEnableTreeDropZone && controller.isDropPlaceholderActive}
 	tabindex="0"
 	data-theme={theme}
+	data-tree-id={controller.treeId}
 	bind:this={treeContainerRef}
 	onkeydown={handleTreeKeydown}
-	ondragenter={controller.handleTreeDragEnter}
-	ondragover={shouldEnableTreeDropZone ? controller.handleTreeZoneDragOver : undefined}
-	ondragleave={controller.handleTreeDragLeave}
-	ondrop={shouldEnableTreeDropZone ? controller.handleTreeZoneDrop : undefined}
-	ondragend={controller._onNodeDragEnd}
 >
 	{#if controller.shouldDisplayDebugInformation}
 		<div class="stv__debug-info">

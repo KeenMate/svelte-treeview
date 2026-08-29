@@ -4,6 +4,13 @@
 
 .stv__node-content--draggable {
 	cursor: grab;
+	/* Pointer-driven drag (no native HTML5 DnD): stop a mouse drag from selecting the label,
+	   and stop a touch long-press drag from being hijacked into a page scroll. Note: this makes
+	   a touch that STARTS on a draggable row initiate a drag rather than scroll the tree — scroll
+	   from the gaps/scrollbar, or on non-draggable rows. */
+	user-select: none;
+	-webkit-user-select: none;
+	touch-action: none;
 }
 
 .stv__node-content--draggable:active {

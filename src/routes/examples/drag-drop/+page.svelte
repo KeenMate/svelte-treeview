@@ -22,6 +22,10 @@
 		icon: string;
 		sortOrder: number;
 		isDraggable?: boolean;
+		// Folders accept drops; files don't. Set on the data (not derived from hasChildren)
+		// because getIsDropAllowedCallback runs during insertArray, BEFORE a parent's children
+		// are linked — so node.hasChildren is still false inside the callback.
+		isFolder?: boolean;
 	};
 
 	// Extended type with allowedDropPositions for restricted drop demo
@@ -35,7 +39,7 @@
 	// via getIsDraggableCallback below — items without the field default to true; only
 	// an explicit `false` opts out.
 	let sourceData = $state<FileItem[]>([
-		{ id: 1, path: '1', name: 'Source Folder', icon: '📁', sortOrder: 10 },
+		{ id: 1, path: '1', name: 'Source Folder', icon: '📁', sortOrder: 10, isFolder: true },
 		{ id: 2, path: '1.1', name: 'File A', icon: '📄', sortOrder: 10 },
 		{ id: 3, path: '1.2', name: 'File B', icon: '📄', sortOrder: 20 },
 		{
@@ -46,7 +50,7 @@
 			sortOrder: 30,
 			isDraggable: false
 		},
-		{ id: 5, path: '2', name: 'Another Folder', icon: '📁', sortOrder: 20 },
+		{ id: 5, path: '2', name: 'Another Folder', icon: '📁', sortOrder: 20, isFolder: true },
 		{ id: 6, path: '2.1', name: 'Document 1', icon: '📝', sortOrder: 10 },
 		{ id: 7, path: '2.2', name: 'Document 2', icon: '📝', sortOrder: 20 }
 	]);
@@ -892,7 +896,7 @@
 						displayValueMember="name"
 						orderMember="sortOrder"
 						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
-						getIsDropAllowedCallback={() => true}
+						getIsDropAllowedCallback={(node) => node.data?.isFolder === true}
 						sortCallback={sortByOrder}
 						isSorted={true}
 						expandLevel={3}
@@ -942,7 +946,7 @@
 						displayValueMember="name"
 						orderMember="sortOrder"
 						getIsDraggableCallback={(node) => node.data?.isDraggable !== false}
-						getIsDropAllowedCallback={() => true}
+						getIsDropAllowedCallback={(node) => node.data?.isFolder === true}
 						sortCallback={sortByOrder}
 						expandLevel={3}
 						dragDropMode="both"
@@ -1119,38 +1123,35 @@ const data = [
 	<div class="card" id="drag-set-guard">
 		<h2>Drag-Set Guard (<code>beforeDragStartCallback</code>)</h2>
 		<p class="description">
-			A set-level interceptor that fires ONCE at drag start, before anything moves, and can
-			<strong>reshape or block the whole dragged set</strong>. It's the only hook that sees the full
-			combination — per-node <code>getIsDraggableCallback</code> runs one node at a time and can't
-			drop a companion, force one in, or veto based on what else is selected. Folders and files all
-			drag normally; the guard only rewrites the set. Try these from the
-			<strong>Files</strong> tree into <strong>Destination</strong> and watch the log:
+			Two hooks working together, each for the job it's actually good at.
+			<code>getIsDraggableCallback</code> is <strong>per-node</strong>: it flat-out blocks grabbing a
+			🔒 locked file, so a locked file <strong>can never move — alone or in a selection</strong>.
+			<code>beforeDragStartCallback</code> is <strong>set-level</strong>, fires ONCE at drag start,
+			and does what per-node can't: it sees the whole combination, so it can prune a locked file
+			<em>nested inside</em> a dragged folder, add a linked companion you didn't select, or veto the
+			entire drag. Try these from the <strong>Files</strong> tree into
+			<strong>Destination</strong> and watch the log:
 		</p>
 		<div class="note">
 			<ul>
 				<li>
-					<strong>Prunes (nested)</strong> — drag 📁 <code>Documents</code>: its nested 🔒
-					<code>secret.key</code> is pruned from the manifest and left behind, so only the folder + its
-					unlocked files cross.
+					<strong>Locked never moves</strong> (per-node) — try to grab 🔒 <code>license.key</code>:
+					you can't, and Ctrl+selecting it alongside other files still leaves it behind.
 				</li>
 				<li>
-					<strong>Prunes (loose)</strong> — Ctrl/Shift+click 📁 <code>Documents</code> <em>and</em>
-					🔒 <code>license.key</code>, then drag <code>Documents</code>: the loose locked file is
-					removed from the set too.
+					<strong>Prunes nested</strong> (set-level) — drag 📁 <code>Documents</code>: its 🔒
+					<code>secret.key</code> rides <em>inside</em> the folder where per-node can't reach it, so
+					<code>beforeDragStartCallback</code> drops it from the manifest and it's left behind.
 				</li>
 				<li>
-					<strong>Augments</strong> — drag <code>invoice.pdf</code>: its linked 🔗
+					<strong>Augments</strong> (set-level) — drag <code>invoice.pdf</code>: its linked 🔗
 					<code>invoice.sig</code> rides along, even if you didn't select it.
 				</li>
 				<li>
-					<strong>Vetoes</strong> — drag ⛔ <code>system.lock</code> (alone or in a selection): the
-					whole drag is cancelled (<code>onNodeDragStart</code> never fires).
+					<strong>Vetoes</strong> (set-level) — drag ⛔ <code>system.lock</code> (alone or in a
+					selection): the whole drag is cancelled (<code>onNodeDragStart</code> never fires).
 				</li>
 			</ul>
-			<p style="margin: 0.5rem 0 0;">
-				Grab a draggable node as the one you drag — the node under the cursor always travels; you
-				can prune its companions, just not itself.
-			</p>
 		</div>
 
 		<div class="controls">
@@ -1177,7 +1178,7 @@ const data = [
 						selectionMode="multi"
 						highlightedNodeClass="stv__node-content--highlight-bold"
 						bind:highlightedPaths={guardHighlighted}
-						getIsDraggableCallback={() => true}
+						getIsDraggableCallback={(node) => (node.data as GuardItem)?.locked !== true}
 						getIsDropAllowedCallback={() => true}
 						beforeDragStartCallback={beforeGuardDragStart}
 						{...getTreeProps()}
@@ -1204,7 +1205,7 @@ const data = [
 						isSorted={true}
 						expandLevel={3}
 						dragDropMode="both"
-						getIsDraggableCallback={() => true}
+						getIsDraggableCallback={(node) => (node.data as GuardItem)?.locked !== true}
 						getIsDropAllowedCallback={() => true}
 						beforeDropCallback={guardForceCopy}
 						nodeInputTransformationCallback={guardMintId}
@@ -1220,11 +1221,14 @@ const data = [
 		</div>
 
 		<div class="code-block">
-			<pre>{`beforeDragStartCallback={(ctx) => {
-  // ctx.dragged = full top-level set (the grabbed node + everything highlighted)
+			<pre>{`// per-node: a locked file can't be grabbed at all — it never moves
+getIsDraggableCallback={(node) => !node.data?.locked}
+
+// set-level: sees the whole combination, reshapes or vetoes the drag
+beforeDragStartCallback={(ctx) => {
   if (ctx.dragged.some((r) => r.node?.data?.protected)) return false;  // VETO whole drag
   const kept = ctx.dragged
-    .filter((r) => !r.node?.data?.locked).map((r) => r.path);          // PRUNE locked
+    .filter((r) => !r.node?.data?.locked).map((r) => r.path);          // PRUNE nested locked
   const linked = ctx.dragged
     .map((r) => r.node?.data?.companion).filter(Boolean);              // AUGMENT companions
   return [...kept, ...linked];  // AUTHORITATIVE new set, in landing order

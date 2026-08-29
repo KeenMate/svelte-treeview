@@ -5,7 +5,7 @@
 	import type {Ltree, DropPosition, DropOperation} from "../ltree/types.js"
 	import type {RenderCoordinator} from "./RenderCoordinator.svelte.js"
 	import type {NodeCallbacks, NodeConfig} from "../core/TreeController.svelte.js"
-	import { uiLogger, dragLogger } from "../logger.js"
+	import { uiLogger } from "../logger.js"
 
 	// Define component props interface
 	// Callbacks and config come from context, drag state comes as props
@@ -68,7 +68,6 @@
 	const customNodeContentClass = $derived(config.nodeContentClass ? (config.nodeContentClass(node) ?? '') : '');
 	// dragOverNodeClass is applied to the DOM directly by the controller
 	// (see hoveredNodeForDrop $effect in TreeController) — no per-Node binding.
-	const isCopyAllowed = $derived(config.isCopyAllowed);
 	const clickBehavior = $derived(config.clickBehavior);
 	const shouldShowCheckboxes = $derived(config.shouldShowCheckboxes);
 	const checkboxMode = $derived(config.checkboxMode);
@@ -77,11 +76,10 @@
 	// Indeterminate state: driven by controller's _updateAncestorVisualStates
 	const isIndeterminate = $derived(checkboxMode === 'cascade' && node.visualState === 'indeterminate');
 
-	// Read dropZoneMode, dropZoneStart, and isAccordionExpand through the proxy
-	// each time (not destructured) so they stay reactive in flat mode where
-	// nodes are NOT recreated on config change.
+	// Read dropZoneMode and isAccordionExpand through the proxy each time (not
+	// destructured) so they stay reactive in flat mode where nodes are NOT
+	// recreated on config change.
 	const dropZoneMode = $derived(config.dropZoneMode);
-	const dropZoneStart = $derived(config.dropZoneStart);
 	const isAccordionExpand = $derived(config.isAccordionExpand);
 	const toggleIconMode = $derived(config.toggleIconMode);
 
@@ -94,8 +92,8 @@
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
 
-	// Track glow position for glow mode
-	let glowPosition = $state<'before' | 'after' | 'child' | null>(null);
+	// Glow/drop position is owned by the controller now (pointer-driven drag) and arrives
+	// via the `activeDropPosition` prop — no per-node local calculation on dragover.
 
 	// Get allowed drop positions for this node (empty/undefined = all allowed)
 	// Uses tree.getNodeAllowedDropPositions which checks callback > member > node property
@@ -109,63 +107,6 @@
 		return allowedPositions.includes(position);
 	}
 
-	// Calculate glow position based on mouse position in the node row
-	// Respects allowedDropPositions - snaps to nearest allowed position
-	// Uses dropZoneStart to determine the child zone threshold
-	function calculateGlowPosition(event: DragEvent, element: HTMLElement): 'before' | 'after' | 'child' | null {
-		const rect = element.getBoundingClientRect();
-		const x = event.clientX - rect.left;
-		const y = event.clientY - rect.top;
-		const width = rect.width;
-		const height = rect.height;
-
-		// Convert dropZoneStart to pixels: number = percentage, string = as-is (px or %)
-		const startPx = typeof dropZoneStart === 'number'
-			? (dropZoneStart / 100) * width
-			: typeof dropZoneStart === 'string' && dropZoneStart.endsWith('px')
-				? parseFloat(dropZoneStart)
-				: typeof dropZoneStart === 'string'
-					? (parseFloat(dropZoneStart) / 100) * width
-					: width / 2;
-		const childThreshold = isNaN(startPx) ? width / 2 : startPx;
-
-		// Calculate the ideal position based on mouse position
-		let idealPosition: DropPosition;
-		if (x > childThreshold) {
-			idealPosition = 'child';
-		} else if (y < height / 2) {
-			idealPosition = 'before';
-		} else {
-			idealPosition = 'after';
-		}
-
-		// If no restrictions, return the ideal position
-		if (!allowedPositions || allowedPositions.length === 0) {
-			return idealPosition;
-		}
-
-		// If the ideal position is allowed, use it
-		if (allowedPositions.includes(idealPosition)) {
-			return idealPosition;
-		}
-
-		// Otherwise, snap to the nearest allowed position
-		// Priority: if only one position allowed, use that
-		if (allowedPositions.length === 1) {
-			return allowedPositions[0];
-		}
-
-		// Multiple positions allowed but not the ideal one
-		// For before/after: pick based on Y position
-		// For child: pick based on what's available
-		if (allowedPositions.includes('before') && allowedPositions.includes('after')) {
-			// Both before and after allowed, pick based on Y
-			return y < height / 2 ? 'before' : 'after';
-		}
-
-		// Return the first allowed position
-		return allowedPositions[0];
-	}
 
 	// Resolve isCollapsible via tree's resolution method (callback > member > node property)
 	const isCollapsible = $derived(tree.getNodeIsCollapsible(node));
@@ -390,11 +331,10 @@
 			class:stv__clickable={node.isSelectable}
 			class:stv__node-content--dragged={isDraggedNode}
 			class:stv__node-content--draggable={node?.isDraggable}
-			class:stv__node-content--glow-before={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'before' && isPositionAllowed('before')}
-			class:stv__node-content--glow-after={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'after' && isPositionAllowed('after')}
-			class:stv__node-content--glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && glowPosition === 'child' && isPositionAllowed('child')}
+			class:stv__node-content--glow-before={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && activeDropPosition === 'before' && isPositionAllowed('before')}
+			class:stv__node-content--glow-after={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && activeDropPosition === 'after' && isPositionAllowed('after')}
+			class:stv__node-content--glow-child={dropZoneMode === 'glow' && isDragInProgress && isHoveredForDrop && activeDropPosition === 'child' && isPositionAllowed('child')}
 			class:stv__node-content--drop-copy={isDragInProgress && isHoveredForDrop && dropOperation === 'copy'}
-			draggable={node?.isDraggable}
 			onclick={(e) => {
 				e.stopPropagation();
 				_onNodeClicked(e);
@@ -403,81 +343,7 @@
 				e.stopPropagation();
 				callbacks.onNodeRightClicked(node, e);
 			}}
-			ondragstart={(e) => {
-				dragLogger.debug(`[dragstart] gate on ${node?.path}`, {
-					path: node?.path,
-					nodeIsDraggable: node?.isDraggable,
-					hasDataTransfer: !!e.dataTransfer,
-					willStartDrag: !!(node?.isDraggable && e.dataTransfer),
-					nodeDataIsDraggable: (node?.data as any)?.isDraggable
-				});
-				if (node?.isDraggable && e.dataTransfer) {
-					e.dataTransfer.effectAllowed = isCopyAllowed ? "copyMove" : "move";
-					e.dataTransfer.setData(
-						"application/svelte-treeview",
-						JSON.stringify(node),
-					);
-					callbacks.onNodeDragStart(node, e);
-				}
-			}}
-			ondragover={(e) => {
-				if (e.dataTransfer?.types.includes("application/svelte-treeview")) {
-					e.preventDefault();
-					// Set dropEffect directly from event to avoid timing issues with prop updates
-					if (e.dataTransfer) {
-						e.dataTransfer.dropEffect = (isCopyAllowed && e.ctrlKey) ? 'copy' : 'move';
-					}
-					// In glow mode, calculate and update the glow position
-					if (dropZoneMode === 'glow') {
-						glowPosition = calculateGlowPosition(e, e.currentTarget as HTMLElement);
-					}
-				}
-				callbacks.onNodeDragOver(node, e);
-			}}
-			ondragleave={(e) => {
-				const rect = e.currentTarget.getBoundingClientRect();
-				const x = e.clientX;
-				const y = e.clientY;
-
-				if (x < rect.left || x >= rect.right || y < rect.top || y >= rect.bottom) {
-					glowPosition = null;
-					callbacks.onNodeDragLeave(node, e);
-				}
-			}}
-			ondrop={(e) => {
-				e.stopPropagation();
-				// Confirm dropEffect for spec compliance
-				if (e.dataTransfer) {
-					e.dataTransfer.dropEffect = (isCopyAllowed && e.ctrlKey) ? 'copy' : 'move';
-				}
-				// In glow mode, use the calculated glowPosition for the drop
-				if (dropZoneMode === 'glow' && glowPosition) {
-					callbacks.onZoneDrop(node, glowPosition, e);
-				} else {
-					callbacks.onNodeDrop(node, e);
-				}
-				glowPosition = null;
-			}}
-			ontouchstart={(e) => {
-				// Native HTML5 `draggable` and synthetic touch events collide: a
-				// draggable=true element swallows the subsequent touchmove/touchend
-				// (Chrome tries to start a mouse-driven native drag). Most visible in
-				// DevTools device emulation, where the touch-drag freezes on the first
-				// move. Disable native DnD for the duration of THIS touch gesture —
-				// synchronously, before the move that would trigger the hijack — so the
-				// touch handlers get the full stream. Mouse never fires touchstart, so a
-				// touchscreen laptop's mouse-drag is untouched. Restored on end/cancel.
-				(e.currentTarget as HTMLElement).draggable = false;
-				callbacks.onTouchDragStart(node, e);
-			}}
-			ontouchmove={(e) => callbacks.onTouchDragMove(node, e)}
-			ontouchend={(e) => {
-				(e.currentTarget as HTMLElement).draggable = node?.isDraggable ?? false;
-				callbacks.onTouchDragEnd(node, e);
-			}}
-			ontouchcancel={(e) => {
-				(e.currentTarget as HTMLElement).draggable = node?.isDraggable ?? false;
-			}}
+			onpointerdown={(e) => callbacks.onPointerDown(node, e)}
 		>
 			{#if children}
 				{@render children(node)}
