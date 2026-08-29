@@ -1794,9 +1794,6 @@
 				<div
 					class="stv__drop-zone stv__drop-zone--before"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'before'}
-					ondragover={(e) => controller.handleFloatingZoneDragOver('before', e)}
-					ondragleave={() => controller.handleFloatingZoneDragLeave()}
-					ondrop={(e) => controller.handleFloatingZoneDrop('before', e)}
 				>
 					↑ Before
 				</div>
@@ -1805,9 +1802,6 @@
 				<div
 					class="stv__drop-zone stv__drop-zone--after"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'after'}
-					ondragover={(e) => controller.handleFloatingZoneDragOver('after', e)}
-					ondragleave={() => controller.handleFloatingZoneDragLeave()}
-					ondrop={(e) => controller.handleFloatingZoneDrop('after', e)}
 				>
 					↓ After
 				</div>
@@ -1816,9 +1810,6 @@
 				<div
 					class="stv__drop-zone stv__drop-zone--child"
 					class:stv__drop-zone--active={controller.floatingHoveredZone === 'child'}
-					ondragover={(e) => controller.handleFloatingZoneDragOver('child', e)}
-					ondragleave={() => controller.handleFloatingZoneDragLeave()}
-					ondrop={(e) => controller.handleFloatingZoneDrop('child', e)}
 				>
 					→ Child
 				</div>
