@@ -316,6 +316,7 @@
 				name: `Folder ${i}`,
 				icon: '📁',
 				sortOrder: i * 10,
+				isFolder: true,
 				...pin()
 			});
 
@@ -327,6 +328,7 @@
 					name: `Subfolder ${i}.${j}`,
 					icon: '📂',
 					sortOrder: j * 10,
+					isFolder: true,
 					...pin()
 				});
 
