@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0-rc15] - Unreleased
+
+### Changed
+- **Drag-and-drop rewritten from native HTML5 DnD to a unified Pointer Events manager (mouse / pen / touch).** The whole drag is now driven by `pointerdown`/`pointermove`/`pointerup`/`pointercancel` listeners the source controller attaches to `window` — there is **no browser drag session**, so re-rendering or moving the dragged row mid-drag can no longer freeze the page (the failure mode native DnD hits, and the reason the old touch path had to be hand-rolled). `Node.svelte` now emits a single `onpointerdown`; the native `draggable` attribute, `ondragstart`/`ondragover`/`ondragleave`/`ondrop` and the separate `ontouchstart`/`move`/`end` handlers are gone. Mouse/pen engage on a 5px move threshold; touch keeps the long-press (with the existing "can't move this" denied feedback). Commit still happens on drop (`elementFromPoint` → target row). **Cross-tree** drops route to the target tree's controller via the clipboard registry + a new `data-tree-id` on `.stv__container` (the dragged set travels through the module-level `dragSet`, not `dataTransfer`). Glow **and** floating drop-zone visuals now come from controller state and light up in whichever tree the pointer is over (including cross-tree); `Esc`/`pointercancel` restores the pre-drag highlight. Draggable rows get `touch-action: none; user-select: none` so a mouse drag doesn't select the label and a touch drag isn't hijacked into a scroll. All `on*`/`before*` drag hooks (`onNodeDragStart`/`DragOver`/`Drop`, `beforeDragStartCallback`, `beforeDropCallback` + `DropGroup[]` routing, multi-drag, manifest holes) are preserved; their context `event` is now a `PointerEvent`.
+
+### Added
+- **Edge autoscroll during a pointer drag.** Native DnD auto-scrolled a container near its edges for free; the pointer drag now does it itself. When the pointer nears the top/bottom of the nearest scrollable ancestor (or the page), a `requestAnimationFrame` loop scrolls it — speed scaling with edge proximity — and re-resolves the hover target under the stationary pointer, so off-screen drop targets are reachable in a scrollable tree. Stops on drop/cancel.
+
+### Removed
+- **Dead native-DnD internals** left unused by the pointer rewrite (~430 LOC): the old touch document path (`_onTouch*`, document touch listeners, `updateDropTarget`/`clearDropTargetHighlight`/`findNodeFromElement`), the empty-tree / tree-zone / floating-zone native handlers, the per-node native drag handlers, and their `NodeCallbacks` fields. The public `touchStart`/`touchMove`/`touchEnd` proxy methods are removed (touch is handled by the unified pointer path). **Kept:** the public custom-renderer drag API — `startDrag` / `dragOver` / `drop` / `dropAt` / `cancelDrag` (+ `_onNodeDragStart` / `_onNodeDragEnd`) — which drives native DnD itself and is used by `/examples/custom-layout`, independent of the main component now being pointer-based.
+
+### Fixed
+- **`/examples/drag-drop` demos updated for the two-hook drag-guard model.** *Drag-Set Guard:* 🔒 locked files are now un-grabbable via `getIsDraggableCallback` (per-node), so they can never move — alone or in a selection — while `beforeDragStartCallback` keeps the jobs only it can do (prune a locked file **nested inside** a dragged folder, add companions, veto on "protected"). *Drag Between Trees:* files reject all drops (folders-only via a data `isFolder` flag); locked files can't be reordered. **Note:** `getIsDropAllowedCallback` runs once during `insertArray`, before a parent's `hasChildren` is set, so folder detection must key off `node.data` (an `isFolder` flag), not `node.hasChildren` — a subtle trap that also required flagging the generated folder rows in the demo's "Reset Target" action.
+
 ## [5.0.0-rc14] - 2026-08-14 [PUBLISHED]
 
 ### Added
