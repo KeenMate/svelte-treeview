@@ -13,6 +13,7 @@ import {
 	type TreeChange,
 	type ApplyChangesResult,
 	type ToggleIconMode,
+	type NodeTitleOverflow,
 	type ClickBehavior,
 	type CheckboxMode,
 	type CascadeSelectPolicy,
@@ -320,6 +321,7 @@ export interface NodeConfig {
 	collapseIconClass: string;
 	leafIconClass: string;
 	toggleIconMode: ToggleIconMode;
+	nodeTitleOverflow: NodeTitleOverflow;
 	highlightedNodeClass: string | null | undefined;
 	focusedNodeClass: string | null | undefined;
 	dragOverNodeClass: string | null | undefined;
@@ -572,6 +574,7 @@ export interface TreeControllerProps<T> {
 	collapseIconClass?: string | null | undefined;
 	leafIconClass?: string | null | undefined;
 	toggleIconMode?: ToggleIconMode;
+	nodeTitleOverflow?: NodeTitleOverflow;
 	scrollHighlightTimeout?: number | null | undefined;
 	scrollHighlightClass?: string | null | undefined;
 	contextMenuXOffset?: number | null | undefined;
@@ -608,6 +611,7 @@ export class TreeController<T> {
 		dropZoneLayout: 'around',
 		dropZoneStart: 33,
 		toggleIconMode: 'rotate',
+		nodeTitleOverflow: 'wrap',
 		dropZoneMaxWidth: 120,
 		isCopyAllowed: false,
 		isAccordionExpand: false
@@ -757,6 +761,7 @@ export class TreeController<T> {
 	collapseIconClass = $state('stv__toggle-icon--collapse');
 	leafIconClass = $state('stv__toggle-icon--leaf');
 	toggleIconMode = $state<ToggleIconMode>('rotate');
+	nodeTitleOverflow = $state<NodeTitleOverflow>('wrap');
 	highlightedNodeClass = $state<string | null | undefined>(undefined);
 	focusedNodeClass = $state<string | null | undefined>(undefined);
 	nodeClass = $state<((node: LTreeNode<any>) => string | null | undefined) | undefined>(undefined);
@@ -976,6 +981,7 @@ export class TreeController<T> {
 		this.collapseIconClass = props.collapseIconClass ?? 'stv__toggle-icon--collapse';
 		this.leafIconClass = props.leafIconClass ?? 'stv__toggle-icon--leaf';
 		this.toggleIconMode = props.toggleIconMode ?? 'rotate';
+		this.nodeTitleOverflow = props.nodeTitleOverflow ?? 'wrap';
 		this.highlightedNodeClass = props.highlightedNodeClass;
 		this.focusedNodeClass = props.focusedNodeClass;
 		this.nodeClass = props.nodeClass;
@@ -1106,6 +1112,7 @@ export class TreeController<T> {
 			collapseIconClass: this.collapseIconClass,
 			leafIconClass: this.leafIconClass,
 			toggleIconMode: this.toggleIconMode,
+			nodeTitleOverflow: this.nodeTitleOverflow,
 			highlightedNodeClass: this.highlightedNodeClass,
 			focusedNodeClass: this.focusedNodeClass,
 			nodeClass: this.nodeClass,
@@ -1142,6 +1149,7 @@ export class TreeController<T> {
 				collapseIconClass: this.collapseIconClass,
 				leafIconClass: this.leafIconClass,
 				toggleIconMode: this.toggleIconMode,
+				nodeTitleOverflow: this.nodeTitleOverflow,
 				highlightedNodeClass: this.highlightedNodeClass,
 				focusedNodeClass: this.focusedNodeClass,
 				nodeClass: this.nodeClass,
@@ -5064,7 +5072,8 @@ export class TreeController<T> {
 
 		const badge = document.createElement('span');
 		badge.className = 'stv__drag-denied-badge';
-		badge.textContent = '🚫';
+		// Glyph is the Lucide "ban" icon, drawn via CSS mask on .stv__drag-denied-badge
+		// (was a 🚫 emoji — inconsistent across platforms and not recolorable).
 		badge.setAttribute('aria-hidden', 'true');
 		el.appendChild(badge);
 		this._deniedBadgeEl = badge;
@@ -5110,7 +5119,8 @@ export class TreeController<T> {
 		el.classList.add('stv__node-content--drag-denied');
 		const badge = document.createElement('span');
 		badge.className = 'stv__drag-denied-badge';
-		badge.textContent = '🚫';
+		// Glyph is the Lucide "ban" icon, drawn via CSS mask on .stv__drag-denied-badge
+		// (was a 🚫 emoji — inconsistent across platforms and not recolorable).
 		badge.setAttribute('aria-hidden', 'true');
 		el.appendChild(badge);
 

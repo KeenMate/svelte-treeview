@@ -224,16 +224,23 @@
 	}
 }
 
-/* No-entry icon pops in and STAYS visible until the finger lifts. */
+/* No-entry icon pops in and STAYS visible until the finger lifts. The glyph is the
+   Lucide "ban" icon via CSS mask (recolour via --stv-drag-denied-badge-color; swap the
+   whole icon via --stv-icon-ban). */
 .stv__drag-denied-badge {
+	--stv-icon-ban: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M4.929 4.929 19.07 19.071'/%3E%3C/svg%3E");
 	position: absolute;
 	right: 6px;
 	top: 50%;
-	font-size: 1em;
+	width: 1.15em;
+	height: 1.15em;
 	line-height: 1;
 	pointer-events: none;
 	z-index: 3;
 	transform: translateY(-50%);
+	background-color: var(--stv-drag-denied-badge-color, #e11d48);
+	-webkit-mask: var(--stv-icon-ban) center / contain no-repeat;
+	mask: var(--stv-icon-ban) center / contain no-repeat;
 	animation: stv-drag-denied-badge 0.22s ease-out forwards;
 }
 

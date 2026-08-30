@@ -98,26 +98,32 @@
 	position: relative;
 }
 
-.stv__scroll-arrow::before {
-	content: '⇨';
+/* Inward-pointing scroll markers — Lucide "arrow-right" (left slot) and "arrow-left"
+   (right slot) via CSS mask (recolour via --stv-scroll-highlight-arrow-color; swap via
+   --stv-icon-arrow-right / --stv-icon-arrow-left). */
+.stv__scroll-arrow::before,
+.stv__scroll-arrow::after {
+	content: '';
 	position: absolute;
-	left: -1.2em;
 	top: 50%;
-	transform: translateY(-57%);
-	font-size: 3em;
+	width: 1.6em;
+	height: 1.6em;
+	transform: translateY(-50%);
 	pointer-events: none;
-	color: var(--stv-scroll-highlight-arrow-color);
+	background-color: var(--stv-scroll-highlight-arrow-color);
 	z-index: 1;
 }
 
+.stv__scroll-arrow::before {
+	--stv-icon-arrow-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m12 5 7 7-7 7'/%3E%3C/svg%3E");
+	left: -1.8em;
+	-webkit-mask: var(--stv-icon-arrow-right) center / contain no-repeat;
+	mask: var(--stv-icon-arrow-right) center / contain no-repeat;
+}
+
 .stv__scroll-arrow::after {
-	content: '⇦';
-	position: absolute;
-	right: 0;
-	top: 50%;
-	transform: translateY(-57%);
-	font-size: 3em;
-	pointer-events: none;
-	color: var(--stv-scroll-highlight-arrow-color);
-	z-index: 1;
+	--stv-icon-arrow-left: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 19-7-7 7-7'/%3E%3Cpath d='M19 12H5'/%3E%3C/svg%3E");
+	right: 0.2em;
+	-webkit-mask: var(--stv-icon-arrow-left) center / contain no-repeat;
+	mask: var(--stv-icon-arrow-left) center / contain no-repeat;
 }

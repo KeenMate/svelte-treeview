@@ -7,3 +7,7 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Vendored code — transferred 1:1 from other packages; keep byte-for-byte so it
+# can be extracted later without a reformat diff (see src/lib/vendor/*/README.md).
+/src/lib/vendor/

@@ -99,7 +99,7 @@
 		<span class="stv__context-menu-shortcut">{shortcut}</span>
 	{/if}
 	{#if hasChildren}
-		<span class="stv__context-menu-arrow">&#x25B8;</span>
+		<span class="stv__context-menu-arrow" aria-hidden="true"></span>
 	{/if}
 </div>
 

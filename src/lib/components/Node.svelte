@@ -6,6 +6,8 @@
 	import type {RenderCoordinator} from "./RenderCoordinator.svelte.js"
 	import type {NodeCallbacks, NodeConfig} from "../core/TreeController.svelte.js"
 	import { uiLogger } from "../logger.js"
+	import { observeElementSize } from "../vendor/environment/element-size.js"
+	import { computePosition, autoUpdate, offset, flip, shift } from "@floating-ui/dom"
 
 	// Define component props interface
 	// Callbacks and config come from context, drag state comes as props
@@ -91,6 +93,76 @@
 
 	const tree = getContext<Ltree<T>>("Ltree")
 	const renderCoordinator = getContext<RenderCoordinator | null>("RenderCoordinator")
+
+	// ── Node title overflow (wrap | ellipsis | info) ────────────────────────
+	// wrap/ellipsis are pure CSS (gated by data-node-title-overflow on the container);
+	// `info` additionally measures whether the built-in label is horizontally clipped and,
+	// if so, shows a trailing ⓘ affordance that reveals the full label on click — the
+	// touch/no-hover substitute for the native title tooltip. Only the default label path
+	// (no nodeTemplate) participates; a snippet owns its own layout.
+	const nodeTitleOverflow = $derived(config.nodeTitleOverflow)
+	const displayValue = $derived(tree.getNodeDisplayValue(node))
+
+	let labelEl: HTMLElement | undefined = $state()
+	let isTruncated = $state(false)
+
+	// Measure clip only in `info` mode. Re-runs when the text changes (displayValue dep)
+	// and, via observeElementSize (shared ResizeObserver), whenever the label's box changes
+	// (container resize, indent depth, font). scrollWidth > clientWidth ⇒ the ellipsis is cutting.
+	$effect(() => {
+		if (nodeTitleOverflow !== 'info' || !labelEl || children) {
+			isTruncated = false
+			return
+		}
+		const el = labelEl
+		void displayValue // dependency: re-measure on content change
+		const measure = () => { isTruncated = el.scrollWidth > el.clientWidth + 1 }
+		measure()
+		return observeElementSize(el, measure)
+	})
+
+	// Full-label reveal popover (info mode). One per node, opened on ⓘ click. A manual
+	// floating panel (not a hover tooltip, which never fires on touch); dismissed by a
+	// second click, an outside pointer, a scroll, or Escape.
+	let infoBtnEl: HTMLElement | undefined = $state()
+	let revealEl: HTMLElement | undefined = $state()
+	let isRevealOpen = $state(false)
+
+	function toggleReveal(e: MouseEvent) {
+		e.stopPropagation()
+		isRevealOpen = !isRevealOpen
+	}
+
+	$effect(() => {
+		if (!isRevealOpen || !infoBtnEl || !revealEl) return
+		const btn = infoBtnEl
+		const panel = revealEl
+		const stopAutoUpdate = autoUpdate(btn, panel, () => {
+			computePosition(btn, panel, {
+				strategy: 'fixed',
+				placement: 'top-end',
+				middleware: [offset(6), flip(), shift({ padding: 8 })]
+			}).then(({ x, y }) => {
+				panel.style.left = `${x}px`
+				panel.style.top = `${y}px`
+			})
+		})
+		const onOutside = (ev: Event) => {
+			const t = ev.target as HTMLElement | null
+			if (t !== btn && !panel.contains(t)) isRevealOpen = false
+		}
+		const onScroll = () => { isRevealOpen = false }
+		const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') isRevealOpen = false }
+		document.addEventListener('pointerdown', onOutside, true)
+		window.addEventListener('scroll', onScroll, true)
+		document.addEventListener('keydown', onKey, true)
+		return () => {
+			stopAutoUpdate()
+			document.removeEventListener('pointerdown', onOutside, true)
+			window.removeEventListener('scroll', onScroll, true)
+			document.removeEventListener('keydown', onKey, true)
+		}
+	})
 
 	// Glow/drop position is owned by the controller now (pointer-driven drag) and arrives
 	// via the `activeDropPosition` prop — no per-node local calculation on dragover.
@@ -348,11 +420,31 @@
 			{#if children}
 				{@render children(node)}
 			{:else}
-				<span class="stv__node-label">{tree.getNodeDisplayValue(node)}</span>
+				<span
+					class="stv__node-label"
+					bind:this={labelEl}
+					title={nodeTitleOverflow === 'info' && isTruncated ? displayValue : null}
+				>{displayValue}</span>
+				{#if nodeTitleOverflow === 'info' && isTruncated}
+					<button
+						type="button"
+						class="stv__node-info"
+						aria-label="Show full label"
+						bind:this={infoBtnEl}
+						onpointerdown={(e) => e.stopPropagation()}
+						onclick={toggleReveal}
+					></button>
+				{/if}
 			{/if}
 		</div>
 
 	</div>
+
+	<!-- Full-label reveal (info mode). position: fixed → escapes the tree's overflow clip;
+	     placed by @floating-ui relative to the ⓘ button. -->
+	{#if isRevealOpen}
+		<div class="stv__node-info-reveal" role="tooltip" bind:this={revealEl}>{displayValue}</div>
+	{/if}
 
 	<!-- In flat mode, children are rendered by Tree.svelte, not recursively here -->
 	{#if !flatMode && node?.isExpanded && node?.hasChildren}

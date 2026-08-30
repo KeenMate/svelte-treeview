@@ -11,7 +11,7 @@ export { createTreeController } from "./core/createTreeController.js"
 
 // Export types
 export type { LTreeNode, NodeId, VisualState } from "./ltree/ltree-node.svelte"
-export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, ClickBehavior, CheckboxMode, CascadeSelectPolicy, SelectionMode, HighlightMode, TreeMutationOptions, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, InsertBranchResult, DeleteBranchResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
+export type { Ltree, DropPosition, DragDropMode, DropOperation, ToggleIconMode, NodeTitleOverflow, ClickBehavior, CheckboxMode, CascadeSelectPolicy, SelectionMode, HighlightMode, TreeMutationOptions, ContextMenuItem, ContextMenuDivider, ContextMenuEntry, InsertArrayResult, InsertBranchResult, DeleteBranchResult, TreeChange, ApplyChangesResult } from "./ltree/types.js"
 
 // Clipboard types & utilities
 export type { ClipboardEntry, TreeClipboard } from "./core/clipboard.js"
@@ -34,6 +34,35 @@ export {
     perfMeasure,
     perfSummary
 } from "./perf-logger.js"
+
+// Responsive / device / container-size signal (transferred 1:1 from
+// @keenmate/web-components-core; see src/lib/vendor/environment/README.md). The
+// tree renders inline and does not change its own behaviour on these — they're
+// exposed so a consumer can adapt settings to the space (AB10-style). The
+// runes-friendly `containerSize`/`environmentState` bridges are for use inside a
+// Svelte component; the raw observers are for app-level (non-Svelte) code.
+export { containerSize, environmentState } from "./core/responsive.svelte.js"
+export type { ReactiveSize, ReactiveEnvironment } from "./core/responsive.svelte.js"
+export {
+    observeEnvironment,
+    observeViewport,
+    getEnvironment,
+    classifyDevice,
+    configureBreakpoints,
+    TABLET_MIN_SHORT_SIDE
+} from "./vendor/environment/environment.js"
+export type {
+    EnvironmentSnapshot,
+    EnvironmentListener,
+    ObserveOptions,
+    PointerType,
+    Orientation,
+    OS,
+    BreakpointMap,
+    DeviceClass
+} from "./vendor/environment/environment.js"
+export { observeElementSize } from "./vendor/environment/element-size.js"
+export type { ElementSize, ElementSizeListener, ObserveElementSizeOptions } from "./vendor/environment/element-size.js"
 
 // Export global API type and ensure registration runs
 export type { GlobalTreeviewAPI } from "./global-api.js"

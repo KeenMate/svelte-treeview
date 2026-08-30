@@ -13,6 +13,7 @@
 		type DragDropMode,
 		type DropOperation,
 		type ClickBehavior,
+		type NodeTitleOverflow,
 		type CheckboxMode,
 		type CascadeSelectPolicy,
 		type SelectionMode,
@@ -33,6 +34,10 @@
 	} from '../core/TreeController.svelte.js';
 	import { createTreeController } from '../core/createTreeController.js';
 	import type { TreeNavigationOverrides } from '../core/navigation.js';
+	import { containerSize as trackContainerSize } from '../core/responsive.svelte.js';
+	import { classifyDevice, getEnvironment } from '../vendor/environment/environment.js';
+	import type { ElementSize } from '../vendor/environment/element-size.js';
+	import type { DeviceClass } from '../vendor/environment/environment.js';
 
 	// NodeCallbacks and NodeConfig are now defined in ../core/TreeController.svelte.ts
 	// and re-exported from index.ts for public consumption.
@@ -215,6 +220,18 @@
 		 *  top-level paths plus their pre-removal nodes. */
 		onDelete?: (ctx: ClipboardEventContext<T>) => void;
 
+		// RESPONSIVE (signal only — the tree renders inline, it does not change its own
+		// behaviour; these surface the container-box signal so a consumer adapts settings
+		// to the space, AB10-style). Backed by the shared ResizeObserver in
+		// vendor/environment; see core/responsive.svelte.ts.
+		/** Fire-and-forget: the tree's own border-box changed (immediate on mount, then on
+		 *  resize, throttled ~30ms). `deviceClass` is the capability+size class of the WINDOW
+		 *  (`classifyDevice`), handy alongside the box for AB10-style adaptation. */
+		onContainerResize?: (size: ElementSize, deviceClass: DeviceClass) => void;
+		/** Bindable: the tree's live border-box size in CSS px. Read it in your own `$derived`
+		 *  to switch settings by space. Updated from the same signal as `onContainerResize`. */
+		containerSize?: ElementSize;
+
 		// INTERCEPTORS (before*Callback = can modify/block)
 		/**
 		 * Called before a drop is processed with a BeforeDropContext ({ target, dragged, position,
@@ -294,6 +311,10 @@
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
 		toggleIconMode?: 'rotate' | 'swap';
+		/** How the built-in node label behaves when wider than the row: `wrap` (default,
+		 *  multi-line), `ellipsis` (single-line clip), or `info` (ellipsis + a trailing ⓘ
+		 *  on clipped rows that reveals the full label on click). See NodeTitleOverflow. */
+		nodeTitleOverflow?: NodeTitleOverflow;
 		scrollHighlightTimeout?: number | null | undefined;
 		scrollHighlightClass?: string | null | undefined;
 		contextMenuXOffset?: number | null | undefined;
@@ -443,6 +464,8 @@
 		onCut,
 		onPaste,
 		onDelete,
+		onContainerResize,
+		containerSize = $bindable(),
 		// INTERCEPTORS
 		beforeDragStartCallback,
 		beforeDropCallback,
@@ -462,6 +485,7 @@
 		collapseIconClass = 'stv__toggle-icon--collapse',
 		leafIconClass = 'stv__toggle-icon--leaf',
 		toggleIconMode = 'rotate',
+		nodeTitleOverflow = 'wrap',
 		highlightedNodeClass,
 		focusedNodeClass,
 		nodeClass,
@@ -590,6 +614,7 @@
 		collapseIconClass,
 		leafIconClass,
 		toggleIconMode,
+		nodeTitleOverflow,
 		scrollHighlightTimeout,
 		scrollHighlightClass,
 		contextMenuXOffset,
@@ -625,6 +650,28 @@
 		if (treeContainerRef) {
 			controller.containerElement = treeContainerRef;
 		}
+	});
+
+	// ── Responsive container-box signal (signal only; see core/responsive.svelte.ts) ──
+	// Reactive border-box of the tree's own container, backed by the shared
+	// ResizeObserver in vendor/environment. The tree does NOT change its own render
+	// on this — it just surfaces the signal to consumers two ways: the `containerSize`
+	// bindable (declarative reads) and the `onContainerResize` callback (imperative).
+	const _box = trackContainerSize(() => treeContainerRef);
+	let _lastEmittedBox: ElementSize | null = null;
+	$effect(() => {
+		const w = _box.width;
+		const h = _box.height;
+		// Skip the pre-mount 0×0 read so consumers don't see a phantom resize.
+		if (w === 0 && h === 0) return;
+		// Emit a FRESH plain snapshot — never the tracked source object — so a consumer's
+		// bind:containerSize can't alias our reactive state and feed a write-back loop.
+		// The last-emitted guard keeps identical boxes from re-firing the callback.
+		if (_lastEmittedBox && _lastEmittedBox.width === w && _lastEmittedBox.height === h) return;
+		const snapshot: ElementSize = { width: w, height: h };
+		_lastEmittedBox = snapshot;
+		containerSize = snapshot;
+		onContainerResize?.(snapshot, classifyDevice(getEnvironment()));
 	});
 
 	// ── Context menu element + Floating UI positioning ─────────────────
@@ -785,6 +832,9 @@
 	});
 	$effect(() => {
 		controller.toggleIconMode = toggleIconMode ?? 'rotate';
+	});
+	$effect(() => {
+		controller.nodeTitleOverflow = nodeTitleOverflow ?? 'wrap';
 	});
 	$effect(() => {
 		controller.highlightedNodeClass = highlightedNodeClass;
@@ -1273,6 +1323,7 @@
 				| 'onCut'
 				| 'onPaste'
 				| 'onDelete'
+				| 'onContainerResize'
 				| 'beforeDragStartCallback'
 				| 'beforeDropCallback'
 				| 'beforeCopyCallback'
@@ -1297,6 +1348,7 @@
 				| 'collapseIconClass'
 				| 'leafIconClass'
 				| 'toggleIconMode'
+				| 'nodeTitleOverflow'
 				| 'highlightedNodeClass'
 				| 'nodeClass'
 				| 'nodeContentClass'
@@ -1392,6 +1444,7 @@
 		if (updates.onCut !== undefined) onCut = updates.onCut;
 		if (updates.onPaste !== undefined) onPaste = updates.onPaste;
 		if (updates.onDelete !== undefined) onDelete = updates.onDelete;
+		if (updates.onContainerResize !== undefined) onContainerResize = updates.onContainerResize;
 		if (updates.beforeDragStartCallback !== undefined)
 			beforeDragStartCallback = updates.beforeDragStartCallback;
 		if (updates.beforeDropCallback !== undefined) beforeDropCallback = updates.beforeDropCallback;
@@ -1427,6 +1480,7 @@
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
 		if (updates.toggleIconMode !== undefined) toggleIconMode = updates.toggleIconMode;
+		if (updates.nodeTitleOverflow !== undefined) nodeTitleOverflow = updates.nodeTitleOverflow;
 		if (updates.highlightedNodeClass !== undefined)
 			highlightedNodeClass = updates.highlightedNodeClass;
 		if (updates.nodeClass !== undefined) nodeClass = updates.nodeClass;
@@ -1658,6 +1712,7 @@
 	class:stv__tree-drop-zone--active={shouldEnableTreeDropZone && controller.isDropPlaceholderActive}
 	tabindex="0"
 	data-theme={theme}
+	data-node-title-overflow={nodeTitleOverflow}
 	data-tree-id={controller.treeId}
 	bind:this={treeContainerRef}
 	onkeydown={handleTreeKeydown}

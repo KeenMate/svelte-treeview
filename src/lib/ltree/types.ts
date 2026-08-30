@@ -6,6 +6,17 @@ export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
+/**
+ * How the built-in node label (`.stv__node-label`) behaves when it's wider than the
+ * available row space:
+ * - `wrap` (default): the label wraps onto multiple lines — the row grows taller.
+ * - `ellipsis`: the label stays on one line and is clipped with an ellipsis (…).
+ * - `info`: like `ellipsis`, but a trailing circled-ⓘ affordance appears ONLY on rows
+ *   whose label is actually clipped; clicking it reveals the full label in a popover
+ *   (the touch/no-hover substitute for the native `title` tooltip, which is also set).
+ * Only affects the default label render path; a `nodeTemplate` snippet owns its own layout.
+ */
+export type NodeTitleOverflow = 'wrap' | 'ellipsis' | 'info';
 export type ClickBehavior = 'select' | 'expand' | 'expand-and-focus';
 export type CheckboxMode = 'independent' | 'cascade';
 /**

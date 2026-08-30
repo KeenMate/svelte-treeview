@@ -43,6 +43,12 @@
 			description: 'Customize appearance with CSS variables for selection, drag-over, and icons.'
 		},
 		{
+			href: '/examples/responsive',
+			icon: '📐',
+			title: 'Responsive',
+			description: 'React to the tree\'s own container box (and the device) via a bindable containerSize + onContainerResize callback — adapt settings to the available space.'
+		},
+		{
 			href: '/examples/data',
 			icon: '📊',
 			title: 'Data Structures',
