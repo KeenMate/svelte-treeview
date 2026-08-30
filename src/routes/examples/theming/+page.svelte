@@ -112,14 +112,14 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>🎨 Theming Examples</h1>
+		<h1>Theming</h1>
 		<p class="subtitle">CSS variables, custom styles, and visual customization</p>
 		<RenderModeSwitch />
 	</header>
 
 	<!-- Dark mode playground (interactive control panel) -->
 	<div class="card">
-		<h2>Dark Mode Playground</h2>
+		<h2>TH01 · Dark Mode Playground</h2>
 		<p class="description">
 			Toggle each signal independently and watch the demo tree react. The
 			"winning signal" line shows which input the CSS is actually responding to
@@ -203,7 +203,7 @@
 
 	<!-- Theme Examples -->
 	<div class="card">
-		<h2>Theme Examples</h2>
+		<h2>TH02 · Theme Examples</h2>
 		<p class="description">Different visual themes using CSS variables.</p>
 
 		<div class="grid-2">
@@ -294,7 +294,7 @@
 
 	<!-- Selection Styles -->
 	<div class="card">
-		<h2>Selection Styles</h2>
+		<h2>TH03 · Selection Styles</h2>
 		<p class="description">Built-in classes for styling selected nodes.</p>
 
 		<table>
@@ -341,7 +341,7 @@
 
 	<!-- Toggle Icon Live Demo -->
 	<div class="card">
-		<h2>Toggle Icon — Live Demo</h2>
+		<h2>TH04 · Toggle Icon — Live Demo</h2>
 		<p class="description">
 			Customize the expand/collapse toggle via four props:
 			<code>expandIconClass</code>, <code>collapseIconClass</code>, <code>leafIconClass</code>,
@@ -434,7 +434,7 @@
 
 	<!-- Icon Classes -->
 	<div class="card">
-		<h2>Expand/Collapse Icons</h2>
+		<h2>TH05 · Expand/Collapse Icons</h2>
 		<p class="description">Alternative icon sets for expand/collapse indicators.</p>
 
 		<table>
@@ -477,7 +477,7 @@
 
 	<!-- Drag Over Styles -->
 	<div class="card">
-		<h2>Drag-Over Styles</h2>
+		<h2>TH06 · Drag-Over Styles</h2>
 		<p class="description">Classes applied when dragging nodes over drop targets.</p>
 
 		<table>
@@ -526,7 +526,7 @@
 
 	<!-- Complete Theme Example -->
 	<div class="card">
-		<h2>Complete Theme Example</h2>
+		<h2>TH07 · Complete Theme Example</h2>
 		<p class="description">Copy this CSS to create a custom theme.</p>
 
 		<div class="code-block">
@@ -558,7 +558,7 @@
 
 	<!-- CSS Variables Reference -->
 	<div class="card">
-		<h2>CSS Variables Reference</h2>
+		<h2>TH08 · CSS Variables Reference</h2>
 		<p class="description">
 			Override these CSS variables to customize the tree appearance. Each one chains to a
 			<code>--base-*</code> token shared across other <code>@keenmate/*</code> web components
@@ -710,7 +710,7 @@
 
 	<!-- Base token integration -->
 	<div class="card">
-		<h2>Base token integration (<code>--base-*</code>)</h2>
+		<h2>TH09 · Base token integration (<code>--base-*</code>)</h2>
 		<p class="description">
 			If you're using svelte-treeview alongside other <code>@keenmate/*</code> components
 			(<code>web-multiselect</code>, <code>web-daterangepicker</code>, etc.), set the shared
@@ -753,7 +753,7 @@
 
 	<!-- Dynamic Theme Switching — ported from web-daterangepicker -->
 	<div class="card">
-		<h2>Dynamic Theme Switching</h2>
+		<h2>TH10 · Dynamic Theme Switching</h2>
 		<p class="description">
 			Change themes at runtime with JavaScript. The brand buttons swap a class
 			on the wrapper (which re-tints the tree via <code>--base-*</code>); the

@@ -188,15 +188,12 @@ TOUCH_DRAG_DROP:
 - Move >10px before long-press cancels drag (allows scrolling)
 
 EXAMPLES:
-- Route: /examples (landing page with feature cards)
-- src/routes/examples/+layout.svelte - shared layout/CSS (purple gradient, cards)
-- src/routes/examples/+page.svelte - landing page
-- src/routes/examples/basic/ - tree rendering, expand level, scroll to path, programmatic control
-- src/routes/examples/drag-drop/ - two-tree drag, touch drag, drop placeholder
-- src/routes/examples/context-menu/ - callback menus, dynamic items, icons, dividers
-- src/routes/examples/search/ - searchText filtering, searchNodes() query
-- src/routes/examples/theming/ - CSS variables, theme examples
-- src/routes/examples/data/ - path structure, separators, insert results
+- Landing page: src/routes/+page.svelte (route `/`) — feature cards from an `examples` registry array; examples/+page.svelte redirects here.
+- Shared CSS: static/examples-shared.css (loaded via root +layout.svelte). Holds ALL reusable example vocabulary — header gradient, .card, .controls, .output, .note, .code-block, .grid, .btn, plus extracted building blocks (.reference-table, .log-panel/.log-entry, .subsection, .badge.new, .muted, kbd, .metric(s), .tabs/.tab, .control-row, .unsaved-badge, .demo-card, .card-grid) and the .chapter-nav* family. Normalize per-page CSS onto these; keep only genuinely-unique visuals local (e.g. custom-layout iOS/dendrogram, theming brand vars, basic indentation demo).
+- Chapter nav: src/routes/ChapterNav.svelte — floating "on this page" jump navigator (Floating UI). Mounted in examples/+layout.svelte (auto-scans `<h2>` in .container + scroll-spy, re-scans on afterNavigate); landing page uses `<ChapterNav items={...} />` for a cross-page jump list. Ported from web-multiselect.
+- Coded section headings: every example page prefixes its section `<h2>`s with a per-page code (`BU01 · …`, `IN02 · …`) so the chapter nav reads as an ordered outline. h1s have no emoji.
+- Example pages (post-merge): basic (Basic Usage: render/expand/scroll/programmatic + array & exclusive-focus, code BU), interaction (click/multi-select/keyboard/cascade + silent restore, IN), drag-drop (DD), context-menu (CM), search (Search & Filter, SF), data (Data Structures: paths/separators/validation + branch ops, DS), tree-editor (Tree Editor: interactive editor + clipboard + business-scenario DB workflows, TE), performance (PF), custom-layout (CL), theming (TH). Logging lives at /dev/logging.
+- MERGES (rc15): expand-collapse→basic, silent-highlight→interaction, branch-operations→data, scenarios→tree-editor. Those four routes are deleted; ExampleHeader.svelte removed (inline headers now).
 - Snippet name: nodeTemplate (not nodeContent)
 
 DRAG_DROP_POSITIONS:

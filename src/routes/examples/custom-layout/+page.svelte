@@ -391,7 +391,7 @@
 	<!-- 0. Windows File Explorer clone                                     -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>🪟 Windows File Explorer</h2>
+		<h2>CL01 · 🪟 Windows File Explorer</h2>
 		<p class="description">
 			A near-complete Windows File Explorer where <strong>both panes are
 			<code>&lt;Tree&gt;</code></strong> with custom <code>nodeTemplate</code> renderers: the
@@ -414,7 +414,7 @@
 	<!-- 1. Standard <Tree> for comparison                                  -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>1. Standard &lt;Tree&gt; (reference)</h2>
+		<h2>CL02 · 1. Standard &lt;Tree&gt; (reference)</h2>
 		<p class="description">
 			This is the default <code>&lt;Tree&gt;</code> component rendering. Everything below uses the same
 			data but renders it differently via <code>&lt;TreeProvider&gt;</code>.
@@ -447,7 +447,7 @@
 	<!-- 2. iOS Files Explorer                                              -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>2. iOS Files Explorer (custom layout)</h2>
+		<h2>CL03 · 2. iOS Files Explorer (custom layout)</h2>
 		<p class="description">
 			A realistic iOS Files-style mobile explorer powered by <code>&lt;TreeProvider&gt;</code>
 			with 120+ real Notepad++ files. Drill into folders, sort, and tap files for details.
@@ -627,7 +627,7 @@
 	<!-- 4. Badge / tag cloud                                               -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>4. Badge Cloud (custom layout)</h2>
+		<h2>CL04 · 4. Badge Cloud (custom layout)</h2>
 		<p class="description">
 			All leaf nodes rendered as badges in a tag cloud. Hover shows the full path.
 			Built with <code>&lt;TreeProvider&gt;</code> &mdash; the controller's
@@ -675,7 +675,7 @@
 	<!-- 3b. Horizontal Token DnD                                           -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>3. Horizontal Tokens (drag-and-drop)</h2>
+		<h2>CL05 · 3. Horizontal Tokens (drag-and-drop)</h2>
 		<p class="description">
 			Nodes as <strong>pill tokens</strong> in nested flex-wrap groups.
 			Click a folder token to expand/collapse its children into a bordered sub-group.
@@ -731,7 +731,7 @@
 	<!-- 4. Controller API demo                                             -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>5. Controller API (programmatic access)</h2>
+		<h2>CL06 · 5. Controller API (programmatic access)</h2>
 		<p class="description">
 			Demonstrates using the <code>TreeController</code> methods directly:
 			<code>expandAll</code>, <code>collapseAll</code>, <code>searchNodes</code>,
@@ -809,7 +809,7 @@
 	<!-- 6. Dendrogram (horizontal tree)                                    -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>6. Dendrogram (horizontal tree with drag-and-drop)</h2>
+		<h2>CL07 · 6. Dendrogram (horizontal tree with drag-and-drop)</h2>
 		<p class="description">
 			A horizontal org-chart layout with CSS-drawn connecting lines and <strong>drag-and-drop</strong>
 			powered by the controller's public API.
@@ -873,7 +873,7 @@
 	<!-- 7. Vertical Dendrogram (top to bottom)                             -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>7. Vertical Dendrogram (top to bottom)</h2>
+		<h2>CL08 · 7. Vertical Dendrogram (top to bottom)</h2>
 		<p class="description">
 			Top-to-bottom org-chart layout with <strong>drag-and-drop</strong>.
 			Drag a node, then hover over another node to see <strong>drop zone pills</strong> appear around it.
@@ -942,7 +942,7 @@
 	<!-- Code hint                                                          -->
 	<!-- ================================================================== -->
 	<div class="card">
-		<h2>How it works</h2>
+		<h2>CL09 · How it works</h2>
 		<p class="description">
 			<code>&lt;TreeProvider&gt;</code> creates a <code>TreeController</code> and provides it
 			via a snippet parameter. The controller holds all tree state (expand/collapse, search,

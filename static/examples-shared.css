@@ -234,6 +234,16 @@ code {
     font-family: 'Courier New', monospace;
 }
 
+/* Code inside a <pre> (incl. .code-block) shouldn't get the inline pill look —
+   reset so <pre><code> renders as plain monospace on the block background. */
+pre code,
+.code-block code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+}
+
 /* Notes/Info boxes */
 .note {
     background: #edf2f7;
@@ -608,6 +618,409 @@ body.landing-body {
     color: #667eea;
 }
 
+/* =============================================================================
+   SHARED COMPONENT VOCABULARY
+   Reusable building blocks extracted from individual example pages so every
+   page speaks the same visual language. Prefer these over per-page <style>.
+   ============================================================================= */
+
+/* Subsection heading inside a card (accent, spaced from the block above). */
+h3.subsection,
+.subsection {
+    margin: 2rem 0 1rem;
+    color: #667eea;
+    font-size: 1.2rem;
+}
+
+/* Muted / secondary inline text. */
+.muted {
+    color: #6b7280;
+}
+
+/* Keyboard key hint. */
+kbd {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.8em;
+    line-height: 1.4;
+    color: #334155;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+}
+
+/* "NEW" pill variant of .badge (the base .badge lives in the landing block). */
+.badge.new {
+    background: #f56565;
+}
+
+/* A row of inline controls (label + input + hint), wraps on small screens. */
+.control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+
+.control-row label {
+    font-weight: 600;
+}
+
+.control-row input[type="text"],
+.control-row input[type="number"] {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.4rem;
+    font-size: 0.95rem;
+}
+
+/* Lightweight demo frame + auto-fit card grid (looser than .grid). */
+.demo-card {
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+/* Tabs (scenario / mode switcher). */
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+}
+
+.tab {
+    padding: 0.5rem 1rem;
+    border: none;
+    background: #f1f5f9;
+    border-radius: 4px 4px 0 0;
+    cursor: pointer;
+    font-weight: 500;
+    color: #64748b;
+    transition: background 0.2s, color 0.2s;
+}
+
+.tab:hover {
+    background: #e2e8f0;
+}
+
+.tab.active {
+    background: #667eea;
+    color: #fff;
+}
+
+/* Metric dashboard (performance-style stat tiles). */
+.metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.metric {
+    background: #f7fafc;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 120px;
+}
+
+.metric .value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.metric .label {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+
+/* Unsaved / dirty-state pill. */
+.unsaved-badge {
+    display: inline-block;
+    background: #fbbf24;
+    color: #78350f;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Activity / event log panel + entries. */
+.log-panel {
+    font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    padding: 1rem 1.25rem;
+    border-radius: 8px;
+    max-height: var(--log-max-height, 220px);
+    overflow-y: auto;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+}
+
+.log-panel--dark {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-color: transparent;
+}
+
+.log-entries {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.log-entry {
+    font-size: 0.8rem;
+    font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+    color: #475569;
+    margin: 0.15rem 0;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.empty-log {
+    color: #64748b;
+    font-style: italic;
+    margin: 0;
+}
+
+/* Reference / API table (denser than the default table). */
+.reference-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    margin-bottom: 2rem;
+}
+
+.reference-table th,
+.reference-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+}
+
+.reference-table th {
+    background: #f3f4f6;
+    font-weight: 600;
+}
+
+.reference-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.reference-table tr.is-highlight {
+    background: #eff6ff;
+}
+
+.reference-table code {
+    background: #e5e7eb;
+    font-size: 0.85em;
+}
+
+/* =============================================================================
+   CHAPTER NAV — floating "on this page" jump navigator (built by
+   ChapterNav.svelte). A tab pinned to the right edge (~1/3 down the viewport)
+   that expands into a scroll-spied list of the page's chapters.
+   ============================================================================= */
+
+/* Smooth hash-jumps + a little headroom so a jumped-to section isn't flush to
+   the top edge. `scroll-margin-top` applies to the anchor targets (cards). */
+html {
+    scroll-behavior: smooth;
+}
+
+.card,
+.example-section {
+    scroll-margin-top: 1rem;
+}
+
+/* The grab tab, pinned to the right edge ~1/3 down. The panel is positioned
+   against it by Floating UI (see ChapterNav.svelte), so it's out of flow here —
+   only the toggle occupies this fixed box. */
+.chapter-nav {
+    position: fixed;
+    top: 33vh;
+    right: 0;
+    z-index: 9000;
+    /* Let clicks fall through to the page; children re-enable. */
+    pointer-events: none;
+}
+
+.chapter-nav__panel,
+.chapter-nav__toggle {
+    pointer-events: auto;
+}
+
+/* The grab tab. Rounded on the left (it hugs the right edge). */
+.chapter-nav__toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 48px;
+    padding: 0;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 10px 0 0 10px;
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.35);
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.chapter-nav__toggle:hover {
+    background: #5a67d8;
+}
+
+.chapter-nav[data-open="true"] .chapter-nav__toggle {
+    background: #4c51bf;
+}
+
+.chapter-nav__toggle svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.chapter-nav__toggle svg circle {
+    fill: currentColor;
+    stroke: none;
+}
+
+/* The list panel — hidden (and non-interactive) until open. Positioned by
+   Floating UI (left/top set inline), so it's taken out of flow with fixed. */
+.chapter-nav__panel {
+    position: fixed;
+    z-index: 9000;
+    width: 260px;
+    max-width: 72vw;
+    max-height: 60vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(8px);
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+}
+
+.chapter-nav[data-open="true"] .chapter-nav__panel {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
+
+/* "Back to Examples" link at the top of the panel (example pages only). */
+.chapter-nav__back {
+    display: block;
+    margin-bottom: 0.35rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4c51bf;
+    text-decoration: none;
+    background: #eef2ff;
+    transition: background 0.15s, color 0.15s;
+}
+
+.chapter-nav__back:hover {
+    background: #e0e7ff;
+    color: #3730a3;
+    text-decoration: none;
+}
+
+.chapter-nav__title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    padding: 0.25rem 0.5rem 0.4rem;
+}
+
+.chapter-nav__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.chapter-nav__item {
+    display: block;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    border-left: 3px solid transparent;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: #4a5568;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.chapter-nav__item:hover {
+    background: #f3f4f6;
+    color: #2d3748;
+    text-decoration: none;
+}
+
+.chapter-nav__item.is-active {
+    background: #eef2ff;
+    color: #4338ca;
+    border-left-color: #667eea;
+    font-weight: 600;
+}
+
+/* On small screens, go near-fullscreen (touch targets + readability). */
+@media (max-width: 768px) {
+    .chapter-nav__panel {
+        width: 80vw;
+        max-width: 80vw;
+        max-height: 80vh;
+    }
+    .chapter-nav__title {
+        font-size: 0.9rem;
+    }
+    .chapter-nav__item {
+        font-size: 1.05rem;
+        padding: 0.7rem 0.85rem;
+    }
+    .chapter-nav__toggle {
+        width: 40px;
+        height: 44px;
+    }
+}
+
+/* Respect reduced-motion: no smooth scroll or slide. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+    .chapter-nav__panel {
+        transition: none;
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     body {
@@ -619,7 +1032,8 @@ body.landing-body {
     }
 
     .grid,
-    .grid-2 {
+    .grid-2,
+    .card-grid {
         grid-template-columns: 1fr;
     }
 

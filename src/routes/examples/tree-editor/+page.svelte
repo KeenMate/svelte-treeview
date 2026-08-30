@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import Tree from '$lib/components/Tree.svelte';
 	import type {
 		TreeController,
@@ -10,8 +10,23 @@
 	} from '$lib/core/TreeController.svelte.js';
 	import { uniqueName } from '$lib/core/clipboard.js';
 	import type { LTreeNode, DropPosition } from '$lib/ltree/types.js';
+	import type { NodeRef } from '$lib/index.js';
 	import RenderModeSwitch from '../RenderModeSwitch.svelte';
 	import { getTreeProps } from '../render-mode.svelte.js';
+
+	// One order-aware sort shared by every tree on this page (editor + scenarios).
+	function sortByOrder<T extends { sortOrder?: number }>(items: LTreeNode<T>[]): LTreeNode<T>[] {
+		return [...items].sort((a, b) => {
+			if (a.parentPath !== b.parentPath) {
+				return (a.parentPath || '').localeCompare(b.parentPath || '');
+			}
+			return (a.data?.sortOrder ?? 0) - (b.data?.sortOrder ?? 0);
+		});
+	}
+
+	// ════════════════════════════════════════════════════════════════════
+	// INTERACTIVE TREE EDITOR
+	// ════════════════════════════════════════════════════════════════════
 
 	interface EditorNode {
 		id: number;
@@ -98,12 +113,7 @@
 	// the resolved destination + the names already taken there. We give each node a fresh
 	// id and, for a root, a collision-free "Copy N" name (uniqueName, library helper) only
 	// when the name already exists in the TARGET parent. Descendants keep their names.
-	// Because the transform reads the pristine clipboard snapshot, repeat pastes stay
-	// "Copy 1 / 2 / 3" with no compounding — no strip-regex, no clipboard mutation.
 	function pasteTransform(data: EditorNode, ctx: NodeTransformContext<EditorNode>): EditorNode {
-		// Read names straight off the roots' landing neighbours — a 'child' paste lands among
-		// target.node's children, a 'before'/'after' paste among the anchor's siblings. No
-		// displayValueMember needed; we decide what "taken" means.
 		const landing =
 			ctx.position === 'child' && ctx.target?.node
 				? Object.values(ctx.target.node.children)
@@ -117,11 +127,9 @@
 		};
 	}
 
-	// beforePasteCallback now does policy only: when you paste onto the copied node
-	// itself (Ctrl+C then Ctrl+V, no move), redirect into its parent so the copy lands
-	// as a sibling — "duplicate in the same folder". ctx.target gives the resolved
-	// destination node (no getNodeByPath needed); entries are readonly; naming lives in
-	// pasteTransform.
+	// beforePasteCallback does policy only: when you paste onto the copied node itself
+	// (Ctrl+C then Ctrl+V, no move), redirect into its parent so the copy lands as a
+	// sibling — "duplicate in the same folder".
 	function beforePaste(ctx: BeforePasteContext<EditorNode>): { targetPath?: string } | void {
 		if (ctx.operation !== 'copy') return;
 		if (ctx.target.path && ctx.entries.some((e) => e.sourcePath === ctx.target.path)) {
@@ -142,8 +150,6 @@
 		const mod = event.ctrlKey || event.metaKey;
 		const key = event.key.toLowerCase();
 
-		// Success logging lives in the onCopy / onCut / onPaste callbacks below;
-		// here we only map keys → operations (and report the can't-act cases).
 		if (mod && key === 'c') {
 			const paths = clipboardPaths(controller);
 			if (!paths.length) { addLog('Nothing selected to copy'); return true; }
@@ -167,11 +173,7 @@
 			const target = selectedNode?.path ?? '';
 
 			// Duplicate-in-place: Ctrl+V onto one of the copied nodes when several were
-			// copied. A single paste target can only land the whole set in one folder,
-			// so a multi-folder selection would dump every copy into the focused node's
-			// parent — only that node ends up correctly duplicated. Instead, paste each
-			// node next to its own original (into its own parent); beforePaste then adds
-			// "Copy N" per parent only where the name actually collides.
+			// copied — paste each node next to its own original (into its own parent).
 			if (
 				controller.getClipboardOperation() === 'copy' &&
 				copiedPaths.length > 1 &&
@@ -182,7 +184,6 @@
 				for (const src of copiedPaths) {
 					const parent = treeRef.getNodeByPath(src)?.parentPath ?? '';
 					controller.copyNodes([src]);
-					// transform comes from nodeInputTransformationCallback on <Tree>
 					const result = controller.pasteNodes(parent, undefined, 'child');
 					if (result.success) pasted += result.count;
 				}
@@ -194,26 +195,20 @@
 			}
 
 			// Pasting onto a file (a node that can't hold children) lands the copies
-			// beside it instead of nested inside — handled by the library now, driven
-			// by getAllowedDropPositionsCallback below, so no per-app redirect here.
+			// beside it — handled by the library, driven by getAllowedDropPositionsCallback.
 			controller.pasteNodes(target, undefined, 'child');
 			cutPaths = new Set();
 			return true;
 		}
 
 		// Delete / Backspace remove the selection. Deletion is a data mutation the
-		// library leaves to the consumer, so there's no built-in Delete — we wire it
-		// here just like copy/cut/paste. Operate on the highlight set when present,
-		// else the focused node.
+		// library leaves to the consumer, so we wire it here just like copy/cut/paste.
 		if (event.key === 'Delete') {
 			const paths = clipboardPaths(controller);
 			if (!paths.length) { addLog('Nothing selected to delete'); return true; }
-			// Remove only top-level paths: removing a parent takes its descendants
-			// with it, so a still-listed child path would 404 on its own removeNode.
+			// Remove only top-level paths: removing a parent takes its descendants with it.
 			const sep = '.';
-			const topLevel = paths.filter(
-				(p) => !paths.some((o) => o !== p && p.startsWith(o + sep))
-			);
+			const topLevel = paths.filter((p) => !paths.some((o) => o !== p && p.startsWith(o + sep)));
 			let removed = 0;
 			let blocked = 0;
 			for (const p of topLevel) {
@@ -286,23 +281,11 @@
 		localStorage.setItem('dropZoneConfig', JSON.stringify(config));
 	});
 
-	function sortByOrder(items: LTreeNode<EditorNode>[]) {
-		return [...items].sort((a, b) => {
-			// Sort by parent path first
-			if (a.parentPath !== b.parentPath) {
-				return (a.parentPath || '').localeCompare(b.parentPath || '');
-			}
-			// Then by sortOrder
-			return (a.data?.sortOrder ?? 0) - (b.data?.sortOrder ?? 0);
-		});
-	}
-
 	function addLog(message: string) {
 		activityLog = [...activityLog.slice(-9), `${new Date().toLocaleTimeString()} - ${message}`];
 	}
 
-	// Show a transient warning in the same banner used for drop rejections, and
-	// auto-clear it after a few seconds so it doesn't linger.
+	// Show a transient warning in the same banner used for drop rejections.
 	let warningTimer: ReturnType<typeof setTimeout> | undefined;
 	function showWarning(message: string) {
 		dropWarning = message;
@@ -358,7 +341,7 @@
 		}
 
 		const siblings = treeRef.getSiblings(selectedNode.path);
-		const currentIndex = siblings.findIndex(s => s.path === selectedNode!.path);
+		const currentIndex = siblings.findIndex((s) => s.path === selectedNode!.path);
 
 		if (currentIndex <= 0) {
 			addLog('Already at top');
@@ -382,7 +365,7 @@
 		}
 
 		const siblings = treeRef.getSiblings(selectedNode.path);
-		const currentIndex = siblings.findIndex(s => s.path === selectedNode!.path);
+		const currentIndex = siblings.findIndex((s) => s.path === selectedNode!.path);
 
 		if (currentIndex >= siblings.length - 1) {
 			addLog('Already at bottom');
@@ -409,10 +392,8 @@
 		const dropNode = target?.node ?? null;
 		const draggedNode = ctx.dragged[0]?.node ?? null;
 		const isFolder = canHaveChildren;
-		const isImage = (node: LTreeNode<EditorNode> | null) =>
-			node?.data?.icon?.includes('🖼️');
-		const isDocumentsFolder = (node: LTreeNode<EditorNode> | null) =>
-			node?.data?.name === 'Documents';
+		const isImage = (node: LTreeNode<EditorNode> | null) => node?.data?.icon?.includes('🖼️');
+		const isDocumentsFolder = (node: LTreeNode<EditorNode> | null) => node?.data?.name === 'Documents';
 
 		// Rule 1: Images cannot be dropped under Documents folder
 		if (isImage(draggedNode) && position === 'child' && isDocumentsFolder(dropNode)) {
@@ -437,7 +418,7 @@
 		// Return undefined to proceed normally
 	}
 
-	// Simple dialog using native confirm/prompt - replace with your own modal
+	// Simple dialog using native confirm - replace with your own modal
 	function showDropDialog(targetName: string): Promise<'cancel' | 'sibling'> {
 		return new Promise((resolve) => {
 			const result = confirm(
@@ -459,11 +440,7 @@
 			return;
 		}
 
-		const result = treeRef.moveNode(
-			draggedNode.path,
-			dropNode.path,
-			position as 'before' | 'after' | 'child'
-		);
+		const result = treeRef.moveNode(draggedNode.path, dropNode.path, position as 'before' | 'after' | 'child');
 
 		if (result.success) {
 			addLog(`Dropped "${draggedNode.data?.name}" ${position} "${dropNode.data?.name}"`);
@@ -473,7 +450,6 @@
 	}
 
 	function handleExport() {
-		// Export current tree state
 		const children = treeRef.getChildren('');
 		const exportData = collectNodes(children);
 		console.log('Exported tree data:', exportData);
@@ -497,6 +473,556 @@
 		activityLog = [];
 		addLog('Tree reset to initial state');
 	}
+
+	// ════════════════════════════════════════════════════════════════════
+	// BUSINESS SCENARIOS (DB-integration workflows)
+	// ════════════════════════════════════════════════════════════════════
+
+	type ScenarioNode = {
+		id: number;
+		path: string;
+		name: string;
+		icon: string;
+		sortOrder: number;
+	};
+
+	type Scenario = 'A' | 'B' | 'C' | 'D' | 'E';
+
+	// Active scenario tab
+	let activeTab = $state<Scenario>('A');
+
+	// Scenario descriptions
+	const scenarioDescriptions: Record<Scenario, { title: string; description: string; keyFeature: string }> = {
+		A: {
+			title: 'Full Redraw + State Preservation',
+			description: 'Drag-drop saves to DB, then reloads entire tree from DB. Expanded state is preserved using getExpandedPaths() / setExpandedPaths().',
+			keyFeature: 'getExpandedPaths() / setExpandedPaths()'
+		},
+		B: {
+			title: 'Partial Redraw (Recommended)',
+			description: 'Same-tree moves are auto-handled by the library using moveNode(). No full rebuild needed - maximum performance.',
+			keyFeature: 'Auto-handled moveNode()'
+		},
+		C: {
+			title: 'Individual CRUD Operations',
+			description: 'Add, edit, and delete nodes with immediate saves to DB. Each operation is saved individually.',
+			keyFeature: 'addNode() / updateNode() / removeNode()'
+		},
+		D: {
+			title: 'Empty Tree + Build One by One',
+			description: "Start with an empty tree, drag nodes from source or add manually. Each node is saved to DB as it's created.",
+			keyFeature: 'dropPlaceholder + addNode()'
+		},
+		E: {
+			title: 'Batch Create Then Save',
+			description: 'Build entire tree structure in memory without saving. Use "Save All" to extract and save everything at once.',
+			keyFeature: 'getAllData()'
+		}
+	};
+
+	// Source tree data (shared across all scenarios)
+	const sourceData: ScenarioNode[] = [
+		{ id: 1, path: '1', name: 'Documents', icon: '📁', sortOrder: 10 },
+		{ id: 2, path: '1.1', name: 'Report.pdf', icon: '📄', sortOrder: 10 },
+		{ id: 3, path: '1.2', name: 'Presentation.pptx', icon: '📊', sortOrder: 20 },
+		{ id: 4, path: '1.3', name: 'Notes', icon: '📁', sortOrder: 30 },
+		{ id: 5, path: '1.3.1', name: 'Meeting Notes.txt', icon: '📝', sortOrder: 10 },
+		{ id: 6, path: '1.3.2', name: 'Ideas.txt', icon: '📝', sortOrder: 20 },
+		{ id: 7, path: '2', name: 'Images', icon: '📁', sortOrder: 20 },
+		{ id: 8, path: '2.1', name: 'Photo.jpg', icon: '🖼️', sortOrder: 10 },
+		{ id: 9, path: '2.2', name: 'Screenshot.png', icon: '🖼️', sortOrder: 20 },
+		{ id: 10, path: '3', name: 'Music', icon: '📁', sortOrder: 30 },
+		{ id: 11, path: '3.1', name: 'Song.mp3', icon: '🎵', sortOrder: 10 }
+	];
+
+	// Initial target data for scenarios A, B, C (pre-populated)
+	function createInitialTargetData(): ScenarioNode[] {
+		return [
+			{ id: 100, path: '1', name: 'Projects', icon: '📁', sortOrder: 10 },
+			{ id: 101, path: '1.1', name: 'Project Alpha', icon: '📁', sortOrder: 10 },
+			{ id: 102, path: '1.1.1', name: 'Specs.doc', icon: '📄', sortOrder: 10 },
+			{ id: 103, path: '1.1.2', name: 'Design.fig', icon: '🎨', sortOrder: 20 },
+			{ id: 104, path: '1.2', name: 'Project Beta', icon: '📁', sortOrder: 20 },
+			{ id: 105, path: '1.2.1', name: 'README.md', icon: '📄', sortOrder: 10 },
+			{ id: 106, path: '2', name: 'Archive', icon: '📁', sortOrder: 20 },
+			{ id: 107, path: '2.1', name: 'Old Files', icon: '📁', sortOrder: 10 },
+			{ id: 108, path: '2.1.1', name: 'Legacy.zip', icon: '📦', sortOrder: 10 }
+		];
+	}
+
+	// Per-scenario state
+	let nextIdA = $state(1000);
+	let nextIdB = $state(2000);
+	let nextIdC = $state(3000);
+	let nextIdD = $state(4000);
+	let nextIdE = $state(5000);
+
+	let targetDataA = $state<ScenarioNode[]>(createInitialTargetData());
+	let targetDataB = $state<ScenarioNode[]>(createInitialTargetData());
+	let targetDataC = $state<ScenarioNode[]>(createInitialTargetData());
+	let targetDataD = $state<ScenarioNode[]>([]); // Empty for scenario D
+	let targetDataE = $state<ScenarioNode[]>([]); // Empty for scenario E
+
+	let mockDatabaseA = $state<ScenarioNode[]>([...createInitialTargetData()]);
+	let mockDatabaseB = $state<ScenarioNode[]>([...createInitialTargetData()]);
+	let mockDatabaseC = $state<ScenarioNode[]>([...createInitialTargetData()]);
+	let mockDatabaseD = $state<ScenarioNode[]>([]);
+	let mockDatabaseE = $state<ScenarioNode[]>([]);
+
+	let activityLogA = $state<string[]>([]);
+	let activityLogB = $state<string[]>([]);
+	let activityLogC = $state<string[]>([]);
+	let activityLogD = $state<string[]>([]);
+	let activityLogE = $state<string[]>([]);
+
+	let selectedNodeC = $state<LTreeNode<ScenarioNode> | null>(null);
+	let editNameC = $state('');
+	let unsavedCountE = $state(0);
+
+	// Loading state per scenario
+	let isLoadingA = $state(false);
+	let isLoadingB = $state(false);
+	let isLoadingC = $state(false);
+	let isLoadingD = $state(false);
+	let isLoadingE = $state(false);
+
+	// Tree refs
+	let treeRefA = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefB = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefC = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefD = $state<Tree<ScenarioNode>>(undefined!);
+	let treeRefE = $state<Tree<ScenarioNode>>(undefined!);
+
+	// Logging helpers
+	function addLogA(message: string) {
+		activityLogA = [...activityLogA.slice(-19), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+	function addLogB(message: string) {
+		activityLogB = [...activityLogB.slice(-19), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+	function addLogC(message: string) {
+		activityLogC = [...activityLogC.slice(-19), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+	function addLogD(message: string) {
+		activityLogD = [...activityLogD.slice(-19), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+	function addLogE(message: string) {
+		activityLogE = [...activityLogE.slice(-19), `${new Date().toLocaleTimeString()} - ${message}`];
+	}
+
+	// Simulated DB operations with random latency (50-450ms)
+	async function simulateLatency(): Promise<number> {
+		const delay = Math.floor(Math.random() * 400) + 50; // 50-450ms
+		await new Promise((r) => setTimeout(r, delay));
+		return delay;
+	}
+
+	// ── Scenario A: Full Redraw ──────────────────────────────────────────
+	function getNextPathSegmentA(parentPath: string): string {
+		const children = mockDatabaseA.filter((n) => {
+			if (parentPath === '') {
+				return !n.path.includes('.');
+			}
+			const prefix = parentPath + '.';
+			return n.path.startsWith(prefix) && !n.path.slice(prefix.length).includes('.');
+		});
+		return String(children.length + 1);
+	}
+
+	async function handleDropA(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
+		const isSameTree = draggedNode.treeId === 'tree-a';
+
+		// Step 1: Save expanded state BEFORE any changes
+		const expandedPaths = treeRefA.getExpandedPaths();
+		addLogA(`Saved ${expandedPaths.length} expanded paths`);
+
+		isLoadingA = true;
+
+		if (isSameTree && operation === 'move') {
+			addLogA(`Moving "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
+			const delay = await simulateLatency();
+			const nodeData = mockDatabaseA.find((n) => n.id === draggedNode.data?.id);
+			if (nodeData) {
+				addLogA(`Saved move to DB (${delay}ms)`);
+			}
+		} else {
+			const parentPath = dropNode === null ? '' : position === 'child' ? dropNode.path : dropNode.parentPath || '';
+			const pathSegment = getNextPathSegmentA(parentPath);
+			const rootPath = parentPath ? `${parentPath}.${pathSegment}` : pathSegment;
+
+			let rootSortOrder = 10;
+			if (dropNode && position === 'before') {
+				rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
+			} else if (dropNode && position === 'after') {
+				rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
+			} else if (position === 'child') {
+				rootSortOrder = 10;
+			}
+
+			const nodesToAdd: ScenarioNode[] = [];
+			let isRoot = true;
+
+			function collectScenarioNodes(node: LTreeNode<ScenarioNode>, newPath: string) {
+				nodesToAdd.push({
+					...node.data!,
+					id: nextIdA++,
+					path: newPath,
+					sortOrder: isRoot ? rootSortOrder : node.data?.sortOrder || 10
+				});
+				isRoot = false;
+
+				const children = Object.values(node.children || {});
+				children.forEach((child, index) => {
+					const childPath = `${newPath}.${index + 1}`;
+					collectScenarioNodes(child, childPath);
+				});
+			}
+
+			collectScenarioNodes(draggedNode, rootPath);
+
+			const delay = await simulateLatency();
+			mockDatabaseA = [...mockDatabaseA, ...nodesToAdd];
+			addLogA(`Added ${nodesToAdd.length} node(s) at "${rootPath}" with sortOrder=${rootSortOrder} (${position} ${dropNode?.data?.name || 'root'}) (${delay}ms)`);
+		}
+
+		// Step 2: Reload FULL tree from database (simulating server round-trip)
+		addLogA(`Reloading tree from DB...`);
+		const reloadDelay = await simulateLatency();
+		targetDataA = [...mockDatabaseA];
+		addLogA(`Loaded ${mockDatabaseA.length} records (${reloadDelay}ms)`);
+
+		// Step 3: Restore expanded state
+		await tick();
+		treeRefA.setExpandedPaths(expandedPaths);
+		addLogA(`Restored ${expandedPaths.length} expanded paths`);
+
+		isLoadingA = false;
+	}
+
+	async function reloadFromDbA() {
+		const expandedPaths = treeRefA.getExpandedPaths();
+		addLogA(`Reloading from DB (saving ${expandedPaths.length} expanded paths)...`);
+
+		isLoadingA = true;
+		const delay = await simulateLatency();
+		targetDataA = [...mockDatabaseA];
+
+		await tick();
+		treeRefA.setExpandedPaths(expandedPaths);
+		addLogA(`Reload complete (${delay}ms), restored expanded state`);
+		isLoadingA = false;
+	}
+
+	function resetA() {
+		mockDatabaseA = [...createInitialTargetData()];
+		targetDataA = [...mockDatabaseA];
+		activityLogA = [];
+		nextIdA = 1000;
+		addLogA('Reset to initial state');
+	}
+
+	// ── Scenario B: Partial Redraw ───────────────────────────────────────
+	async function handleDropB(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
+		const isSameTree = draggedNode.treeId === 'tree-b';
+
+		isLoadingB = true;
+
+		if (isSameTree && operation === 'move') {
+			addLogB(`[AUTO-HANDLED] Moved "${draggedNode.data?.name}" ${position} "${dropNode?.data?.name || 'root'}"`);
+			const delay = await simulateLatency();
+			addLogB(`Saved to DB (${delay}ms) - no tree rebuild needed!`);
+		} else {
+			const parentPath = dropNode === null ? '' : position === 'child' ? dropNode.path : dropNode.parentPath || '';
+
+			let rootSortOrder = 10;
+			if (dropNode && position === 'before') {
+				rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
+			} else if (dropNode && position === 'after') {
+				rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
+			}
+
+			let isFirst = true;
+			const result = treeRefB.copyNodeWithDescendants(draggedNode, parentPath, (data) => {
+				const order = isFirst ? rootSortOrder : data.sortOrder || 10;
+				isFirst = false;
+				return { ...data, id: nextIdB++, path: '', sortOrder: order };
+			});
+
+			if (result.success) {
+				addLogB(`Copied ${result.count} node(s) with sortOrder=${rootSortOrder} (${position} ${dropNode?.data?.name || 'root'})`);
+				const delay = await simulateLatency();
+				addLogB(`Saved to DB (${delay}ms)`);
+			}
+		}
+
+		isLoadingB = false;
+	}
+
+	function resetB() {
+		targetDataB = [...createInitialTargetData()];
+		mockDatabaseB = [...createInitialTargetData()];
+		activityLogB = [];
+		nextIdB = 2000;
+		addLogB('Reset to initial state');
+	}
+
+	// ── Scenario C: Individual CRUD ──────────────────────────────────────
+	async function handleDropC(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
+		const isSameTree = draggedNode.treeId === 'tree-c';
+
+		isLoadingC = true;
+
+		if (isSameTree && operation === 'move') {
+			addLogC(`Moved "${draggedNode.data?.name}"`);
+			const delay = await simulateLatency();
+			addLogC(`Saved move to DB (${delay}ms)`);
+		} else {
+			const parentPath = dropNode === null ? '' : position === 'child' ? dropNode.path : dropNode.parentPath || '';
+
+			let sortOrder = 10;
+			if (dropNode && position === 'before') {
+				sortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
+			} else if (dropNode && position === 'after') {
+				sortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
+			}
+
+			const newNode: ScenarioNode = { ...draggedNode.data!, id: nextIdC++, path: '', sortOrder };
+
+			const result = treeRefC.addNode(parentPath, newNode);
+			if (result.success) {
+				const delay = await simulateLatency();
+				mockDatabaseC = [...mockDatabaseC, result.node!.data!];
+				addLogC(`Added "${newNode.name}" with sortOrder=${sortOrder} (${position} ${dropNode?.data?.name || 'root'}) (${delay}ms)`);
+			}
+		}
+
+		isLoadingC = false;
+	}
+
+	async function handleAddC() {
+		const parentPath = selectedNodeC?.path || '';
+		const newNode: ScenarioNode = {
+			id: nextIdC++,
+			path: '',
+			name: `New Item ${nextIdC}`,
+			icon: '📄',
+			sortOrder: 10
+		};
+
+		isLoadingC = true;
+		const result = treeRefC.addNode(parentPath, newNode);
+		if (result.success) {
+			const delay = await simulateLatency();
+			mockDatabaseC = [...mockDatabaseC, result.node!.data!];
+			addLogC(`Added "${newNode.name}" under "${parentPath || 'root'}" - saved to DB (${delay}ms)`);
+		}
+		isLoadingC = false;
+	}
+
+	async function handleUpdateC() {
+		if (!selectedNodeC || !editNameC.trim()) return;
+
+		isLoadingC = true;
+		const result = treeRefC.updateNode(selectedNodeC.path, { name: editNameC.trim() });
+		if (result.success) {
+			const delay = await simulateLatency();
+			const dbNode = mockDatabaseC.find((n) => n.id === selectedNodeC!.data?.id);
+			if (dbNode) dbNode.name = editNameC.trim();
+			addLogC(`Updated "${selectedNodeC.path}" to "${editNameC}" - saved to DB (${delay}ms)`);
+		}
+		isLoadingC = false;
+	}
+
+	async function handleDeleteC() {
+		if (!selectedNodeC) return;
+
+		isLoadingC = true;
+		const nodeName = selectedNodeC.data?.name;
+		const result = treeRefC.removeNode(selectedNodeC.path);
+		if (result.success) {
+			const delay = await simulateLatency();
+			mockDatabaseC = mockDatabaseC.filter((n) => n.id !== selectedNodeC!.data?.id);
+			addLogC(`Deleted "${nodeName}" - saved to DB (${delay}ms)`);
+			selectedNodeC = null;
+		}
+		isLoadingC = false;
+	}
+
+	function onNodeClickC(ctx: NodeRef<ScenarioNode>) {
+		selectedNodeC = ctx.node;
+		editNameC = ctx.node?.data?.name || '';
+	}
+
+	function resetC() {
+		targetDataC = [...createInitialTargetData()];
+		mockDatabaseC = [...createInitialTargetData()];
+		activityLogC = [];
+		nextIdC = 3000;
+		selectedNodeC = null;
+		editNameC = '';
+		addLogC('Reset to initial state');
+	}
+
+	// ── Scenario D: Empty + One by One ───────────────────────────────────
+	async function handleDropD(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
+		const isSameTree = draggedNode.treeId === 'tree-d';
+
+		isLoadingD = true;
+
+		if (isSameTree && operation === 'move') {
+			addLogD(`Moved "${draggedNode.data?.name}"`);
+			const delay = await simulateLatency();
+			addLogD(`Saved to DB (${delay}ms)`);
+			isLoadingD = false;
+			return;
+		}
+
+		const parentPath = dropNode === null ? '' : position === 'child' ? dropNode.path : dropNode.parentPath || '';
+
+		let sortOrder = 10;
+		if (dropNode && position === 'before') {
+			sortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
+		} else if (dropNode && position === 'after') {
+			sortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
+		}
+
+		const newNode: ScenarioNode = { ...draggedNode.data!, id: nextIdD++, path: '', sortOrder };
+
+		const result = treeRefD.addNode(parentPath, newNode);
+		if (result.success) {
+			const delay = await simulateLatency();
+			mockDatabaseD = [...mockDatabaseD, result.node!.data!];
+			addLogD(`Added "${newNode.name}" with sortOrder=${sortOrder} (${position} ${dropNode?.data?.name || 'root'}) (${delay}ms)`);
+		}
+
+		isLoadingD = false;
+	}
+
+	async function addRootNodeD() {
+		const newNode: ScenarioNode = { id: nextIdD++, path: '', name: `Root ${nextIdD}`, icon: '📁', sortOrder: 10 };
+
+		isLoadingD = true;
+		const result = treeRefD.addNode('', newNode);
+		if (result.success) {
+			const delay = await simulateLatency();
+			mockDatabaseD = [...mockDatabaseD, result.node!.data!];
+			addLogD(`Added root node "${newNode.name}" - saved to DB (${delay}ms)`);
+		}
+		isLoadingD = false;
+	}
+
+	function clearD() {
+		targetDataD = [];
+		mockDatabaseD = [];
+		activityLogD = [];
+		nextIdD = 4000;
+		addLogD('Cleared tree and database');
+	}
+
+	// ── Scenario E: Batch Create Then Save ───────────────────────────────
+	function handleDropE(ctx: NodeDropContext<ScenarioNode>) {
+		const dropNode = ctx.target?.node ?? null;
+		const draggedNode = ctx.source.node!;
+		const { position, operation } = ctx;
+		const isSameTree = draggedNode.treeId === 'tree-e';
+
+		if (isSameTree && operation === 'move') {
+			addLogE(`Moved "${draggedNode.data?.name}" (not saved yet)`);
+			unsavedCountE++;
+			return;
+		}
+
+		const parentPath = dropNode === null ? '' : position === 'child' ? dropNode.path : dropNode.parentPath || '';
+
+		let rootSortOrder = 10;
+		if (dropNode && position === 'before') {
+			rootSortOrder = (dropNode.data?.sortOrder ?? 10) - 5;
+		} else if (dropNode && position === 'after') {
+			rootSortOrder = (dropNode.data?.sortOrder ?? 10) + 5;
+		}
+
+		let isFirst = true;
+		const result = treeRefE.copyNodeWithDescendants(draggedNode, parentPath, (data) => {
+			const order = isFirst ? rootSortOrder : data.sortOrder || 10;
+			isFirst = false;
+			return { ...data, id: nextIdE++, path: '', sortOrder: order };
+		});
+
+		if (result.success) {
+			unsavedCountE += result.count;
+			addLogE(`Added ${result.count} node(s) with sortOrder=${rootSortOrder} (${position} ${dropNode?.data?.name || 'root'}) - NOT saved`);
+		}
+	}
+
+	function addRootNodeE() {
+		const newNode: ScenarioNode = { id: nextIdE++, path: '', name: `Item ${nextIdE}`, icon: '📄', sortOrder: 10 };
+
+		const result = treeRefE.addNode('', newNode);
+		if (result.success) {
+			unsavedCountE++;
+			addLogE(`Added "${newNode.name}" (NOT saved - ${unsavedCountE} unsaved total)`);
+		}
+	}
+
+	async function saveAllE() {
+		isLoadingE = true;
+
+		const allData = treeRefE.getAllData();
+		addLogE(`Extracting ${allData.length} nodes with getAllData()...`);
+
+		const delay1 = await simulateLatency();
+		addLogE(`Preparing batch insert (${delay1}ms)...`);
+		const delay2 = await simulateLatency();
+
+		mockDatabaseE = [...allData];
+		unsavedCountE = 0;
+		addLogE(`Batch saved ${allData.length} nodes to DB! (total: ${delay1 + delay2}ms)`);
+
+		isLoadingE = false;
+	}
+
+	function clearE() {
+		targetDataE = [];
+		mockDatabaseE = [];
+		activityLogE = [];
+		nextIdE = 5000;
+		unsavedCountE = 0;
+		addLogE('Cleared tree (database was already empty)');
+	}
+
+	// Get current scenario's activity log
+	function getCurrentLog(): string[] {
+		switch (activeTab) {
+			case 'A': return activityLogA;
+			case 'B': return activityLogB;
+			case 'C': return activityLogC;
+			case 'D': return activityLogD;
+			case 'E': return activityLogE;
+		}
+	}
+
+	// Get current scenario's mock database
+	function getCurrentDb(): ScenarioNode[] {
+		switch (activeTab) {
+			case 'A': return mockDatabaseA;
+			case 'B': return mockDatabaseB;
+			case 'C': return mockDatabaseC;
+			case 'D': return mockDatabaseD;
+			case 'E': return mockDatabaseE;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -507,13 +1033,15 @@
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
 		<h1>Tree Editor</h1>
-		<p class="subtitle">Add, remove, and move nodes with drag-and-drop</p>
+		<p class="subtitle">
+			Add, remove, move, and clipboard-edit nodes — plus real-world DB-integration workflows.
+		</p>
 		<RenderModeSwitch />
 	</header>
 
 	<!-- Main Editor -->
 	<div class="card">
-		<h2>Interactive Tree Editor</h2>
+		<h2>TE01 · Interactive Tree Editor</h2>
 		<p class="description">
 			Click to select a node (double-click to expand), then use the controls to add
 			children, remove, or reorder. <strong>Ctrl/Cmd+click</strong> or
@@ -689,7 +1217,7 @@
 
 	<!-- API Reference -->
 	<div class="card">
-		<h2>Tree Editor API</h2>
+		<h2>TE02 · Tree Editor API</h2>
 		<p class="description">Methods available for programmatic tree manipulation.</p>
 
 		<table>
@@ -769,7 +1297,7 @@
 />`}</pre>
 		</div>
 
-		<h3 style="margin-top: 2rem;">Clipboard API</h3>
+		<h3 class="subsection">Clipboard API</h3>
 		<p class="description">
 			Controller methods (call via <code>onTreeKeydown</code>'s <code>controller</code> arg or
 			<code>bind:this</code>) backed by a module-level, cross-tree clipboard.
@@ -839,7 +1367,7 @@
 
 	<!-- Code Example -->
 	<div class="card">
-		<h2>Code Example</h2>
+		<h2>TE03 · Code Example</h2>
 		<p class="description">Example of handling tree editing operations.</p>
 
 		<div class="code-block">
@@ -891,13 +1419,8 @@
   //   self  — reorder within same tree only
   //   cross — between different trees only
   //   both  — same-tree and cross-tree
-  function handleDrop(
-    dropNode: LTreeNode<MyNode> | null,
-    draggedNode: LTreeNode<MyNode>,
-    position: DropPosition,
-    event: DragEvent | TouchEvent,
-    operation: DropOperation
-  ) {
+  function handleDrop({ source, target, position }: NodeDropContext<MyNode>) {
+    const draggedNode = source.node, dropNode = target?.node ?? null;
     if (dropNode) {
       treeRef.moveNode(draggedNode.path, dropNode.path, position);
     }
@@ -921,7 +1444,7 @@
 
 	<!-- Multi-select + Clipboard -->
 	<div class="card">
-		<h2>Multi-select &amp; Clipboard (Ctrl/Cmd + C / X / V)</h2>
+		<h2>TE04 · Multi-select &amp; Clipboard (Ctrl/Cmd + C / X / V)</h2>
 		<p class="description">
 			The controller implements the clipboard operations and a shared cross-tree
 			clipboard; the key bindings are left to you via <code>onTreeKeydown</code>.
@@ -947,15 +1470,9 @@ function clipboardPaths(controller: TreeController<MyNode>) {
 }
 
 // THE place for all paste-time data derivation — pure, per node, called by the
-// library with LIVE references. target mirrors source: { path, node, parent, siblings }
-// = the node you aimed at + its context; ctx.position says how the roots land. Return new
-// data (fresh id/value/name) or null to SKIP this node (skipping a root skips its subtree).
-// You decide what "collision" means by reading the landing neighbours — no displayValueMember
-// assumption. They're LIVE and batch-aware, so repeats stay Copy 1/2/3 with no compounding.
-// (Same context type the output transform gets, with phase: 'input'; on output, target is null.)
+// library with LIVE references. target mirrors source: { path, node, parent, siblings }.
+// Return new data (fresh id/value/name) or null to SKIP this node.
 function pasteTransform(data: MyNode, ctx: NodeTransformContext<MyNode>): MyNode | null {
-  // e.g. skip what isn't allowed here: if (!allowed(data, ctx)) return null;
-  // Landing = target.node's children for a 'child' paste, else the anchor's siblings.
   const landing = ctx.position === 'child' && ctx.target?.node
     ? Object.values(ctx.target.node.children)
     : ctx.target?.siblings ?? [];
@@ -968,8 +1485,7 @@ function pasteTransform(data: MyNode, ctx: NodeTransformContext<MyNode>): MyNode
   };
 }
 
-// beforePaste = policy only. ctx = { operation, target: { path, node }, entries }
-// (entries are readonly snapshots). Pasting onto the copied node itself (Ctrl+C then
+// beforePaste = policy only. Pasting onto the copied node itself (Ctrl+C then
 // Ctrl+V, no move) → redirect into its parent so the copy lands as a sibling.
 function beforePaste(ctx) {
   if (ctx.operation !== 'copy') return;
@@ -1006,53 +1522,371 @@ function handleKeydown({ event, controller }) {
 }`}</pre>
 		</div>
 
-		<div class="code-block" style="margin-top: 1rem;">
-			<pre>{`<Tree
-  bind:this={treeRef}
-  data={data}
-  clickBehavior="select"            // click selects, double-click expands
-  selectionMode="multi"             // Ctrl/Cmd+click & Shift+click extend the set
-  bind:focusedNode={focusedNode}
-  bind:highlightedPaths={highlightedPaths}
-  onTreeKeydown={handleKeydown}
-  onCopy={({ paths }) => log(\`copied \${paths.length}\`)}
-  onCut={({ paths }) => log(\`cut \${paths.length}\`)}
-  onPaste={(result) => log(result.success ? \`pasted \${result.count}, skipped \${result.skipped}\` : result.error)}
-  beforePasteCallback={beforePaste}
-  nodeInputTransformationCallback={pasteTransform}
->
-  {#snippet nodeTemplate(node)}
-    <span class:cut-dimmed={cutPaths.has(node.path)}>{node.data?.name}</span>
-  {/snippet}
-</Tree>`}</pre>
-		</div>
-
 		<div class="note">
 			<p class="note-title">Two roles, two hooks</p>
 			<p>
 				<code>beforePasteCallback</code> is <strong>batch policy</strong> — redirect
 				target/position or block; it sees <strong>readonly</strong> entries and never
 				mutates data. <code>nodeInputTransformationCallback(data, ctx) =&gt; T | null</code>
-				is <strong>per-node derivation</strong> — ids, values, <code>"Copy N"</code> naming
-				(read names off the roots' landing neighbours — <code>ctx.target.node.children</code> for a
-				<code>'child'</code> paste, else <code>ctx.target.siblings</code> — and pass to
-				<code>uniqueName</code>), and per-entry skip (return <code>null</code>). <code>target</code> mirrors
-				<code>source</code> — <code>path</code> / <code>node</code> / <code>parent</code> / <code>siblings</code>
-				for the node you aimed at, plus <code>ctx.position</code> — so collision logic is yours, with no display-name assumption. The clipboard snapshot is immutable; each paste runs
-				on a fresh working copy, and <code>nodeOutputTransformationCallback</code> can clean data
-				before it ever lands on the shared clipboard.
+				is <strong>per-node derivation</strong> — ids, values, <code>"Copy N"</code> naming,
+				and per-entry skip (return <code>null</code>). The clipboard snapshot is immutable; each
+				paste runs on a fresh working copy, and <code>nodeOutputTransformationCallback</code> can
+				clean data before it ever lands on the shared clipboard.
 			</p>
 		</div>
+	</div>
 
-		<div class="note">
-			<p class="note-title">Cut dimming</p>
-			<p>
-				The controller tracks cut paths on <code>controller.cutPaths</code> but doesn't
-				paint dimming itself — render it yourself by checking the path in your
-				<code>nodeTemplate</code> (the <code>.cut-dimmed</code> class above). The
-				library wires <code>Escape</code>→cancel-cut into its own keydown handler; mirror
-				it here only to clear your local dim set.
+	<!-- Business Scenarios -->
+	<div class="scenarios">
+		<div class="card">
+			<h2>TE05 · Business Scenarios</h2>
+			<p class="description">
+				Real-world tree-manipulation workflows with (mock) database integration. Switch tabs to
+				compare five persistence strategies — each drags from the shared source tree into a target
+				tree and logs the DB round-trip.
 			</p>
+			<div class="tabs">
+				{#each ['A', 'B', 'C', 'D', 'E'] as tab}
+					<button
+						class="tab"
+						class:active={activeTab === tab}
+						onclick={() => (activeTab = tab as Scenario)}
+					>
+						Scenario {tab}
+					</button>
+				{/each}
+			</div>
+
+			<div class="scenario-info">
+				<h3>{scenarioDescriptions[activeTab].title}</h3>
+				<p>{scenarioDescriptions[activeTab].description}</p>
+				<p class="key-feature">Key feature: <code>{scenarioDescriptions[activeTab].keyFeature}</code></p>
+			</div>
+		</div>
+
+		<!-- Trees Side by Side -->
+		<div class="card">
+			<div class="trees-side-by-side">
+				<!-- Source Tree (shared) -->
+				<div>
+					<h3>Source Tree (drag from here)</h3>
+					<div class="tree-container">
+						<Tree
+							treeId="source-tree"
+							data={sourceData}
+							idMember="id"
+							pathMember="path"
+							orderMember="sortOrder"
+							sortCallback={sortByOrder}
+							isSorted={true}
+							expandLevel={3}
+							dragDropMode="cross"
+							getIsDraggableCallback={() => true}
+							getIsDropAllowedCallback={() => true}
+							{...getTreeProps()}
+						>
+							{#snippet nodeTemplate(node: any)}
+								<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+							{/snippet}
+						</Tree>
+					</div>
+				</div>
+
+				<!-- Target Tree (per scenario) -->
+				<div>
+					<h3>
+						Target Tree
+						{#if activeTab === 'E' && unsavedCountE > 0}
+							<span class="unsaved-badge">{unsavedCountE} unsaved</span>
+						{/if}
+					</h3>
+					<div class="tree-container">
+						{#if activeTab === 'A'}
+							<Tree
+								bind:this={treeRefA}
+								treeId="tree-a"
+								data={targetDataA}
+								idMember="id"
+								pathMember="path"
+								orderMember="sortOrder"
+								sortCallback={sortByOrder}
+								expandLevel={3}
+								dragDropMode="cross"
+								getIsDraggableCallback={() => true}
+								getIsDropAllowedCallback={() => true}
+								onNodeDrop={handleDropA}
+								isLoading={isLoadingA}
+								{...getTreeProps()}
+							>
+								{#snippet nodeTemplate(node: any)}
+									<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+								{/snippet}
+							</Tree>
+						{:else if activeTab === 'B'}
+							<Tree
+								bind:this={treeRefB}
+								treeId="tree-b"
+								data={targetDataB}
+								idMember="id"
+								pathMember="path"
+								orderMember="sortOrder"
+								sortCallback={sortByOrder}
+								expandLevel={3}
+								dragDropMode="cross"
+								getIsDraggableCallback={() => true}
+								getIsDropAllowedCallback={() => true}
+								onNodeDrop={handleDropB}
+								isLoading={isLoadingB}
+								{...getTreeProps()}
+							>
+								{#snippet nodeTemplate(node: any)}
+									<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+								{/snippet}
+							</Tree>
+						{:else if activeTab === 'C'}
+							<Tree
+								bind:this={treeRefC}
+								treeId="tree-c"
+								data={targetDataC}
+								idMember="id"
+								pathMember="path"
+								orderMember="sortOrder"
+								sortCallback={sortByOrder}
+								expandLevel={3}
+								dragDropMode="cross"
+								getIsDraggableCallback={() => true}
+								getIsDropAllowedCallback={() => true}
+								onNodeDrop={handleDropC}
+								onNodeClick={onNodeClickC}
+								focusedNode={selectedNodeC}
+								isLoading={isLoadingC}
+								{...getTreeProps()}
+							>
+								{#snippet nodeTemplate(node: any)}
+									<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+								{/snippet}
+							</Tree>
+						{:else if activeTab === 'D'}
+							<Tree
+								bind:this={treeRefD}
+								treeId="tree-d"
+								data={targetDataD}
+								idMember="id"
+								pathMember="path"
+								orderMember="sortOrder"
+								sortCallback={sortByOrder}
+								expandLevel={3}
+								dragDropMode="cross"
+								getIsDraggableCallback={() => true}
+								getIsDropAllowedCallback={() => true}
+								onNodeDrop={handleDropD}
+								isLoading={isLoadingD}
+								{...getTreeProps()}
+							>
+								{#snippet nodeTemplate(node: any)}
+									<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+								{/snippet}
+								{#snippet noData()}
+									<div class="drop-placeholder-content">
+										<p class="placeholder-icon">📂</p>
+										<p>Empty tree — drag items here or click "Add Root Node"</p>
+									</div>
+								{/snippet}
+								{#snippet dropPlaceholder()}
+									<div class="drop-placeholder-content">
+										<p class="placeholder-icon">📥</p>
+										<p>Drag items here or click "Add Root Node"</p>
+									</div>
+								{/snippet}
+							</Tree>
+						{:else if activeTab === 'E'}
+							<Tree
+								bind:this={treeRefE}
+								treeId="tree-e"
+								data={targetDataE}
+								idMember="id"
+								pathMember="path"
+								orderMember="sortOrder"
+								sortCallback={sortByOrder}
+								expandLevel={3}
+								dragDropMode="cross"
+								getIsDraggableCallback={() => true}
+								getIsDropAllowedCallback={() => true}
+								onNodeDrop={handleDropE}
+								isLoading={isLoadingE}
+								{...getTreeProps()}
+							>
+								{#snippet nodeTemplate(node: any)}
+									<span><small class="node-id">[{node.data?.id}]</small> {node.data?.icon} {node.data?.name}</span>
+								{/snippet}
+								{#snippet noData()}
+									<div class="drop-placeholder-content">
+										<p class="placeholder-icon">📂</p>
+										<p>Empty tree — drag items here or add nodes</p>
+									</div>
+								{/snippet}
+								{#snippet dropPlaceholder()}
+									<div class="drop-placeholder-content">
+										<p class="placeholder-icon">📥</p>
+										<p>Build your tree structure, then "Save All"</p>
+									</div>
+								{/snippet}
+							</Tree>
+						{/if}
+					</div>
+				</div>
+			</div>
+
+			<!-- Scenario-specific Controls -->
+			<div class="controls scenario-controls">
+				{#if activeTab === 'A'}
+					<button class="btn" onclick={reloadFromDbA}>Reload from DB</button>
+					<button class="btn btn-secondary" onclick={resetA}>Reset</button>
+				{:else if activeTab === 'B'}
+					<button class="btn btn-secondary" onclick={resetB}>Reset</button>
+					<span class="hint">Same-tree moves are auto-handled by the library</span>
+				{:else if activeTab === 'C'}
+					<button class="btn" onclick={handleAddC}>Add Child</button>
+					<input type="text" bind:value={editNameC} placeholder="New name..." />
+					<button class="btn" onclick={handleUpdateC} disabled={!selectedNodeC}>Update Name</button>
+					<button class="btn btn-danger" onclick={handleDeleteC} disabled={!selectedNodeC}>Delete</button>
+					<button class="btn btn-secondary" onclick={resetC}>Reset</button>
+				{:else if activeTab === 'D'}
+					<button class="btn" onclick={addRootNodeD}>Add Root Node</button>
+					<button class="btn btn-secondary" onclick={clearD}>Clear All</button>
+				{:else if activeTab === 'E'}
+					<button class="btn" onclick={addRootNodeE}>Add Node</button>
+					<button class="btn btn-primary" onclick={saveAllE} disabled={unsavedCountE === 0}>
+						Save All ({unsavedCountE} unsaved)
+					</button>
+					<button class="btn btn-secondary" onclick={clearE}>Clear All</button>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Activity Log -->
+		<div class="card">
+			<h3>Activity Log</h3>
+			<div class="output">
+				{#if getCurrentLog().length > 0}
+					<pre>{getCurrentLog().join('\n')}</pre>
+				{:else}
+					<p class="empty-log">No activity yet. Try dragging nodes or using the controls above.</p>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Mock Database -->
+		<div class="card">
+			<details>
+				<summary>Mock Database ({getCurrentDb().length} records)</summary>
+				<div class="output">
+					<pre>{JSON.stringify(getCurrentDb(), null, 2)}</pre>
+				</div>
+			</details>
+		</div>
+
+		<!-- Code Example -->
+		<div class="card">
+			<h3>Code Example — Scenario {activeTab}</h3>
+			<div class="code-block">
+				{#if activeTab === 'A'}
+					<pre>{`// Scenario A: Full Redraw with State Preservation
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
+  // 1. Save expanded state BEFORE changes
+  const expandedPaths = treeRef.getExpandedPaths();
+
+  // 2. Save to database
+  await saveToDatabase(draggedNode);
+
+  // 3. Reload FULL tree from database
+  targetData = await loadFromDatabase();
+
+  // 4. Restore expanded state
+  await tick();
+  treeRef.setExpandedPaths(expandedPaths);
+}`}</pre>
+				{:else if activeTab === 'B'}
+					<pre>{`// Scenario B: Partial Redraw (Recommended)
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
+  // Same-tree moves are AUTO-HANDLED by the library!
+  // Library calls moveNode() internally - no rebuild needed.
+
+  // Just save to DB for persistence
+  await saveToDatabase({
+    action: 'move',
+    from: draggedNode.path,
+    to: dropNode.path,
+    position
+  });
+
+  // Tree is already updated - no reload needed!
+}`}</pre>
+				{:else if activeTab === 'C'}
+					<pre>{`// Scenario C: Individual CRUD Operations
+async function handleAdd() {
+  const result = treeRef.addNode(parentPath, newData);
+  if (result.success) {
+    await saveToDatabase(result.node.data);
+  }
+}
+
+async function handleUpdate() {
+  const result = treeRef.updateNode(path, { name: newName });
+  if (result.success) {
+    await saveToDatabase(result.node.data);
+  }
+}
+
+async function handleDelete() {
+  const result = treeRef.removeNode(path);
+  if (result.success) {
+    await deleteFromDatabase(path);
+  }
+}`}</pre>
+				{:else if activeTab === 'D'}
+					<pre>{`// Scenario D: Empty Tree + One by One
+// Use dropPlaceholder for empty state
+<Tree onNodeDrop={handleDrop}>
+  {#snippet dropPlaceholder()}
+    <div>Drop items here to start building</div>
+  {/snippet}
+</Tree>
+
+async function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
+  const newNode = { ...draggedNode.data, id: nextId++ };
+  const result = treeRef.addNode(dropNode?.path || '', newNode);
+
+  if (result.success) {
+    // Save immediately
+    await saveToDatabase(result.node.data);
+  }
+}`}</pre>
+				{:else if activeTab === 'E'}
+					<pre>{`// Scenario E: Batch Create Then Save
+function handleDrop({ source, target, position }) {
+  const draggedNode = source.node, dropNode = target?.node ?? null;
+  // Add to tree WITHOUT saving
+  treeRef.copyNodeWithDescendants(
+    draggedNode,
+    dropNode?.path || '',
+    (data) => ({ ...data, id: nextId++ })
+  );
+  unsavedCount++;
+}
+
+async function saveAll() {
+  // Extract ALL data from tree
+  const allData = treeRef.getAllData();
+
+  // Batch save to database
+  await saveBatchToDatabase(allData);
+}`}</pre>
+				{/if}
+			</div>
 		</div>
 	</div>
 
@@ -1062,6 +1896,7 @@ function handleKeydown({ event, controller }) {
 </div>
 
 <style>
+	/* ── Interactive editor ─────────────────────────────────────────── */
 	.editor-layout {
 		display: grid;
 		grid-template-columns: 1fr 300px;
@@ -1192,5 +2027,104 @@ function handleKeydown({ event, controller }) {
 		border-radius: 4px;
 		color: #92400e;
 		font-size: 0.85rem;
+	}
+
+	/* ── Business scenarios (scoped so styling doesn't leak to the editor) ── */
+	.scenarios .scenario-info {
+		padding: 1rem;
+		background: #f8fafc;
+		border-radius: 4px;
+	}
+
+	.scenarios .scenario-info h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1.25rem;
+	}
+
+	.scenarios .scenario-info p {
+		margin: 0.5rem 0;
+		color: #475569;
+	}
+
+	.scenarios .key-feature {
+		font-weight: 500;
+	}
+
+	.scenarios .key-feature code {
+		background: #e0e7ff;
+		color: #4338ca;
+		padding: 0.2rem 0.5rem;
+		border-radius: 4px;
+	}
+
+	.scenarios .trees-side-by-side {
+		gap: 1.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.scenarios .trees-side-by-side h3 {
+		margin: 0 0 0.5rem 0;
+		font-size: 1rem;
+		color: #374151;
+	}
+
+	.scenarios .tree-container {
+		min-height: 300px;
+		max-height: 400px;
+		overflow: auto;
+		background: #fafafa;
+	}
+
+	.scenarios .scenario-controls {
+		padding-top: 1rem;
+		border-top: 1px solid #e2e8f0;
+	}
+
+	.scenarios .controls input[type='text'] {
+		padding: 0.5rem;
+		border: 1px solid #e2e8f0;
+		border-radius: 4px;
+		width: 150px;
+	}
+
+	.scenarios .output pre {
+		max-height: 220px;
+		overflow: auto;
+	}
+
+	.btn-primary {
+		background: #22c55e;
+		color: white;
+	}
+
+	.btn-primary:hover:not(:disabled) {
+		background: #16a34a;
+	}
+
+	.scenarios details {
+		cursor: pointer;
+	}
+
+	.scenarios details summary {
+		font-weight: 500;
+		padding: 0.5rem 0;
+	}
+
+	.drop-placeholder-content {
+		text-align: center;
+		padding: 2rem;
+		color: #667eea;
+	}
+
+	.placeholder-icon {
+		font-size: 2rem;
+		margin: 0;
+	}
+
+	.node-id {
+		color: #94a3b8;
+		font-family: monospace;
+		font-size: 0.75rem;
+		margin-right: 0.25rem;
 	}
 </style>

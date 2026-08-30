@@ -1,6 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	import { VERSION } from '$lib/constants.generated.js';
+	import ChapterNav from './ChapterNav.svelte';
 
 	const version = `v${VERSION}`;
 
@@ -8,14 +9,14 @@
 		{
 			href: '/examples/basic',
 			icon: '🌲',
-			title: 'Basic Examples',
-			description: 'Tree rendering, expand/collapse controls, node selection, and scroll to path.'
+			title: 'Basic Usage',
+			description: 'The essentials — render a tree, control initial expansion, scroll to a node, and drive expand/collapse programmatically (array + exclusive-focus variants).'
 		},
 		{
 			href: '/examples/interaction',
 			icon: '🖱️',
 			title: 'Interaction',
-			description: 'Click behavior modes, multi-select with range selection, and keyboard navigation.'
+			description: 'Click behavior modes, multi-select with range selection, keyboard navigation, cascade checkboxes, and silent state restore.'
 		},
 		{
 			href: '/examples/drag-drop',
@@ -45,25 +46,13 @@
 			href: '/examples/data',
 			icon: '📊',
 			title: 'Data Structures',
-			description: 'Path-based data structure, custom separators, and insert result validation.'
+			description: 'Path-based data structure, custom separators, insert-result validation, and bulk branch operations (insertBranch / deleteBranch).'
 		},
 		{
 			href: '/examples/tree-editor',
 			icon: '✏️',
 			title: 'Tree Editor',
-			description: 'Interactive tree editing with add, move, remove operations and drag-and-drop.'
-		},
-		{
-			href: '/examples/scenarios',
-			icon: '🏢',
-			title: 'Business Scenarios',
-			description: 'Real-world workflows with mock database integration and batch operations.'
-		},
-		{
-			href: '/examples/branch-operations',
-			icon: '🌿',
-			title: 'Branch Operations',
-			description: 'Bulk subtree operations — insertBranch, replaceBranch, deleteBranch — with single emission.'
+			description: 'Interactive add/move/remove + clipboard editing, plus real-world DB-integration workflows (full redraw, partial redraw, CRUD, build-one-by-one, batch save).'
 		},
 		{
 			href: '/examples/performance',
@@ -76,18 +65,6 @@
 			icon: '🧩',
 			title: 'Custom Layout',
 			description: 'Build custom UIs (breadcrumbs, badge clouds) on the headless TreeController via TreeProvider.'
-		},
-		{
-			href: '/examples/silent-highlight',
-			icon: '🔕',
-			title: 'Silent Highlight',
-			description: 'Restore tree state from URL params (deep links) without firing onHighlightChange / onSelectionChange.'
-		},
-		{
-			href: '/examples/expand-collapse',
-			icon: '🌳',
-			title: 'Expand / Collapse',
-			description: 'Array variants and exclusive focus mode for expandNodes / collapseNodes / expandAll / collapseAll.'
 		},
 		{
 			href: '/dev/logging',
@@ -140,3 +117,6 @@
 		</p>
 	</footer>
 </div>
+
+<!-- Cross-page jump list, fed from the same registry as the cards above. -->
+<ChapterNav items={examples.map((e) => ({ label: e.title, href: e.href }))} />

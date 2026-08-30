@@ -766,14 +766,14 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>🎯 Drag & Drop Examples</h1>
+		<h1>Drag & Drop</h1>
 		<p class="subtitle">Desktop and mobile drag and drop between trees</p>
 		<RenderModeSwitch />
 	</header>
 
 	<!-- Two Trees Side by Side -->
 	<div class="card">
-		<h2>Drag Between Trees</h2>
+		<h2>DD01 · Drag Between Trees</h2>
 		<p class="description">
 			<strong>Source tree (left):</strong> Drag to reorganize nodes (move). Enable "Allow Ctrl+drag
 			to copy" then hold Ctrl while dragging to copy nodes. With <code>selectionMode="multi"</code>
@@ -1025,7 +1025,7 @@
 
 	<!-- Restricted Drop Positions Demo -->
 	<div class="card">
-		<h2>Restricted Drop Positions</h2>
+		<h2>DD02 · Restricted Drop Positions</h2>
 		<p class="description">
 			Control which drop positions are valid per node using <code>allowedDropPositions</code>. Try
 			dragging items to different targets. With <code>selectionMode="multi"</code>, Ctrl/Shift+click
@@ -1123,7 +1123,7 @@ const data = [
 
 	<!-- Drag-Set Guard (beforeDragStartCallback) -->
 	<div class="card" id="drag-set-guard">
-		<h2>Drag-Set Guard (<code>beforeDragStartCallback</code>)</h2>
+		<h2>DD03 · Drag-Set Guard (<code>beforeDragStartCallback</code>)</h2>
 		<p class="description">
 			Two hooks working together, each for the job it's actually good at.
 			<code>getIsDraggableCallback</code> is <strong>per-node</strong>: it flat-out blocks grabbing a
@@ -1247,7 +1247,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Leave-behind on drag (same-tree, moveNodes holes) -->
 	<div class="card" id="leave-behind">
-		<h2>Leave a locked child behind (same-tree drag)</h2>
+		<h2>DD04 · Leave a locked child behind (same-tree drag)</h2>
 		<p class="description">
 			Drag <strong>Documents</strong> onto <strong>Archive</strong>. Its
 			<code>beforeDragStartCallback</code> receives the <strong>complete</strong>
@@ -1309,7 +1309,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Sorting Zone (whole-tree drop zone + DropGroup routing) -->
 	<div class="card">
-		<h2>Sorting Zone (<code>shouldEnableTreeDropZone</code> + <code>DropGroup[]</code>)</h2>
+		<h2>DD05 · Sorting Zone (<code>shouldEnableTreeDropZone</code> + <code>DropGroup[]</code>)</h2>
 		<p class="description">
 			The <strong>Pantry</strong> category nodes reject direct drops (<code
 				>getIsDropAllowedCallback</code
@@ -1437,7 +1437,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Touch Drag Instructions -->
 	<div class="card">
-		<h2>Touch Drag (Mobile)</h2>
+		<h2>DD06 · Touch Drag (Mobile)</h2>
 		<p class="description">
 			On touch devices, long-press (300ms) on a node to start dragging. A ghost element will follow
 			your finger.
@@ -1511,7 +1511,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Drop Placeholder -->
 	<div class="card">
-		<h2>Drop Placeholder Customization</h2>
+		<h2>DD07 · Drop Placeholder Customization</h2>
 		<p class="description">
 			When dragging to an empty tree, a customizable placeholder appears. Use the <code
 				>dropPlaceholder</code
@@ -1553,7 +1553,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Drag Drop Mode -->
 	<div class="card">
-		<h2>Drag Drop Mode</h2>
+		<h2>DD08 · Drag Drop Mode</h2>
 		<p class="description">
 			Control where drag and drop is allowed with the <code>dragDropMode</code> prop.
 		</p>
@@ -1599,7 +1599,7 @@ beforeDragStartCallback={(ctx) => {
 
 	<!-- Drag Visual Feedback -->
 	<div class="card">
-		<h2>Drag Visual Feedback</h2>
+		<h2>DD09 · Drag Visual Feedback</h2>
 		<p class="description">CSS classes are applied during drag operations for visual feedback.</p>
 
 		<table>

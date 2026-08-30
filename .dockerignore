@@ -1,4 +1,4 @@
-# Dependencies
+# Keep the build context small and force a clean, in-container build.
 node_modules
 npm-debug.log*
 
@@ -6,6 +6,12 @@ npm-debug.log*
 .svelte-kit
 build
 dist
+*.tgz
+
+# Testing / tooling output
+coverage
+test-results
+playwright-report
 
 # Development files
 .env
@@ -14,26 +20,27 @@ dist
 .env.test.local
 .env.production.local
 
-# IDE
+# IDE / VCS / assistant
 .vscode
 .idea
+.git
+.gitignore
+.claude
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Git
-.git
-.gitignore
-
-# Docker
-Dockerfile
-.dockerignore
-
-# Documentation
+# Documentation not needed to build the site
 README.md
 CHANGELOG.md
 CLAUDE.md
 
-# Testing
-coverage
+# Local scratch that shouldn't ship in the image
+validation_*.md
+
+# Docker / Make config
+Dockerfile
+.dockerignore
+Makefile
+.makefile.env

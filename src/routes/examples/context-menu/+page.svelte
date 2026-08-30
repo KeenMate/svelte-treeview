@@ -146,7 +146,7 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>📋 Context Menu Examples</h1>
+		<h1>Context Menu</h1>
 		<p class="subtitle">Right-click context menus with callbacks, snippets, shortcuts, submenus, and named dividers</p>
 		<RenderModeSwitch />
 	</header>
@@ -158,7 +158,7 @@
 
 	<!-- Dynamic Context Menu (Callback approach) -->
 	<div class="card">
-		<h2>Callback Approach</h2>
+		<h2>CM01 · Callback Approach</h2>
 		<p class="description">Right-click on any node. Demonstrates shortcuts, submenus, named dividers, <code>className="danger"</code>, and <code>isVisible</code>.</p>
 
 		<div class="controls">
@@ -214,7 +214,7 @@
 
 	<!-- Snippet Approach -->
 	<div class="card">
-		<h2>Snippet + Component Approach</h2>
+		<h2>CM02 · Snippet + Component Approach</h2>
 		<p class="description">Uses <code>ContextMenuItemC</code> and <code>ContextMenuDividerC</code> Svelte components inside a <code>contextMenu</code> snippet for declarative menus with conditional rendering.</p>
 
 		<div class="controls">
@@ -264,7 +264,7 @@
 
 	<!-- Callback API Reference -->
 	<div class="card">
-		<h2>Callback API</h2>
+		<h2>CM03 · Callback API</h2>
 		<p class="description">Use <code>getContextMenuItemsCallback</code> to dynamically generate menu entries based on the node.</p>
 
 		<div class="code-block">
@@ -290,7 +290,7 @@ function getContextMenu(node: LTreeNode<FileItem>, close: () => void): ContextMe
 
 	<!-- Snippet API Reference -->
 	<div class="card">
-		<h2>Snippet + Component API</h2>
+		<h2>CM04 · Snippet + Component API</h2>
 		<p class="description">Use <code>ContextMenuItemC</code> and <code>ContextMenuDividerC</code> components inside the <code>contextMenu</code> snippet.</p>
 
 		<div class="code-block">
@@ -321,7 +321,7 @@ function getContextMenu(node: LTreeNode<FileItem>, close: () => void): ContextMe
 
 	<!-- ContextMenuEntry Types -->
 	<div class="card">
-		<h2>ContextMenuEntry Types</h2>
+		<h2>CM05 · ContextMenuEntry Types</h2>
 		<p class="description">The unified type definition shared across svelte-treeview and canvas-tree.</p>
 
 		<div class="code-block">
@@ -407,7 +407,7 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
 
 	<!-- Menu Position Offset -->
 	<div class="card">
-		<h2>Menu Position Offset</h2>
+		<h2>CM06 · Menu Position Offset</h2>
 		<p class="description">Adjust the context menu position relative to the cursor using <code>contextMenuXOffset</code> and <code>contextMenuYOffset</code>.</p>
 
 		<div class="code-block">
@@ -427,7 +427,7 @@ type ContextMenuEntry = ContextMenuItem | ContextMenuDivider;`}</pre>
 
 	<!-- CSS Customization -->
 	<div class="card">
-		<h2>CSS Customization</h2>
+		<h2>CM07 · CSS Customization</h2>
 		<p class="description">Style the context menu using these CSS classes.</p>
 
 		<table>

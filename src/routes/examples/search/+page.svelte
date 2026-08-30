@@ -296,14 +296,14 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>🔍 Search & Filter</h1>
+		<h1>Search & Filter</h1>
 		<p class="subtitle">Internal search index with result navigation</p>
 		<RenderModeSwitch />
 	</header>
 
 	<!-- Unified Search Card -->
 	<div class="card">
-		<h2>Search & Navigate</h2>
+		<h2>SF01 · Search & Navigate</h2>
 		<p class="description">
 			Type to search the tree. <strong>Filter</strong> mode hides non-matching nodes.
 			<strong>Search</strong> mode keeps the tree visible and navigates to results.
@@ -468,7 +468,7 @@ ${"<"}/script>
 
 	<!-- Search Configuration -->
 	<div class="card">
-		<h2>Search Configuration</h2>
+		<h2>SF02 · Search Configuration</h2>
 		<p class="description">Configure how the search index is built and queried.</p>
 
 		<table>
@@ -545,7 +545,7 @@ ${"<"}/script>
 
 	<!-- FlexSearch Integration -->
 	<div class="card">
-		<h2>FlexSearch Integration</h2>
+		<h2>SF03 · FlexSearch Integration</h2>
 		<p class="description">For advanced full-text search, integrate with FlexSearch (optional peer dependency).</p>
 
 		<div class="note">

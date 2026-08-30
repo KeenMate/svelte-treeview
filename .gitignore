@@ -28,3 +28,6 @@ src/lib/constants.generated.ts
 
 # Playwright test artifacts
 test-results/
+
+# Per-developer Make overrides (container runner, image name, port)
+.makefile.env

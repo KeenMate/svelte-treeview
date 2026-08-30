@@ -187,6 +187,57 @@
 	function onNavNodeClick({ node, path }: NodeRef<Item>) {
 		navLog = [`Navigated to: ${node?.data?.name} (${path})`, ...navLog.slice(0, 9)];
 	}
+
+	// ── Silent state restore demo ────────────────────────────────────
+	// Imagine the user shares a URL like  /app?nodePath=1.2.3&detailId=42
+	// On load the page parses the URL, fetches the detail record into the
+	// form, and just needs the tree to scroll + highlight the matching node.
+	// Firing onHighlightChange in that flow would re-trigger the form-load
+	// listener and cause a loop or wipe the data the URL just supplied.
+	let silentTreeRef: Tree<Item>;
+	let silentHighlightedPaths = $state(new Set<string>());
+
+	// "Form data" — only updated by onHighlightChange so we can see when
+	// it would have been clobbered.
+	let formNotes = $state<string>('(form not loaded yet)');
+	let highlightChangeFires = $state(0);
+
+	function handleHighlightChange({ paths }: { paths: Set<string> }) {
+		highlightChangeFires++;
+		// In a real app this is the listener that would re-fetch & overwrite
+		// form data based on the newly highlighted node.
+		const last = [...paths].pop();
+		if (last) formNotes = `Form reloaded for ${last} (overwrote any URL-loaded data)`;
+	}
+
+	// Simulated "load from URL" — picks a path + writes some form data, then
+	// asks the tree to scroll + highlight either silently or noisily.
+	let pathFromUrl = $state('1.2.3');
+	let silentMode = $state(true);
+
+	async function simulateUrlLoad() {
+		// 1. The page loads form data based on the URL — this is the value
+		//    we want to preserve.
+		formNotes = `URL-loaded data for "${pathFromUrl}" — do not overwrite`;
+		highlightChangeFires = 0;
+
+		// 2. Mark the matching tree node so the user sees what's selected.
+		silentTreeRef.highlightNode(pathFromUrl, 'replace', { silent: silentMode });
+
+		// 3. Scroll the tree into view. scrollToPath itself never fires
+		//    selection callbacks, only the visual scroll-flash highlight.
+		await silentTreeRef.scrollToPath(pathFromUrl, {
+			expand: true,
+			highlight: true,
+			scrollOptions: { behavior: 'smooth', block: 'center' }
+		});
+	}
+
+	function silentReset() {
+		silentHighlightedPaths = new Set();
+		formNotes = '(form not loaded yet)';
+		highlightChangeFires = 0;
+	}
 </script>
 
 <svelte:head>
@@ -196,14 +247,16 @@
 <div class="container">
 	<header class="example-header">
 		<a href="/" class="back-link">&larr; Back to Examples</a>
-		<h1>🖱️ Interaction</h1>
-		<p class="subtitle">Click behavior, checkboxes, multi-select, and keyboard navigation</p>
+		<h1>Interaction</h1>
+		<p class="subtitle">
+			Click behavior, checkboxes, multi-select, keyboard navigation, and silent state restore
+		</p>
 		<RenderModeSwitch />
 	</header>
 
 	<!-- Click Behavior -->
 	<div class="card">
-		<h2>Click Behavior</h2>
+		<h2>IN01 · Click Behavior</h2>
 		<p class="description">
 			The <code>clickBehavior</code> prop controls what happens when you click a node. Try switching
 			between modes and clicking nodes to see the difference.
@@ -396,7 +449,7 @@
 
 	<!-- Multi-Select -->
 	<div class="card">
-		<h2>Multi-Select</h2>
+		<h2>IN02 · Multi-Select</h2>
 		<p class="description">
 			Requires <code>selectionMode="multi"</code> (set above). Then hold <code>Ctrl</code> (or
 			<code>Cmd</code>) and click to toggle individual nodes, or hold <code>Shift</code> and click
@@ -493,7 +546,7 @@
 
 	<!-- Keyboard Navigation -->
 	<div class="card">
-		<h2>Keyboard Navigation</h2>
+		<h2>IN03 · Keyboard Navigation</h2>
 		<p class="description">
 			Click a node to focus the tree, then use arrow keys to navigate. The tree supports full
 			keyboard control out of the box.
@@ -570,7 +623,7 @@ End    Go to last visible node
 
 	<!-- Cascade Checkboxes & Value Policy -->
 	<div class="card">
-		<h2>Cascade Checkboxes &amp; Value Policy</h2>
+		<h2>IN04 · Cascade Checkboxes &amp; Value Policy</h2>
 		<p class="description">
 			Two orthogonal knobs. <code>checkboxMode</code> controls how checking a branch
 			<em>behaves</em>; <code>cascadeSelectPolicy</code> controls which paths the selection
@@ -650,6 +703,100 @@ End    Go to last visible node
   onSelectionChange={({ paths }) => { /* projected set */ }}
   ...
 />`}</pre>
+		</div>
+	</div>
+
+	<!-- Silent State Restore -->
+	<div class="card">
+		<h2>IN05 · Silent State Restore</h2>
+		<p class="description">
+			Restore tree state from URL parameters <em>without</em> firing selection callbacks. You share a
+			link like <code>?nodePath=1.2.3</code>. The page loads form data from the URL, and the tree just
+			needs to scroll + visually highlight the matching node. Firing <code>onHighlightChange</code> in
+			that flow would re-trigger your form-loader and overwrite whatever the URL just supplied.
+		</p>
+
+		<p class="description">
+			Pass <code>{`{ silent: true }`}</code> to <code>highlightNode()</code> /
+			<code>highlightNodes()</code> / <code>clearHighlight()</code> / <code>clearSelection()</code>.
+			State (<code>highlightedPaths</code>, <code>isHighlighted</code> CSS class, focused node) still
+			updates — only <code>onNodeClick</code> / <code>onHighlightChange</code> / <code>onSelectionChange</code>
+			are suppressed.
+		</p>
+
+		<div class="controls">
+			<label>
+				Path from URL:
+				<input type="text" bind:value={pathFromUrl} style="width: 100px" />
+			</label>
+			<label>
+				<input type="checkbox" bind:checked={silentMode} />
+				silent: true
+			</label>
+			<button class="btn" onclick={simulateUrlLoad}>Simulate URL load</button>
+			<button class="btn btn-secondary" onclick={silentReset}>Reset</button>
+		</div>
+
+		<div class="tree-container tree-container-tall">
+			<Tree
+				bind:this={silentTreeRef}
+				data={sampleData}
+				idMember="id"
+				pathMember="path"
+				sortCallback={sortByName}
+				isSorted={true}
+				expandLevel={2}
+				highlightedNodeClass="stv__node-content--highlight-bold"
+				bind:highlightedPaths={silentHighlightedPaths}
+				onHighlightChange={handleHighlightChange}
+				{...getTreeProps()}
+			>
+				{#snippet nodeTemplate(node: LTreeNode<Item>)}
+					<span>{node.data?.icon} {node.data?.name}</span>
+				{/snippet}
+			</Tree>
+		</div>
+
+		<div class="output">
+			<p class="output-label">Form data (only changes when onHighlightChange fires)</p>
+			<pre>{formNotes}</pre>
+		</div>
+
+		<div class="output">
+			<p class="output-label">onHighlightChange fired</p>
+			<pre>{highlightChangeFires} time(s)
+{silentMode
+	? '→ expected 0 in silent mode'
+	: '→ expected 1 in loud mode (form data was overwritten)'}</pre>
+		</div>
+
+		<div class="code-block">
+			<pre>{`// Restore tree state from URL params without firing onHighlightChange
+function restoreFromUrl(nodePath: string) {
+  // 1. Load form data based on the URL — preserve this value
+  loadFormDataFromUrl(nodePath);
+
+  // 2. Mark the matching node visually — { silent: true } skips
+  //    onNodeClick / onHighlightChange so the form-load handler
+  //    doesn't re-fire and clobber the data above.
+  tree.highlightNode(nodePath, 'replace', { silent: true });
+
+  // 3. Scroll into view (scrollToPath never fires selection events).
+  tree.scrollToPath(nodePath, { expand: true, highlight: true });
+}`}</pre>
+		</div>
+
+		<div class="note">
+			<p class="note-title">Also supported</p>
+			<p>
+				All four methods accept <code>{`{ silent: true }`}</code>:
+				<code>highlightNode(path, mode, opts)</code>,
+				<code>highlightNodes(paths, opts)</code>,
+				<code>clearHighlight(paths?, opts)</code>,
+				<code>clearSelection(paths?, opts)</code>.
+				The bindable props (<code>highlightedPaths</code>, <code>selectedPaths</code>, <code>focusedNode</code>)
+				still sync back to the parent — silent only skips the explicit callbacks.
+			</p>
 		</div>
 	</div>
 

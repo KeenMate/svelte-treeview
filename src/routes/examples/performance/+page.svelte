@@ -559,7 +559,7 @@
   </header>
 
   <div class="card">
-    <h2>Rendering Mode</h2>
+    <h2>PF01 · Rendering Mode</h2>
     <div class="mode-toggle">
       <label class="toggle-option" class:active={renderMode === 'recursive'}>
         <input type="radio" bind:group={renderMode} value="recursive" />
@@ -612,7 +612,7 @@
   </div>
 
   <div class="card">
-    <h2>Configuration</h2>
+    <h2>PF02 · Configuration</h2>
     <div class="controls">
       <label>
         Node Count:
@@ -654,7 +654,7 @@
   </div>
 
   <div class="card">
-    <h2>Performance Metrics</h2>
+    <h2>PF03 · Performance Metrics</h2>
     <div class="metrics">
       <div class="metric">
         <span class="value">{metrics.nodeCount.toLocaleString()}</span>
@@ -718,7 +718,7 @@
   {#if treeData.length > 0}
     <div class="card">
       <h2>
-        {dataSource === 'countries' ? 'Countries + States' : 'Synthetic Data'}
+        PF04 · {dataSource === 'countries' ? 'Countries + States' : 'Synthetic Data'}
         ({metrics.nodeCount.toLocaleString()} nodes) - {renderMode === 'virtual' ? 'Virtual Scroll' : renderMode === 'flat' ? 'Flat Mode' : 'Recursive Mode'}
       </h2>
       <div class="tree-controls">
@@ -825,7 +825,7 @@
   {/if}
 
   <div class="card">
-    <h2>What to Test</h2>
+    <h2>PF05 · What to Test</h2>
     <div class="description">
       <ol>
         <li><strong>Initial render:</strong> Generate data with different node counts and expand levels. Compare render times between modes.</li>
@@ -905,20 +905,6 @@
     font-size: 0.875rem;
   }
 
-  .metrics {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .metric {
-    background: #f7fafc;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    text-align: center;
-    min-width: 120px;
-  }
-
   .metric.total {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -937,12 +923,6 @@
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
-  }
-
-  .metric .value {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 600;
   }
 
   .metric .label {
