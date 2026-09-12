@@ -1,10 +1,20 @@
 /* =============================================================================
-   TOGGLE ICON (chevron / +/- / arrow / leaf)
+   TOGGLE ICON (disclosure glyph + optional leaf marker)
    =============================================================================
-   The toggle column is a span with classes `stv__toggle-icon` + an icon class
-   (`stv__toggle-icon--expand`, `stv__toggle-icon--collapse-arrow`, etc.). The icon classes set
-   only `mask-image`; the rest of the SVG-rendering boilerplate lives on the
-   shared `.stv__toggle-icon::before` rule below so each icon class is a one-liner.
+   The toggle column is a span with `stv__toggle-icon` + ONE glyph class:
+   `stv__toggle-icon--expand` for an expandable row (the single canonical
+   disclosure class) or `stv__toggle-icon--leaf` for a leaf. Which PICTURE the
+   `--expand` glyph shows is decided entirely by the --stv-icon-* variables,
+   reconfigured per `icon-set` in variables.css — NOT by swapping to a different
+   CSS class. This replaces the old family of per-set classes
+   (--expand-alt / --expand-plus / --collapse-arrow / …), which offered four
+   parallel shapes for one slot.
+
+   Both toggle modes keep the SAME `--expand` class + an `.expanded` state marker:
+   - rotate (default): the glyph rotates between --stv-icon-rotate-collapsed and
+     --stv-icon-rotate-expanded when `.expanded` is applied.
+   - swap: rotation is cancelled and the ::before mask flips to --stv-icon-collapse
+     when `.expanded` (gated on data-toggle-icon-mode="swap").
 */
 
 .stv__toggle-icon {
@@ -18,8 +28,16 @@
 	flex-shrink: 0;
 }
 
-.stv__toggle-icon.expanded {
-	transform: rotate(90deg);
+/* Collapsed / expanded orientation. The `.expanded` marker is applied by
+   Node.svelte for BOTH modes; swap just doesn't rotate (see below). Keyed on
+   `.stv__toggle-icon.stv__clickable` (every expandable toggle carries it) rather
+   than `--expand`, so a custom escape-hatch glyph class (e.g. FontAwesome, which
+   replaces `--expand`) still rotates. */
+.stv__toggle-icon.stv__clickable {
+	transform: rotate(var(--stv-icon-rotate-collapsed, 0deg));
+}
+.stv__toggle-icon.stv__clickable.expanded {
+	transform: rotate(var(--stv-icon-rotate-expanded, 90deg));
 }
 
 /* Leaf rows have no twistie (the --leaf dot is disabled below), but the empty
@@ -29,21 +47,16 @@
    left under the parent. `.stv__toggle-icon--leaf` therefore inherits the shared
    `.stv__toggle-icon` width above — no override needed. */
 
-/* Shared boilerplate: every stv__toggle-icon--* class renders its SVG via mask-image
-   so it inherits currentColor. */
-.stv__toggle-icon--expand::before,
-.stv__toggle-icon--collapse::before,
-/* .stv__toggle-icon--leaf::before, */ /* leaf dot disabled — no marker for leaves */
-.stv__toggle-icon--expand-alt::before,
-.stv__toggle-icon--collapse-alt::before,
-.stv__toggle-icon--expand-plus::before,
-.stv__toggle-icon--collapse-minus::before,
-.stv__toggle-icon--expand-arrow::before,
-.stv__toggle-icon--collapse-arrow::before {
+/* The one disclosure glyph — rendered via mask-image so it inherits currentColor
+   (→ --stv-toggle-icon-color). Its picture comes from --stv-icon-expand, which
+   `icon-set` re-points (see variables.css). (When the leaf dot below is enabled it
+   shares this same boilerplate — add `.stv__toggle-icon--leaf::before` to the
+   selector list.) */
+.stv__toggle-icon--expand::before {
 	content: '';
 	display: inline-block;
-	width: 1em;
-	height: 1em;
+	width: var(--stv-icon-size-glyph, 1em);
+	height: var(--stv-icon-size-glyph, 1em);
 	background-color: currentColor;
 	-webkit-mask-repeat: no-repeat;
 	mask-repeat: no-repeat;
@@ -52,55 +65,50 @@
 	-webkit-mask-size: contain;
 	mask-size: contain;
 	vertical-align: -0.15em;
+	-webkit-mask-image: var(--stv-icon-expand);
+	mask-image: var(--stv-icon-expand);
 }
 
-/* Default — Lucide chevron */
-.stv__toggle-icon--expand::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>");
+/* Swap mode — show the collapse glyph when expanded instead of rotating. For the
+   built-in glyph Node.svelte keeps the single `--expand` class + `.expanded` and only
+   the pictured mask changes (below); for a custom escape-hatch glyph Node.svelte swaps
+   the class name itself. Either way rotation is cancelled. Gated on
+   data-toggle-icon-mode so rotate sets are unaffected. */
+.stv__container[data-toggle-icon-mode='swap'] .stv__toggle-icon.stv__clickable {
+	transform: none;
+}
+.stv__container[data-toggle-icon-mode='swap'] .stv__toggle-icon--expand.expanded::before {
+	-webkit-mask-image: var(--stv-icon-collapse);
+	mask-image: var(--stv-icon-collapse);
 }
 
-.stv__toggle-icon--collapse::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+/* plus-minus is inherently a swap set (a rotated + or − is meaningless), so force
+   glyph-swap for it regardless of toggle-icon-mode. */
+.stv__container[data-icon-set='plus-minus'] .stv__toggle-icon.stv__clickable {
+	transform: none;
+}
+.stv__container[data-icon-set='plus-minus'] .stv__toggle-icon--expand.expanded::before {
+	-webkit-mask-image: var(--stv-icon-collapse);
+	mask-image: var(--stv-icon-collapse);
 }
 
-/* leaf dot disabled for now — leaves render no toggle marker
+/* leaf dot disabled for now — leaves render no toggle marker. Set leafIconClass
+   to `stv__toggle-icon--leaf` and un-comment to bring back the bullet dot; its
+   picture comes from --stv-icon-leaf.
 .stv__toggle-icon--leaf::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>");
+	content: '';
+	display: inline-block;
+	width: var(--stv-icon-size-glyph, 1em);
+	height: var(--stv-icon-size-glyph, 1em);
+	background-color: currentColor;
+	-webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+	mask-position: center;
+	-webkit-mask-size: contain;
+	mask-size: contain;
+	vertical-align: -0.15em;
+	-webkit-mask-image: var(--stv-icon-leaf);
+	mask-image: var(--stv-icon-leaf);
 }
 */
-
-/* Alternative — filled triangles */
-.stv__toggle-icon--expand-alt::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>");
-}
-
-.stv__toggle-icon--collapse-alt::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 8l7 11 7-11z'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M5 8l7 11 7-11z'/></svg>");
-}
-
-/* Plus / Minus — Lucide square-plus / square-minus */
-.stv__toggle-icon--expand-plus::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>");
-}
-
-.stv__toggle-icon--collapse-minus::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='18' x='3' y='3' rx='2'/><path d='M8 12h8'/></svg>");
-}
-
-/* Arrow — Lucide arrow-right / arrow-down */
-.stv__toggle-icon--expand-arrow::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>");
-}
-
-.stv__toggle-icon--collapse-arrow::before {
-	-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>");
-	mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>");
-}

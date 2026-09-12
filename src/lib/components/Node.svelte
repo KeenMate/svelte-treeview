@@ -59,9 +59,18 @@
 	// Read every config field through $derived so updates from controller.update()
 	// or the controller's runtime $effect syncs propagate into this Node's render.
 	// Plain destructuring would snapshot primitives once and never react.
+	// For the BUILT-IN glyph, which picture the disclosure shows (and whether it
+	// rotates or swaps on expand) is decided by CSS via the --stv-icon-* variables +
+	// data-icon-set / data-toggle-icon-mode on .stv__container — the template just
+	// renders the single `stv__toggle-icon--expand` class + an `.expanded` marker.
+	// A CUSTOM expandIconClass (e.g. FontAwesome) is a deprecated escape hatch: it
+	// isn't a CSS mask, so swap mode has to swap the class NAME here (see template).
 	const expandIconClass = $derived(config.expandIconClass);
 	const collapseIconClass = $derived(config.collapseIconClass);
 	const leafIconClass = $derived(config.leafIconClass);
+	const toggleIconMode = $derived(config.toggleIconMode);
+	// True when a custom (non-default) expand class is in play — the escape hatch.
+	const isCustomGlyph = $derived(expandIconClass !== 'stv__toggle-icon--expand');
 	const highlightedNodeClass = $derived(config.highlightedNodeClass);
 	const focusedNodeClass = $derived(config.focusedNodeClass);
 	// Data-driven per-row classes. The callbacks read node data; recompute when the
@@ -83,7 +92,6 @@
 	// recreated on config change.
 	const dropZoneMode = $derived(config.dropZoneMode);
 	const isAccordionExpand = $derived(config.isAccordionExpand);
-	const toggleIconMode = $derived(config.toggleIconMode);
 
 	// Compute if THIS node is the one being hovered for drop.
 	// Single source of truth from the controller — guarantees exactly one highlighted
@@ -362,10 +370,12 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		{#if hasChildren && isCollapsible}
 			<span
-				class="stv__toggle-icon stv__clickable {toggleIconMode === 'swap'
-					? (node.isExpanded ? collapseIconClass : expandIconClass)
+				class="stv__toggle-icon stv__clickable {isCustomGlyph && toggleIconMode === 'swap'
+					? node.isExpanded
+						? collapseIconClass
+						: expandIconClass
 					: expandIconClass}"
-				class:expanded={toggleIconMode === 'rotate' && node.isExpanded}
+				class:expanded={node.isExpanded}
 				onclick={toggleExpanded}
 			></span>
 		{:else}

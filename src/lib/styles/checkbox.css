@@ -59,22 +59,18 @@
 	border-color: var(--stv-checkbox-checked-border-color);
 }
 
-/* Checkmark — sized as % of the box so it scales with --stv-checkbox-size.
-   The translate Y is -58% (not -50%) because rotating a tall rectangle 45°
-   shifts its visual center down a couple of % from its geometric center;
-   the offset brings the checkmark's optical center back to box center. */
+/* Checkmark — a currentColor-tinted mask (was a CSS-border checkmark) so it follows
+   --stv-icon-check → the shared --base-icon-check contract. Fills the box; the Lucide
+   glyph's own viewBox padding keeps it visually inset, and it scales with the box. */
 .stv__checkbox input:checked + .stv__checkbox-box::after {
 	display: block;
-	left: 50%;
-	top: 50%;
-	width: 28%;
-	height: 55%;
-	border: solid var(--stv-checkbox-checkmark-color);
-	border-width: 0 var(--stv-checkbox-checkmark-width) var(--stv-checkbox-checkmark-width) 0;
-	transform: translate(-50%, -58%) rotate(45deg);
+	inset: 0;
+	background-color: var(--stv-checkbox-checkmark-color);
+	-webkit-mask: var(--stv-icon-check) no-repeat center / contain;
+	mask: var(--stv-icon-check) no-repeat center / contain;
 }
 
-/* Indeterminate state — dash */
+/* Indeterminate state — dash (swaps the check glyph for --stv-icon-indeterminate) */
 .stv__checkbox input:indeterminate + .stv__checkbox-box {
 	background: var(--stv-checkbox-checked-bg);
 	border-color: var(--stv-checkbox-checked-border-color);
@@ -82,12 +78,10 @@
 
 .stv__checkbox input:indeterminate + .stv__checkbox-box::after {
 	display: block;
-	left: 50%;
-	top: 50%;
-	width: 60%;
-	height: 0;
-	border-bottom: var(--stv-checkbox-checkmark-width) solid var(--stv-checkbox-checkmark-color);
-	transform: translate(-50%, -50%);
+	inset: 0;
+	background-color: var(--stv-checkbox-checkmark-color);
+	-webkit-mask: var(--stv-icon-indeterminate) no-repeat center / contain;
+	mask: var(--stv-icon-indeterminate) no-repeat center / contain;
 }
 
 /* Focus ring */

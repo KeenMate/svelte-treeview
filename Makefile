@@ -6,8 +6,8 @@
 # .makefile.env to switch the runner (e.g. DOCKER_RUNNER = docker) or the port.
 -include .makefile.env
 DOCKER_RUNNER  ?= podman
-IMAGE_NAME     ?= registry.km8.es/svelte-treeview-showcase:prod
-CONTAINER_NAME ?= svelte-treeview-showcase
+IMAGE_NAME     ?= registry.km8.es/svelte-treeview-examples:prod
+CONTAINER_NAME ?= svelte-treeview-examples
 IMAGE_PORT     ?= 17780
 
 help: ## Show this help

@@ -157,8 +157,10 @@ The two per-node transforms are **operation-neutral** and defined by DIRECTION, 
 | `bodyClass` | `string \| null` | `undefined` | CSS class for tree body |
 | `focusedNodeClass` | `string \| null` | `undefined` | CSS class applied to the focused node |
 | `dragOverNodeClass` | `string \| null` | `undefined` | CSS class for nodes being dragged over |
-| `expandIconClass` | `string \| null` | `"stv__toggle-icon--expand"` | CSS class for expand icons |
-| `collapseIconClass` | `string \| null` | `"stv__toggle-icon--collapse"` | CSS class for collapse icons |
+| `iconSet` | `'chevron' \| 'triangle' \| 'plus-minus' \| 'arrow'` | `'chevron'` | Disclosure glyph — one knob that re-points the `--stv-icon-*` set (chains to `--base-icon-*`). See [theming](./theming.md#disclosure-glyph-iconset). |
+| `toggleIconMode` | `'rotate' \| 'swap'` | `'rotate'` | Whether the glyph rotates or swaps to the collapse glyph on expand (`plus-minus` always swaps) |
+| `expandIconClass` | `string \| null` | `"stv__toggle-icon--expand"` | **Deprecated** — prefer `iconSet`. Escape hatch to override the toggle glyph with a custom class (e.g. FontAwesome) |
+| `collapseIconClass` | `string \| null` | `"stv__toggle-icon--collapse"` | **Deprecated** — only used with a *custom* `expandIconClass` in `swap` mode (built-in swap is CSS-driven) |
 | `leafIconClass` | `string \| null` | `"stv__toggle-icon--leaf"` | CSS class for leaf node icons |
 | `scrollHighlightTimeout` | `number \| null` | `4000` | Duration (ms) for scroll highlight animation |
 | `scrollHighlightClass` | `string \| null` | `'stv__scroll-highlight'` | CSS class to apply for scroll highlight effect |

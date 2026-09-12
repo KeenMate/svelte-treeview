@@ -141,18 +141,33 @@ The tree emits BEM-style classes (`stv__<element>` / `stv__<element>--<modifier>
 />
 ```
 
-### Custom icon classes
+### Disclosure glyph (`iconSet`)
+
+Pick the expand/collapse glyph with one knob — `iconSet` (`'chevron'` (default) ·
+`'triangle'` · `'plus-minus'` · `'arrow'`). It re-points the single
+`--stv-icon-expand` / `--stv-icon-collapse` variable set (via `data-icon-set` on
+`.stv__container`); it is **not** a switch between separate CSS classes.
 
 ```svelte
-<Tree
-  {data}
-  idMember="path"
-  pathMember="path"
-  expandIconClass="custom-expand-icon"
-  collapseIconClass="custom-collapse-icon"
-  leafIconClass="custom-leaf-icon"
-/>
+<Tree {data} idMember="path" pathMember="path" iconSet="plus-minus" />
 ```
+
+Each set chains its glyph to a shared `--base-icon-*` token
+(`chevron` → `--base-icon-chevron`, `triangle` → `--base-icon-caret-down`,
+`plus-minus` → `--base-icon-expand`/`--base-icon-collapse`), so overriding one base
+token reskins the disclosure glyph across every KeenMate component at once:
+
+```css
+.my-app { --base-icon-chevron: url("data:image/svg+xml;utf8,<svg …>"); }
+```
+
+`toggleIconMode` (`'rotate'` (default) | `'swap'`) controls whether the glyph
+rotates or swaps to the collapse glyph on expand. `plus-minus` always swaps.
+
+> **Deprecated:** `expandIconClass` / `collapseIconClass` are superseded by `iconSet`
+> for picking a built-in glyph, but remain a working escape hatch for a *custom* glyph
+> class (e.g. FontAwesome): in `swap` mode the class name is swapped, and a custom glyph
+> still rotates in `rotate` mode. Prefer `iconSet`.
 
 ## See also
 

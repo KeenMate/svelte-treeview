@@ -21,7 +21,13 @@
 		{ "name": "base-font-size-xs", "required": false, "usage": "Small text — node path, context-menu shortcut, icon font-size (multiplier × --stv-rem)" },
 		{ "name": "base-font-size-sm", "required": false, "usage": "Default node text and context-menu items (multiplier × --stv-rem)" },
 		{ "name": "base-font-weight-medium", "required": false, "usage": "Node label weight" },
-		{ "name": "base-border-radius-sm", "required": false, "usage": "Checkbox, context-menu, node-content border radius (multiplier × --stv-rem)" }
+		{ "name": "base-border-radius-sm", "required": false, "usage": "Checkbox, context-menu, node-content border radius (multiplier × --stv-rem)" },
+		{ "name": "base-icon-chevron", "required": false, "usage": "Disclosure glyph for the default `icon-set` (chevron). Chained by --stv-icon-expand; override to reskin the toggle." },
+		{ "name": "base-icon-caret-down", "required": false, "usage": "Disclosure glyph for `icon-set='triangle'` (filled caret)." },
+		{ "name": "base-icon-expand", "required": false, "usage": "Expand glyph (plus) for `icon-set='plus-minus'`." },
+		{ "name": "base-icon-collapse", "required": false, "usage": "Collapse glyph (minus) for `icon-set='plus-minus'`." },
+		{ "name": "base-icon-check", "required": false, "usage": "Checkbox checkmark glyph; chained by --stv-icon-check; inline Lucide SVG fallback." },
+		{ "name": "base-icon-indeterminate", "required": false, "usage": "Tri-state (partial) checkbox dash glyph; chained by --stv-icon-indeterminate; inline Lucide SVG fallback." }
 	],
 	"componentVariables": [
 		{ "name": "stv-rem", "category": "sizing", "usage": "Base sizing unit for proportional scaling (default 10px). Set to 1rem to scale with document font-size." },
@@ -52,6 +58,15 @@
 		{ "name": "stv-toggle-icon-color", "category": "color", "usage": "Toggle icon color (via currentColor mask)" },
 		{ "name": "stv-toggle-icon-margin-right", "category": "spacing", "usage": "Gap between toggle and node content" },
 		{ "name": "stv-toggle-icon-transition", "category": "animation", "usage": "Rotation animation timing" },
+
+		{ "name": "stv-icon-expand", "category": "icon", "usage": "Disclosure glyph shown collapsed (and the only glyph in rotate mode). Re-pointed per `icon-set`; chains to --base-icon-chevron by default." },
+		{ "name": "stv-icon-collapse", "category": "icon", "usage": "Disclosure glyph shown when expanded — only consulted in swap mode / plus-minus set." },
+		{ "name": "stv-icon-leaf", "category": "icon", "usage": "Optional leaf marker glyph (leaf dot disabled by default in toggle-icons.css)." },
+		{ "name": "stv-icon-rotate-collapsed", "category": "animation", "usage": "Rotation of the disclosure glyph when collapsed (per icon-set; e.g. -90deg for the down-caret triangle)." },
+		{ "name": "stv-icon-rotate-expanded", "category": "animation", "usage": "Rotation of the disclosure glyph when expanded (per icon-set; 90deg for chevron/arrow, 0deg for triangle)." },
+		{ "name": "stv-icon-size-glyph", "category": "sizing", "usage": "Mask box for the disclosure glyph (default 1em; scales with the toggle column font-size)." },
+		{ "name": "stv-icon-check", "category": "icon", "usage": "Checkbox checkmark glyph (mask) for a checked box; chains to --base-icon-check." },
+		{ "name": "stv-icon-indeterminate", "category": "icon", "usage": "Dash glyph (mask) for a tri-state/partial checkbox; chains to --base-icon-indeterminate." },
 
 		{ "name": "stv-checkbox-size", "category": "sizing", "usage": "Checkbox square dimension" },
 		{ "name": "stv-checkbox-border-width", "category": "border", "usage": "Checkbox border thickness (hairline, does not scale)" },

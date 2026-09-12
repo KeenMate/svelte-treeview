@@ -24,18 +24,27 @@
 		return [...items].sort((a, b) => (a.data?.name || '').localeCompare(b.data?.name || ''));
 	}
 
-	// Toggle icon demo state
-	const iconSets = {
-		default: { expand: 'stv__toggle-icon--expand', collapse: 'stv__toggle-icon--collapse', label: 'Chevron' },
-		alt: { expand: 'stv__toggle-icon--expand-alt', collapse: 'stv__toggle-icon--collapse-alt', label: 'Filled triangle' },
-		plusminus: { expand: 'stv__toggle-icon--expand-plus', collapse: 'stv__toggle-icon--collapse-minus', label: 'Plus / Minus' },
-		arrows: { expand: 'stv__toggle-icon--expand-arrow', collapse: 'stv__toggle-icon--collapse-arrow', label: 'Arrows' }
-	} as const;
-	type IconSetKey = keyof typeof iconSets;
+	// Toggle icon demo state — ONE `iconSet` knob re-points the --stv-icon-* set.
+	type IconSetKey = 'chevron' | 'triangle' | 'plus-minus' | 'arrow';
+	const iconSetOptions: { key: IconSetKey; label: string; note: string }[] = [
+		{ key: 'chevron', label: 'Chevron', note: '→ --base-icon-chevron · rotates' },
+		{ key: 'triangle', label: 'Filled caret', note: '→ --base-icon-caret-down · rotates' },
+		{ key: 'plus-minus', label: 'Plus / Minus', note: '→ --base-icon-expand/-collapse · swaps' },
+		{ key: 'arrow', label: 'Arrows', note: 'Lucide arrow · rotates' }
+	];
 
-	let iconSet = $state<IconSetKey>('default');
+	let iconSet = $state<IconSetKey>('chevron');
 	let toggleIconMode = $state<'rotate' | 'swap'>('rotate');
-	const activeIcons = $derived(iconSets[iconSet]);
+
+	// Reskin the default chevron via the shared --base-icon-* contract: setting
+	// --base-icon-chevron on an ancestor of .stv__container flows into
+	// --stv-icon-expand, so the whole tree's chevron swaps to a custom mask — the
+	// same override a theme applies to every KeenMate component at once. (Only the
+	// chevron set consults --base-icon-chevron; the others chain to their own token.)
+	let brandChevron = $state(false);
+	const brandChevronUrl =
+		"url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M8 5l11 7-11 7z'/></svg>\")";
+	const toggleDemoStyle = $derived(brandChevron ? `--base-icon-chevron: ${brandChevronUrl}` : '');
 
 	// ---- Dark Mode Playground state -----------------------------------------
 	type PageScheme = 'normal' | 'light dark' | 'dark' | 'light';
@@ -156,10 +165,10 @@
 			<fieldset>
 				<legend>4. Brand theme — sets <code>--base-*</code> tokens on the wrapper</legend>
 				<label><input type="radio" bind:group={brandTheme} value="default" /> Default (Bootstrap blue)</label>
-				<label><input type="radio" bind:group={brandTheme} value="material" /> Material (calm blue, soft shadows)</label>
-				<label><input type="radio" bind:group={brandTheme} value="neon" /> Neon (dark, magenta + cyan glow)</label>
-				<label><input type="radio" bind:group={brandTheme} value="sharp" /> Sharp (high-contrast, brutalist)</label>
-				<label><input type="radio" bind:group={brandTheme} value="soft" /> Soft (peach + pink, very rounded)</label>
+				<label><input type="radio" bind:group={brandTheme} value="material" /> Material (calm blue, soft shadows, pre-oriented caret)</label>
+				<label><input type="radio" bind:group={brandTheme} value="neon" /> Neon (dark, magenta + cyan glow, double-chevron)</label>
+				<label><input type="radio" bind:group={brandTheme} value="sharp" /> Sharp (high-contrast, brutalist, square-chevron)</label>
+				<label><input type="radio" bind:group={brandTheme} value="soft" /> Soft (peach + pink, very rounded, circle-chevron)</label>
 				<label><input type="radio" bind:group={brandTheme} value="glass" /> Glass (translucent, blurred)</label>
 				<label><input type="radio" bind:group={brandTheme} value="forest" /> Forest (earth tones, cream ↔ deep forest)</label>
 			</fieldset>
@@ -343,28 +352,29 @@
 	<div class="card">
 		<h2>TH04 · Toggle Icon — Live Demo</h2>
 		<p class="description">
-			Customize the expand/collapse toggle via four props:
-			<code>expandIconClass</code>, <code>collapseIconClass</code>, <code>leafIconClass</code>,
-			and <code>toggleIconMode</code> (<code>'rotate'</code> or <code>'swap'</code>).
+			Pick the disclosure glyph with ONE knob — <code>iconSet</code>
+			(<code>'chevron'</code> · <code>'triangle'</code> · <code>'plus-minus'</code> ·
+			<code>'arrow'</code>) — plus <code>toggleIconMode</code>
+			(<code>'rotate'</code> or <code>'swap'</code>). <code>iconSet</code> re-points
+			the single <code>--stv-icon-*</code> variable set (via
+			<code>data-icon-set</code> on <code>.stv__container</code>); it does not switch
+			between separate CSS classes.
 		</p>
 
 		<div class="toggle-demo">
 			<div class="toggle-controls">
 				<fieldset>
-					<legend>Icon set</legend>
-					{#each Object.entries(iconSets) as [key, set] (key)}
+					<legend>iconSet</legend>
+					{#each iconSetOptions as opt (opt.key)}
 						<label class="radio-row">
 							<input
 								type="radio"
 								name="icon-set"
-								value={key}
-								checked={iconSet === key}
-								onchange={() => (iconSet = key as IconSetKey)}
+								value={opt.key}
+								checked={iconSet === opt.key}
+								onchange={() => (iconSet = opt.key)}
 							/>
-							<span class="preview"
-								><span class={set.expand}></span> / <span class={set.collapse}></span></span
-							>
-							<span>{set.label}</span>
+							<span><code>{opt.key}</code> — {opt.label} <small class="muted">{opt.note}</small></span>
 						</label>
 					{/each}
 				</fieldset>
@@ -379,7 +389,7 @@
 							checked={toggleIconMode === 'rotate'}
 							onchange={() => (toggleIconMode = 'rotate')}
 						/>
-						<span><code>rotate</code> — rotate expand icon 90°</span>
+						<span><code>rotate</code> — rotate the glyph on expand</span>
 					</label>
 					<label class="radio-row">
 						<input
@@ -389,12 +399,23 @@
 							checked={toggleIconMode === 'swap'}
 							onchange={() => (toggleIconMode = 'swap')}
 						/>
-						<span><code>swap</code> — swap expand ↔ collapse class</span>
+						<span><code>swap</code> — swap to the collapse glyph on expand</span>
+					</label>
+				</fieldset>
+
+				<fieldset>
+					<legend>Theme reskin</legend>
+					<label class="radio-row">
+						<input type="checkbox" bind:checked={brandChevron} />
+						<span
+							>Override <code>--base-icon-chevron</code>
+							<small class="muted">re-skins the chevron set through the shadow of the shared base contract</small></span
+						>
 					</label>
 				</fieldset>
 			</div>
 
-			<div class="tree-container toggle-demo-tree">
+			<div class="tree-container toggle-demo-tree" style={toggleDemoStyle}>
 				<Tree
 					data={sampleData}
 					idMember="id"
@@ -402,8 +423,7 @@
 					sortCallback={sortByName}
 					isSorted={true}
 					expandLevel={3}
-					expandIconClass={activeIcons.expand}
-					collapseIconClass={activeIcons.collapse}
+					{iconSet}
 					{toggleIconMode}
 					{...getTreeProps()}
 				>
@@ -417,59 +437,63 @@
 		<div class="code-block">
 			<pre>{`<Tree
   ...
-  expandIconClass="${activeIcons.expand}"
-  collapseIconClass="${activeIcons.collapse}"
+  iconSet="${iconSet}"
   toggleIconMode="${toggleIconMode}"
 />`}</pre>
 		</div>
 
 		<p class="hint">
-			Tip: <code>rotate</code> works best with chevron/arrow sets where the same glyph
-			points in two directions. <code>swap</code> is required for sets where expand and
-			collapse use visually different glyphs (plus/minus). All built-in icons are
-			Lucide SVGs rendered via <code>mask-image</code>, so they inherit
-			<code>currentColor</code> from the surrounding text.
+			Tip: <code>rotate</code> suits chevron/arrow/caret sets, where one glyph points
+			two ways. <code>plus-minus</code> is inherently a swap set (a rotated +/− is
+			meaningless) so it glyph-swaps regardless of <code>toggleIconMode</code>. All
+			built-in glyphs are Lucide SVGs rendered via <code>mask-image</code>, so they
+			inherit <code>currentColor</code> and chain to <code>--base-icon-*</code> — set
+			that token once and every KeenMate component's disclosure glyph follows.
 		</p>
 	</div>
 
-	<!-- Icon Classes -->
+	<!-- Icon Set Reference -->
 	<div class="card">
-		<h2>TH05 · Expand/Collapse Icons</h2>
-		<p class="description">Alternative icon sets for expand/collapse indicators.</p>
+		<h2>TH05 · Icon Sets</h2>
+		<p class="description">
+			The <code>iconSet</code> values and the <code>--base-icon-*</code> token each
+			re-points the one <code>--stv-icon-expand</code>/<code>--stv-icon-collapse</code>
+			set to. Rotation offsets differ because a glyph's native orientation does.
+		</p>
 
 		<table>
 			<thead>
 				<tr>
-					<th>Icon Set</th>
-					<th>Expand Class</th>
-					<th>Collapse Class</th>
-					<th>Preview</th>
+					<th><code>iconSet</code></th>
+					<th>Base token(s)</th>
+					<th>Behaviour</th>
+					<th>Rotation (collapsed → expanded)</th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr>
-					<td>Default (triangles)</td>
-					<td><code>stv__toggle-icon--expand</code></td>
-					<td><code>stv__toggle-icon--collapse</code></td>
-					<td><span class="stv__toggle-icon--expand"></span> / <span class="stv__toggle-icon--collapse"></span></td>
+					<td><code>chevron</code> (default)</td>
+					<td><code>--base-icon-chevron</code></td>
+					<td>rotate</td>
+					<td><code>0° → 90°</code></td>
 				</tr>
 				<tr>
-					<td>Alternative</td>
-					<td><code>stv__toggle-icon--expand-alt</code></td>
-					<td><code>stv__toggle-icon--collapse-alt</code></td>
-					<td><span class="stv__toggle-icon--expand-alt"></span> / <span class="stv__toggle-icon--collapse-alt"></span></td>
+					<td><code>triangle</code></td>
+					<td><code>--base-icon-caret-down</code></td>
+					<td>rotate</td>
+					<td><code>-90° → 0°</code></td>
 				</tr>
 				<tr>
-					<td>Plus/Minus</td>
-					<td><code>stv__toggle-icon--expand-plus</code></td>
-					<td><code>stv__toggle-icon--collapse-minus</code></td>
-					<td><span class="stv__toggle-icon--expand-plus"></span> / <span class="stv__toggle-icon--collapse-minus"></span></td>
+					<td><code>plus-minus</code></td>
+					<td><code>--base-icon-expand</code> / <code>--base-icon-collapse</code></td>
+					<td>swap (forced)</td>
+					<td>—</td>
 				</tr>
 				<tr>
-					<td>Arrows</td>
-					<td><code>stv__toggle-icon--expand-arrow</code></td>
-					<td><code>stv__toggle-icon--collapse-arrow</code></td>
-					<td><span class="stv__toggle-icon--expand-arrow"></span> / <span class="stv__toggle-icon--collapse-arrow"></span></td>
+					<td><code>arrow</code></td>
+					<td>Lucide arrow (no base token)</td>
+					<td>rotate</td>
+					<td><code>0° → 90°</code></td>
 				</tr>
 			</tbody>
 		</table>
@@ -608,6 +632,12 @@
 				<tr><td><code>--stv-toggle-icon-color</code></td><td><code>var(--base-text-color-3, #6c757d)</code></td><td>Icon color (via <code>currentColor</code> mask)</td></tr>
 				<tr><td><code>--stv-toggle-icon-margin-right</code></td><td><code>0.8 × rem</code> (= 8px)</td><td>Gap between toggle and node label</td></tr>
 				<tr><td><code>--stv-toggle-icon-transition</code></td><td><code>transform 0.2s</code></td><td>Rotate animation timing (does not scale)</td></tr>
+				<tr><td><code>--stv-icon-expand</code></td><td><code>var(--base-icon-chevron, …)</code></td><td>Disclosure glyph (collapsed / rotate mode). Re-pointed by <code>iconSet</code>.</td></tr>
+				<tr><td><code>--stv-icon-collapse</code></td><td>Lucide chevron-down</td><td>Glyph shown expanded — only in swap / plus-minus</td></tr>
+				<tr><td><code>--stv-icon-leaf</code></td><td>dot</td><td>Optional leaf marker (disabled by default)</td></tr>
+				<tr><td><code>--stv-icon-rotate-collapsed</code></td><td><code>0deg</code></td><td>Glyph rotation when collapsed (per icon-set)</td></tr>
+				<tr><td><code>--stv-icon-rotate-expanded</code></td><td><code>90deg</code></td><td>Glyph rotation when expanded (per icon-set)</td></tr>
+				<tr><td><code>--stv-icon-size-glyph</code></td><td><code>1em</code></td><td>Mask box for the disclosure glyph</td></tr>
 
 				<tr class="section-row"><td colspan="3">Checkbox</td></tr>
 				<tr><td><code>--stv-checkbox-size</code></td><td><code>1.5 × rem</code> (= 15px)</td><td>Checkbox square dimension</td></tr>
@@ -1062,7 +1092,20 @@ wrapper.className = 'brand-${dynamicBrand}';
 		--base-text-color-3: light-dark(#757575, #90caf9);
 		--base-border-color: light-dark(#e0e0e0, #3949ab);
 		--base-hover-bg: light-dark(#f5f5f5, #283593);
+		/* Custom glyph + rotation RE-MAP: Material's indicator is a PRE-ORIENTED
+		   down-caret (arrow_drop_down), so hand the toggle a down-caret and re-map the
+		   rotation tokens (collapsed points it right, expanded leaves it down) instead
+		   of the default right-chevron 0deg→90deg. */
+		--base-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M18 9c.852 0 1.297 .986 .783 1.623l-.076 .084l-6 6a1 1 0 0 1 -1.32 .083l-.094 -.083l-6 -6l-.083 -.094l-.054 -.077l-.054 -.096l-.017 -.036l-.027 -.067l-.032 -.108l-.01 -.053l-.01 -.06l-.004 -.057v-.118l.005 -.058l.009 -.06l.01 -.052l.032 -.108l.027 -.067l.07 -.132l.065 -.09l.073 -.081l.094 -.083l.077 -.054l.096 -.054l.036 -.017l.067 -.027l.108 -.032l.053 -.01l.06 -.01l.057 -.004l12.059 -.002z'/></svg>");
 		background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+	}
+	/* The rotation re-map must target .stv__container DIRECTLY: it declares its own
+	   --stv-icon-rotate-* defaults, and an element's own declaration beats a value
+	   inherited from an ancestor wrapper (unlike --base-icon-chevron, which the
+	   container doesn't declare and so inherits fine). */
+	:global(.playground-wrapper.brand-material .stv__container) {
+		--stv-icon-rotate-collapsed: -90deg;
+		--stv-icon-rotate-expanded: 0deg;
 	}
 	:global(.playground-wrapper.brand-material .playground-tree) {
 		box-shadow: 0 4px 16px rgba(25, 118, 210, 0.12);
@@ -1112,6 +1155,8 @@ wrapper.className = 'brand-${dynamicBrand}';
 		--base-text-color-3: #ff8aff;
 		--base-text-color-4: #cc99cc;
 		--base-border-color: #ff00ff;
+		/* Double-chevron disclosure glyph to match the neon energy. */
+		--base-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 17 5-5-5-5'/><path d='m13 17 5-5-5-5'/></svg>");
 		background: #0a0a0a;
 		background-image: linear-gradient(45deg, rgba(255, 0, 255, 0.1), rgba(0, 255, 255, 0.08));
 	}
@@ -1132,6 +1177,8 @@ wrapper.className = 'brand-${dynamicBrand}';
 		--base-border-color: light-dark(#000000, #ffffff);
 		--base-border-radius-sm: 0;
 		--base-font-weight-medium: 700;
+		/* Hard geometric filled square-chevron for the brutalist look. */
+		--base-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><path d='M19 2a3 3 0 0 1 3 3v14a3 3 0 0 1 -3 3h-14a3 3 0 0 1 -3 -3v-14a3 3 0 0 1 3 -3zm-10.387 6.21a1 1 0 0 0 -1.32 .083l-.083 .094a1 1 0 0 0 .083 1.32l2.292 2.293l-2.292 2.293l-.083 .094a1 1 0 0 0 1.497 1.32l3 -3l.083 -.094a1 1 0 0 0 -.083 -1.32l-3 -3zm5 0a1 1 0 0 0 -1.32 .083l-.083 .094a1 1 0 0 0 .083 1.32l2.292 2.293l-2.292 2.293l-.083 .094a1 1 0 0 0 1.497 1.32l3 -3l.083 -.094a1 1 0 0 0 -.083 -1.32l-3 -3z'/></svg>");
 		background: #ffffff;
 		border: 2px solid #000000;
 		border-radius: 0;
@@ -1186,6 +1233,8 @@ wrapper.className = 'brand-${dynamicBrand}';
 		--base-border-color: light-dark(#f0d0c0, #5a3a45);
 		--base-hover-bg: light-dark(#fff5f0, #3d2530);
 		--base-border-radius-sm: 1.2;
+		/* Soft circle-chevron to match the extra-rounded pill shapes. */
+		--base-icon-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><path d='m10 8 4 4-4 4'/></svg>");
 		background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
 		border-radius: 20px;
 	}
@@ -1356,14 +1405,6 @@ wrapper.className = 'brand-${dynamicBrand}';
 		cursor: pointer;
 	}
 
-	.toggle-controls .preview {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.25rem;
-		min-width: 2.5rem;
-		color: #6b7280;
-	}
-
 	/* Section header rows in the CSS variable reference table */
 	tbody .section-row td {
 		background: #f3f4f6;
@@ -1419,19 +1460,6 @@ wrapper.className = 'brand-${dynamicBrand}';
 	:global(.demo-lucide-leaf::before) {
 		-webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>");
 		mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z'/><path d='M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12'/></svg>");
-	}
-
-	/* Icon preview styles */
-	.stv__toggle-icon--expand::before,
-	.stv__toggle-icon--collapse::before,
-	.stv__toggle-icon--expand-alt::before,
-	.stv__toggle-icon--collapse-alt::before,
-	.stv__toggle-icon--expand-plus::before,
-	.stv__toggle-icon--collapse-minus::before,
-	.stv__toggle-icon--expand-arrow::before,
-	.stv__toggle-icon--collapse-arrow::before {
-		font-size: 14px;
-		color: #6b7280;
 	}
 
 	/* === Dynamic Theme Switching — button row ===

@@ -94,6 +94,29 @@
 	--stv-toggle-icon-margin-right: calc(0.25 * var(--stv-rem));
 	--stv-toggle-icon-transition: transform 0.2s;
 
+	/* Disclosure glyph — ONE variable set, reconfigured per `icon-set` via the
+	   .stv__container[data-icon-set=…] blocks BELOW this rule (NOT four parallel
+	   CSS-class families). The rendering rule in toggle-icons.css only ever reads
+	   these tokens; `icon-set` just swaps what they point at. Each chains to a
+	   shared --base-icon-* token so a theme reskins every KeenMate component's
+	   disclosure glyph at once.
+	     --stv-icon-expand    glyph shown collapsed / the only glyph in rotate mode
+	     --stv-icon-collapse  glyph shown expanded (only consulted in swap mode)
+	     --stv-icon-leaf      optional leaf marker (leaf dot is disabled by default;
+	                          see the commented rule in toggle-icons.css) */
+	--stv-icon-expand: var(--base-icon-chevron, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m9 18 6-6-6-6'/></svg>"));
+	--stv-icon-collapse: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+	--stv-icon-leaf: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'><circle cx='12' cy='12' r='4'/></svg>");
+	--stv-icon-rotate-collapsed: 0deg;
+	--stv-icon-rotate-expanded: 90deg;
+	--stv-icon-size-glyph: 1em;  /* mask box; scales with the toggle column's font-size */
+
+	/* Checkbox glyphs — the checkmark (checked) and dash (indeterminate/tri-state),
+	   rendered as masks (see checkbox.css) so they inherit --stv-checkbox-checkmark-color
+	   and follow the shared --base-icon-* contract. Override either to diverge. */
+	--stv-icon-check: var(--base-icon-check, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>"));
+	--stv-icon-indeterminate: var(--base-icon-indeterminate, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/></svg>"));
+
 	/* -------------------------------------------------------------------------
 	   CHECKBOX
 	   ------------------------------------------------------------------------- */
@@ -225,4 +248,38 @@
 	   LEGACY ALIASES — pre-rc09 names kept for backward compatibility
 	   ------------------------------------------------------------------------- */
 	--tree-node-indent-per-level: var(--stv-node-indent-per-level);
+}
+
+/* =============================================================================
+   ICON-SET RECONFIGURATION — one knob, one variable set
+   =============================================================================
+   `icon-set` (a <Tree> prop → `data-icon-set` on .stv__container) RE-POINTS the
+   --stv-icon-* tokens declared above; it is NOT a switch between four parallel
+   CSS-class families. The rendering rule in toggle-icons.css is unchanged — it
+   always reads --stv-icon-expand / --stv-icon-collapse (+ rotation). The default
+   set (chevron) IS the base declaration above, so there is no [data-icon-set="chevron"]
+   block. Each set declares its own rotation offsets because a base glyph's native
+   orientation differs: a chevron/arrow points RIGHT (collapsed 0°, expanded 90°),
+   but a filled caret points DOWN (collapsed -90°, expanded 0°). plus-minus is a
+   swap set (see toggle-icons.css) so its rotation is a no-op. */
+
+.stv__container[data-icon-set='triangle'] {
+	--stv-icon-expand: var(--base-icon-caret-down, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M12 15 6 9h12z'/></svg>"));
+	--stv-icon-collapse: var(--base-icon-caret-down, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M12 15 6 9h12z'/></svg>"));
+	--stv-icon-rotate-collapsed: -90deg;
+	--stv-icon-rotate-expanded: 0deg;
+}
+
+.stv__container[data-icon-set='plus-minus'] {
+	--stv-icon-expand: var(--base-icon-expand, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='M12 5v14'/></svg>"));
+	--stv-icon-collapse: var(--base-icon-collapse, url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/></svg>"));
+	--stv-icon-rotate-collapsed: 0deg;
+	--stv-icon-rotate-expanded: 0deg;
+}
+
+.stv__container[data-icon-set='arrow'] {
+	--stv-icon-expand: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14'/><path d='m12 5 7 7-7 7'/></svg>");
+	--stv-icon-collapse: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14'/><path d='m19 12-7 7-7-7'/></svg>");
+	--stv-icon-rotate-collapsed: 0deg;
+	--stv-icon-rotate-expanded: 90deg;
 }

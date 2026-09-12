@@ -307,7 +307,17 @@
 		/** Data-driven per-row class hook. Return extra class(es) for `.stv__node-content`. */
 		nodeContentClass?: (node: LTreeNode<T>) => string | null | undefined;
 		dragOverNodeClass?: string | null | undefined;
+		/** Pick the disclosure glyph as a single knob (default `'chevron'`). Re-points
+		 *  the ONE `--stv-icon-*` variable set via `data-icon-set` on `.stv__container`
+		 *  — it does not switch between separate CSS classes. `'plus-minus'` is a swap
+		 *  set (glyph-swaps regardless of `toggleIconMode`). Each set chains to a shared
+		 *  `--base-icon-*` token, so a theme reskins every KeenMate component at once. */
+		iconSet?: 'chevron' | 'triangle' | 'plus-minus' | 'arrow';
+		/** @deprecated Use `iconSet` instead. Escape hatch to override the expand
+		 *  glyph's CSS class; the canonical class is `stv__toggle-icon--expand`. */
 		expandIconClass?: string | null | undefined;
+		/** @deprecated No longer consumed at render time — swap between expand/collapse
+		 *  is CSS-driven (see `iconSet` / `toggleIconMode`). Retained for back-compat. */
 		collapseIconClass?: string | null | undefined;
 		leafIconClass?: string | null | undefined;
 		toggleIconMode?: 'rotate' | 'swap';
@@ -481,6 +491,7 @@
 		// VISUALS
 		theme,
 		bodyClass,
+		iconSet = 'chevron',
 		expandIconClass = 'stv__toggle-icon--expand',
 		collapseIconClass = 'stv__toggle-icon--collapse',
 		leafIconClass = 'stv__toggle-icon--leaf',
@@ -1344,6 +1355,7 @@
 				| 'shouldEnableTreeDropZone'
 				| 'noDataText'
 				| 'bodyClass'
+				| 'iconSet'
 				| 'expandIconClass'
 				| 'collapseIconClass'
 				| 'leafIconClass'
@@ -1476,6 +1488,7 @@
 			shouldEnableTreeDropZone = updates.shouldEnableTreeDropZone;
 		if (updates.noDataText !== undefined) noDataText = updates.noDataText;
 		if (updates.bodyClass !== undefined) bodyClass = updates.bodyClass;
+		if (updates.iconSet !== undefined) iconSet = updates.iconSet;
 		if (updates.expandIconClass !== undefined) expandIconClass = updates.expandIconClass;
 		if (updates.collapseIconClass !== undefined) collapseIconClass = updates.collapseIconClass;
 		if (updates.leafIconClass !== undefined) leafIconClass = updates.leafIconClass;
@@ -1713,6 +1726,8 @@
 	tabindex="0"
 	data-theme={theme}
 	data-node-title-overflow={nodeTitleOverflow}
+	data-icon-set={iconSet}
+	data-toggle-icon-mode={toggleIconMode}
 	data-tree-id={controller.treeId}
 	bind:this={treeContainerRef}
 	onkeydown={handleTreeKeydown}

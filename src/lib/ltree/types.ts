@@ -7,6 +7,21 @@ export type { LTreeNode, DropPosition } from './ltree-node.svelte.js';
 export type DragDropMode = 'none' | 'self' | 'cross' | 'both';
 export type ToggleIconMode = 'rotate' | 'swap';
 /**
+ * Selects which picture the ONE disclosure-glyph variable set draws. Not four
+ * parallel CSS-class families — `iconSet` is a single knob that re-points
+ * `--stv-icon-expand` / `--stv-icon-collapse` (+ rotation) via the
+ * `.stv__container[data-icon-set=…]` blocks in `variables.css`. Each set chains
+ * to a shared `--base-icon-*` token so a theme reskins every KeenMate
+ * component's disclosure glyph at once.
+ * - `chevron` (default): Lucide chevron → `--base-icon-chevron`; rotates.
+ * - `triangle`: filled caret → `--base-icon-caret-down`; rotates.
+ * - `plus-minus`: square-plus/minus → `--base-icon-expand`/`--base-icon-collapse`;
+ *   inherently a swap set (a rotated +/− is meaningless), so it glyph-swaps
+ *   regardless of `toggleIconMode`.
+ * - `arrow`: Lucide arrow-right/down; rotates.
+ */
+export type IconSet = 'chevron' | 'triangle' | 'plus-minus' | 'arrow';
+/**
  * How the built-in node label (`.stv__node-label`) behaves when it's wider than the
  * available row space:
  * - `wrap` (default): the label wraps onto multiple lines — the row grows taller.

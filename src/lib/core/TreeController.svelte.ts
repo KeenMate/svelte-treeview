@@ -570,7 +570,11 @@ export interface TreeControllerProps<T> {
 	nodeClass?: (node: LTreeNode<T>) => string | null | undefined;
 	nodeContentClass?: (node: LTreeNode<T>) => string | null | undefined;
 	dragOverNodeClass?: string | null | undefined;
+	/** @deprecated Prefer the `iconSet` prop on `<Tree>`. Escape hatch to override
+	 *  the expand glyph's CSS class; canonical is `stv__toggle-icon--expand`. */
 	expandIconClass?: string | null | undefined;
+	/** @deprecated No longer consumed at render time — expand/collapse swap is
+	 *  CSS-driven (`data-toggle-icon-mode` / `data-icon-set`). Kept for back-compat. */
 	collapseIconClass?: string | null | undefined;
 	leafIconClass?: string | null | undefined;
 	toggleIconMode?: ToggleIconMode;
